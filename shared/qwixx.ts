@@ -126,12 +126,23 @@ function scoreCount(count: number) {
   return (count * (count + 1)) / 2;
 }
 
+export function sheetScoreBreakdown(sheet: QwixxSheet) {
+  const colors = Object.fromEntries(
+    QWIXX_COLORS.map((color) => [
+      color,
+      scoreCount(sheet.marks[color].length + (sheet.locks.includes(color) ? 1 : 0))
+    ])
+  ) as Record<QwixxColor, number>;
+  const failedThrowPenalty = sheet.failedThrows * 5;
+  return {
+    colors,
+    failedThrowPenalty,
+    total: QWIXX_COLORS.reduce((sum, color) => sum + colors[color], 0) - failedThrowPenalty
+  };
+}
+
 export function sheetScore(sheet: QwixxSheet) {
-  const rowPoints = QWIXX_COLORS.reduce(
-    (sum, color) => sum + scoreCount(sheet.marks[color].length + (sheet.locks.includes(color) ? 1 : 0)),
-    0
-  );
-  return rowPoints - sheet.failedThrows * 5;
+  return sheetScoreBreakdown(sheet).total;
 }
 
 function finish(game: QwixxGameState) {

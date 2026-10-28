@@ -8,6 +8,7 @@ import {
   canMark,
   createQwixxGame,
   rollQwixx,
+  sheetScoreBreakdown,
   sheetScore,
   submitColorChoice,
   submitWhiteChoice,
@@ -158,7 +159,11 @@ export function QwixxGameScreen({
   }
 
   const standings = [...game.playerOrder]
-    .map((id) => ({ id, name: game.sheets[id].playerName, score: sheetScore(game.sheets[id]) }))
+    .map((id) => {
+      const playerSheet = game.sheets[id];
+      const breakdown = sheetScoreBreakdown(playerSheet);
+      return { id, name: playerSheet.playerName, score: breakdown.total, breakdown };
+    })
     .sort((a, b) => b.score - a.score);
 
   return (
@@ -255,7 +260,19 @@ export function QwixxGameScreen({
           <h1 id="result-title">Partie beendet</h1>
           <p>{game.winnerIds.length > 1 ? "Gleichstand an der Spitze" : `${game.sheets[game.winnerIds[0]].playerName} gewinnt`}</p>
           <ol>
-            {standings.map((entry) => <li key={entry.id}><span>{entry.name}</span><strong>{entry.score} Punkte</strong></li>)}
+            {standings.map((entry) => (
+              <li className="result-player" key={entry.id}>
+                <div className="result-player__total"><span>{entry.name}</span><strong>{entry.score} Punkte</strong></div>
+                <div className="result-player__breakdown" aria-label={`Punkte von ${entry.name}`}>
+                  {QWIXX_COLORS.map((color) => (
+                    <span className={`result-color result-color--${color}`} key={color}>
+                      {QWIXX_COLOR_NAMES[color]} <strong>{entry.breakdown.colors[color]}</strong>
+                    </span>
+                  ))}
+                  <span className="result-penalty">Fehlwürfe <strong>−{entry.breakdown.failedThrowPenalty}</strong></span>
+                </div>
+              </li>
+            ))}
           </ol>
           <button className="button button--secondary button--wide" onClick={onExit}>Zum Startmenü</button>
         </section>

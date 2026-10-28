@@ -4,6 +4,7 @@ import {
   createQwixxGame,
   activePlayerId,
   rollQwixx,
+  sheetScoreBreakdown,
   sheetScore,
   submitColorChoice,
   submitWhiteChoice
@@ -53,6 +54,11 @@ closingGame = submitWhiteChoice(closingGame, "p2", null);
 assert.deepEqual(closingGame.closedRows, ["red"]);
 assert.deepEqual(closingGame.sheets.p1.locks, ["red"]);
 assert.equal(sheetScore(closingGame.sheets.p1), 28, "Sechs Kreuze plus Schloss ergeben 28 Punkte");
+assert.deepEqual(
+  sheetScoreBreakdown(closingGame.sheets.p1),
+  { colors: { red: 28, yellow: 0, green: 0, blue: 0 }, failedThrowPenalty: 0, total: 28 },
+  "Die Endabrechnung weist jede Farbe einzeln aus"
+);
 
 closingGame = submitColorChoice(closingGame, "p1", null);
 closingGame.sheets.p2.marks.yellow = [0, 1, 2, 3, 4];
