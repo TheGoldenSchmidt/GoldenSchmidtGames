@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: spielraum-qwixx
+    name: GoldenSchmidtGames
     runtime: docker
     plan: free
     region: frankfurt
