@@ -1,0 +1,94 @@
+import { useMemo, useState } from "react";
+import { GAMES, getGame } from "../../shared/games";
+import type { GameId } from "../../shared/types";
+import { ScreenHeader } from "../components/ScreenHeader";
+
+export function LocalSetupScreen({
+  onBack,
+  onStart
+}: {
+  onBack: () => void;
+  onStart: (gameId: GameId, names: string[]) => void;
+}) {
+  const [gameId, setGameId] = useState<GameId>("qwixx");
+  const game = getGame(gameId);
+  const [count, setCount] = useState(2);
+  const [names, setNames] = useState(["Spieler 1", "Spieler 2"]);
+
+  const visibleNames = useMemo(
+    () => Array.from({ length: count }, (_, index) => names[index] ?? `Spieler ${index + 1}`),
+    [count, names]
+  );
+
+  function changeCount(value: number) {
+    setCount(value);
+    setNames((current) => Array.from({ length: value }, (_, index) => current[index] ?? `Spieler ${index + 1}`));
+  }
+
+  return (
+    <main className="page screen-enter">
+      <ScreenHeader title="Lokal spielen" onBack={onBack} />
+      <section className="page__content">
+        <div className="section-heading">
+          <h2>Spiel auswählen</h2>
+          <p>Weitere Spiele kommen als eigene Module hinzu.</p>
+        </div>
+
+        <div className="game-choices">
+          {GAMES.map((entry) => (
+            <button
+              className={`game-choice ${entry.id === gameId ? "is-selected" : ""}`}
+              key={entry.id}
+              onClick={() => {
+                setGameId(entry.id);
+                changeCount(Math.max(entry.minPlayers, Math.min(entry.maxPlayers, count)));
+              }}
+            >
+              <span className="game-choice__tile game-choice__tile--qwixx" aria-hidden="true">2–12</span>
+              <span>
+                <strong>{entry.name}</strong>
+                <small>{entry.shortDescription}</small>
+              </span>
+              <span className="check" aria-label="Ausgewählt">✓</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="section-heading section-heading--row">
+          <div>
+            <h2>Spieler</h2>
+            <p>Alle spielen an diesem Gerät.</p>
+          </div>
+          <div className="stepper" aria-label="Spielerzahl">
+            <button onClick={() => changeCount(Math.max(game.minPlayers, count - 1))} disabled={count <= game.minPlayers}>−</button>
+            <strong>{count}</strong>
+            <button onClick={() => changeCount(Math.min(game.maxPlayers, count + 1))} disabled={count >= game.maxPlayers}>+</button>
+          </div>
+        </div>
+
+        <div className="player-fields">
+          {visibleNames.map((name, index) => (
+            <label className="field field--player" key={index}>
+              <span className="player-number">{index + 1}</span>
+              <input
+                value={name}
+                maxLength={24}
+                aria-label={`Name von Spieler ${index + 1}`}
+                onChange={(event) => {
+                  const next = [...visibleNames];
+                  next[index] = event.target.value;
+                  setNames(next);
+                }}
+              />
+            </label>
+          ))}
+        </div>
+      </section>
+      <div className="sticky-action">
+        <button className="button button--primary button--wide" onClick={() => onStart(gameId, visibleNames.map((name, index) => name.trim() || `Spieler ${index + 1}`))}>
+          {game.name} starten
+        </button>
+      </div>
+    </main>
+  );
+}

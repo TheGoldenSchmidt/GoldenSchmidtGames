@@ -1,0 +1,41 @@
+{
+  "name": "spielraum",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "concurrently -n SERVER,APP -c magenta,cyan \"npm:dev:server\" \"npm:dev:client\"",
+    "dev:client": "vite --host 0.0.0.0",
+    "dev:server": "tsx watch server/index.ts",
+    "generate:icons": "tsx scripts/generate-icons.ts",
+    "prebuild": "npm run generate:icons",
+    "build": "tsc --noEmit && vite build",
+    "test:rules": "tsx scripts/qwixx-rules-test.ts",
+    "test:online": "tsx scripts/integration-test.ts",
+    "test:production": "tsx scripts/production-smoke-test.ts",
+    "preview": "vite preview --host 0.0.0.0",
+    "start": "tsx server/index.ts"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
+    "tsx": "^4.20.5"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.5.2",
+    "@types/react": "^19.1.16",
+    "@types/react-dom": "^19.1.9",
+    "@vitejs/plugin-react": "^5.0.3",
+    "concurrently": "^9.2.1",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.7",
+    "vite-plugin-pwa": "^1.0.3"
+  }
+}
