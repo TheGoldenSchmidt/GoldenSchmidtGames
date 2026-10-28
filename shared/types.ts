@@ -1,4 +1,4 @@
-export type GameId = "qwixx";
+export type GameId = "qwixx" | "durak" | "binokel";
 
 export type QwixxColor = "red" | "yellow" | "green" | "blue";
 

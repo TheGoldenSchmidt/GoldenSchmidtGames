@@ -103,10 +103,13 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .game-choices { display: grid; gap: 10px; }
 .game-choice { width: 100%; background: var(--paper); border: 2px solid var(--line); border-radius: 18px; padding: 14px; display: grid; grid-template-columns: 52px 1fr 26px; align-items: center; gap: 12px; text-align: left; color: var(--ink); }
 .game-choice.is-selected { border-color: var(--blue); }
+.game-choice:disabled { opacity: .72; cursor: not-allowed; }
 .game-choice__tile { width: 50px; height: 50px; border-radius: 15px; background: var(--blue); color: white; display: grid; place-items: center; font-size: 1.6rem; }
 .game-choice > span:nth-child(2) { display: grid; gap: 4px; }
+.game-choice strong { display: flex; align-items: center; gap: 7px; }.game-choice strong em { padding: 3px 6px; border-radius: 999px; background: #e3dfd4; color: var(--muted); font-size: .58rem; font-style: normal; letter-spacing: .05em; text-transform: uppercase; }
 .game-choice small { color: var(--muted); line-height: 1.3; font-size: .74rem; }
 .game-choice__tile--qwixx { font-size: .7rem; font-weight: 900; letter-spacing: -.05em; }
+.game-choice__tile--durak { background: #2d355d; }.game-choice__tile--binokel { background: #8b3f38; font-family: Georgia, serif; font-weight: 800; }
 .check { width: 24px; height: 24px; background: var(--mint); border-radius: 50%; display: grid; place-items: center; font-weight: 900; visibility: hidden; }
 .is-selected .check { visibility: visible; }
 

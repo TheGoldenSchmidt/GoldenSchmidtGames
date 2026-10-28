@@ -37,19 +37,22 @@ export function LocalSetupScreen({
         <div className="game-choices">
           {GAMES.map((entry) => (
             <button
-              className={`game-choice ${entry.id === gameId ? "is-selected" : ""}`}
+              className={`game-choice game-choice--${entry.id} ${entry.id === gameId ? "is-selected" : ""}`}
               key={entry.id}
+              disabled={entry.status !== "ready"}
               onClick={() => {
                 setGameId(entry.id);
                 changeCount(Math.max(entry.minPlayers, Math.min(entry.maxPlayers, count)));
               }}
             >
-              <span className="game-choice__tile game-choice__tile--qwixx" aria-hidden="true">2–12</span>
+              <span className={`game-choice__tile game-choice__tile--${entry.id}`} aria-hidden="true">
+                {entry.id === "qwixx" ? "2–12" : entry.id === "durak" ? "♠" : "B"}
+              </span>
               <span>
-                <strong>{entry.name}</strong>
+                <strong>{entry.name}{entry.status === "soon" && <em>Bald</em>}</strong>
                 <small>{entry.shortDescription}</small>
               </span>
-              <span className="check" aria-label="Ausgewählt">✓</span>
+              {entry.status === "ready" && <span className="check" aria-label="Ausgewählt">✓</span>}
             </button>
           ))}
         </div>
