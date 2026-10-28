@@ -10,6 +10,10 @@ Die Produktionsanwendung besteht aus einem gemeinsamen Node-Prozess. Er liefert 
 - dauerhaft laufender Prozess; kein rein statisches Hosting
 - Umgebungsvariable `PORT` wird vom Hoster vorgegeben
 
+## Render Blueprint
+
+Die Datei `render.yaml` beschreibt bereits einen kostenlosen Docker-Web-Service in der Region Frankfurt. In Render genügt deshalb „New → Blueprint“ und die Auswahl dieses Repositorys. Build, Startbefehl und Health-Check werden automatisch übernommen.
+
 ## Start ohne Docker
 
 ```bash
