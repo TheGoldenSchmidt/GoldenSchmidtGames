@@ -82,6 +82,26 @@ function broadcast(room: RoomState) {
   io.to(room.code).emit("room:updated", publicRoom(room));
 }
 
+function connectedPlayers(room: RoomState) {
+  return room.players.filter((player) => player.connected);
+}
+
+function allPlayersReady(room: RoomState) {
+  const players = connectedPlayers(room);
+  return players.length === room.config.playerCount && players.every((player) => player.ready);
+}
+
+function startRoom(room: RoomState) {
+  const players = connectedPlayers(room);
+  room.phase = "playing";
+  room.players.forEach((player) => {
+    player.score = 0;
+  });
+  room.game = createQwixxGame(players);
+  broadcast(room);
+  io.to(room.code).emit("game:started", publicRoom(room));
+}
+
 function enterRoom(socketId: string, room: RoomState, playerId: string) {
   const socket = io.sockets.sockets.get(socketId);
   socket?.join(room.code);
@@ -168,6 +188,9 @@ io.on("connection", (socket) => {
         gameId: game.id,
         playerCount: Math.max(game.minPlayers, Math.min(game.maxPlayers, requestedCount))
       };
+      room.players.forEach((player) => {
+        player.ready = false;
+      });
       broadcast(room);
       callback({ ok: true, data: publicRoom(room) });
     }
@@ -178,7 +201,12 @@ io.on("connection", (socket) => {
     const room = membership ? rooms.get(membership.roomCode) : undefined;
     const player = room?.players.find((entry) => entry.id === membership?.playerId);
     if (!room || !player) return callback({ ok: false, error: "Du bist in keinem Raum." });
+    if (room.phase !== "lobby") return callback({ ok: false, error: "Die Partie läuft bereits." });
     player.ready = !player.ready;
+    if (allPlayersReady(room)) {
+      startRoom(room);
+      return callback({ ok: true, data: publicRoom(room) });
+    }
     broadcast(room);
     callback({ ok: true, data: publicRoom(room) });
   });
@@ -190,20 +218,14 @@ io.on("connection", (socket) => {
     if (room.hostId !== membership.playerId) {
       return callback({ ok: false, error: "Nur der Host kann die Partie starten." });
     }
-    const connectedPlayers = room.players.filter((player) => player.connected);
-    if (connectedPlayers.length !== room.config.playerCount) {
+    const players = connectedPlayers(room);
+    if (players.length !== room.config.playerCount) {
       return callback({
         ok: false,
         error: `Für den Start werden genau ${room.config.playerCount} verbundene Spieler benötigt.`
       });
     }
-    room.phase = "playing";
-    room.players.forEach((player) => {
-      player.score = 0;
-    });
-    room.game = createQwixxGame(connectedPlayers);
-    broadcast(room);
-    io.to(room.code).emit("game:started", publicRoom(room));
+    startRoom(room);
     callback({ ok: true, data: publicRoom(room) });
   });
 

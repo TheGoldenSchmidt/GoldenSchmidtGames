@@ -65,7 +65,13 @@ try {
   await hostSeesGuest;
 
   await emit<RoomState>(host, "room:configure", { gameId: "qwixx", playerCount: 2 });
-  const started = await emit<RoomState>(host, "room:start");
+  const guestSeesStart = waitForRoom(guest, (room) => room.phase === "playing");
+  const hostReady = await emit<RoomState>(host, "room:ready");
+  if (!hostReady.players.find((player) => player.id === "host-test")?.ready) {
+    throw new Error("Bereitschaft des Hosts wurde nicht gespeichert");
+  }
+  const started = await emit<RoomState>(guest, "room:ready");
+  await guestSeesStart;
   if (started.phase !== "playing") throw new Error("Partie wurde nicht gestartet");
   if (started.game?.phase !== "awaiting-roll") throw new Error("Qwixx wurde nicht initialisiert");
 

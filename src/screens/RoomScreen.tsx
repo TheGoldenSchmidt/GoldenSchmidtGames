@@ -20,7 +20,8 @@ export function RoomScreen({
   const [error, setError] = useState("");
   const isHost = room.hostId === profile.id;
   const connectedCount = room.players.filter((player) => player.connected).length;
-  const canStart = connectedCount === room.config.playerCount;
+  const readyCount = room.players.filter((player) => player.connected && player.ready).length;
+  const currentPlayerReady = room.players.find((player) => player.id === profile.id)?.ready ?? false;
   const game = getGame(room.config.gameId);
   const options = useMemo(
     () => Array.from({ length: game.maxPlayers - game.minPlayers + 1 }, (_, index) => game.minPlayers + index),
@@ -47,13 +48,6 @@ export function RoomScreen({
   function toggleReady() {
     socket.emit("room:ready", (response: { ok: boolean; error?: string }) => {
       if (!response.ok) setError(response.error ?? "Status konnte nicht geändert werden.");
-    });
-  }
-
-  function startGame() {
-    setError("");
-    socket.emit("room:start", (response: { ok: boolean; data?: RoomState; error?: string }) => {
-      if (!response.ok) setError(response.error ?? "Die Partie konnte nicht gestartet werden.");
     });
   }
 
@@ -123,17 +117,22 @@ export function RoomScreen({
           </label>
         </div>
 
-        {!isHost && (
-          <button className={`button button--wide ${room.players.find((player) => player.id === profile.id)?.ready ? "button--secondary" : "button--primary"}`} onClick={toggleReady}>
-            {room.players.find((player) => player.id === profile.id)?.ready ? "Nicht bereit" : "Ich bin bereit"}
-          </button>
-        )}
-
-        {isHost && (
-          <button className="button button--primary button--wide" onClick={startGame} disabled={!canStart}>
-            {canStart ? "Partie starten" : `Warte auf ${room.config.playerCount - connectedCount} Spieler`}
-          </button>
-        )}
+        <button
+          className={`button button--wide ${currentPlayerReady ? "button--secondary" : "button--primary"}`}
+          onClick={toggleReady}
+          disabled={connectedCount !== room.config.playerCount}
+        >
+          {connectedCount !== room.config.playerCount
+            ? `Warte auf ${room.config.playerCount - connectedCount} Spieler`
+            : currentPlayerReady
+              ? `Bereit (${readyCount}/${room.config.playerCount})`
+              : "Ich bin bereit"}
+        </button>
+        <p className="lobby-status">
+          {connectedCount === room.config.playerCount
+            ? `Das Spiel startet automatisch, sobald alle ${room.config.playerCount} Spieler bereit sind.`
+            : "Sobald alle Plätze besetzt sind, können sich alle Spieler bereit melden."}
+        </p>
         {error && <p className="error-message" role="alert">{error}</p>}
       </section>
     </main>
