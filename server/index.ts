@@ -65,6 +65,14 @@ function cleanName(value: unknown, fallback: string) {
   return value.trim().replace(/\s+/g, " ").slice(0, 24) || fallback;
 }
 
+function cleanPlayerId(value: unknown) {
+  if (typeof value === "string") {
+    const playerId = value.trim().slice(0, 64);
+    if (/^[A-Za-z0-9_-]+$/.test(playerId)) return playerId;
+  }
+  return `guest-${randomInt(10000)}`;
+}
+
 function createCode() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let code = "";
@@ -112,7 +120,7 @@ io.on("connection", (socket) => {
   socket.on(
     "room:create",
     (payload: { playerId?: string; name?: string }, callback: (ack: Ack<RoomState>) => void) => {
-      const playerId = cleanName(payload?.playerId, `guest-${randomInt(10000)}`);
+      const playerId = cleanPlayerId(payload?.playerId);
       const code = createCode();
       const player: Player = {
         id: playerId,
@@ -143,12 +151,12 @@ io.on("connection", (socket) => {
       const code = cleanName(payload?.code, "").toUpperCase();
       const room = rooms.get(code);
       if (!room) return callback({ ok: false, error: "Dieser Raum wurde nicht gefunden." });
+      const playerId = cleanPlayerId(payload?.playerId);
       if (room.phase !== "lobby") {
-        const returning = room.players.some((player) => player.id === payload?.playerId);
+        const returning = room.players.some((player) => player.id === playerId);
         if (!returning) return callback({ ok: false, error: "Die Partie läuft bereits." });
       }
 
-      const playerId = cleanName(payload?.playerId, `guest-${randomInt(10000)}`);
       let player = room.players.find((entry) => entry.id === playerId);
       if (player) {
         player.connected = true;
