@@ -28,6 +28,39 @@ export interface QwixxGameState {
   log: string[];
 }
 
+export type DurakSuit = "clubs" | "diamonds" | "hearts" | "spades";
+export type DurakRank = "6" | "7" | "8" | "9" | "10" | "J" | "Q" | "K" | "A";
+
+export interface DurakCard {
+  id: string;
+  suit: DurakSuit;
+  rank: DurakRank;
+}
+
+export interface DurakTablePair {
+  attack: DurakCard;
+  defense?: DurakCard;
+}
+
+export interface DurakGameState {
+  playerOrder: string[];
+  playerNames: Record<string, string>;
+  hands: Record<string, DurakCard[]>;
+  handCounts: Record<string, number>;
+  deck: DurakCard[];
+  trumpSuit: DurakSuit;
+  trumpCard: DurakCard;
+  attackerId: string;
+  defenderId: string;
+  phase: "attack" | "defend" | "throw-in" | "finished";
+  table: DurakTablePair[];
+  maxAttackCards: number;
+  defenderTakes: boolean;
+  finishedPlayerIds: string[];
+  durakId: string | null;
+  log: string[];
+}
+
 export interface GameDefinition {
   id: GameId;
   name: string;
@@ -57,6 +90,7 @@ export interface RoomState {
   config: RoomConfig;
   phase: "lobby" | "playing";
   game?: QwixxGameState;
+  durakGame?: DurakGameState;
 }
 
 export interface GuestProfile {

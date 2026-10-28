@@ -7,10 +7,12 @@ Eine installierbare Smartphone-PWA für lokale und Online-Spiele. Das aktuelle G
 - Online-Räume mit fünfstelligem Raumcode
 - Host-Wechsel bei Verbindungsabbruch
 - gemeinsame Spieldefinitionen für lokalen und Online-Modus
-- ein vollständiges Qwixx-Spielmodul für lokale und Online-Partien
+- vollständige Qwixx- und Durak-Spielmodule für lokale und Online-Partien
 - Offline-Cache als installierbare PWA
 
 Das Qwixx-Modul enthält den gemeinsamen weißen Wurf, die zusätzliche Farbaktion der aktiven Person, vier getrennte Wertungsblätter, Fehlwürfe, Reihenschlüsse, automatische Wertung und die Spielergebnisanzeige.
+
+Durak verwendet 36 Karten für zwei bis sechs Spieler. Enthalten sind Trumpf, Angriff und Verteidigung, Aufnehmen, Nachlegen, Weiterschieben sowie verdeckte Online-Handkarten. Im lokalen Modus schützt eine Übergabeansicht die Hand der jeweils aktiven Person.
 
 ## Entwicklung
 

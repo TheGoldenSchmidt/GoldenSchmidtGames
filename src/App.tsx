@@ -7,6 +7,7 @@ import { HomeScreen } from "./screens/HomeScreen";
 import { LocalSetupScreen } from "./screens/LocalSetupScreen";
 import { OnlineEntryScreen } from "./screens/OnlineEntryScreen";
 import { QwixxGameScreen } from "./screens/QwixxGameScreen";
+import { DurakGameScreen } from "./screens/DurakGameScreen";
 import { RoomScreen } from "./screens/RoomScreen";
 
 type View = "home" | "local-setup" | "online-entry" | "room" | "game-local" | "game-online";
@@ -88,10 +89,14 @@ export default function App() {
         />
       )}
       {view === "game-local" && (
-        localGameId === "qwixx" && <QwixxGameScreen profile={profile} localNames={localNames} onExit={() => setView("home")} />
+        localGameId === "qwixx"
+          ? <QwixxGameScreen profile={profile} localNames={localNames} onExit={() => setView("home")} />
+          : localGameId === "durak" && <DurakGameScreen profile={profile} localNames={localNames} onExit={() => setView("home")} />
       )}
       {view === "game-online" && room && (
-        room.config.gameId === "qwixx" && <QwixxGameScreen profile={profile} initialRoom={room} onExit={leaveOnline} />
+        room.config.gameId === "qwixx"
+          ? <QwixxGameScreen profile={profile} initialRoom={room} onExit={leaveOnline} />
+          : room.config.gameId === "durak" && <DurakGameScreen profile={profile} initialRoom={room} onExit={leaveOnline} />
       )}
       {showProfile && (
         <ProfileDialog profile={profile} onSave={updateProfile} onClose={() => setShowProfile(false)} />

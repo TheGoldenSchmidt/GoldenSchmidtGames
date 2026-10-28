@@ -95,12 +95,31 @@ try {
   }
   if (nextTurn.game.sheets[hostPlayerId].failedThrows !== 1) throw new Error("Fehlwurf wurde nicht gewertet");
 
+  const durakCreated = await emit<RoomState>(host, "room:create", { playerId: hostPlayerId, name: "Host" });
+  await emit<RoomState>(guest, "room:join", { code: durakCreated.code, playerId: guestPlayerId, name: "Gast" });
+  await emit<RoomState>(host, "room:configure", { gameId: "durak", playerCount: 2 });
+  await emit<RoomState>(host, "room:ready");
+  const durakStarted = await emit<RoomState>(guest, "room:ready");
+  if (!durakStarted.durakGame || durakStarted.durakGame.phase !== "attack") throw new Error("Durak wurde nicht gestartet");
+  if (durakStarted.durakGame.hands[guestPlayerId].length !== 6 || durakStarted.durakGame.hands[hostPlayerId].length !== 0) {
+    throw new Error("Verdeckte Online-Handkarten wurden nicht korrekt gefiltert");
+  }
+  const hostDurakState = await emit<RoomState>(host, "durak:state");
+  const attackerId = hostDurakState.durakGame!.attackerId;
+  const attackerSocket = attackerId === hostPlayerId ? host : guest;
+  const attackerState = attackerId === hostPlayerId ? hostDurakState : durakStarted;
+  const attackCard = attackerState.durakGame!.hands[attackerId][0];
+  const attacked = await emit<RoomState>(attackerSocket, "durak:attack", { cardId: attackCard.id });
+  if (attacked.durakGame?.phase !== "defend" || attacked.durakGame.table.length !== 1) {
+    throw new Error("Durak-Angriff wurde nicht synchronisiert");
+  }
+
   const hostMigrates = waitForRoom(guest, (room) => room.hostId === guestPlayerId);
   host.disconnect();
   const migrated = await hostMigrates;
   if (migrated.hostId !== guestPlayerId) throw new Error("Host-Wechsel fehlgeschlagen");
 
-  console.log(`Online-Integration erfolgreich: Raum ${created.code}, 2 Spieler, Qwixx-Start, Phasensync, Fehlwurf, Host-Wechsel`);
+  console.log(`Online-Integration erfolgreich: Qwixx und Durak, verdeckte Hände, Phasensync und Host-Wechsel`);
 } finally {
   host?.disconnect();
   guest?.disconnect();

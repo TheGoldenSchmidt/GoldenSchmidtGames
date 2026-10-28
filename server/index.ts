@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { Server } from "socket.io";
 import { getGame } from "../shared/games";
+import { attackDurak, createDurakGame, defendDurak, finishDurakBout, takeDurak, throwInDurak, transferDurak } from "../shared/durak";
 import {
   QWIXX_COLORS,
   createQwixxGame,
@@ -82,12 +83,33 @@ function createCode() {
   return code;
 }
 
-function publicRoom(room: RoomState): RoomState {
-  return structuredClone(room);
+function publicRoom(room: RoomState, viewerId?: string): RoomState {
+  const result = structuredClone(room);
+  if (result.durakGame) {
+    for (const playerId of result.durakGame.playerOrder) {
+      if (playerId !== viewerId) result.durakGame.hands[playerId] = [];
+    }
+    result.durakGame.deck = Array.from({ length: result.durakGame.deck.length }, (_, index) => ({
+      id: `hidden-${index}`,
+      suit: "clubs" as const,
+      rank: "6" as const
+    }));
+  }
+  return result;
 }
 
 function broadcast(room: RoomState) {
-  io.to(room.code).emit("room:updated", publicRoom(room));
+  for (const socketId of io.sockets.adapter.rooms.get(room.code) ?? []) {
+    const membership = socketMembership.get(socketId);
+    io.sockets.sockets.get(socketId)?.emit("room:updated", publicRoom(room, membership?.playerId));
+  }
+}
+
+function broadcastGameStarted(room: RoomState) {
+  for (const socketId of io.sockets.adapter.rooms.get(room.code) ?? []) {
+    const membership = socketMembership.get(socketId);
+    io.sockets.sockets.get(socketId)?.emit("game:started", publicRoom(room, membership?.playerId));
+  }
 }
 
 function connectedPlayers(room: RoomState) {
@@ -105,9 +127,11 @@ function startRoom(room: RoomState) {
   room.players.forEach((player) => {
     player.score = 0;
   });
-  room.game = createQwixxGame(players);
+  if (room.config.gameId === "qwixx") room.game = createQwixxGame(players);
+  else if (room.config.gameId === "durak") room.durakGame = createDurakGame(players);
+  else throw new Error("Dieses Spiel ist noch nicht verfügbar.");
   broadcast(room);
-  io.to(room.code).emit("game:started", publicRoom(room));
+  broadcastGameStarted(room);
 }
 
 function enterRoom(socketId: string, room: RoomState, playerId: string) {
@@ -117,6 +141,24 @@ function enterRoom(socketId: string, room: RoomState, playerId: string) {
 }
 
 io.on("connection", (socket) => {
+  function runDurakAction(
+    callback: (ack: Ack<RoomState>) => void,
+    action: (room: RoomState, playerId: string) => void
+  ) {
+    const membership = socketMembership.get(socket.id);
+    const room = membership ? rooms.get(membership.roomCode) : undefined;
+    if (!membership || !room || room.phase !== "playing" || !room.durakGame) {
+      return callback({ ok: false, error: "Die Durak-Partie ist nicht aktiv." });
+    }
+    try {
+      action(room, membership.playerId);
+      broadcast(room);
+      callback({ ok: true, data: publicRoom(room, membership.playerId) });
+    } catch (error) {
+      callback({ ok: false, error: error instanceof Error ? error.message : "Aktion nicht möglich." });
+    }
+  }
+
   socket.on(
     "room:create",
     (payload: { playerId?: string; name?: string }, callback: (ack: Ack<RoomState>) => void) => {
@@ -138,7 +180,7 @@ io.on("connection", (socket) => {
       };
       rooms.set(code, room);
       enterRoom(socket.id, room, playerId);
-      callback({ ok: true, data: publicRoom(room) });
+      callback({ ok: true, data: publicRoom(room, playerId) });
     }
   );
 
@@ -173,7 +215,7 @@ io.on("connection", (socket) => {
       }
 
       enterRoom(socket.id, room, playerId);
-      callback({ ok: true, data: publicRoom(room) });
+      callback({ ok: true, data: publicRoom(room, playerId) });
       broadcast(room);
     }
   );
@@ -200,7 +242,7 @@ io.on("connection", (socket) => {
         player.ready = false;
       });
       broadcast(room);
-      callback({ ok: true, data: publicRoom(room) });
+      callback({ ok: true, data: publicRoom(room, membership.playerId) });
     }
   );
 
@@ -213,10 +255,10 @@ io.on("connection", (socket) => {
     player.ready = !player.ready;
     if (allPlayersReady(room)) {
       startRoom(room);
-      return callback({ ok: true, data: publicRoom(room) });
+      return callback({ ok: true, data: publicRoom(room, membership?.playerId) });
     }
     broadcast(room);
-    callback({ ok: true, data: publicRoom(room) });
+    callback({ ok: true, data: publicRoom(room, membership?.playerId) });
   });
 
   socket.on("room:start", (callback: (ack: Ack<RoomState>) => void) => {
@@ -234,7 +276,7 @@ io.on("connection", (socket) => {
       });
     }
     startRoom(room);
-    callback({ ok: true, data: publicRoom(room) });
+    callback({ ok: true, data: publicRoom(room, membership.playerId) });
   });
 
   socket.on("qwixx:roll", (callback: (ack: Ack<RoomState>) => void) => {
@@ -246,7 +288,7 @@ io.on("connection", (socket) => {
     try {
       room.game = rollQwixx(room.game, membership.playerId);
       broadcast(room);
-      callback({ ok: true, data: publicRoom(room) });
+      callback({ ok: true, data: publicRoom(room, membership.playerId) });
     } catch (error) {
       callback({ ok: false, error: error instanceof Error ? error.message : "Würfeln nicht möglich." });
     }
@@ -267,7 +309,7 @@ io.on("connection", (socket) => {
       try {
         room.game = submitWhiteChoice(room.game, membership.playerId, color);
         broadcast(room);
-        callback({ ok: true, data: publicRoom(room) });
+        callback({ ok: true, data: publicRoom(room, membership.playerId) });
       } catch (error) {
         callback({ ok: false, error: error instanceof Error ? error.message : "Auswahl nicht möglich." });
       }
@@ -292,7 +334,7 @@ io.on("connection", (socket) => {
       try {
         room.game = submitColorChoice(room.game, membership.playerId, choice);
         broadcast(room);
-        callback({ ok: true, data: publicRoom(room) });
+        callback({ ok: true, data: publicRoom(room, membership.playerId) });
       } catch (error) {
         callback({ ok: false, error: error instanceof Error ? error.message : "Auswahl nicht möglich." });
       }
@@ -302,8 +344,51 @@ io.on("connection", (socket) => {
   socket.on("qwixx:state", (callback: (ack: Ack<RoomState>) => void) => {
     const membership = socketMembership.get(socket.id);
     const room = membership ? rooms.get(membership.roomCode) : undefined;
-    if (!room) return callback({ ok: false, error: "Du bist in keinem Raum." });
-    callback({ ok: true, data: publicRoom(room) });
+    if (!membership || !room) return callback({ ok: false, error: "Du bist in keinem Raum." });
+    callback({ ok: true, data: publicRoom(room, membership.playerId) });
+  });
+
+  socket.on("durak:attack", (payload: { cardId?: string }, callback: (ack: Ack<RoomState>) => void) => {
+    runDurakAction(callback, (room, playerId) => {
+      room.durakGame = attackDurak(room.durakGame!, playerId, payload.cardId ?? "");
+    });
+  });
+
+  socket.on("durak:defend", (payload: { attackCardId?: string; defenseCardId?: string }, callback: (ack: Ack<RoomState>) => void) => {
+    runDurakAction(callback, (room, playerId) => {
+      room.durakGame = defendDurak(room.durakGame!, playerId, payload.attackCardId ?? "", payload.defenseCardId ?? "");
+    });
+  });
+
+  socket.on("durak:transfer", (payload: { cardId?: string }, callback: (ack: Ack<RoomState>) => void) => {
+    runDurakAction(callback, (room, playerId) => {
+      room.durakGame = transferDurak(room.durakGame!, playerId, payload.cardId ?? "");
+    });
+  });
+
+  socket.on("durak:take", (callback: (ack: Ack<RoomState>) => void) => {
+    runDurakAction(callback, (room, playerId) => {
+      room.durakGame = takeDurak(room.durakGame!, playerId);
+    });
+  });
+
+  socket.on("durak:throw-in", (payload: { cardId?: string }, callback: (ack: Ack<RoomState>) => void) => {
+    runDurakAction(callback, (room, playerId) => {
+      room.durakGame = throwInDurak(room.durakGame!, playerId, payload.cardId ?? "");
+    });
+  });
+
+  socket.on("durak:finish-bout", (callback: (ack: Ack<RoomState>) => void) => {
+    runDurakAction(callback, (room, playerId) => {
+      room.durakGame = finishDurakBout(room.durakGame!, playerId);
+    });
+  });
+
+  socket.on("durak:state", (callback: (ack: Ack<RoomState>) => void) => {
+    const membership = socketMembership.get(socket.id);
+    const room = membership ? rooms.get(membership.roomCode) : undefined;
+    if (!membership || !room || !room.durakGame) return callback({ ok: false, error: "Die Durak-Partie ist nicht aktiv." });
+    callback({ ok: true, data: publicRoom(room, membership.playerId) });
   });
 
   socket.on("disconnect", () => {

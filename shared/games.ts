@@ -15,7 +15,7 @@ export const GAMES: GameDefinition[] = [
     shortDescription: "Angreifen, verteidigen und als Erster alle Karten loswerden.",
     minPlayers: 2,
     maxPlayers: 6,
-    status: "soon"
+    status: "ready"
   },
   {
     id: "binokel",
