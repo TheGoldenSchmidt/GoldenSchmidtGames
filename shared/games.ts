@@ -1,6 +1,7 @@
 import type { GameDefinition, GameId } from "./types";
 
 export const GAMES: GameDefinition[] = [
+  { id: "party", name: "Inselparty", shortDescription: "Eine Insel, Trophäen, Items und gemeinsame Minispiele.", minPlayers: 2, maxPlayers: 6, status: "ready" },
   {
     id: "qwixx",
     name: "Qwixx",

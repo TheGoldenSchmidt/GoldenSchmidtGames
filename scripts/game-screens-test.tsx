@@ -10,6 +10,9 @@ import { QwixxGameScreen } from "../src/screens/QwixxGameScreen";
 import { DurakGameScreen } from "../src/screens/DurakGameScreen";
 import type { RoomState } from "../shared/types";
 import { InstallPrompt } from "../src/components/InstallPrompt";
+import { PartyGameScreen } from "../src/screens/PartyGameScreen";
+import { createPartyGame, createPartyPractice, publicParty } from "../shared/party";
+import { PartyMini } from "../src/components/PartyMini";
 
 const players = [{ id: "a", name: "Anna" }, { id: "b", name: "Ben" }];
 // tsx verwendet außerhalb des Vite-Builds den klassischen JSX-Laufzeitpfad.
@@ -34,6 +37,12 @@ room.game = createQwixxGame(players); room.game.phase = "finished"; room.game.wi
 assert.match(renderToString(<QwixxGameScreen profile={profile} initialRoom={room} onExit={exit} />), /Fehlwürfe/);
 room.durakGame = createDurakGame(players); room.durakGame.phase = "finished"; room.durakGame.durakId = "b";
 assert.match(renderToString(<DurakGameScreen profile={profile} initialRoom={room} onExit={exit} />), /Ben ist der Durak/);
+room.partyGame=createPartyGame(players,{rounds:5},true,123);
+const partyStart=renderToString(<PartyGameScreen profile={profile} initialRoom={room} onExit={exit}/>);
+assert.match(partyStart,/Inselparty/);assert.match(partyStart,/Inselkarte/);assert.match(partyStart,/Trophäenstand/);
+room.partyGame.phase="finished";room.partyGame.winners=["a"];
+assert.match(renderToString(<PartyGameScreen profile={profile} initialRoom={room} onExit={exit}/>),/Die Insel feiert euch/);
+for(const id of ["targets","colors","memory","timing","trail","risk"] as const){const practice=createPartyPractice(id);assert.ok(renderToString(<PartyMini game={publicParty(practice,"practice")} id="practice" now={Date.now()} send={()=>{}}/>).length>100);}
 // Ohne beforeinstallprompt muss die Installationshilfe trotzdem erreichbar bleiben.
 const originalNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");
 const originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");

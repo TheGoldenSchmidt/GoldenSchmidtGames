@@ -1,12 +1,13 @@
 import express from "express";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
-import { randomInt } from "node:crypto";
+import { randomInt, randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { Server } from "socket.io";
 import { getGame } from "../shared/games";
+import { applyPartyAction, createPartyGame, partyOptions, publicParty, tickParty, type PartyAction, type PartyOptions } from "../shared/party";
 import { createKribbelnGame, rollKribbeln, submitKribbeln } from "../shared/kribbeln";
 import { accuseDurak, attackDurak, cheatDefendDurak, cheatThrowInDurak, createDurakGame, defendDurak, finishDurakBout, takeDurak, throwInDurak, transferDurak } from "../shared/durak";
 import {
@@ -38,6 +39,7 @@ export function createSpielraumServer() {
 
 const rooms = new Map<string, RoomState>();
 const socketMembership = new Map<string, { roomCode: string; playerId: string }>();
+const partyTokens = new Map<string, Map<string, string>>();
 
 app.get("/api/health", (_request, response) => {
   response.json({ ok: true, version: "0.1.0", rooms: rooms.size });
@@ -86,6 +88,8 @@ function createCode() {
 
 function publicRoom(room: RoomState, viewerId?: string): RoomState {
   const result = structuredClone(room);
+  if (room.partyGame) result.partyGame = publicParty(room.partyGame, viewerId ?? "");
+  if (viewerId) result.partyToken = partyTokens.get(room.code)?.get(viewerId);
   if (result.durakGame) {
     for (const pair of result.durakGame.table) {
       delete pair.attackIllegal;
@@ -135,6 +139,10 @@ function startRoom(room: RoomState) {
   if (room.config.gameId === "qwixx") room.game = createQwixxGame(players);
   else if (room.config.gameId === "durak") room.durakGame = createDurakGame(players, Math.random, room.config.durakCheatMode ?? false);
   else if (room.config.gameId === "kribbeln") room.kribbelnGame = createKribbelnGame(players);
+  else if (room.config.gameId === "party") {
+    room.partyGame = createPartyGame(players, room.config.party, true, randomInt(0x100000000));
+    partyTokens.set(room.code, new Map(players.map(p => [p.id, randomUUID()])));
+  }
   else throw new Error("Dieses Spiel ist noch nicht verfügbar.");
   broadcast(room);
   broadcastGameStarted(room);
@@ -147,6 +155,16 @@ function enterRoom(socketId: string, room: RoomState, playerId: string) {
 }
 
 io.on("connection", (socket) => {
+  socket.on("party:action", (payload: { seq?: number; phaseId?: number; token?: string; action?: PartyAction }, callback: (ack: Ack<RoomState>) => void) => {
+    const member=socketMembership.get(socket.id),room=member?rooms.get(member.roomCode):undefined,g=room?.partyGame;
+    if(!member||!room||!g||payload?.token!==partyTokens.get(room.code)?.get(member.playerId))return callback({ok:false,error:"Die Inselparty-Sitzung ist nicht gültig."});
+    if(!Number.isSafeInteger(payload.seq)||payload.seq!<1||!payload.action)return callback({ok:false,error:"Ungültige Aktion."});
+    if(payload.seq! <= (g.seq[member.playerId]??0))return callback({ok:true,data:publicRoom(room,member.playerId)});
+    if(payload.phaseId!==g.phaseId)return callback({ok:false,error:"Der Spielzug hat sich geändert. Bitte erneut wählen."});
+    if((payload.action.type==="resume"||payload.action.type==="abort")&&room.hostId!==member.playerId)return callback({ok:false,error:"Nur der Host kann fortsetzen oder abbrechen."});
+    try {room.partyGame=applyPartyAction(g,member.playerId,payload.action);room.partyGame.seq[member.playerId]=payload.seq!;broadcast(room);callback({ok:true,data:publicRoom(room,member.playerId)});}
+    catch(error){callback({ok:false,error:error instanceof Error?error.message:"Aktion nicht möglich."});}
+  });
   socket.on("kribbeln:roll", (payload: { keep?: number[] }, callback: (ack: Ack<RoomState>) => void) => {
     const member = socketMembership.get(socket.id);
     const room = member ? rooms.get(member.roomCode) : undefined;
@@ -208,13 +226,14 @@ io.on("connection", (socket) => {
   socket.on(
     "room:join",
     (
-      payload: { code?: string; playerId?: string; name?: string },
+      payload: { code?: string; playerId?: string; name?: string; partyToken?: string },
       callback: (ack: Ack<RoomState>) => void
     ) => {
       const code = cleanName(payload?.code, "").toUpperCase();
       const room = rooms.get(code);
       if (!room) return callback({ ok: false, error: "Dieser Raum wurde nicht gefunden." });
       const playerId = cleanPlayerId(payload?.playerId);
+      if(room.partyGame&&payload.partyToken!==partyTokens.get(code)?.get(playerId))return callback({ok:false,error:"Diese Inselparty kann nur mit der ursprünglichen Sitzung fortgesetzt werden."});
       if (room.phase !== "lobby") {
         const returning = room.players.some((player) => player.id === playerId);
         if (!returning) return callback({ ok: false, error: "Die Partie läuft bereits." });
@@ -236,6 +255,7 @@ io.on("connection", (socket) => {
       }
 
       enterRoom(socket.id, room, playerId);
+      if(room.partyGame){delete room.partyGame.disconnected[playerId];if(!Object.keys(room.partyGame.disconnected).length&&room.partyGame.pausedAt){const pause=Date.now()-room.partyGame.pausedAt;if(room.partyGame.deadline)room.partyGame.deadline+=pause;if(room.partyGame.mini?.startAt)room.partyGame.mini.startAt+=pause;room.partyGame.pausedAt=0;room.partyGame.resumeOffered=false;}}
       callback({ ok: true, data: publicRoom(room, playerId) });
       broadcast(room);
     }
@@ -244,7 +264,7 @@ io.on("connection", (socket) => {
   socket.on(
     "room:configure",
     (
-      payload: { gameId?: GameId; playerCount?: number; durakCheatMode?: boolean },
+      payload: { gameId?: GameId; playerCount?: number; durakCheatMode?: boolean; party?: Partial<PartyOptions> },
       callback: (ack: Ack<RoomState>) => void
     ) => {
       const membership = socketMembership.get(socket.id);
@@ -253,12 +273,19 @@ io.on("connection", (socket) => {
       if (room.hostId !== membership.playerId) {
         return callback({ ok: false, error: "Nur der Host kann das Spiel einstellen." });
       }
-      const game = getGame(payload.gameId ?? room.config.gameId);
+      if(room.phase!=="lobby")return callback({ok:false,error:"Die Partie läuft bereits."});
+      let options: PartyOptions;
+      try { options=partyOptions(payload.party??room.config.party); } catch {return callback({ok:false,error:"Ungültige Inselparty-Einstellungen."});}
+      let game;
+      try { game=getGame(payload?.gameId??room.config.gameId); } catch {return callback({ok:false,error:"Unbekanntes Spiel."});}
+      if(game.status!=="ready")return callback({ok:false,error:"Dieses Spiel ist noch nicht verfügbar."});
       const requestedCount = Number(payload.playerCount ?? room.config.playerCount);
+      if(!Number.isInteger(requestedCount))return callback({ok:false,error:"Ungültige Spielerzahl."});
       room.config = {
         gameId: game.id,
         playerCount: Math.max(game.minPlayers, Math.min(game.maxPlayers, requestedCount)),
-        durakCheatMode: game.id === "durak" ? Boolean(payload.durakCheatMode ?? room.config.durakCheatMode) : false
+        durakCheatMode: game.id === "durak" ? Boolean(payload.durakCheatMode ?? room.config.durakCheatMode) : false,
+        party: options
       };
       room.players.forEach((player) => {
         player.ready = false;
@@ -435,11 +462,13 @@ io.on("connection", (socket) => {
     const membership = socketMembership.get(socket.id);
     socketMembership.delete(socket.id);
     if (!membership) return;
+    if([...socketMembership.values()].some(m=>m.roomCode===membership.roomCode&&m.playerId===membership.playerId))return;
     const room = rooms.get(membership.roomCode);
     const player = room?.players.find((entry) => entry.id === membership.playerId);
     if (!room || !player) return;
 
     player.connected = false;
+    if(room.partyGame&&!room.partyGame.players.find(p=>p.id===player.id)?.passive){room.partyGame.disconnected[player.id]=Date.now();if(!room.partyGame.pausedAt)room.partyGame.pausedAt=Date.now();}
     player.ready = false;
     const connectedPlayers = room.players.filter((entry) => entry.connected);
     if (room.hostId === player.id && connectedPlayers.length > 0) {
@@ -451,11 +480,13 @@ io.on("connection", (socket) => {
       const currentRoom = rooms.get(room.code);
       if (!currentRoom) return;
       const stillConnected = currentRoom.players.some((entry) => entry.connected);
-      if (!stillConnected) rooms.delete(currentRoom.code);
+      if (!stillConnected) {rooms.delete(currentRoom.code);partyTokens.delete(currentRoom.code);}
     }, 5 * 60 * 1000).unref();
   });
 });
 
+  const partyClock=setInterval(()=>{for(const room of rooms.values())if(room.partyGame&&!['finished','aborted'].includes(room.partyGame.phase)){room.partyGame=tickParty(room.partyGame);broadcast(room);}},250);
+  partyClock.unref();
   return {
     app,
     httpServer,
@@ -469,6 +500,7 @@ io.on("connection", (socket) => {
       });
     },
     close() {
+      clearInterval(partyClock);
       return new Promise<void>((resolve) => io.close(() => resolve()));
     }
   };

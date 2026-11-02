@@ -2,19 +2,22 @@ import { useMemo, useState } from "react";
 import { GAMES, getGame } from "../../shared/games";
 import type { GameId } from "../../shared/types";
 import { ScreenHeader } from "../components/ScreenHeader";
+import { PartySettings } from "../components/PartySettings";
+import { PARTY_DEFAULTS, type PartyOptions } from "../../shared/party";
 
 export function LocalSetupScreen({
   onBack,
   onStart
 }: {
   onBack: () => void;
-  onStart: (gameId: GameId, names: string[], options?: { durakCheatMode: boolean }) => void;
+  onStart: (gameId: GameId, names: string[], options?: { durakCheatMode: boolean; party?: PartyOptions }) => void;
 }) {
   const [gameId, setGameId] = useState<GameId>("qwixx");
   const game = getGame(gameId);
   const [count, setCount] = useState(2);
   const [names, setNames] = useState(["Spieler 1", "Spieler 2"]);
   const [durakCheatMode, setDurakCheatMode] = useState(false);
+  const [party,setParty]=useState(PARTY_DEFAULTS);
 
   const visibleNames = useMemo(
     () => Array.from({ length: count }, (_, index) => names[index] ?? `Spieler ${index + 1}`),
@@ -47,7 +50,7 @@ export function LocalSetupScreen({
               }}
             >
               <span className={`game-choice__tile game-choice__tile--${entry.id}`} aria-hidden="true">
-                {entry.id === "qwixx" ? "2–12" : entry.id === "durak" ? "♠" : entry.id === "kribbeln" ? "⚄" : "B"}
+                {entry.id === "qwixx" ? "2–12" : entry.id === "durak" ? "♠" : entry.id === "kribbeln" ? "⚄" : entry.id === "party" ? "⚑" : "B"}
               </span>
               <span>
                 <strong>{entry.name}{entry.status === "soon" && <em>Bald</em>}</strong>
@@ -88,6 +91,7 @@ export function LocalSetupScreen({
           ))}
         </div>
 
+        {gameId === "party" && <PartySettings value={party} onChange={setParty}/>}
         {gameId === "durak" && (
           <label className="option-toggle">
             <span><strong>Schummelmodus</strong><small>Erlaubt bewusst falsches Decken und Nachlegen mit Verdachtsmeldungen.</small></span>
@@ -96,7 +100,7 @@ export function LocalSetupScreen({
         )}
       </section>
       <div className="sticky-action">
-        <button className="button button--primary button--wide" onClick={() => onStart(gameId, visibleNames.map((name, index) => name.trim() || `Spieler ${index + 1}`), { durakCheatMode })}>
+        <button className="button button--primary button--wide" onClick={() => onStart(gameId, visibleNames.map((name, index) => name.trim() || `Spieler ${index + 1}`), { durakCheatMode, party })}>
           {game.name} starten
         </button>
       </div>

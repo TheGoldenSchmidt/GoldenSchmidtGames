@@ -3,6 +3,8 @@ import { GAMES, getGame } from "../../shared/games";
 import type { GameId, GuestProfile, RoomState } from "../../shared/types";
 import { ScreenHeader } from "../components/ScreenHeader";
 import { socket } from "../lib/socket";
+import { PartySettings } from "../components/PartySettings";
+import type { PartyOptions } from "../../shared/party";
 
 export function RoomScreen({
   profile,
@@ -39,8 +41,8 @@ export function RoomScreen({
     };
   }, [onGameStart]);
 
-  function configure(gameId: GameId, playerCount: number, durakCheatMode = room.config.durakCheatMode ?? false) {
-    socket.emit("room:configure", { gameId, playerCount, durakCheatMode }, (response: { ok: boolean; error?: string }) => {
+  function configure(gameId: GameId, playerCount: number, durakCheatMode = room.config.durakCheatMode ?? false, party:PartyOptions|undefined=room.config.party) {
+    socket.emit("room:configure", { gameId, playerCount, durakCheatMode, party }, (response: { ok: boolean; error?: string }) => {
       if (!response.ok) setError(response.error ?? "Einstellung konnte nicht gespeichert werden.");
     });
   }
@@ -117,6 +119,7 @@ export function RoomScreen({
           </label>
         </div>
 
+        {room.config.gameId === "party" && <PartySettings value={room.config.party} disabled={!isHost} onChange={value=>configure("party",room.config.playerCount,false,value)}/>}
         {room.config.gameId === "durak" && (
           <label className="option-toggle">
             <span><strong>Schummelmodus</strong><small>Regelwidrig decken oder nachlegen – auf eigenes Risiko.</small></span>

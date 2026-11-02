@@ -13,11 +13,12 @@
     "generate:icons": "tsx scripts/generate-icons.ts",
     "prebuild": "npm run generate:icons",
     "build": "tsc --noEmit && vite build",
-    "test:rules": "tsx scripts/qwixx-rules-test.ts && tsx scripts/durak-rules-test.ts && tsx scripts/kribbeln-rules-test.ts && tsx scripts/game-edge-cases-test.ts",
-    "test:online": "tsx scripts/integration-test.ts",
+    "test:rules": "tsx scripts/qwixx-rules-test.ts && tsx scripts/durak-rules-test.ts && tsx scripts/kribbeln-rules-test.ts && tsx scripts/game-edge-cases-test.ts && tsx scripts/party-rules-test.ts",
+    "test:online": "tsx scripts/integration-test.ts && tsx scripts/party-online-test.ts",
     "test:production": "tsx scripts/production-smoke-test.ts",
     "test:screens": "tsx --tsconfig tsconfig.json scripts/game-screens-test.tsx",
     "test:pwa": "tsx scripts/pwa-update-test.ts",
+    "test:browser": "playwright test",
     "preview": "vite preview --host 0.0.0.0",
     "start": "tsx server/index.ts"
   },
@@ -30,6 +31,7 @@
     "tsx": "^4.20.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@types/express": "^5.0.3",
     "@types/node": "^24.5.2",
     "@types/react": "^19.1.16",
