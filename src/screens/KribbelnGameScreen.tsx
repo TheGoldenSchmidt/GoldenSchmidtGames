@@ -23,7 +23,7 @@ export function KribbelnGameScreen({ profile, localNames, initialRoom, onExit }:
   if (!game) return <main className="page"><p>Partie wird geladen …</p><button onClick={onExit}>Zurück</button></main>;
   const active = game.order[game.playerIndex];
   const canAct = !online || active === profile.id;
-  const row = KRIBBEL_ROWS[game.row];
+  const row = KRIBBEL_ROWS[Math.min(game.row, KRIBBEL_ROWS.length - 1)];
   const sum = game.dice.reduce((total, die) => total + die.value, 0);
   const met = kribbelTaskMet(row.task, game.dice);
   function action(event: "roll" | "submit", payload: { keep: number[] } | { choice: "score" | "skip" | "fallback" }) {

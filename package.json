@@ -16,6 +16,7 @@
     "test:rules": "tsx scripts/qwixx-rules-test.ts && tsx scripts/durak-rules-test.ts && tsx scripts/kribbeln-rules-test.ts && tsx scripts/game-edge-cases-test.ts",
     "test:online": "tsx scripts/integration-test.ts",
     "test:production": "tsx scripts/production-smoke-test.ts",
+    "test:screens": "tsx --tsconfig tsconfig.json scripts/game-screens-test.tsx",
     "preview": "vite preview --host 0.0.0.0",
     "start": "tsx server/index.ts"
   },
