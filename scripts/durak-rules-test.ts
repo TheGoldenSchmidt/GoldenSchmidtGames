@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import {
   attackDurak,
+  accuseDurak,
   canBeatDurak,
   canTransferDurak,
   createDurakGame,
+  cheatDefendDurak,
   defendDurak,
   finishDurakBout,
   takeDurak,
@@ -46,6 +48,9 @@ function transferState(): DurakGameState {
     defenderTakes: false,
     finishedPlayerIds: [],
     durakId: null,
+    cheatMode: true,
+    cheatBannedPlayerIds: [],
+    accusationUsedPlayerIds: [],
     log: []
   };
 }
@@ -77,4 +82,18 @@ assert.equal(canTransferDurak(twoPlayerAttack, "p2", "hearts-6"), true, "Weiters
 const transferredBack = transferDurak(twoPlayerAttack, "p2", "hearts-6");
 assert.equal(transferredBack.defenderId, "p1", "Beim Duell geht der Angriff an den ursprünglichen Angreifer zurück");
 
-console.log("Durak-Regeltests erfolgreich: Karten, Trumpf, Angriff, Decken, Aufnehmen und Weiterschieben");
+let cheated = attackDurak(transferState(), "p1", "clubs-6");
+cheated = cheatDefendDurak(cheated, "p2", "clubs-6", "clubs-9");
+assert.equal(cheated.table[0].defenseIllegal, false, "Eine reguläre Karte bleibt auch über den Schummelknopf legal");
+
+const illegalState = transferState();
+illegalState.hands.p2 = [card("diamonds", "8"), card("hearts", "6")];
+illegalState.handCounts.p2 = 2;
+let illegalDefense = attackDurak(illegalState, "p1", "clubs-6");
+illegalDefense = cheatDefendDurak(illegalDefense, "p2", "clubs-6", "diamonds-8");
+assert.equal(illegalDefense.table[0].defenseIllegal, true, "Eine falsche Abwehr wird serverseitig als Schummelei markiert");
+const caught = accuseDurak(illegalDefense, "p1", "diamonds-8");
+assert.equal(caught.cheatBannedPlayerIds.includes("p2"), true, "Erwischte Spieler dürfen nicht erneut schummeln");
+assert.equal(caught.table.length, 0, "Nach richtigem Verdacht nimmt der Schummler den Tisch");
+
+console.log("Durak-Regeltests erfolgreich: Karten, Trumpf, Angriff, Decken, Aufnehmen, Weiterschieben und Schummelmodus");

@@ -40,6 +40,10 @@ export interface DurakCard {
 export interface DurakTablePair {
   attack: DurakCard;
   defense?: DurakCard;
+  attackPlayedBy: string;
+  defensePlayedBy?: string;
+  attackIllegal?: boolean;
+  defenseIllegal?: boolean;
 }
 
 export interface DurakGameState {
@@ -58,6 +62,9 @@ export interface DurakGameState {
   defenderTakes: boolean;
   finishedPlayerIds: string[];
   durakId: string | null;
+  cheatMode: boolean;
+  cheatBannedPlayerIds: string[];
+  accusationUsedPlayerIds: string[];
   log: string[];
 }
 
@@ -81,6 +88,7 @@ export interface Player {
 export interface RoomConfig {
   gameId: GameId;
   playerCount: number;
+  durakCheatMode?: boolean;
 }
 
 export interface RoomState {

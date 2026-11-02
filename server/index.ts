@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { Server } from "socket.io";
 import { getGame } from "../shared/games";
-import { attackDurak, createDurakGame, defendDurak, finishDurakBout, takeDurak, throwInDurak, transferDurak } from "../shared/durak";
+import { accuseDurak, attackDurak, cheatDefendDurak, cheatThrowInDurak, createDurakGame, defendDurak, finishDurakBout, takeDurak, throwInDurak, transferDurak } from "../shared/durak";
 import {
   QWIXX_COLORS,
   createQwixxGame,
@@ -86,6 +86,10 @@ function createCode() {
 function publicRoom(room: RoomState, viewerId?: string): RoomState {
   const result = structuredClone(room);
   if (result.durakGame) {
+    for (const pair of result.durakGame.table) {
+      delete pair.attackIllegal;
+      delete pair.defenseIllegal;
+    }
     for (const playerId of result.durakGame.playerOrder) {
       if (playerId !== viewerId) result.durakGame.hands[playerId] = [];
     }
@@ -128,7 +132,7 @@ function startRoom(room: RoomState) {
     player.score = 0;
   });
   if (room.config.gameId === "qwixx") room.game = createQwixxGame(players);
-  else if (room.config.gameId === "durak") room.durakGame = createDurakGame(players);
+  else if (room.config.gameId === "durak") room.durakGame = createDurakGame(players, Math.random, room.config.durakCheatMode ?? false);
   else throw new Error("Dieses Spiel ist noch nicht verfügbar.");
   broadcast(room);
   broadcastGameStarted(room);
@@ -175,7 +179,7 @@ io.on("connection", (socket) => {
         code,
         hostId: playerId,
         players: [player],
-        config: { gameId: "qwixx", playerCount: 2 },
+        config: { gameId: "qwixx", playerCount: 2, durakCheatMode: false },
         phase: "lobby"
       };
       rooms.set(code, room);
@@ -223,7 +227,7 @@ io.on("connection", (socket) => {
   socket.on(
     "room:configure",
     (
-      payload: { gameId?: GameId; playerCount?: number },
+      payload: { gameId?: GameId; playerCount?: number; durakCheatMode?: boolean },
       callback: (ack: Ack<RoomState>) => void
     ) => {
       const membership = socketMembership.get(socket.id);
@@ -236,7 +240,8 @@ io.on("connection", (socket) => {
       const requestedCount = Number(payload.playerCount ?? room.config.playerCount);
       room.config = {
         gameId: game.id,
-        playerCount: Math.max(game.minPlayers, Math.min(game.maxPlayers, requestedCount))
+        playerCount: Math.max(game.minPlayers, Math.min(game.maxPlayers, requestedCount)),
+        durakCheatMode: game.id === "durak" ? Boolean(payload.durakCheatMode ?? room.config.durakCheatMode) : false
       };
       room.players.forEach((player) => {
         player.ready = false;
@@ -381,6 +386,24 @@ io.on("connection", (socket) => {
   socket.on("durak:finish-bout", (callback: (ack: Ack<RoomState>) => void) => {
     runDurakAction(callback, (room, playerId) => {
       room.durakGame = finishDurakBout(room.durakGame!, playerId);
+    });
+  });
+
+  socket.on("durak:cheat-defend", (payload: { attackCardId?: string; defenseCardId?: string }, callback: (ack: Ack<RoomState>) => void) => {
+    runDurakAction(callback, (room, playerId) => {
+      room.durakGame = cheatDefendDurak(room.durakGame!, playerId, payload.attackCardId ?? "", payload.defenseCardId ?? "");
+    });
+  });
+
+  socket.on("durak:cheat-throw-in", (payload: { cardId?: string }, callback: (ack: Ack<RoomState>) => void) => {
+    runDurakAction(callback, (room, playerId) => {
+      room.durakGame = cheatThrowInDurak(room.durakGame!, playerId, payload.cardId ?? "");
+    });
+  });
+
+  socket.on("durak:accuse", (payload: { cardId?: string }, callback: (ack: Ack<RoomState>) => void) => {
+    runDurakAction(callback, (room, playerId) => {
+      room.durakGame = accuseDurak(room.durakGame!, playerId, payload.cardId ?? "");
     });
   });
 

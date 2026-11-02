@@ -8,12 +8,13 @@ export function LocalSetupScreen({
   onStart
 }: {
   onBack: () => void;
-  onStart: (gameId: GameId, names: string[]) => void;
+  onStart: (gameId: GameId, names: string[], options?: { durakCheatMode: boolean }) => void;
 }) {
   const [gameId, setGameId] = useState<GameId>("qwixx");
   const game = getGame(gameId);
   const [count, setCount] = useState(2);
   const [names, setNames] = useState(["Spieler 1", "Spieler 2"]);
+  const [durakCheatMode, setDurakCheatMode] = useState(false);
 
   const visibleNames = useMemo(
     () => Array.from({ length: count }, (_, index) => names[index] ?? `Spieler ${index + 1}`),
@@ -86,9 +87,16 @@ export function LocalSetupScreen({
             </label>
           ))}
         </div>
+
+        {gameId === "durak" && (
+          <label className="option-toggle">
+            <span><strong>Schummelmodus</strong><small>Erlaubt bewusst falsches Decken und Nachlegen mit Verdachtsmeldungen.</small></span>
+            <input type="checkbox" checked={durakCheatMode} onChange={(event) => setDurakCheatMode(event.target.checked)} />
+          </label>
+        )}
       </section>
       <div className="sticky-action">
-        <button className="button button--primary button--wide" onClick={() => onStart(gameId, visibleNames.map((name, index) => name.trim() || `Spieler ${index + 1}`))}>
+        <button className="button button--primary button--wide" onClick={() => onStart(gameId, visibleNames.map((name, index) => name.trim() || `Spieler ${index + 1}`), { durakCheatMode })}>
           {game.name} starten
         </button>
       </div>

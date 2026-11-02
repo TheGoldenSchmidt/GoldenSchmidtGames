@@ -97,10 +97,11 @@ try {
 
   const durakCreated = await emit<RoomState>(host, "room:create", { playerId: hostPlayerId, name: "Host" });
   await emit<RoomState>(guest, "room:join", { code: durakCreated.code, playerId: guestPlayerId, name: "Gast" });
-  await emit<RoomState>(host, "room:configure", { gameId: "durak", playerCount: 2 });
+  await emit<RoomState>(host, "room:configure", { gameId: "durak", playerCount: 2, durakCheatMode: true });
   await emit<RoomState>(host, "room:ready");
   const durakStarted = await emit<RoomState>(guest, "room:ready");
   if (!durakStarted.durakGame || durakStarted.durakGame.phase !== "attack") throw new Error("Durak wurde nicht gestartet");
+  if (!durakStarted.durakGame.cheatMode) throw new Error("Der optionale Schummelmodus wurde nicht übernommen");
   if (durakStarted.durakGame.hands[guestPlayerId].length !== 6 || durakStarted.durakGame.hands[hostPlayerId].length !== 0) {
     throw new Error("Verdeckte Online-Handkarten wurden nicht korrekt gefiltert");
   }

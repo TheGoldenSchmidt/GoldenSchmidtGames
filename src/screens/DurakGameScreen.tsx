@@ -3,10 +3,13 @@ import {
   DURAK_RANKS,
   DURAK_SUIT_NAMES,
   DURAK_SUIT_SYMBOLS,
+  accuseDurak,
   attackDurak,
   canBeatDurak,
   canThrowInDurak,
   canTransferDurak,
+  cheatDefendDurak,
+  cheatThrowInDurak,
   createDurakGame,
   defendDurak,
   finishDurakBout,
@@ -36,16 +39,17 @@ function actorId(game: DurakGameState) {
   return game.phase === "defend" ? game.defenderId : game.attackerId;
 }
 
-export function DurakGameScreen({ profile, localNames, initialRoom, onExit }: {
+export function DurakGameScreen({ profile, localNames, initialRoom, cheatMode = false, onExit }: {
   profile: GuestProfile;
   localNames?: string[];
   initialRoom?: RoomState;
+  cheatMode?: boolean;
   onExit: () => void;
 }) {
   const online = Boolean(initialRoom);
   const [room, setRoom] = useState(initialRoom);
   const [localGame, setLocalGame] = useState<DurakGameState | undefined>(() => localNames
-    ? createDurakGame(localNames.map((name, index) => ({ id: `local-${index}`, name })))
+    ? createDurakGame(localNames.map((name, index) => ({ id: `local-${index}`, name })), Math.random, cheatMode)
     : undefined);
   const [selectedCardId, setSelectedCardId] = useState("");
   const [selectedAttackId, setSelectedAttackId] = useState("");
@@ -95,7 +99,7 @@ export function DurakGameScreen({ profile, localNames, initialRoom, onExit }: {
 
   function updateLocal(action: (current: DurakGameState) => DurakGameState) {
     setError("");
-    try { setLocalGame((current) => current ? action(current) : current); }
+    try { if (localGame) setLocalGame(action(localGame)); }
     catch (cause) { setError(cause instanceof Error ? cause.message : "Aktion nicht möglich."); }
   }
 
@@ -135,6 +139,26 @@ export function DurakGameScreen({ profile, localNames, initialRoom, onExit }: {
     online ? send("durak:finish-bout") : updateLocal((current) => finishDurakBout(current, viewerId));
   }
 
+  function cheatDefend() {
+    if (!selectedCard || !targetAttack) return;
+    online
+      ? send("durak:cheat-defend", { attackCardId: targetAttack.id, defenseCardId: selectedCard.id })
+      : updateLocal((current) => cheatDefendDurak(current, viewerId, targetAttack.id, selectedCard.id));
+  }
+
+  function cheatThrowIn() {
+    if (!selectedCard) return;
+    online
+      ? send("durak:cheat-throw-in", { cardId: selectedCard.id })
+      : updateLocal((current) => cheatThrowInDurak(current, viewerId, selectedCard.id));
+  }
+
+  function accuse(cardId: string) {
+    online
+      ? send("durak:accuse", { cardId })
+      : updateLocal((current) => accuseDurak(current, viewerId, cardId));
+  }
+
   function phaseText() {
     if (activeGame.phase === "finished") return activeGame.durakId ? `${activeGame.playerNames[activeGame.durakId]} ist der Durak.` : "Unentschieden – niemand ist der Durak.";
     if (!isActor) return `Warte auf ${activeGame.playerNames[actorId(activeGame)]} …`;
@@ -163,9 +187,11 @@ export function DurakGameScreen({ profile, localNames, initialRoom, onExit }: {
 
       <section className="durak-status">
         <div className="durak-trump"><small>Trumpf</small><strong>{DURAK_SUIT_SYMBOLS[game.trumpSuit]}</strong></div>
-        <div><strong>{game.playerNames[viewerId] ?? "Zuschauer"}</strong><p>{phaseText()}</p></div>
+        <div><strong>{game.playerNames[viewerId] ?? "Zuschauer"}{game.cheatMode && <em className="cheat-badge">Schummeln an</em>}</strong><p>{phaseText()}</p></div>
         <div className="durak-deck"><strong>{game.deck.length}</strong><small>Karten</small></div>
       </section>
+
+      {game.log.length > 0 && <p className="durak-event" role="status">{game.log[game.log.length - 1]}</p>}
 
       <section className="durak-players" aria-label="Spieler">
         {game.playerOrder.map((id) => (
@@ -188,6 +214,12 @@ export function DurakGameScreen({ profile, localNames, initialRoom, onExit }: {
           >
             <Card card={pair.attack} />
             {pair.defense && <span className="durak-defense"><Card card={pair.defense} /></span>}
+            {game.cheatMode && !game.accusationUsedPlayerIds.includes(viewerId) && (
+              <span className="durak-accusations">
+                {pair.attackPlayedBy !== viewerId && <button onClick={(event) => { event.stopPropagation(); accuse(pair.attack.id); }}>Angriff melden</button>}
+                {pair.defense && pair.defensePlayedBy !== viewerId && <button onClick={(event) => { event.stopPropagation(); accuse(pair.defense!.id); }}>Abwehr melden</button>}
+              </span>
+            )}
           </div>
         ))}
       </section>
@@ -208,10 +240,12 @@ export function DurakGameScreen({ profile, localNames, initialRoom, onExit }: {
             {canDefend && <>
               <button className="button button--primary" disabled={!selectedCard || !targetAttack || !canBeatDurak(targetAttack, selectedCard, game.trumpSuit)} onClick={defend}>Decken</button>
               <button className="button button--secondary" disabled={!selectedCard || !canTransferDurak(game, viewerId, selectedCard.id)} onClick={transfer}>Weiterschieben</button>
+              {game.cheatMode && !game.cheatBannedPlayerIds.includes(viewerId) && selectedCard && targetAttack && !canBeatDurak(targetAttack, selectedCard, game.trumpSuit) && <button className="button button--danger" onClick={cheatDefend}>Schummeln: Decken</button>}
               <button className="button button--ghost" onClick={take}>Aufnehmen</button>
             </>}
             {canThrow && <>
               <button className="button button--secondary" disabled={!selectedCard || !canThrowInDurak(game, viewerId, selectedCard.id)} onClick={throwIn}>Nachlegen</button>
+              {game.cheatMode && !game.cheatBannedPlayerIds.includes(viewerId) && selectedCard && !canThrowInDurak(game, viewerId, selectedCard.id) && game.table.length < game.maxAttackCards && <button className="button button--danger" onClick={cheatThrowIn}>Schummeln: Nachlegen</button>}
               <button className="button button--primary" onClick={finishBout}>Runde beenden</button>
             </>}
           </div>

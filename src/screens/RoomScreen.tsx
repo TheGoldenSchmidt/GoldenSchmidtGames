@@ -39,8 +39,8 @@ export function RoomScreen({
     };
   }, [onGameStart]);
 
-  function configure(gameId: GameId, playerCount: number) {
-    socket.emit("room:configure", { gameId, playerCount }, (response: { ok: boolean; error?: string }) => {
+  function configure(gameId: GameId, playerCount: number, durakCheatMode = room.config.durakCheatMode ?? false) {
+    socket.emit("room:configure", { gameId, playerCount, durakCheatMode }, (response: { ok: boolean; error?: string }) => {
       if (!response.ok) setError(response.error ?? "Einstellung konnte nicht gespeichert werden.");
     });
   }
@@ -116,6 +116,18 @@ export function RoomScreen({
             </select>
           </label>
         </div>
+
+        {room.config.gameId === "durak" && (
+          <label className="option-toggle">
+            <span><strong>Schummelmodus</strong><small>Regelwidrig decken oder nachlegen – auf eigenes Risiko.</small></span>
+            <input
+              type="checkbox"
+              checked={room.config.durakCheatMode ?? false}
+              disabled={!isHost}
+              onChange={(event) => configure("durak", room.config.playerCount, event.target.checked)}
+            />
+          </label>
+        )}
 
         <button
           className={`button button--wide ${currentPlayerReady ? "button--secondary" : "button--primary"}`}

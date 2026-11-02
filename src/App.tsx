@@ -20,6 +20,7 @@ export default function App() {
   const [room, setRoom] = useState<RoomState>();
   const [localNames, setLocalNames] = useState<string[]>([]);
   const [localGameId, setLocalGameId] = useState<GameId>("qwixx");
+  const [localDurakCheatMode, setLocalDurakCheatMode] = useState(false);
 
   useEffect(() => {
     const updateOnline = () => setOnline(navigator.onLine);
@@ -63,9 +64,10 @@ export default function App() {
       {view === "local-setup" && (
         <LocalSetupScreen
           onBack={() => setView("home")}
-          onStart={(gameId, names) => {
+          onStart={(gameId, names, options) => {
             setLocalGameId(gameId);
             setLocalNames(names);
+            setLocalDurakCheatMode(options?.durakCheatMode ?? false);
             setView("game-local");
           }}
         />
@@ -91,7 +93,7 @@ export default function App() {
       {view === "game-local" && (
         localGameId === "qwixx"
           ? <QwixxGameScreen profile={profile} localNames={localNames} onExit={() => setView("home")} />
-          : localGameId === "durak" && <DurakGameScreen profile={profile} localNames={localNames} onExit={() => setView("home")} />
+          : localGameId === "durak" && <DurakGameScreen profile={profile} localNames={localNames} cheatMode={localDurakCheatMode} onExit={() => setView("home")} />
       )}
       {view === "game-online" && room && (
         room.config.gameId === "qwixx"
