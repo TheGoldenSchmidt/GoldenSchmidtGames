@@ -262,3 +262,45 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
 }
+
+/* Kribbeln: ein gemeinsamer Würfeltisch, auf dem die Aktion im Mittelpunkt steht. */
+.kribbel-game { background: #eff5f2; padding-bottom: 28px; }
+.kribbel-game > .game-header { min-height: 64px; padding: max(12px, env(safe-area-inset-top)) 18px 12px; background: #153f49; color: #fffcf2; }
+.kribbel-game > .game-header > strong { font-size: 1.2rem; letter-spacing: -.04em; }
+.kribbel-game .page__content { padding: 16px; }
+.kribbel-score-strip { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 5px; }
+.kribbel-score-strip > span { display: flex; align-items: center; gap: 10px; white-space: nowrap; padding: 8px 12px; border-radius: 30px; background: #dce7e3; font-size: .75rem; }
+.kribbel-score-strip .is-active { background: #174d59; color: #fff; }
+.kribbel-score-strip strong { font-size: 1rem; font-variant-numeric: tabular-nums; }
+.kribbel-round { display: flex; align-items: center; gap: 14px; margin: 18px 2px 12px; font-size: .7rem; color: #49616a; }
+.kribbel-round progress { appearance: none; flex: 1; width: 80px; height: 5px; border: 0; border-radius: 6px; overflow: hidden; background: #d8e3df; }
+.kribbel-round progress::-webkit-progress-bar { background: #d8e3df; }.kribbel-round progress::-webkit-progress-value { background: #277785; }.kribbel-round progress::-moz-progress-bar { background: #277785; }
+.kribbel-mission { padding: 10px 4px 18px; }
+.kribbel-mission > span { color: #49616a; font-size: .78rem; }
+.kribbel-mission h1 { margin: 7px 0 14px; font-size: clamp(1.5rem, 6.6vw, 2rem); line-height: 1.08; letter-spacing: -.04em; max-width: 400px; }
+.kribbel-attempts { display: flex; gap: 6px; align-items: center; }
+.kribbel-attempts > span { width: 25px; height: 25px; border-radius: 50%; display: grid; place-items: center; border: 1px solid #a3b9b3; font-size: .7rem; font-weight: 800; }.kribbel-attempts > span.is-used { background: #174d59; border-color: #174d59; color: white; }.kribbel-attempts small { margin-left: 5px; color: #49616a; }
+.kribbel-tray { padding: 20px 10px 12px; border: 6px solid #24616b; border-radius: 32px 32px 46px 46px; background: radial-gradient(ellipse at 50% 25%, #226776, #153f49); box-shadow: inset 0 5px 15px #00263080, 0 5px 0 #c1d3cc; }
+.kribbel-tray .kribbel-dice { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px 4px; margin: 0 auto; max-width: 360px; }
+.kribbel-die-slot { min-height: 90px; padding: 7px 2px 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; border: 1px solid transparent; border-radius: 16px; color: #fff; background: transparent; cursor: pointer; transition: background .16s, border-color .16s; }
+.kribbel-die-slot.is-kept { background: #ffd16620; border-color: #ffd166; }
+.kribbel-die-slot:disabled { opacity: 1; cursor: default; }
+.kribbel-die-slot:focus-visible { outline-color: #ffd166; }
+.kribbel-die-caption { font-size: .63rem; color: #d4e4e2; }.kribbel-die-slot.is-kept .kribbel-die-caption { color: #ffe09a; font-weight: 900; }
+.kribbel-cube-scene { --die-size: clamp(40px, 12vw, 56px); --die-bg: #fffcf2; --pip: white; }
+.kribbel-face-color--red { --die-bg: #c63b48; }.kribbel-face-color--yellow { --die-bg: #f6cb49; --pip: #473910; }.kribbel-face-color--green { --die-bg: #318463; }.kribbel-face-color--blue { --die-bg: #3476af; }.kribbel-face-color--orange { --die-bg: #c86418; }.kribbel-face-color--purple { --die-bg: #8353a0; }
+.kribbel-die-slot.is-kept .die-cube { animation: none; transform: rotateX(var(--end-x)) rotateY(var(--end-y)); }.kribbel-die-slot.is-kept .die-scene::after { animation: none; }
+.kribbel-die-placeholder { width: 50px; height: 50px; border: 1px dashed #8eaeaf; border-radius: 12px; display: grid; place-items: center; color: #a4c4c6; font-size: 2rem; transform: rotate(-8deg); }
+.kribbel-tray > p { margin: 14px 0 0; text-align: center; min-height: 24px; color: #d4e4e2; font-size: .68rem; }
+.kribbel-feedback { margin: 18px 0 12px; min-height: 61px; display: flex; align-items: center; gap: 13px; padding: 9px 12px; border-left: 4px solid #a9beba; }
+.kribbel-feedback > strong { min-width: 48px; font-size: 2rem; letter-spacing: -.05em; text-align: center; font-variant-numeric: tabular-nums; }.kribbel-feedback > span { font-size: .82rem; line-height: 1.35; }.kribbel-feedback.is-success { background: #d8ecde; border-color: #36835b; color: #245c3d; }.kribbel-feedback.is-success > strong { animation: kribbel-score-pop .3s ease-out; }
+@keyframes kribbel-score-pop { from { transform: scale(.7); } to { transform: scale(1); } }
+.kribbel-game .kribbel-actions { display: grid; grid-template-columns: 1fr; gap: 9px; }
+.kribbel-game .kribbel-roll { background: #174d59; color: #fff; box-shadow: 0 4px 0 #092f38; min-height: 54px; }
+.kribbel-game .kribbel-roll:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 #092f38; }
+.kribbel-game .kribbel-skip { font-size: .75rem; min-height: 42px; }.kribbel-game .button:disabled { opacity: .45; }
+.kribbel-waiting { padding: 14px; text-align: center; color: #49616a; font-size: .8rem; }
+.kribbel-game details { margin: 18px 0; }.kribbel-game summary { padding: 10px 2px; cursor: pointer; font-weight: 800; font-size: .82rem; }.kribbel-game details p { font-size: .8rem; line-height: 1.55; color: #49616a; }
+.kribbel-game .kribbel-sheet .is-current { background: #d8ecde; }
+.kribbel-finale { text-align: center; padding: 25px 8px 10px; }.kribbel-finale > span { display: inline-grid; place-items: center; width: 80px; height: 80px; border-radius: 50%; background: #ffd166; color: #735112; font-size: 3rem; animation: kribbel-score-pop .5s ease-out; }.kribbel-finale h1 { letter-spacing: -.04em; }.kribbel-finale ol { list-style: none; padding: 0; }.kribbel-finale li { display: flex; justify-content: space-between; padding: 14px; border-bottom: 1px solid #cbded6; }
+@media (prefers-reduced-motion: reduce) { .kribbel-die-slot { transition: none; }.kribbel-cube-scene .die-cube { animation: none; transform: rotateX(var(--end-x)) rotateY(var(--end-y)); } }
