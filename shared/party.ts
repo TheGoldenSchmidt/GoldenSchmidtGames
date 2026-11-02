@@ -118,10 +118,22 @@ function selectMini(g:PartyGame,now:number,forceDigital=false) {
   g.localMiniIndex=0;phase(g,"mini-intro",now);if(g.online)g.deadline=now+90000;
 }
 function startMini(g:PartyGame,now:number) {g.mini!.startAt=now+3000;phase(g,"mini-play",now);g.deadline=g.mini!.startAt+MINIS[g.mini!.id].seconds*1000;}
+/** One source for awarded coins and the result screen, including lower-place ties. */
+export function partyMiniResults(g:PartyGame) {
+  const m=g.mini!;
+  const eligible=g.players.filter(p=>!p.passive&&(m.runs[p.id].lastInput>0||m.reports[p.id]!==undefined));
+  const better=(a:PartyPlayer,b:PartyPlayer)=>m.runs[a.id].score>m.runs[b.id].score||(m.runs[a.id].score===m.runs[b.id].score&&m.id==="memory"&&m.runs[a.id].attempts<m.runs[b.id].attempts);
+  return g.players.map(player=>{
+    const participated=eligible.includes(player);
+    const place=participated?eligible.filter(q=>!better(player,q)).length:0;
+    const coins=participated?([10,7,5,3,2,1][place-1]??0):0;
+    return {player,place,coins,participated,score:m.runs[player.id].score,attempts:m.runs[player.id].attempts};
+  }).sort((a,b)=>(a.place||99)-(b.place||99));
+}
 function rewardMini(g:PartyGame,now:number) {
-  const m=g.mini!, eligible=g.players.filter(p=>!p.passive&&(m.runs[p.id].lastInput>0||m.reports[p.id]!==undefined)), ranked=[...eligible].sort((a,b)=>m.runs[b.id].score-m.runs[a.id].score || (m.id==="memory"?m.runs[a.id].attempts-m.runs[b.id].attempts:0));
+  const m=g.mini!, results=partyMiniResults(g), eligible=results.filter(r=>r.participated).map(r=>r.player), ranked=[...eligible].sort((a,b)=>m.runs[b.id].score-m.runs[a.id].score || (m.id==="memory"?m.runs[a.id].attempts-m.runs[b.id].attempts:0));
   const same=(a:PartyPlayer,b:PartyPlayer)=>m.runs[a.id].score===m.runs[b.id].score&&(m.id!=="memory"||m.runs[a.id].attempts===m.runs[b.id].attempts);
-  for(const p of eligible) {const place=ranked.filter(q=>m.runs[q.id].score>m.runs[p.id].score || (m.runs[q.id].score===m.runs[p.id].score&&(m.id!=="memory"||m.runs[q.id].attempts<=m.runs[p.id].attempts))).length; const amount=[10,7,5,3,2,1][place-1]??0;p.coins+=amount;if(ranked[0]&&same(p,ranked[0]))p.wins++;log(g,`${p.name}: +${amount} Münzen (${m.runs[p.id].score} Minispielpunkte).`);}
+  for(const {player:p,coins:amount} of results.filter(r=>r.participated)) {p.coins+=amount;if(ranked[0]&&same(p,ranked[0]))p.wins++;log(g,`${p.name}: +${amount} Münzen (${m.runs[p.id].score} Minispielpunkte).`);}
   phase(g,"mini-result",now);
 }
 function finishRun(g:PartyGame,id:string,now:number) {const m=g.mini!;m.runs[id].done=true;

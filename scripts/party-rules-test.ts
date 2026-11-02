@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { activePartyPlayer, applyPartyAction as act, BOARD, createPartyGame, createPartyPractice, ITEM_IDS, ITEMS, MINI_IDS, partyOptions, partyStanding, publicParty, tickParty, type PartyGame, type PartyAction, type MiniId } from "../shared/party";
+import { activePartyPlayer, applyPartyAction as act, BOARD, createPartyGame, createPartyPractice, ITEM_IDS, ITEMS, MINI_IDS, partyMiniResults, partyOptions, partyStanding, publicParty, tickParty, type PartyGame, type PartyAction, type MiniId } from "../shared/party";
 
 const players=[{id:"a",name:"Ada"},{id:"b",name:"Ben"}];
 let now=100000;
@@ -71,4 +71,17 @@ for(const analog of ["words","bridge"] as MiniId[]){
   assert.equal(game.phase,"mini-result");assert.ok(game.players.every(p=>p.coins===17),"Gleicher erster Platz erhält 7 Münzen");
   let replacement=make();replacement.options.analog=true;replacement.phase="summary";replacement.turn=1;replacement.miniBag=[analog];replacement=command(replacement,{type:"next"});replacement=act(replacement,replacement.players[0].id,{type:"material",available:false},now);assert.ok(MINI_IDS.includes(replacement.mini!.id as typeof MINI_IDS[number]));
 }
-console.log(`Inselparty-Regeltests erfolgreich: Felder, Items, Trophäen, sechs Minispiele, Datenschutz und ${completed} vollständige Partien`);
+// The visible reward must equal the actual change, including ties and memory tiebreaks.
+for(const scores of [[4,3,3,0],[3,3,3,0]]) {
+  let payout=createPartyPractice("memory",now);
+  const base=payout.mini!.runs.practice;
+  payout.players=["practice","second","third","absent"].map((id,i)=>({...payout.players[0],id,name:id,passive:false,coins:10}));
+  payout.online=true;
+  payout.mini!.runs=Object.fromEntries(payout.players.map((p,i)=>[p.id,{...base,done:i>0,score:scores[i],attempts:i===0?2:3,lastInput:i===3?0:now+4000}]));
+  payout=act(payout,"practice",{type:"finish"},now+4001);
+  assert.equal(payout.phase,"mini-result");
+  assert.deepEqual(partyMiniResults(payout).map(r=>[r.place,r.coins]),[[1,10],[3,5],[3,5],[0,0]]);
+  assert.deepEqual(payout.players.map(p=>p.coins),[20,15,15,10]);
+  for(const result of partyMiniResults(publicParty(payout,"practice",now+4002)))assert.equal(result.coins,result.player.coins-10);
+}
+console.log(`Inselparty-Regeltests erfolgreich: Felder, Items, Trophäen, sechs Minispiele, Belohnungsanzeige, Datenschutz und ${completed} vollständige Partien`);

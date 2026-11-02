@@ -35,7 +35,7 @@ Inselwörter und Papierbrücke sind optional. Erst wird Material bestätigt, ans
 
 Lokale Partien speichern ihren Zustand nach Änderungen im Browser. „Lokale Inselparty fortsetzen“ lädt diesen Stand. Online speichert das Gerät Raum und Sitzungsschlüssel, sodass „Online-Inselparty wieder beitreten“ nach einem Verbindungsabbruch funktioniert. Die Gruppe pausiert bis zu 60 Sekunden; anschließend kann der Host ohne getrennte Spieler fortsetzen oder abbrechen. Online-Zustände bleiben im Arbeitsspeicher: Ein Serverneustart beendet die Partie. Sitzungsschlüssel und verdeckte Minispielinhalte dürfen nicht mit fremden Personen geteilt werden. Der Server bewertet Eingaben; es gibt kein garantiert manipulationssicheres Wettkampfsystem oder Latenzausgleich für Brückenstopp.
 
-Die Insel ist eine eigene SVG-Karte. Zoom und Feldbeschreibungen funktionieren per Touch, Maus und Tastatur. Bewegung respektiert „reduzierte Bewegung“. Kurze Spieltöne sind standardmäßig aus, Haptik ist abschaltbar.
+Die illustrierte SVG-Insel zeigt Hafen, Jahrmarkt, Dschungel und Vulkan. Zoom und Feldbeschreibungen funktionieren per Touch, Maus und Tastatur. Räumliche Würfel fallen vor der Figurenbewegung; eine Wegwahl setzt die Animation fort. Items werden erst ausgewählt und anschließend gezielt eingesetzt. Die Minispiele haben eigene Spielszenen mit Countdown, Fortschritt und Trefferfeedback; beim Brückenstopp bleibt der Marker an der gewerteten Stelle stehen. Ergebnislisten zeigen Platz, Punkte und die tatsächlich gewonnenen Münzen. Übungsdialoge unterstützen Tastatur, Escape und erneutes Üben. Bewegung respektiert „reduzierte Bewegung“. Kurze Spieltöne sind standardmäßig aus, Haptik ist abschaltbar. Die Gestaltungsentscheidungen stehen in [Spielerlebnis](docs/inselparty-spielerlebnis.md).
 
 ## Entwicklung starten
 
@@ -61,7 +61,7 @@ npm run test:production
 npm run test:browser
 ```
 
-Für die Browsertests einmal `npx playwright install chromium` ausführen. Die CI installiert Chromium automatisch. Die Tests umfassen 55 vollständige Inselpartien (alle Spielerzahlen und Rundenzahlen), Feld-/Item-/Minispielregeln, Socket-Wiederbeitritt und eine vollständige Online-Partie sowie 16 Handy-/Desktop-Browsertests. Browser-Screenshots und Fehlertraces liegen lokal unter `test-results/` (nicht versioniert).
+Für die Browsertests einmal `npx playwright install chromium` ausführen. Die CI installiert Chromium automatisch. Die Tests umfassen 55 vollständige Inselpartien (alle Spielerzahlen und Rundenzahlen), Feld-/Item-/Minispielregeln, Socket-Wiederbeitritt und eine vollständige Online-Partie sowie 28 Handy-/Desktop-Browsertests. Diese prüfen auch die Würfel-/Bewegungsreihenfolge, Wegfortsetzung, gestoppten Marker, Item-Ziele, Münzbelohnungen, Tastaturdialoge und Erreichbarkeit der Hauptaktion auf kleinen Handys. Browser-Screenshots und Fehlertraces liegen lokal unter `test-results/` (nicht versioniert).
 
 Die Schritte für einen öffentlichen HTTPS-Link und einen Docker-fähigen Hoster stehen in [DEPLOYMENT.md](DEPLOYMENT.md).
 
