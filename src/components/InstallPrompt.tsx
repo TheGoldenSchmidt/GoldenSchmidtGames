@@ -11,7 +11,8 @@ function isStandalone() {
 
 export function InstallPrompt() {
   const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent>();
-  const [showIosHelp, setShowIosHelp] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
+  const [installError, setInstallError] = useState("");
   const [installed, setInstalled] = useState(() => isStandalone());
   const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
@@ -19,37 +20,59 @@ export function InstallPrompt() {
     const beforeInstall = (event: Event) => {
       event.preventDefault();
       setInstallEvent(event as BeforeInstallPromptEvent);
+      setInstalled(false);
+      setInstallError("");
     };
     const appInstalled = () => {
       setInstalled(true);
       setInstallEvent(undefined);
     };
+    // Ein Browser-Tab kann nach Deinstallation weiterhin geöffnet sein.
+    // Die Startbildschirm-Ansicht ist die einzige zuverlässige lokale Anzeige.
+    const refreshDisplayMode = () => setInstalled(isStandalone());
     window.addEventListener("beforeinstallprompt", beforeInstall);
     window.addEventListener("appinstalled", appInstalled);
+    window.addEventListener("focus", refreshDisplayMode);
     return () => {
       window.removeEventListener("beforeinstallprompt", beforeInstall);
       window.removeEventListener("appinstalled", appInstalled);
+      window.removeEventListener("focus", refreshDisplayMode);
     };
   }, []);
 
-  if (installed || (!installEvent && !isIos)) return null;
+  if (installed) return null;
 
   async function install() {
-    if (!installEvent) return setShowIosHelp((current) => !current);
-    await installEvent.prompt();
-    const result = await installEvent.userChoice;
-    if (result.outcome === "accepted") setInstallEvent(undefined);
+    setInstallError("");
+    if (!installEvent) return setShowHelp((current) => !current);
+    // Browser-Installationsereignisse können nur einmal verwendet werden.
+    const currentEvent = installEvent;
+    setInstallEvent(undefined);
+    try {
+      await currentEvent.prompt();
+      const result = await currentEvent.userChoice;
+      if (result.outcome === "dismissed") setShowHelp(true);
+    } catch {
+      setInstallError("Der Browser hat den Installationsdialog nicht geöffnet. Nutze bitte die Schritte unten.");
+      setShowHelp(true);
+    }
   }
 
   return (
-    <aside className="install-card">
+    <aside className="install-card" aria-label="App installieren">
       <button onClick={install}>
         <span className="install-card__icon" aria-hidden="true">↓</span>
-        <span><strong>Als App installieren</strong><small>Offline spielen und direkt starten</small></span>
-        <span aria-hidden="true">{showIosHelp ? "−" : "+"}</span>
+        <span><strong>Als App installieren</strong><small>{installEvent ? "Installationsdialog öffnen" : "So kommt Spielraum auf deinen Startbildschirm"}</small></span>
+        <span aria-hidden="true">{showHelp ? "−" : "+"}</span>
       </button>
-      {showIosHelp && (
-        <p>In Safari auf <strong>Teilen</strong> tippen, dann <strong>Zum Home-Bildschirm</strong> und <strong>Als Web-App öffnen</strong> wählen.</p>
+      {installError && <p role="alert">{installError}</p>}
+      {showHelp && (
+        <div className="install-help">
+          {isIos ? <p>Öffne diesen Link in <strong>Safari</strong>. Wähle <strong>Teilen → Zum Home-Bildschirm</strong> und, falls angezeigt, <strong>Als Web-App öffnen → Hinzufügen</strong>.</p>
+            : <p>Öffne diesen Link direkt in <strong>Chrome</strong> oder deinem normalen Browser. Wähle im <strong>⋮-Menü</strong> den Eintrag <strong>App installieren</strong> oder <strong>Zum Startbildschirm hinzufügen</strong>. Auf dem PC findest du die Installation meist oben in der Adressleiste.</p>}
+          <p>„Aktuelle Version“ bedeutet nur, dass diese Webseite aktuell ist. Du kannst sie trotzdem als App installieren.</p>
+          {!isIos && <p>Falls der Browser „Öffnen“ statt „Installieren“ anbietet: Prüfe in den Handy-Einstellungen unter <strong>Apps → Spielraum</strong>, ob die App noch installiert ist. Ein entferntes Startbildschirm-Symbol deinstalliert sie nicht unbedingt.</p>}
+        </div>
       )}
     </aside>
   );

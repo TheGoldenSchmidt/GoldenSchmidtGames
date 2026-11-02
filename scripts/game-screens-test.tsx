@@ -9,6 +9,7 @@ import { KribbelnDice } from "../src/components/KribbelnDice";
 import { QwixxGameScreen } from "../src/screens/QwixxGameScreen";
 import { DurakGameScreen } from "../src/screens/DurakGameScreen";
 import type { RoomState } from "../shared/types";
+import { InstallPrompt } from "../src/components/InstallPrompt";
 
 const players = [{ id: "a", name: "Anna" }, { id: "b", name: "Ben" }];
 // tsx verwendet außerhalb des Vite-Builds den klassischen JSX-Laufzeitpfad.
@@ -33,4 +34,19 @@ room.game = createQwixxGame(players); room.game.phase = "finished"; room.game.wi
 assert.match(renderToString(<QwixxGameScreen profile={profile} initialRoom={room} onExit={exit} />), /Fehlwürfe/);
 room.durakGame = createDurakGame(players); room.durakGame.phase = "finished"; room.durakGame.durakId = "b";
 assert.match(renderToString(<DurakGameScreen profile={profile} initialRoom={room} onExit={exit} />), /Ben ist der Durak/);
+// Ohne beforeinstallprompt muss die Installationshilfe trotzdem erreichbar bleiben.
+const originalNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+const originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
+try {
+  Object.defineProperty(globalThis, "navigator", { configurable: true, value: { userAgent: "Android Chrome", platform: "Linux", maxTouchPoints: 1 } });
+  Object.defineProperty(globalThis, "window", { configurable: true, value: { matchMedia: () => ({ matches: false }) } });
+  assert.match(renderToString(<InstallPrompt />), /Als App installieren/);
+  Object.defineProperty(globalThis, "navigator", { configurable: true, value: { userAgent: "iPhone Safari", platform: "iPhone", maxTouchPoints: 1 } });
+  assert.match(renderToString(<InstallPrompt />), /Als App installieren/);
+  Object.defineProperty(globalThis, "window", { configurable: true, value: { matchMedia: () => ({ matches: true }) } });
+  assert.equal(renderToString(<InstallPrompt />), "", "In der App-Ansicht keine erneute Installation anbieten");
+} finally {
+  if (originalNavigator) Object.defineProperty(globalThis, "navigator", originalNavigator); else Reflect.deleteProperty(globalThis, "navigator");
+  if (originalWindow) Object.defineProperty(globalThis, "window", originalWindow); else Reflect.deleteProperty(globalThis, "window");
+}
 console.log("Spieloberflächen erfolgreich: Start und Endansichten ohne Renderfehler");

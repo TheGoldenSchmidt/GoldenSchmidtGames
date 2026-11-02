@@ -55,6 +55,6 @@ export function AppUpdate() {
     <button className="button button--secondary button--wide" onClick={status === "ready" ? apply : check} disabled={["checking", "applying", "unsupported"].includes(status)}>
       {status === "ready" ? "Neue Version laden" : status === "checking" ? "Suche nach Updates …" : status === "applying" ? "Update wird geladen …" : "Nach Updates suchen"}
     </button>
-    <p role="status">{status === "ready" ? "Eine neue Version ist bereit. Beim Aktualisieren wird die App neu gestartet." : status === "current" ? "Du verwendest die aktuelle Version." : status === "unsupported" ? "Updates sind in dieser Umgebung nicht verfügbar." : message || "Hier kannst du die App auf die neueste Version bringen."}</p>
+    <p role="status">{status === "ready" ? "Eine neue Version ist bereit. Beim Aktualisieren wird die App neu gestartet." : status === "current" ? "Diese Ansicht ist aktuell. Die Update-Prüfung installiert keine App." : status === "unsupported" ? "Updates sind in dieser Umgebung nicht verfügbar." : message || "Hier prüfst du auf neue Spielversionen. Installation und Updates sind unabhängig voneinander."}</p>
   </aside>;
 }
