@@ -1,6 +1,7 @@
 import type { GuestProfile } from "../../shared/types";
 import { Brand } from "../components/Brand";
 import { InstallPrompt } from "../components/InstallPrompt";
+import { AppUpdate } from "../components/AppUpdate";
 import { displayName } from "../lib/profile";
 
 export function HomeScreen({
@@ -56,6 +57,7 @@ export function HomeScreen({
       </section>
 
       <InstallPrompt />
+      <AppUpdate />
 
       <footer className="home__footer">
         <span className={`connection-dot ${online ? "is-online" : ""}`} />

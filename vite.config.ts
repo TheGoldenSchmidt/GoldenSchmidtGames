@@ -6,7 +6,8 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: "autoUpdate",
+      registerType: "prompt",
+      injectRegister: false,
       includeAssets: ["icon.svg", "icon-192.png", "icon-512.png", "apple-touch-icon.png"],
       manifest: {
         id: "/",
@@ -44,7 +45,9 @@ export default defineConfig({
         ]
       },
       workbox: {
-        navigateFallback: "/index.html"
+        navigateFallback: "/index.html",
+        skipWaiting: false,
+        clientsClaim: true
       }
     })
   ],

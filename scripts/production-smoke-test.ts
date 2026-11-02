@@ -21,6 +21,8 @@ try {
   assert.ok((manifestData.icons?.length ?? 0) >= 3);
   assert.equal(serviceWorker.status, 200);
   assert.match(serviceWorker.headers.get("content-type") ?? "", /javascript/);
+  const workerSource = await serviceWorker.text();
+  assert.match(workerSource, /SKIP_WAITING/, "Manuelle Update-Aktivierung muss im Worker vorhanden sein");
   assert.equal(health.status, 200);
   assert.equal((await health.json() as { ok?: boolean }).ok, true);
   console.log(`Produktionsprüfung erfolgreich: HTML, Manifest, Service Worker und Health-Check auf Port ${port}`);
