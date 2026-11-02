@@ -1,0 +1,44 @@
+import assert from "node:assert/strict";
+import { canEnterKribbelSum, rankKribbelnResults, createKribbelnGame, rollKribbeln, submitKribbeln, kribbelTaskMet, type KribbelDie } from "../shared/kribbeln";
+
+assert.deepEqual(rankKribbelnResults({ a: 30, b: 30, c: 20, d: null }), { a: 3, b: 3, c: 2, d: 0 });
+assert.deepEqual(rankKribbelnResults({ a: null, b: 22 }), { a: 0, b: 2 });
+assert.equal(canEnterKribbelSum([null, 17, 21], 22), true);
+assert.equal(canEnterKribbelSum([17, 21], 21), false);
+assert.equal(canEnterKribbelSum([], 5), false);
+const dice: KribbelDie[] = ["green", "red", "red", "blue", "orange", "purple"].map(color => ({ color: color as KribbelDie["color"], value: 3 }));
+assert.equal(kribbelTaskMet(0, dice), true);
+assert.equal(kribbelTaskMet(1, dice), true);
+assert.equal(kribbelTaskMet(2, dice), false);
+assert.equal(kribbelTaskMet(3, dice), false);
+assert.equal(kribbelTaskMet(4, dice), false);
+assert.equal(kribbelTaskMet(5, dice), false);
+let game = createKribbelnGame([{ id: "a", name: "A" }, { id: "b", name: "B" }]);
+assert.throws(() => rollKribbeln(game, "b", []));
+game = rollKribbeln(game, "a", [], () => 0);
+const kept = game.dice[0];
+game = rollKribbeln(game, "a", [0], () => 0.99);
+assert.deepEqual(game.dice[0], kept);
+game = rollKribbeln(game, "a", [], () => 0);
+assert.throws(() => rollKribbeln(game, "a", []));
+game = submitKribbeln(game, "a", "skip");
+assert.equal(game.order[game.playerIndex], "b");
+game = rollKribbeln(game, "b", [], () => 0);
+game = submitKribbeln(game, "b", "skip");
+assert.equal(game.row, 1);
+let retry = createKribbelnGame([{ id: "a", name: "A" }, { id: "b", name: "B" }]);
+retry = rollKribbeln(retry, "a", [], () => 0);
+retry.dice = Array.from({ length: 6 }, () => ({ color: "red" as const, value: 2 }));
+assert.equal(kribbelTaskMet(0, retry.dice), false);
+retry = submitKribbeln(retry, "a", "fallback");
+assert.equal(retry.results.a[2], 12);
+assert.equal(retry.rolls, 0);
+assert.equal(retry.order[retry.playerIndex], "a");
+assert.throws(() => submitKribbeln(retry, "a", "fallback"));
+while (!game.finished) {
+  const player = game.order[game.playerIndex];
+  game = rollKribbeln(game, player, [], () => 0);
+  game = submitKribbeln(game, player, "skip");
+}
+assert.equal(game.winners.length, 2);
+console.log("Kribbeln-Grundregeln erfolgreich: Platzierung, Gleichstand und steigende Kribbelfelder");

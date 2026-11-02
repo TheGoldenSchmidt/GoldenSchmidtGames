@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { Server } from "socket.io";
 import { getGame } from "../shared/games";
+import { createKribbelnGame, rollKribbeln, submitKribbeln } from "../shared/kribbeln";
 import { accuseDurak, attackDurak, cheatDefendDurak, cheatThrowInDurak, createDurakGame, defendDurak, finishDurakBout, takeDurak, throwInDurak, transferDurak } from "../shared/durak";
 import {
   QWIXX_COLORS,
@@ -133,6 +134,7 @@ function startRoom(room: RoomState) {
   });
   if (room.config.gameId === "qwixx") room.game = createQwixxGame(players);
   else if (room.config.gameId === "durak") room.durakGame = createDurakGame(players, Math.random, room.config.durakCheatMode ?? false);
+  else if (room.config.gameId === "kribbeln") room.kribbelnGame = createKribbelnGame(players);
   else throw new Error("Dieses Spiel ist noch nicht verfügbar.");
   broadcast(room);
   broadcastGameStarted(room);
@@ -145,6 +147,21 @@ function enterRoom(socketId: string, room: RoomState, playerId: string) {
 }
 
 io.on("connection", (socket) => {
+  socket.on("kribbeln:roll", (payload: { keep?: number[] }, callback: (ack: Ack<RoomState>) => void) => {
+    const member = socketMembership.get(socket.id);
+    const room = member ? rooms.get(member.roomCode) : undefined;
+    if (!member || !room?.kribbelnGame || room.phase !== "playing") return callback({ ok: false, error: "Die Partie ist nicht aktiv." });
+    try { room.kribbelnGame = rollKribbeln(room.kribbelnGame, member.playerId, payload?.keep ?? []); broadcast(room); callback({ ok: true, data: publicRoom(room, member.playerId) }); }
+    catch (error) { callback({ ok: false, error: error instanceof Error ? error.message : "Würfeln nicht möglich." }); }
+  });
+  socket.on("kribbeln:submit", (payload: { choice?: "score" | "skip" | "fallback" }, callback: (ack: Ack<RoomState>) => void) => {
+    const member = socketMembership.get(socket.id);
+    const room = member ? rooms.get(member.roomCode) : undefined;
+    if (!member || !room?.kribbelnGame || room.phase !== "playing") return callback({ ok: false, error: "Die Partie ist nicht aktiv." });
+    if (!payload || !["score", "skip", "fallback"].includes(payload.choice ?? "")) return callback({ ok: false, error: "Ungültige Auswahl." });
+    try { room.kribbelnGame = submitKribbeln(room.kribbelnGame, member.playerId, payload.choice!); broadcast(room); callback({ ok: true, data: publicRoom(room, member.playerId) }); }
+    catch (error) { callback({ ok: false, error: error instanceof Error ? error.message : "Eintrag nicht möglich." }); }
+  });
   function runDurakAction(
     callback: (ack: Ack<RoomState>) => void,
     action: (room: RoomState, playerId: string) => void

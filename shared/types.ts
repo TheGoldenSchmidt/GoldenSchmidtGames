@@ -1,4 +1,4 @@
-export type GameId = "qwixx" | "durak" | "binokel";
+export type GameId = "qwixx" | "durak" | "kribbeln" | "binokel";
 
 export type QwixxColor = "red" | "yellow" | "green" | "blue";
 
@@ -99,6 +99,7 @@ export interface RoomState {
   phase: "lobby" | "playing";
   game?: QwixxGameState;
   durakGame?: DurakGameState;
+  kribbelnGame?: import("./kribbeln").KribbelnGame;
 }
 
 export interface GuestProfile {

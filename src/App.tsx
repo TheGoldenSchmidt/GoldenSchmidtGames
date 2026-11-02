@@ -8,6 +8,7 @@ import { LocalSetupScreen } from "./screens/LocalSetupScreen";
 import { OnlineEntryScreen } from "./screens/OnlineEntryScreen";
 import { QwixxGameScreen } from "./screens/QwixxGameScreen";
 import { DurakGameScreen } from "./screens/DurakGameScreen";
+import { KribbelnGameScreen } from "./screens/KribbelnGameScreen";
 import { RoomScreen } from "./screens/RoomScreen";
 
 type View = "home" | "local-setup" | "online-entry" | "room" | "game-local" | "game-online";
@@ -93,12 +94,14 @@ export default function App() {
       {view === "game-local" && (
         localGameId === "qwixx"
           ? <QwixxGameScreen profile={profile} localNames={localNames} onExit={() => setView("home")} />
-          : localGameId === "durak" && <DurakGameScreen profile={profile} localNames={localNames} cheatMode={localDurakCheatMode} onExit={() => setView("home")} />
+          : localGameId === "durak" ? <DurakGameScreen profile={profile} localNames={localNames} cheatMode={localDurakCheatMode} onExit={() => setView("home")} />
+          : localGameId === "kribbeln" && <KribbelnGameScreen profile={profile} localNames={localNames} onExit={() => setView("home")} />
       )}
       {view === "game-online" && room && (
         room.config.gameId === "qwixx"
           ? <QwixxGameScreen profile={profile} initialRoom={room} onExit={leaveOnline} />
-          : room.config.gameId === "durak" && <DurakGameScreen profile={profile} initialRoom={room} onExit={leaveOnline} />
+          : room.config.gameId === "durak" ? <DurakGameScreen profile={profile} initialRoom={room} onExit={leaveOnline} />
+          : room.config.gameId === "kribbeln" && <KribbelnGameScreen profile={profile} initialRoom={room} onExit={leaveOnline} />
       )}
       {showProfile && (
         <ProfileDialog profile={profile} onSave={updateProfile} onClose={() => setShowProfile(false)} />

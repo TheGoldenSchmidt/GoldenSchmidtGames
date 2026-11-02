@@ -47,7 +47,7 @@ export function LocalSetupScreen({
               }}
             >
               <span className={`game-choice__tile game-choice__tile--${entry.id}`} aria-hidden="true">
-                {entry.id === "qwixx" ? "2–12" : entry.id === "durak" ? "♠" : "B"}
+                {entry.id === "qwixx" ? "2–12" : entry.id === "durak" ? "♠" : entry.id === "kribbeln" ? "⚄" : "B"}
               </span>
               <span>
                 <strong>{entry.name}{entry.status === "soon" && <em>Bald</em>}</strong>

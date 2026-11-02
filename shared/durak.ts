@@ -30,7 +30,7 @@ function nextActive(game: DurakGameState, playerId: string) {
   const start = game.playerOrder.indexOf(playerId);
   for (let offset = 1; offset <= game.playerOrder.length; offset += 1) {
     const candidate = game.playerOrder[(start + offset) % game.playerOrder.length];
-    if (!game.finishedPlayerIds.includes(candidate) && game.hands[candidate].length > 0) return candidate;
+    if (!game.finishedPlayerIds.includes(candidate) && game.handCounts[candidate] > 0) return candidate;
   }
   return playerId;
 }
@@ -216,7 +216,7 @@ export function canTransferDurak(game: DurakGameState, playerId: string, cardId:
   if (game.phase !== "defend" || game.defenderId !== playerId || game.table.some((pair) => pair.defense)) return false;
   const card = game.hands[playerId]?.find((entry) => entry.id === cardId);
   const nextDefender = nextActive(game, playerId);
-  return Boolean(card && game.table.some((pair) => pair.attack.rank === card.rank) && game.table.length + 1 <= Math.min(6, game.hands[nextDefender].length));
+  return Boolean(card && game.table.some((pair) => pair.attack.rank === card.rank) && game.table.length + 1 <= Math.min(6, game.handCounts[nextDefender]));
 }
 
 export function canThrowInDurak(game: DurakGameState, playerId: string, cardId: string) {

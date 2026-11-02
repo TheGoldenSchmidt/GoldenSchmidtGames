@@ -95,6 +95,19 @@ try {
   }
   if (nextTurn.game.sheets[hostPlayerId].failedThrows !== 1) throw new Error("Fehlwurf wurde nicht gewertet");
 
+  const kribbelnCreated = await emit<RoomState>(host, "room:create", { playerId: hostPlayerId, name: "Host" });
+  await emit<RoomState>(guest, "room:join", { code: kribbelnCreated.code, playerId: guestPlayerId, name: "Gast" });
+  await emit<RoomState>(host, "room:configure", { gameId: "kribbeln", playerCount: 2 });
+  await emit<RoomState>(host, "room:ready");
+  const kribbelnStarted = await emit<RoomState>(guest, "room:ready");
+  if (!kribbelnStarted.kribbelnGame) throw new Error("Kribbeln wurde nicht gestartet");
+  const guestSeesDice = waitForRoom(guest, (room) => room.kribbelnGame?.rolls === 1);
+  const rolledKribbeln = await emit<RoomState>(host, "kribbeln:roll", { keep: [] });
+  await guestSeesDice;
+  if (rolledKribbeln.kribbelnGame?.dice.length !== 6) throw new Error("Kribbeln-Würfel fehlen");
+  const submittedKribbeln = await emit<RoomState>(host, "kribbeln:submit", { choice: "skip" });
+  if (submittedKribbeln.kribbelnGame?.order[submittedKribbeln.kribbelnGame.playerIndex] !== guestPlayerId) throw new Error("Kribbeln-Zugwechsel fehlgeschlagen");
+
   const durakCreated = await emit<RoomState>(host, "room:create", { playerId: hostPlayerId, name: "Host" });
   await emit<RoomState>(guest, "room:join", { code: durakCreated.code, playerId: guestPlayerId, name: "Gast" });
   await emit<RoomState>(host, "room:configure", { gameId: "durak", playerCount: 2, durakCheatMode: true });

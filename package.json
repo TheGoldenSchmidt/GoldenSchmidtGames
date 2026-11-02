@@ -13,7 +13,7 @@
     "generate:icons": "tsx scripts/generate-icons.ts",
     "prebuild": "npm run generate:icons",
     "build": "tsc --noEmit && vite build",
-    "test:rules": "tsx scripts/qwixx-rules-test.ts && tsx scripts/durak-rules-test.ts",
+    "test:rules": "tsx scripts/qwixx-rules-test.ts && tsx scripts/durak-rules-test.ts && tsx scripts/kribbeln-rules-test.ts && tsx scripts/game-edge-cases-test.ts",
     "test:online": "tsx scripts/integration-test.ts",
     "test:production": "tsx scripts/production-smoke-test.ts",
     "preview": "vite preview --host 0.0.0.0",

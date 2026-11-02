@@ -18,6 +18,14 @@ export const GAMES: GameDefinition[] = [
     status: "ready"
   },
   {
+    id: "kribbeln",
+    name: "Kribbeln",
+    shortDescription: "Sechs Würfel, wechselnde Farbaufgaben und spannende Kribbelfelder.",
+    minPlayers: 2,
+    maxPlayers: 5,
+    status: "ready"
+  },
+  {
     id: "binokel",
     name: "Binokel",
     shortDescription: "Reizen, melden und mit dem richtigen Trumpf Stiche sammeln.",
