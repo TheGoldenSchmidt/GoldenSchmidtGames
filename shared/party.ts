@@ -1,3 +1,4 @@
+import { ACTION_MINI_IDS, advanceArena, ARENA_META, createArena, isArenaId, publicArena, setArenaControl, type ArenaId, type ArenaInput, type ArenaState } from "./partyArena";
 export type PartyTempo = "slow" | "normal" | "fast";
 export interface PartyOptions { rounds: number; tempo: PartyTempo; analog: boolean }
 export const PARTY_DEFAULTS: PartyOptions = { rounds: 8, tempo: "normal", analog: false };
@@ -23,8 +24,9 @@ export const BOARD = Array.from({ length: 34 }, (_, id) => {
   return { id, type, next, x, y };
 });
 export const MINI_IDS = ["targets", "colors", "memory", "timing", "trail", "risk"] as const;
-export type MiniId = typeof MINI_IDS[number] | "words" | "bridge";
+export type MiniId = typeof MINI_IDS[number] | ArenaId | "words" | "bridge";
 export const MINIS: Record<MiniId, { name: string; seconds: number; instruction: string }> = {
+  ...ARENA_META,
   targets: { name: "Schatzfänger", seconds: 24, instruction: "Tippe das leuchtende Schatzfeld an. Zwölf Ziele, jeweils zwei Sekunden. Jeder Treffer zählt!" },
   colors: { name: "Farbfalle", seconds: 24, instruction: "Wähle die Schriftfarbe, nicht das geschriebene Wort. Zwölf Aufgaben, je ein Punkt." },
   memory: { name: "Muschelmemory", seconds: 30, instruction: "Finde sechs Paare. Mehr Paare gewinnen; bei Gleichstand zählen weniger Versuche." },
@@ -38,7 +40,7 @@ export const SYMBOLS = ["☀", "☂", "♣", "★", "♥", "⚓"];
 export const COLORS = ["Rot", "Blau", "Grün", "Gelb"];
 export interface PartyPlayer { id: string; name: string; position: number; coins: number; trophies: number; wins: number; items: Item[]; shield: boolean; passive: boolean }
 export interface MiniRun { ready: boolean; done: boolean; score: number; attempts: number; cursor: number; opened: number[]; matched: number[]; blockedUntil: number; bank: number; loot: number; feedback: string; lastInput: number }
-export interface PartyMini { id: MiniId; startAt: number; runs: Record<string, MiniRun>; cards: number[]; prompts: number[]; words: number[]; targets: number[]; trail: number[]; risk: number[]; reports: Record<string, number>; confirms: Record<string, boolean>; material: Record<string, boolean> }
+export interface PartyMini { id: MiniId; startAt: number; runs: Record<string, MiniRun>; cards: number[]; prompts: number[]; words: number[]; targets: number[]; trail: number[]; risk: number[]; reports: Record<string, number>; confirms: Record<string, boolean>; material: Record<string, boolean>; arenaSeed?:number; arena?:ArenaState }
 export type PartyPhase = "turn" | "path" | "trophy" | "shop" | "gift" | "summary" | "mini-intro" | "mini-play" | "analog-confirm" | "mini-result" | "finished" | "aborted";
 export interface PartyGame {
   serverTime?: number;
@@ -59,7 +61,7 @@ export type PartyAction =
 export function partyOptions(value?: Partial<PartyOptions>): PartyOptions {
   const rounds = value?.rounds ?? 8, tempo = value?.tempo ?? "normal";
   if (!Number.isInteger(rounds) || rounds < 5 || rounds > 15 || !["slow","normal","fast"].includes(tempo) || (value?.analog !== undefined && typeof value.analog !== "boolean")) throw new Error("Ungültige Inselparty-Einstellungen.");
-  return { rounds, tempo, analog: value?.analog ?? false };
+  return { rounds, tempo, analog: false };
 }
 function random(g: PartyGame) { g.rng = (Math.imul(g.rng, 1664525) + 1013904223) >>> 0; return g.rng / 4294967296; }
 function shuffle<T>(g: PartyGame, source: readonly T[]): T[] { const result = [...source]; for (let i=result.length-1;i>0;i--) { const j=Math.floor(random(g)*(i+1)); [result[i],result[j]]=[result[j],result[i]]; } return result; }
@@ -112,12 +114,31 @@ function move(g: PartyGame, now:number) {
 function step(g:PartyGame,destination:number) {const p=activePartyPlayer(g);p.position=destination;g.path.push(destination);g.steps--;if(destination===0){p.coins+=3;log(g,`${p.name} passiert den Hafen: +3 Münzen.`);}}
 function startTurn(g:PartyGame,now:number) {g.itemUsed=false;g.double=false;g.boost=0;g.trophyBought=false;g.dice=[];g.path=[];g.offered=undefined;phase(g,"turn",now);log(g,`${activePartyPlayer(g).name} ist am Zug.`);}
 function selectMini(g:PartyGame,now:number,forceDigital=false) {
-  if(!g.miniBag.length) {g.miniBag=shuffle(g,g.options.analog?[...MINI_IDS,"words","bridge"] as MiniId[]:MINI_IDS);if(g.miniBag.at(-1)===g.lastMini) [g.miniBag[0],g.miniBag[g.miniBag.length-1]]=[g.miniBag[g.miniBag.length-1],g.miniBag[0]];}
-  let id=g.miniBag.pop()!;if(forceDigital) id=MINI_IDS[Math.floor(random(g)*6)];g.lastMini=id;
+  if(!g.miniBag.length) {g.miniBag=shuffle(g,ACTION_MINI_IDS);if(g.miniBag.at(-1)===g.lastMini) [g.miniBag[0],g.miniBag[g.miniBag.length-1]]=[g.miniBag[g.miniBag.length-1],g.miniBag[0]];}
+  let id=g.miniBag.pop()!;if(forceDigital) id=ACTION_MINI_IDS[Math.floor(random(g)*ACTION_MINI_IDS.length)];g.lastMini=id;
   g.mini={id,startAt:0,runs:Object.fromEntries(g.players.map(p=>[p.id,{ready:false,done:p.passive,score:0,attempts:0,cursor:0,opened:[],matched:[],blockedUntil:0,bank:0,loot:0,feedback:"",lastInput:0}])),cards:shuffle(g,[0,0,1,1,2,2,3,3,4,4,5,5]),prompts:Array.from({length:12},()=>Math.floor(random(g)*4)),words:Array.from({length:12},()=>Math.floor(random(g)*4)),targets:Array.from({length:12},()=>Math.floor(random(g)*9)),trail:Array.from({length:6},()=>Math.floor(random(g)*6)),risk:Array.from({length:256},()=>random(g)),reports:{},confirms:{},material:{}};
+  g.mini.arenaSeed=g.rng;
   g.localMiniIndex=0;phase(g,"mini-intro",now);if(g.online)g.deadline=now+90000;
 }
-function startMini(g:PartyGame,now:number) {g.mini!.startAt=now+3000;phase(g,"mini-play",now);g.deadline=g.mini!.startAt+MINIS[g.mini!.id].seconds*1000;}
+function startMini(g:PartyGame,now:number) {
+  const m=g.mini!;m.startAt=now+3000;
+  if(isArenaId(m.id))m.arena=createArena(m.id,g.players.filter((p,i)=>!p.passive&&(g.online||i===g.localMiniIndex)).map(p=>({id:p.id,style:g.players.indexOf(p)})),m.arenaSeed??1);
+  phase(g,"mini-play",now);g.deadline=m.startAt+MINIS[m.id].seconds*1000;
+}
+
+export function applyPartyControl(current:PartyGame,id:string,input:ArenaInput,seq:number,now=Date.now()):PartyGame {
+  if(current.pausedAt||current.phase!=="mini-play"||!current.mini?.arena||now<current.mini.startAt||now>=current.deadline)throw new Error("Die Steuerung ist gerade pausiert.");
+  const player=current.players.find(p=>p.id===id);
+  if(!player||player.passive||current.mini.runs[id]?.done)throw new Error("Dein Versuch ist nicht aktiv.");
+  const g=structuredClone(current),m=g.mini!;
+  advanceArena(m.arena!,now-m.startAt);
+  setArenaControl(m.arena!,id,input,seq);
+  syncArenaRuns(g,now);
+  return g;
+}
+function syncArenaRuns(g:PartyGame,now:number) {
+  for(const actor of g.mini!.arena!.actors){const run=g.mini!.runs[actor.id];run.score=actor.score;run.feedback=actor.feedback;if(actor.played&&run.lastInput===0)run.lastInput=now;}
+}
 /** One source for awarded coins and the result screen, including lower-place ties. */
 export function partyMiniResults(g:PartyGame) {
   const m=g.mini!;
@@ -165,7 +186,7 @@ export function applyPartyAction(current:PartyGame,id:string,action:PartyAction,
   if(!current.players.some(p=>p.id===id)||current.phase==="finished"||current.phase==="aborted")throw new Error("Diese Partie ist nicht aktiv.");
   const g=structuredClone(current),p=activePartyPlayer(g),own=g.players.find(p=>p.id===id)!;
   if(action.type==="abort"){phase(g,"aborted",now);return g;}
-  if(action.type==="resume"){if(!g.resumeOffered)throw new Error("Die Wartezeit läuft noch.");Object.keys(g.disconnected).forEach(id=>{g.players.find(p=>p.id===id)!.passive=true;if(g.mini)g.mini.runs[id].done=true;});const pause=now-g.pausedAt;if(g.deadline)g.deadline+=pause;if(g.mini?.startAt)g.mini.startAt+=pause;g.pausedAt=0;g.resumeOffered=false;return g;}
+  if(action.type==="resume"){if(!g.resumeOffered)throw new Error("Die Wartezeit läuft noch.");Object.keys(g.disconnected).forEach(id=>{g.players.find(p=>p.id===id)!.passive=true;if(g.mini){g.mini.runs[id].done=true;const actor=g.mini.arena?.actors.find(a=>a.id===id);if(actor){actor.finished=true;actor.inputUntil=0;}}});const pause=now-g.pausedAt;if(g.deadline)g.deadline+=pause;if(g.mini?.startAt)g.mini.startAt+=pause;g.pausedAt=0;g.resumeOffered=false;return g;}
   if(g.pausedAt)throw new Error("Die Partie wartet auf die Verbindung.");
   const miniPhase=["mini-intro","mini-play","analog-confirm"].includes(g.phase);
   if(!miniPhase && id!==p.id)throw new Error("Du bist nicht am Zug.");
@@ -187,7 +208,7 @@ export function applyPartyAction(current:PartyGame,id:string,action:PartyAction,
   else if(action.type==="ready"&&g.phase==="mini-intro") {const m=g.mini!;if(!g.online&&id!==g.players[g.localMiniIndex].id&&m.id!=="words"&&m.id!=="bridge")throw new Error("Bitte das Gerät weitergeben.");m.runs[id].ready=true;if(!g.online||g.players.filter(p=>!p.passive).every(p=>m.runs[p.id].ready)){if((m.id==="words"||m.id==="bridge")&&!g.players.filter(p=>!p.passive).every(p=>m.material[p.id]===true))throw new Error("Erst das Material bestätigen.");startMini(g,now);}}
   else if(action.type==="material"&&g.phase==="mini-intro"){if(!["words","bridge"].includes(g.mini!.id))throw new Error("Kein Material nötig.");if(!action.available)selectMini(g,now,true);else{if(!g.online)g.players.forEach(p=>g.mini!.material[p.id]=true);else g.mini!.material[id]=true;}}
   else if(action.type==="input"&&g.phase==="mini-play") {if(!g.online&&id!==g.players[g.localMiniIndex].id)throw new Error("Nicht dein Versuch.");partyInput(g,id,action.value,now);}
-  else if(action.type==="finish"&&g.phase==="mini-play"){if(["words","bridge"].includes(g.mini!.id))throw new Error("Analoge Aufgaben laufen bis zum Zeitende.");if(!g.online&&id!==g.players[g.localMiniIndex].id)throw new Error("Nicht dein Versuch.");finishRun(g,id,now);}
+  else if(action.type==="finish"&&g.phase==="mini-play"){if(["words","bridge"].includes(g.mini!.id))throw new Error("Analoge Aufgaben laufen bis zum Zeitende.");if(!g.online&&id!==g.players[g.localMiniIndex].id)throw new Error("Nicht dein Versuch.");const actor=g.mini?.arena?.actors.find(a=>a.id===id);if(actor){actor.finished=true;actor.vx=0;actor.vz=0;actor.inputUntil=0;}finishRun(g,id,now);}
   else if(action.type==="report"&&(g.phase==="mini-play"||g.phase==="analog-confirm")){if(!g.mini||!["words","bridge"].includes(g.mini.id)||now<g.deadline&&g.phase==="mini-play")throw new Error("Die Aufgabe läuft noch.");if(!Number.isInteger(action.score)||action.score<0||action.score>200)throw new Error("Bitte 0–200 ganze Punkte eintragen.");g.mini.reports[id]=action.score;g.mini.runs[id].score=action.score;g.mini.confirms={};finishRun(g,id,now);}
   else if(action.type==="confirm"&&g.phase==="analog-confirm"){if(!action.accept)selectMini(g,now,true);else{g.mini!.confirms[id]=true;if(!g.online||g.players.filter(p=>!p.passive).every(p=>g.mini!.confirms[p.id]))rewardMini(g,now);}}
   else if(action.type==="next"&&g.phase==="mini-result"){if(g.round===g.options.rounds){const first=partyStanding(g)[0];g.winners=g.players.filter(p=>p.trophies===first.trophies&&p.coins===first.coins&&p.wins===first.wins).map(p=>p.id);phase(g,"finished",now);}else{g.round++;g.order.push(g.order.shift()!);g.turn=0;g.mini=undefined;startTurn(g,now);}}
@@ -199,6 +220,11 @@ export function tickParty(current:PartyGame,now=Date.now()):PartyGame {
   if(current.pausedAt){const g=structuredClone(current);if(now-g.pausedAt>=60000)g.resumeOffered=true;return g;}
   const g=structuredClone(current);
   if(g.phase==="finished"||g.phase==="aborted")return g;
+  if(g.phase==="mini-play"&&g.mini?.arena&&now>=g.mini.startAt){
+    advanceArena(g.mini.arena,now-g.mini.startAt);syncArenaRuns(g,now);
+    const finished=g.mini.arena.actors.filter(a=>a.finished&&!g.mini!.runs[a.id].done).map(a=>a.id);
+    for(const id of finished)if(g.phase==="mini-play")finishRun(g,id,now);
+  }
   if(g.phase==="mini-play"&&now>=g.deadline){const m=g.mini!;if(m.id==="words"||m.id==="bridge"){phase(g,"analog-confirm",now);return g;}const ids=g.online?g.players.filter(p=>!p.passive&&!m.runs[p.id].done).map(p=>p.id):[g.players[g.localMiniIndex].id];ids.forEach(id=>{if(g.phase==="mini-play")finishRun(g,id,now);});return g;}
   if(!g.online)return g;
   const p=activePartyPlayer(g);
@@ -214,6 +240,7 @@ export function tickParty(current:PartyGame,now=Date.now()):PartyGame {
 export function publicParty(current:PartyGame,viewer:string,now=Date.now()):PartyGame {
   const g=structuredClone(current);g.rng=0;g.events=[];g.miniBag=[];g.serverTime=now;
   if(g.mini){const m=g.mini,original=current.mini!,r=original.runs[viewer];m.risk=[];
+    if(m.arena)m.arena=publicArena(m.arena,viewer);
     m.cards=original.cards.map((value,i)=>r&&(r.matched.includes(i)||r.opened.includes(i))?value:-1);
     m.trail=g.phase==="mini-play"&&now>=m.startAt&&now<m.startAt+6000?m.trail:[];
     m.targets=original.targets.map((v,i)=>g.phase==="mini-play"&&i===Math.floor((now-m.startAt)/2000)?v:-1);

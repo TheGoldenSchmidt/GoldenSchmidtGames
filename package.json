@@ -13,7 +13,7 @@
     "generate:icons": "tsx scripts/generate-icons.ts",
     "prebuild": "npm run generate:icons",
     "build": "tsc --noEmit && vite build",
-    "test:rules": "tsx scripts/qwixx-rules-test.ts && tsx scripts/durak-rules-test.ts && tsx scripts/kribbeln-rules-test.ts && tsx scripts/game-edge-cases-test.ts && tsx scripts/party-rules-test.ts",
+    "test:rules": "tsx scripts/qwixx-rules-test.ts && tsx scripts/durak-rules-test.ts && tsx scripts/kribbeln-rules-test.ts && tsx scripts/game-edge-cases-test.ts && tsx scripts/party-rules-test.ts && tsx scripts/party-arena-test.ts",
     "test:online": "tsx scripts/integration-test.ts && tsx scripts/party-online-test.ts",
     "test:production": "tsx scripts/production-smoke-test.ts",
     "test:screens": "tsx --tsconfig tsconfig.json scripts/game-screens-test.tsx",
@@ -28,6 +28,7 @@
     "react-dom": "^19.1.1",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
+    "three": "^0.187.0",
     "tsx": "^4.20.5"
   },
   "devDependencies": {
@@ -36,6 +37,7 @@
     "@types/node": "^24.5.2",
     "@types/react": "^19.1.16",
     "@types/react-dom": "^19.1.9",
+    "@types/three": "^0.187.0",
     "@vitejs/plugin-react": "^5.0.3",
     "concurrently": "^9.2.1",
     "typescript": "^5.9.2",

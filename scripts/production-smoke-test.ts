@@ -23,9 +23,14 @@ try {
   assert.match(serviceWorker.headers.get("content-type") ?? "", /javascript/);
   const workerSource = await serviceWorker.text();
   assert.match(workerSource, /SKIP_WAITING/, "Manuelle Update-Aktivierung muss im Worker vorhanden sein");
+  const worldModules=[...new Set(workerSource.match(/assets\/(?:sceneKit|boardWorld|arenaWorld)-[A-Za-z0-9_-]+\.js/g)??[])];
+  assert.equal(worldModules.length,3,"Alle nachgeladenen 3D-Module müssen im PWA-Cache liegen");
+  for(const response of await Promise.all(worldModules.map(module=>fetch(`${origin}/${module}`)))){
+    assert.equal(response.status,200);assert.match(response.headers.get("content-type")??"",/javascript/);assert.ok((await response.text()).length>1000);
+  }
   assert.equal(health.status, 200);
   assert.equal((await health.json() as { ok?: boolean }).ok, true);
-  console.log(`Produktionsprüfung erfolgreich: HTML, Manifest, Service Worker und Health-Check auf Port ${port}`);
+  console.log(`Produktionsprüfung erfolgreich: HTML, Manifest, Service Worker, 3D-Module im PWA-Cache und Health-Check auf Port ${port}`);
 } finally {
   await server.close();
 }

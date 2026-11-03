@@ -13,6 +13,8 @@ import { InstallPrompt } from "../src/components/InstallPrompt";
 import { PartyGameScreen } from "../src/screens/PartyGameScreen";
 import { createPartyGame, createPartyPractice, publicParty } from "../shared/party";
 import { PartyMini } from "../src/components/PartyMini";
+import { ACTION_MINI_IDS } from "../shared/partyArena";
+import { LocalSetupScreen } from "../src/screens/LocalSetupScreen";
 
 const players = [{ id: "a", name: "Anna" }, { id: "b", name: "Ben" }];
 // tsx verwendet außerhalb des Vite-Builds den klassischen JSX-Laufzeitpfad.
@@ -42,7 +44,8 @@ const partyStart=renderToString(<PartyGameScreen profile={profile} initialRoom={
 assert.match(partyStart,/Inselparty/);assert.match(partyStart,/Inselkarte/);assert.match(partyStart,/Trophäenstand/);
 room.partyGame.phase="finished";room.partyGame.winners=["a"];
 assert.match(renderToString(<PartyGameScreen profile={profile} initialRoom={room} onExit={exit}/>),/Die Insel feiert euch/);
-for(const id of ["targets","colors","memory","timing","trail","risk"] as const){const practice=createPartyPractice(id);assert.ok(renderToString(<PartyMini game={publicParty(practice,"practice")} id="practice" now={Date.now()} send={()=>{}}/>).length>100);}
+for(const id of ["targets","colors","memory","timing","trail","risk",...ACTION_MINI_IDS] as const){const practice=createPartyPractice(id);assert.ok(renderToString(<PartyMini game={publicParty(practice,"practice")} id="practice" now={Date.now()} send={()=>{}}/>).length>100);}
+const localSetup=renderToString(<LocalSetupScreen onBack={exit} onStart={exit}/>);assert.doesNotMatch(localSetup,/Inselparty/);assert.match(localSetup,/Qwixx/);
 // Ohne beforeinstallprompt muss die Installationshilfe trotzdem erreichbar bleiben.
 const originalNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");
 const originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");

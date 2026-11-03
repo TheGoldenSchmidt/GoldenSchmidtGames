@@ -1,5 +1,7 @@
 # Inselparty: Spielerlebnis
 
+Dieser Entwurf beschreibt den früheren 2D-Stand. Die aktuelle, ausschließlich online gespielte 3D-Version ist in [Inselparty in 3D](inselparty-3d.md) dokumentiert.
+
 Die Insel ist die Bühne. Die bisherige Ansicht zeigte Karte, Regeln und Aktionen untereinander; auf dem Handy verschwand der Spielzug unter dem Kartenbereich. Minispiele hatten kaum eigene Identität und Belohnungen waren nur Text.
 
 ## Gestaltungsrichtung

@@ -10,7 +10,6 @@ export function HomeScreen({
   onProfile,
   onLocal,
   onOnline,
-  onResumeLocal,
   onResumeOnline,
   resumeError
 }: {
@@ -19,7 +18,6 @@ export function HomeScreen({
   onProfile: () => void;
   onLocal: () => void;
   onOnline: () => void;
-  onResumeLocal?: () => void;
   onResumeOnline?: () => void;
   resumeError?: string;
 }) {
@@ -63,7 +61,7 @@ export function HomeScreen({
       </section>
 
       <InstallPrompt />
-      {(onResumeLocal||onResumeOnline)&&<section className="party-resume" aria-label="Inselparty fortsetzen">{onResumeLocal&&<button className="button button--secondary button--wide" onClick={onResumeLocal}>Lokale Inselparty fortsetzen</button>}{onResumeOnline&&<button className="button button--secondary button--wide" onClick={onResumeOnline} disabled={!online}>Online-Inselparty wieder beitreten</button>}{resumeError&&<p role="alert">{resumeError}</p>}</section>}
+      {onResumeOnline&&<section className="party-resume" aria-label="Inselparty fortsetzen"><button className="button button--secondary button--wide" onClick={onResumeOnline} disabled={!online}>Online-Inselparty wieder beitreten</button>{resumeError&&<p role="alert">{resumeError}</p>}</section>}
       <AppUpdate />
 
       <footer className="home__footer">

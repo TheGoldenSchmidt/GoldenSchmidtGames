@@ -1,13 +1,16 @@
 import { useEffect, useRef, useState } from "react";
-import { activePartyPlayer, applyPartyAction, BOARD, createPartyGame, FIELD_ICONS, FIELD_LABELS, ITEMS, ITEM_IDS, MINIS, partyMiniActor, partyMiniResults, partyStanding, publicParty, tickParty, type PartyAction, type PartyGame, type PartyOptions } from "../../shared/party";
+import { activePartyPlayer, BOARD, FIELD_ICONS, FIELD_LABELS, ITEMS, ITEM_IDS, MINIS, partyMiniResults, partyStanding, type MiniId, type PartyAction } from "../../shared/party";
+import { type ArenaInput, type ArenaState } from "../../shared/partyArena";
 import type { GuestProfile, RoomState } from "../../shared/types";
 import { PartyBoard, FIGURES } from "../components/PartyBoard";
 import { Celebration, MINI_LOOK, MiniPreview } from "../components/PartyArt";
 import { PartyDice } from "../components/PartyDice";
 import { PartyMini, PartyPractice } from "../components/PartyMini";
+import { PartyTraining } from "../components/PartyTraining";
 import { socket } from "../lib/socket";
 
-export const PARTY_LOCAL_SAVE="spielraum.party.local.v1", PARTY_ONLINE_SAVE="spielraum.party.online.v1";
+export const PARTY_ONLINE_SAVE="spielraum.party.online.v1";
+export interface PartySavedSession {code:string;partyToken:string}
 export function readPartySave<T>(key:string):T|undefined {try{return JSON.parse(localStorage.getItem(key)??"null")??undefined;}catch{return undefined;}}
 const BOARD_PHASES=["turn","path","trophy","shop","gift","summary"];
 
@@ -17,28 +20,27 @@ function pathPreview(position:number,steps:number,destination:number) {
   return {fields,label:FIELD_LABELS[BOARD[fields.at(-1)??position].type]};
 }
 
-export function PartyGameScreen({profile,localNames,options,initialRoom,initialGame,onExit}:{profile:GuestProfile;localNames?:string[];options?:PartyOptions;initialRoom?:RoomState;initialGame?:PartyGame;onExit:()=>void}) {
-  const online=Boolean(initialRoom),[room,setRoom]=useState(initialRoom);
-  const [local,setLocal]=useState(()=>initialGame??(!online?createPartyGame((localNames??[]).map((name,i)=>({id:`local-${i}`,name})),options):undefined));
-  const [now,setNow]=useState(Date.now()),[error,setError]=useState(""),[pending,setPending]=useState(false),[practice,setPractice]=useState(false);
-  const [replace,setReplace]=useState(0),[target,setTarget]=useState(""),[destination,setDestination]=useState(6),[score,setScore]=useState(0),[reportId,setReportId]=useState(""),[selectedItem,setSelectedItem]=useState<number>();
+export function PartyGameScreen({profile,initialRoom,onExit}:{profile:GuestProfile;initialRoom:RoomState;onExit:()=>void}) {
+  const [room,setRoom]=useState(initialRoom);
+  const [now,setNow]=useState(Date.now()),[error,setError]=useState(""),[pending,setPending]=useState(false),[practice,setPractice]=useState<MiniId>();
+  const [replace,setReplace]=useState(0),[target,setTarget]=useState(""),[destination,setDestination]=useState(6),[selectedItem,setSelectedItem]=useState<number>();
   const [sound,setSound]=useState(false),[haptics,setHaptics]=useState(true),[connection,setConnection]=useState(true),[rolling,setRolling]=useState(false),[travelling,setTravelling]=useState(false);
-  const lock=useRef(false),offset=useRef(0),game=online?room?.partyGame:local;
+  const lock=useRef(false),offset=useRef(0),controlSeq=useRef(0),game=room.partyGame;
   const diceKey=game?.dice.length?`${game.round}:${game.turn}:${game.dice.join()}`:"",lastDice=useRef(diceKey);
   const turnStart=useRef({key:"",coins:0,trophies:0});
 
-  useEffect(()=>{const timer=setInterval(()=>{const time=Date.now()+offset.current;setNow(time);if(!online)setLocal(g=>{if(!g)return g;const next=tickParty(g,time);return JSON.stringify(next)===JSON.stringify(g)?g:next;});},100);return()=>clearInterval(timer);},[online]);
-  useEffect(()=>{if(!game)return;try{if(online)localStorage.setItem(PARTY_ONLINE_SAVE,JSON.stringify(room));else localStorage.setItem(PARTY_LOCAL_SAVE,JSON.stringify(game));}catch{setError("Der Spielstand konnte auf diesem Gerät nicht gespeichert werden.");}},[game,room,online]);
+  useEffect(()=>{const timer=setInterval(()=>setNow(Date.now()+offset.current),50);return()=>clearInterval(timer);},[]);
+  useEffect(()=>{try{localStorage.setItem(PARTY_ONLINE_SAVE,JSON.stringify({code:room.code,partyToken:room.partyToken}));}catch{setError("Der Raum konnte auf diesem Gerät nicht für den Wiederbeitritt gespeichert werden.");}},[room.code,room.partyToken]);
   useEffect(()=>{
-    if(!online||!initialRoom)return;
     const update=(next:RoomState)=>{if(next.code!==initialRoom.code)return;if(next.partyGame?.serverTime)offset.current=next.partyGame.serverTime-Date.now();setRoom(next);};
+    const arena=(payload:{code:string;phaseId:number;arena:ArenaState;serverTime:number})=>{if(payload.code!==initialRoom.code)return;offset.current=payload.serverTime-Date.now();setRoom(previous=>{const g=previous.partyGame;if(!g?.mini||g.phaseId!==payload.phaseId||(g.mini.arena?.time??0)>payload.arena.time)return previous;const runs={...g.mini.runs};for(const actor of payload.arena.actors)runs[actor.id]={...runs[actor.id],score:actor.score,feedback:actor.feedback,done:runs[actor.id].done||actor.finished,lastInput:actor.played?(runs[actor.id].lastInput||payload.serverTime):0};return {...previous,partyGame:{...g,serverTime:payload.serverTime,mini:{...g.mini,arena:payload.arena,runs}}};});};
     const lost=()=>setConnection(false);
     const rejoin=()=>{socket.timeout(8000).emit("room:join",{code:initialRoom.code,playerId:profile.id,name:profile.username,partyToken:initialRoom.partyToken},(err:Error|null,response:{ok:boolean;data?:RoomState;error?:string})=>{if(err||!response.ok||!response.data){setError(response?.error??"Die Sitzung ist nicht mehr erreichbar. Nach einem Serverneustart muss eine neue Partie begonnen werden.");return;}setConnection(true);setError("");update(response.data);});};
-    socket.on("room:updated",update);socket.on("connect",rejoin);socket.on("disconnect",lost);
+    socket.on("room:updated",update);socket.on("party:arena",arena);socket.on("connect",rejoin);socket.on("disconnect",lost);
     if(!socket.connected)socket.connect();else rejoin();
-    return()=>{socket.off("room:updated",update);socket.off("connect",rejoin);socket.off("disconnect",lost);};
-  },[online,initialRoom?.code,profile.id]);
-  useEffect(()=>{setError("");setReplace(0);setReportId("");setPractice(false);setSelectedItem(undefined);},[game?.phaseId,game?.itemUsed]);
+    return()=>{socket.off("room:updated",update);socket.off("party:arena",arena);socket.off("connect",rejoin);socket.off("disconnect",lost);};
+  },[initialRoom.code,profile.id]);
+  useEffect(()=>{setError("");setReplace(0);setPractice(undefined);setSelectedItem(undefined);if(game?.phase==="mini-intro")void import("../three/arenaWorld");},[game?.phaseId,game?.itemUsed]);
   useEffect(()=>{
     if(lastDice.current===diceKey)return;
     lastDice.current=diceKey;
@@ -46,37 +48,37 @@ export function PartyGameScreen({profile,localNames,options,initialRoom,initialG
     setRolling(true);const timer=setTimeout(()=>setRolling(false),700);return()=>clearTimeout(timer);
   },[diceKey]);
   const boardPhase=Boolean(game&&BOARD_PHASES.includes(game.phase));
-  useEffect(()=>{if(!boardPhase)window.scrollTo({top:0,behavior:"instant"});},[boardPhase,game?.localMiniIndex]);
+  useEffect(()=>{if(!boardPhase)window.scrollTo({top:0,behavior:"instant"});},[boardPhase]);
 
   function feedback() {
     if(haptics){try{navigator.vibrate?.(18);}catch{ /* optional */ }}
     if(sound){try{const AudioCtx=window.AudioContext;if(AudioCtx){const context=new AudioCtx(),osc=context.createOscillator(),gain=context.createGain();osc.frequency.value=520;gain.gain.value=.025;osc.connect(gain);gain.connect(context.destination);osc.start();osc.stop(context.currentTime+.07);osc.onended=()=>{void context.close();};}}catch{ /* optional */ }}
   }
   if(!game)return <main className="page"><p>Inselparty wird geladen …</p><button onClick={onExit}>Zurück</button></main>;
-  const g=game,p=activePartyPlayer(g),miniPhase=["mini-intro","mini-play","analog-confirm"].includes(g.phase),viewer=online?profile.id:miniPhase?partyMiniActor(g,profile.id):p.id;
-  const projected=online?g:publicParty(g,viewer,now),own=g.players.find(q=>q.id===viewer)!,canAct=!online||p.id===profile.id,host=!online||room?.hostId===profile.id;
-  const m=projected.mini,analog=m&&["words","bridge"].includes(m.id),standings=partyStanding(g),busy=pending||!connection;
+  const g=game,p=activePartyPlayer(g),viewer=profile.id;
+  const projected=g,own=g.players.find(q=>q.id===viewer)!,canAct=p.id===profile.id,host=room.hostId===profile.id;
+  const m=projected.mini,standings=partyStanding(g),busy=pending||!connection;
   const turnKey=`${g.round}:${g.turn}`;
   if(turnStart.current.key!==turnKey)turnStart.current={key:turnKey,coins:p.coins,trophies:p.trophies};
   const coinsChanged=p.coins-turnStart.current.coins,trophiesChanged=p.trophies-turnStart.current.trophies;
   const moving=rolling||travelling,item=selectedItem===undefined?undefined:p.items[selectedItem];
   const seconds=g.deadline>0?Math.max(0,Math.ceil((g.deadline-now)/1000)):0;
-  function send(action:PartyAction,id=viewer) {
+  function send(action:PartyAction) {
     if(lock.current||!connection||g.pausedAt&&action.type!=="resume"&&action.type!=="abort")return;
     setError("");feedback();
-    if(online){lock.current=true;setPending(true);socket.timeout(8000).emit("party:action",{seq:(g.seq[profile.id]??0)+1,phaseId:g.phaseId,token:room?.partyToken,action},(err:Error|null,response:{ok:boolean;data?:RoomState;error?:string})=>{lock.current=false;setPending(false);if(err||!response.ok||!response.data)setError(response?.error??"Der Server antwortet nicht. Die Verbindung wird wiederhergestellt.");else{if(response.data.partyGame?.serverTime)offset.current=response.data.partyGame.serverTime-Date.now();setRoom(response.data);}});}
-    else{try{setLocal(applyPartyAction(g,id,action,Date.now()));}catch(e){setError(e instanceof Error?e.message:"Aktion nicht möglich.");}}
+    lock.current=true;setPending(true);socket.timeout(8000).emit("party:action",{seq:(g.seq[profile.id]??0)+1,phaseId:g.phaseId,token:room.partyToken,action},(err:Error|null,response:{ok:boolean;data?:RoomState;error?:string})=>{lock.current=false;setPending(false);if(err||!response.ok||!response.data)setError(response?.error??"Der Server antwortet nicht. Die Verbindung wird wiederhergestellt.");else{if(response.data.partyGame?.serverTime)offset.current=response.data.partyGame.serverTime-Date.now();setRoom(response.data);}});
   }
+  function control(input:ArenaInput) {if(!connection||g.pausedAt||g.phase!=="mini-play")return;controlSeq.current=Math.max(controlSeq.current,g.mini?.arena?.actors.find(a=>a.id===viewer)?.inputSeq??0)+1;socket.volatile.emit("party:control",{phaseId:g.phaseId,token:room.partyToken,seq:controlSeq.current,input});}
   const replaceControl=<label>Welches Item möchtest du ersetzen?<select value={replace} onChange={e=>setReplace(Number(e.target.value))}>{p.items.map((item,i)=><option value={i} key={i}>{ITEMS[item].name}</option>)}</select></label>;
   return <main className={`party-screen ${boardPhase?"party-screen--board":"party-screen--stage"} ${g.phase==="mini-play"?"party-screen--playing":""}`}>
-    <header className="party-header"><div><strong>Inselparty<span aria-hidden="true">✦</span></strong><small>{online?`Raum ${room?.code}`:"Gemeinsam an einem Gerät"}</small></div><div className="party-round"><span>Runde <b>{g.round}</b> / {g.options.rounds}</span><div aria-hidden="true">{Array.from({length:g.options.rounds},(_,i)=><i key={i} className={i<g.round?"is-complete":""}/>)}</div></div><button className="text-button" onClick={onExit}>Verlassen</button></header>
+    <header className="party-header"><div><strong>Inselparty<span aria-hidden="true">✦</span></strong><small>Raum {room.code}</small></div><div className="party-round"><span>Runde <b>{g.round}</b> / {g.options.rounds}</span><div aria-hidden="true">{Array.from({length:g.options.rounds},(_,i)=><i key={i} className={i<g.round?"is-complete":""}/>)}</div></div><button className="text-button" onClick={onExit}>Verlassen</button></header>
     {g.phase!=="mini-play"&&g.phase!=="finished"&&<div className="party-standings" aria-label="Punktestand">{standings.map((player,rank)=>{const i=g.players.indexOf(player);return <div key={player.id} className={player.id===p.id&&boardPhase?"is-active":""}><span className={`party-avatar party-player-color-${i}`}>{FIGURES[i]}</span><strong>{player.name}</strong><small><span aria-label={`${player.trophies} Trophäen`}>★ {player.trophies}</span><span aria-label={`${player.coins} Münzen`}>◉ {player.coins}</span>{player.shield&&<span title="Schutzschild aktiv">⬡</span>}{player.passive&&<span>pausiert</span>}</small><em>{rank+1}.</em></div>;})}</div>}
     {(!connection||g.pausedAt>0)&&<section className="party-connection" role="status"><h2>Wir warten auf die Verbindung</h2><p>Die Partie pausiert bis zu 60 Sekunden. Nach einem Serverneustart sind Online-Partien nicht wiederherstellbar.</p>{host&&g.resumeOffered&&<button className="button button--primary" disabled={busy} onClick={()=>send({type:"resume"})}>Ohne getrennte Spieler fortsetzen</button>}{host&&<button className="button button--ghost" disabled={busy} onClick={()=>send({type:"abort"})}>Partie abbrechen</button>}</section>}
     <div className="party-layout">
       {boardPhase&&<PartyBoard game={g} rolling={rolling} onTravelChange={setTravelling}/>}
       <section className={`party-decision ${moving&&boardPhase?"is-travelling":""}`}>
         {boardPhase&&<>
-          <div className="party-turn-title"><span className={`party-avatar party-player-color-${g.players.indexOf(p)}`}>{FIGURES[g.players.indexOf(p)]}</span><div><h2>{canAct?`${p.name}, du bist dran!`:`${p.name} ist am Zug`}</h2><small>{moving?(rolling?"Der Würfel fällt …":"Ab auf die Insel!"):g.deadline>0?`${seconds} Sekunden für deine Entscheidung`:`Zug ${g.turn+1} von ${g.players.length} · danach Minispiel`}</small></div>{online&&g.deadline>0&&<b className={`party-decision-time ${seconds<=5?"is-urgent":""}`}>{seconds}</b>}</div>
+          <div className="party-turn-title"><span className={`party-avatar party-player-color-${g.players.indexOf(p)}`}>{FIGURES[g.players.indexOf(p)]}</span><div><h2>{canAct?`${p.name}, du bist dran!`:`${p.name} ist am Zug`}</h2><small>{moving?(rolling?"Der Würfel fällt …":"Ab auf die Insel!"):g.deadline>0?`${seconds} Sekunden für deine Entscheidung`:`Zug ${g.turn+1} von ${g.players.length} · danach Minispiel`}</small></div>{g.deadline>0&&<b className={`party-decision-time ${seconds<=5?"is-urgent":""}`}>{seconds}</b>}</div>
           {(g.phase==="turn"||g.dice.length>0)&&<PartyDice values={g.dice} rolling={rolling} boost={g.boost}/>}
           {moving&&<p className="party-movement-status" role="status">{rolling?"Wie weit geht’s diesmal?":`${p.name} zieht weiter …`}</p>}
         </>}
@@ -106,20 +108,18 @@ export function PartyGameScreen({profile,localNames,options,initialRoom,initialG
 
         {g.phase==="mini-intro"&&m&&<div className="party-mini-intro">
           <MiniPreview id={m.id}/><p className="party-mini-round">Minispiel der Runde {g.round}</p><h1>{MINIS[m.id].name}</h1><p className="party-mini-tagline">{MINI_LOOK[m.id].action}</p><p>{MINIS[m.id].instruction}</p><div className="party-mini-facts"><span>{MINI_LOOK[m.id].goal}</span><span>Bis zu 10 Münzen gewinnen</span></div>
-          {!online&&<div className="party-handoff"><span className={`party-avatar party-player-color-${g.players.indexOf(own)}`}>{FIGURES[g.players.indexOf(own)]}</span><p>Gerät an <strong>{own.name}</strong> weitergeben.<small>Die anderen Ergebnisse bleiben verdeckt.</small></p></div>}
-          {analog?<><p>Seid ihr am selben Ort und ist das Material vorhanden?</p><button className="button button--secondary button--wide" disabled={busy} onClick={()=>send({type:"material",available:true})}>{m.material[viewer]?"✓ Material ist bereit":"Material vorhanden"}</button><button className="button button--ghost button--wide" disabled={busy} onClick={()=>send({type:"material",available:false})}>Digitales Ersatzspiel wählen</button></>:<button className="button button--secondary button--wide" onClick={()=>setPractice(true)}>Erst kurz üben</button>}
-          <button className="button button--primary button--wide" disabled={busy||m.runs[viewer]?.ready||(analog&&!m.material[viewer])||own.passive} onClick={()=>send({type:"ready"})}>{m.runs[viewer]?.ready?"Bereit – wir warten auf die anderen":"Ich bin bereit"}</button>
-          {online&&<div className="party-ready-players" aria-label="Bereitschaft">{g.players.filter(q=>!q.passive).map(q=><span key={q.id} className={m.runs[q.id].ready?"is-ready":""}>{m.runs[q.id].ready?"✓":"◷"} {q.name}</span>)}</div>}
+          <button className="button button--secondary button--wide" onClick={()=>setPractice(m.id)}>Erst kurz üben</button>
+          <button className="button button--primary button--wide" disabled={busy||m.runs[viewer]?.ready||own.passive} onClick={()=>send({type:"ready"})}>{m.runs[viewer]?.ready?"Bereit – wir warten auf die anderen":"Ich bin bereit"}</button>
+          <div className="party-ready-players" aria-label="Bereitschaft">{g.players.filter(q=>!q.passive).map(q=><span key={q.id} className={m.runs[q.id].ready?"is-ready":""}>{m.runs[q.id].ready?"✓":"◷"} {q.name}</span>)}</div>
         </div>}
-        {g.phase==="mini-play"&&m&&<><div className="party-mini-player"><span className={`party-player-color-${g.players.indexOf(own)}`}>{FIGURES[g.players.indexOf(own)]}</span>{own.name}{online?<small>Alle spielen gleichzeitig</small>:<small>Dein Versuch</small>}</div><PartyMini game={projected} id={viewer} now={g.pausedAt||now} send={send} busy={busy||own.passive||Boolean(g.pausedAt)}/>{!analog&&!m.runs[viewer]?.done&&<details className="party-end-attempt"><summary>Versuch vorzeitig beenden</summary><p>Deine bisher erspielten Punkte zählen.</p><button className="button button--ghost" disabled={busy} onClick={()=>send({type:"finish"})}>Versuch beenden</button></details>}</>}
-        {g.phase==="analog-confirm"&&m&&<><h2>Gemeinsam auswerten</h2><p>{MINIS[m.id].instruction}</p>{!online&&<label>Ergebnis für<select value={reportId||g.players[0].id} onChange={e=>setReportId(e.target.value)}>{g.players.map(q=><option key={q.id} value={q.id}>{q.name}</option>)}</select></label>}<label>Ganze Punkte (0–200)<input type="number" min={0} max={200} value={score} onChange={e=>setScore(Number(e.target.value))}/></label><button className="button button--secondary" disabled={busy} onClick={()=>send({type:"report",score},online?viewer:reportId||g.players[0].id)}>Ergebnis eintragen</button><ul>{g.players.map(q=><li key={q.id}>{q.name}: {m.reports[q.id]??"noch offen"}</li>)}</ul><button className="button button--primary" disabled={busy||g.players.filter(q=>!q.passive).some(q=>m.reports[q.id]===undefined)||m.confirms[viewer]} onClick={()=>send({type:"confirm",accept:true})}>{online?"Alle Ergebnisse bestätigen":"Die Gruppe bestätigt alle Ergebnisse"}</button><button className="button button--ghost" disabled={busy} onClick={()=>send({type:"confirm",accept:false})}>Uneinig – digitales Ersatzspiel</button></>}
+        {g.phase==="mini-play"&&m&&<><div className="party-mini-player"><span className={`party-player-color-${g.players.indexOf(own)}`}>{FIGURES[g.players.indexOf(own)]}</span>{own.name}<small>Alle spielen gleichzeitig</small></div><PartyMini game={projected} id={viewer} now={g.pausedAt||now} send={send} control={control} busy={!connection||own.passive||Boolean(g.pausedAt)}/>{!m.runs[viewer]?.done&&<details className="party-end-attempt"><summary>Versuch vorzeitig beenden</summary><p>Deine bisher erspielten Punkte zählen.</p><button className="button button--ghost" disabled={busy} onClick={()=>send({type:"finish"})}>Versuch beenden</button></details>}</>}
         {g.phase==="mini-result"&&m&&<div className="party-mini-results"><Celebration small/><h1>Schätze verteilt!</h1><p>{MINIS[m.id].name}</p><ol className="party-awards">{partyMiniResults(g).map(result=><li key={result.player.id} className={result.player.id===viewer?"is-you":""}><span className="party-place">{result.place?`${result.place}.`:"–"}</span><span className={`party-avatar party-player-color-${g.players.indexOf(result.player)}`}>{FIGURES[g.players.indexOf(result.player)]}</span><div><strong>{result.player.name}</strong><small>{result.participated?`${result.score} ${m.id==="memory"?`Paare · ${result.attempts} Versuche`:"Punkte"}`:result.player.passive?"Ausgesetzt":"Nicht teilgenommen"}</small></div><b>+{result.coins}<small>Münzen</small></b></li>)}</ol><p className="party-result-note">Bei Gleichstand zählt der gemeinsame niedrigere Platz.</p>{canAct?<button className="button button--primary button--wide" disabled={busy} onClick={()=>send({type:"next"})}>{g.round===g.options.rounds?"Zur Siegerehrung":"Weiter zur Insel"}</button>:<p className="party-wait">{p.name} bringt euch gleich zurück zur Insel.</p>}</div>}
         {g.phase==="finished"&&<section className="party-finale"><Celebration/><p>Alle {g.options.rounds} Runden gespielt</p><h1>Die Insel feiert euch!</h1><h2>{g.winners.map(id=>g.players.find(q=>q.id===id)!.name).join(" & ")}</h2><p>{g.winners.length>1?"Ihr teilt euch den Sieg!":"Du gewinnst die Inselparty!"}</p><ol>{standings.map((q,i)=><li key={q.id}><span>{i+1}.</span><span className={`party-avatar party-player-color-${g.players.indexOf(q)}`}>{FIGURES[g.players.indexOf(q)]}</span><strong>{q.name}<small>★ {q.trophies} · ◉ {q.coins} · {q.wins} Minispielsiege</small></strong></li>)}</ol><button className="button button--primary button--wide" onClick={onExit}>Zurück zum Spielraum</button></section>}
         {g.phase==="aborted"&&<><h2>Partie beendet</h2><button className="button button--primary" onClick={onExit}>Zum Startmenü</button></>}
         {error&&<p className="error-message" role="alert">{error}</p>}
       </section>
     </div>
-    {g.phase!=="mini-play"&&<footer className="party-footer"><details className="party-journal"><summary>Inselchronik</summary><ol>{g.log.map((line,i)=><li key={i}>{line}</li>)}</ol></details><details className="party-journal"><summary>Regeln & Spielgefühl</summary><p>Die meisten Trophäen gewinnen; dann entscheiden Münzen und Minispielsiege. Eine Trophäe kostet 20 Münzen. Pro Zug darfst du ein Item einsetzen, dann würfeln, Wege wählen und das Zielfeld erleben. Nach allen Zügen folgt ein Minispiel. Online gibt es Entscheidungsfristen, lokal kannst du dir Zeit nehmen. Analoge Aufgaben werden gemeinsam bestätigt.</p><label><input type="checkbox" checked={sound} onChange={e=>setSound(e.target.checked)}/> Kurze Spieltöne</label><label><input type="checkbox" checked={haptics} onChange={e=>setHaptics(e.target.checked)}/> Vibration, falls unterstützt</label><p>Lokale Spielstände werden auf diesem Gerät gespeichert. Online benötigt der Raum einen laufenden Server; ein Serverneustart beendet diese Partie.</p></details></footer>}
-    {practice&&m&&<PartyPractice miniId={m.id} onClose={()=>setPractice(false)}/>}
+    {g.phase!=="mini-play"&&<footer className="party-footer"><PartyTraining active/><details className="party-journal"><summary>Inselchronik</summary><ol>{g.log.map((line,i)=><li key={i}>{line}</li>)}</ol></details><details className="party-journal"><summary>Regeln & Spielgefühl</summary><p>Die meisten Trophäen gewinnen; dann entscheiden Münzen und Minispielsiege. Eine Trophäe kostet 20 Münzen. Pro Zug darfst du ein Item einsetzen, dann würfeln, Wege wählen und das Zielfeld erleben. Nach allen Zügen folgt ein gemeinsames Minispiel mit eigener Figur auf jedem Gerät.</p><label><input type="checkbox" checked={sound} onChange={e=>setSound(e.target.checked)}/> Kurze Spieltöne</label><label><input type="checkbox" checked={haptics} onChange={e=>setHaptics(e.target.checked)}/> Vibration, falls unterstützt</label><p>Nach einer Unterbrechung kannst du mit deiner gespeicherten Sitzung wieder beitreten. Ein Serverneustart beendet die laufende Partie.</p></details></footer>}
+    {practice&&<PartyPractice key={practice} miniId={practice} onClose={()=>setPractice(undefined)}/>}
   </main>;
 }

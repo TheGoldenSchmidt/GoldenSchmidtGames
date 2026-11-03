@@ -2,6 +2,12 @@ import type { CSSProperties } from "react";
 import type { MiniId } from "../../shared/party";
 
 export const MINI_LOOK: Record<MiniId, { icon: string; action: string; hint: string; goal: string }> = {
+  dash:{icon:"◆",action:"Deine Figur auf Schatzjagd",hint:"Laufe, springe und sammle Schätze.",goal:"Laufen & springen · 30 Sekunden"},
+  crates:{icon:"✦",action:"Mach die Kisten klein!",hint:"Laufe zu den Kisten und schlage sie auf.",goal:"Laufen, springen & schlagen · 30 Sekunden"},
+  hurdles:{icon:"↑",action:"Ab zum Leuchtturm!",hint:"Springe über die Hürden auf dem Weg zum Ziel.",goal:"Hindernisrennen · 35 Sekunden"},
+  shock:{icon:"◎",action:"Spring über die Wellen",hint:"Bleib auf der Insel und weiche den Wellen aus.",goal:"Laufen & springen · 30 Sekunden"},
+  balance:{icon:"↔",action:"Ruhige Hände, sicherer Weg",hint:"Balanciere deine Figur über den schmalen Steg.",goal:"Neigung oder Stick · 35 Sekunden"},
+  tilt:{icon:"◉",action:"Auf der Kugel um die Kurve",hint:"Neige dein Handy und rolle zu den Kristallen.",goal:"Neigung oder Stick · 30 Sekunden"},
   targets: { icon: "◆", action: "Fang den Schatz", hint: "Tippe auf das goldene Feld.", goal: "12 Schätze · 24 Sekunden" },
   colors: { icon: "✿", action: "Lass dich nicht täuschen", hint: "Welche Farbe hat die Schrift?", goal: "12 Farben · 24 Sekunden" },
   memory: { icon: "◒", action: "Was liegt unter den Muscheln?", hint: "Decke immer zwei Muscheln auf.", goal: "6 Paare · 30 Sekunden" },

@@ -7,7 +7,8 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { Server } from "socket.io";
 import { getGame } from "../shared/games";
-import { applyPartyAction, createPartyGame, partyOptions, publicParty, tickParty, type PartyAction, type PartyOptions } from "../shared/party";
+import { applyPartyAction, applyPartyControl, createPartyGame, partyOptions, publicParty, tickParty, type PartyAction, type PartyOptions } from "../shared/party";
+import { NEUTRAL_INPUT, publicArena, type ArenaInput } from "../shared/partyArena";
 import { createKribbelnGame, rollKribbeln, submitKribbeln } from "../shared/kribbeln";
 import { accuseDurak, attackDurak, cheatDefendDurak, cheatThrowInDurak, createDurakGame, defendDurak, finishDurakBout, takeDurak, throwInDurak, transferDurak } from "../shared/durak";
 import {
@@ -155,6 +156,16 @@ function enterRoom(socketId: string, room: RoomState, playerId: string) {
 }
 
 io.on("connection", (socket) => {
+  let lastPartyControl=0;
+  socket.on("party:control",(payload:{phaseId?:number;token?:string;seq?:number;input?:ArenaInput},callback?:(ack:Ack<{accepted:boolean}>)=>void)=>{
+    const member=socketMembership.get(socket.id),room=member?rooms.get(member.roomCode):undefined,g=room?.partyGame;
+    const fail=(error:string)=>callback?.({ok:false,error});
+    if(!member||!room||!g||payload?.token!==partyTokens.get(room.code)?.get(member.playerId))return fail("Die Inselparty-Sitzung ist nicht gültig.");
+    if(payload.phaseId!==g.phaseId)return fail("Die Minispielrunde hat sich geändert.");
+    const now=Date.now();if(now-lastPartyControl<25)return callback?.({ok:true,data:{accepted:false}});
+    try{room.partyGame=applyPartyControl(g,member.playerId,payload.input!,payload.seq!,now);lastPartyControl=now;callback?.({ok:true,data:{accepted:true}});}
+    catch(error){fail(error instanceof Error?error.message:"Steuerung nicht möglich.");}
+  });
   socket.on("party:action", (payload: { seq?: number; phaseId?: number; token?: string; action?: PartyAction }, callback: (ack: Ack<RoomState>) => void) => {
     const member=socketMembership.get(socket.id),room=member?rooms.get(member.roomCode):undefined,g=room?.partyGame;
     if(!member||!room||!g||payload?.token!==partyTokens.get(room.code)?.get(member.playerId))return callback({ok:false,error:"Die Inselparty-Sitzung ist nicht gültig."});
@@ -468,7 +479,7 @@ io.on("connection", (socket) => {
     if (!room || !player) return;
 
     player.connected = false;
-    if(room.partyGame&&!room.partyGame.players.find(p=>p.id===player.id)?.passive){room.partyGame.disconnected[player.id]=Date.now();if(!room.partyGame.pausedAt)room.partyGame.pausedAt=Date.now();}
+    if(room.partyGame&&!room.partyGame.players.find(p=>p.id===player.id)?.passive){room.partyGame.disconnected[player.id]=Date.now();if(!room.partyGame.pausedAt)room.partyGame.pausedAt=Date.now();room.partyGame.mini?.arena?.actors.forEach(a=>{a.input={...NEUTRAL_INPUT};a.inputUntil=0;});}
     player.ready = false;
     const connectedPlayers = room.players.filter((entry) => entry.connected);
     if (room.hostId === player.id && connectedPlayers.length > 0) {
@@ -485,7 +496,19 @@ io.on("connection", (socket) => {
   });
 });
 
-  const partyClock=setInterval(()=>{for(const room of rooms.values())if(room.partyGame&&!['finished','aborted'].includes(room.partyGame.phase)){room.partyGame=tickParty(room.partyGame);broadcast(room);}},250);
+  let pulse=0;
+  const partyClock=setInterval(()=>{
+    pulse++;
+    for(const room of rooms.values()){
+      const before=room.partyGame;if(!before||['finished','aborted'].includes(before.phase))continue;
+      const realtime=before.phase==="mini-play"&&Boolean(before.mini?.arena)&&!before.pausedAt;
+      if(!realtime&&pulse%5!==0)continue;
+      room.partyGame=tickParty(before);const after=room.partyGame;
+      if(realtime&&after.phaseId===before.phaseId&&after.mini?.arena){
+        if(pulse%2===0)for(const socketId of io.sockets.adapter.rooms.get(room.code)??[]){const viewer=socketMembership.get(socketId)?.playerId??"";io.sockets.sockets.get(socketId)?.emit("party:arena",{code:room.code,phaseId:after.phaseId,arena:publicArena(after.mini.arena,viewer),serverTime:Date.now()});}
+      }else broadcast(room);
+    }
+  },50);
   partyClock.unref();
   return {
     app,
