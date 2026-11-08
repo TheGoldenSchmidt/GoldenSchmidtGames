@@ -1,5 +1,19 @@
 import assert from "node:assert/strict";
-import { canEnterKribbelSum, rankKribbelnResults, createKribbelnGame, rollKribbeln, submitKribbeln, kribbelTaskMet, type KribbelDie } from "../shared/kribbeln";
+import { canEnterKribbelSum, rankKribbelnResults, createKribbelnGame, rollKribbeln, submitKribbeln, kribbelTaskMet, KRIBBEL_COLORS, KRIBBEL_DICE_FACES, type KribbelDie } from "../shared/kribbeln";
+
+const players = [{ id: "a", name: "A" }, { id: "b", name: "B" }];
+const material = KRIBBEL_DICE_FACES.flat();
+assert.equal(KRIBBEL_DICE_FACES.length, 6);
+for (const faces of KRIBBEL_DICE_FACES) {
+  assert.equal(faces.length, 6);
+  assert.deepEqual(faces.map(face => face.value).sort(), [1, 2, 3, 4, 5, 6]);
+  assert.deepEqual(faces.map(face => face.color).sort(), [...KRIBBEL_COLORS].sort());
+}
+const sampled = Array.from({ length: 6 }, (_, side) => rollKribbeln(createKribbelnGame(players), "a", [], () => (side + .5) / 6).dice).flat();
+for (const color of KRIBBEL_COLORS) for (let value = 1; value <= 6; value++) {
+  assert.equal(material.filter(face => face.color === color && face.value === value).length, 1, `${color} ${value} existiert genau einmal`);
+  assert.equal(sampled.filter(face => face.color === color && face.value === value).length, 1, `${color} ${value} wird auf genau einer Würfelseite gewürfelt`);
+}
 
 assert.deepEqual(rankKribbelnResults({ a: 30, b: 30, c: 20, d: null }), { a: 3, b: 3, c: 2, d: 0 });
 assert.deepEqual(rankKribbelnResults({ a: null, b: 22 }), { a: 0, b: 2 });
@@ -19,9 +33,11 @@ game = rollKribbeln(game, "a", [], () => 0);
 const kept = game.dice[0];
 game = rollKribbeln(game, "a", [0], () => 0.99);
 assert.deepEqual(game.dice[0], kept);
+assert.deepEqual(game.keptDice, [0]);
 game = rollKribbeln(game, "a", [], () => 0);
 assert.throws(() => rollKribbeln(game, "a", []));
 game = submitKribbeln(game, "a", "skip");
+assert.deepEqual(game.keptDice, []);
 assert.equal(game.order[game.playerIndex], "b");
 game = rollKribbeln(game, "b", [], () => 0);
 game = submitKribbeln(game, "b", "skip");
@@ -41,4 +57,4 @@ while (!game.finished) {
   game = submitKribbeln(game, player, "skip");
 }
 assert.equal(game.winners.length, 2);
-console.log("Kribbeln-Grundregeln erfolgreich: Platzierung, Gleichstand und steigende Kribbelfelder");
+console.log("Kribbeln erfolgreich: 36 eindeutige Zahl-Farbe-Paare, sechs vollständige Würfel, Behalten, Platzierung und steigende Kribbelfelder");

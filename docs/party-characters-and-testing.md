@@ -10,8 +10,7 @@ bereit, würfeln, verwenden Items und steuern ihre Figuren in den Minispielen.
 Oben in der Partie öffnet **Testpartie mit Bots** die Werkzeuge:
 
 - Ein bestimmtes Minispiel mit allen Bots starten.
-- Das aktuelle Minispiel wiederholen.
-- Beim Wiederholen bleibt auch der Arenaaufbau gleich.
+- Das aktuelle Minispiel mit demselben Arenaaufbau wiederholen.
 - Die verbleibenden Bot-Züge bis zum eigenen Zug oder Minispiel überspringen.
 - Die komplette Partie mit demselben Startwert neu beginnen.
 

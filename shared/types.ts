@@ -105,7 +105,7 @@ export interface RoomState {
   kribbelnGame?: import("./kribbeln").KribbelnGame;
   partyGame?: import("./party").PartyGame;
   partyToken?: string;
-  partyTest?: { seed: number };
+  partyTest?: { seed: number; commandSeq?: number };
 }
 
 export interface GuestProfile {

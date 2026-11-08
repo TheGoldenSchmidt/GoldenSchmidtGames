@@ -29,6 +29,7 @@ test("Solo-Test: eigene JSON-Figur wählen, drehen und mit echten Bots spielen",
   await page.locator(".party-test-tools>summary").click();
   await page.getByLabel("Minispiel auswählen").selectOption("crates");
   await page.getByRole("button",{name:"Minispiel starten",exact:true}).click();
+  await expect(page.locator(".party-test-tools")).not.toHaveAttribute("open","",{timeout:20000});
   await expect(page.getByRole("heading",{name:"Kistenkrawall",exact:true})).toBeVisible();
   await page.getByRole("button",{name:"Ich bin bereit",exact:true}).click();
   const arena=page.locator(".party-action-world");

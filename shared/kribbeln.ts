@@ -19,6 +19,9 @@ export function canEnterKribbelSum(previous: Array<number | null>, sum: number):
 export type KribbelColor = "red" | "yellow" | "green" | "blue" | "orange" | "purple";
 export type KribbelDie = { value: number; color: KribbelColor };
 export const KRIBBEL_COLORS: KribbelColor[] = ["red", "yellow", "green", "blue", "orange", "purple"];
+/** Six physical dice: each number/color pair occurs on exactly one of the 36 faces. */
+export const KRIBBEL_DICE_FACES: ReadonlyArray<ReadonlyArray<Readonly<KribbelDie>>> = KRIBBEL_COLORS.map((_, die) =>
+  Array.from({ length: 6 }, (_, side) => ({ value: side + 1, color: KRIBBEL_COLORS[(side + die) % 6] })));
 export const KRIBBEL_ROWS = [
   { label: "Genau ein grüner Würfel", group: 0, task: 0 },
   { label: "Kein gelber Würfel", group: 0, task: 1 },
@@ -39,6 +42,7 @@ export interface KribbelnGame {
   playerIndex: number;
   dice: KribbelDie[];
   rolls: number;
+  keptDice: number[];
   results: Record<string, Array<number | null>>;
   scores: Record<string, number>;
   finished: boolean;
@@ -48,7 +52,7 @@ export interface KribbelnGame {
 export function createKribbelnGame(players: { id: string; name: string }[]): KribbelnGame {
   if (players.length < 2 || players.length > 5) throw new Error("Kribbeln benötigt zwei bis fünf Spieler.");
   return { order: players.map(p => p.id), names: Object.fromEntries(players.map(p => [p.id, p.name])), row: 0, playerIndex: 0,
-    dice: [], rolls: 0, results: Object.fromEntries(players.map(p => [p.id, Array(10).fill(-1)])),
+    dice: [], rolls: 0, keptDice: [], results: Object.fromEntries(players.map(p => [p.id, Array(10).fill(-1)])),
     scores: Object.fromEntries(players.map(p => [p.id, 0])), finished: false, winners: [] };
 }
 
@@ -79,9 +83,10 @@ export function rollKribbeln(current: KribbelnGame, playerId: string, keep: numb
   const game = structuredClone(current);
   game.dice = Array.from({ length: 6 }, (_, i) => {
     if (keep.includes(i)) return game.dice[i];
-    const value = Math.floor(random() * 6) + 1;
-    return { value, color: KRIBBEL_COLORS[(value - 1 + i) % 6] };
+    const side = Math.floor(random() * 6);
+    return { ...KRIBBEL_DICE_FACES[i][side] };
   });
+  game.keptDice = [...new Set(keep)];
   game.rolls++;
   return game;
 }
@@ -133,12 +138,12 @@ export function submitKribbeln(current: KribbelnGame, playerId: string, choice: 
     const preceding = target === undefined ? [] : cribRows.filter(i => i < target && (game.results[playerId][i] ?? -1) >= 0).map(i => game.results[playerId][i] ?? null);
     if (target === undefined || !canEnterKribbelSum(preceding, sum)) throw new Error("Kein passendes Kribbelfeld für diese Summe verfügbar.");
     game.results[playerId][target] = sum;
-    game.dice = []; game.rolls = 0;
+    game.dice = []; game.rolls = 0; game.keptDice = [];
     return game;
   }
   if (choice === "score" && (!met || (row.task === -1 && !canEnterKribbelSum(previous, sum)))) throw new Error("Das Ergebnis erfüllt die Aufgabe nicht.");
   game.results[playerId][game.row] = choice === "score" ? sum : null;
-  game.dice = []; game.rolls = 0;
+  game.dice = []; game.rolls = 0; game.keptDice = [];
   const start = game.playerIndex;
   const next = game.order.findIndex((_, offset) => game.results[game.order[(start + 1 + offset) % game.order.length]][game.row] === -1);
   if (next >= 0) game.playerIndex = (start + 1 + next) % game.order.length;

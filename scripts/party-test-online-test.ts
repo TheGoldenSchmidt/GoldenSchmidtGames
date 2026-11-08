@@ -29,9 +29,12 @@ try{
   const command=(command:string,miniId?:string)=>request(host,"party:test-command",{command,miniId,token,phaseId:room.partyGame!.phaseId});
   const original=structuredClone(room.partyGame!);
   assert.equal((await emit(host,"party:test-command",{command:"restart",token:"wrong",phaseId:original.phaseId})).ok,false);
-  assert.equal((await emit(host,"party:test-command",{command:"restart",token,phaseId:-1})).ok,false);
+  assert.equal((await emit(host,"party:test-command",{command:"restart",token,seq:-1})).ok,false);
   room=await command("skip-bots");assert.equal(activePartyPlayer(room.partyGame!).id,id);
   room=await command("mini","crates");assert.equal(room.partyGame!.phase,"mini-intro");
+  const repeatPacket={command:"mini",miniId:"crates",token,phaseId:0,seq:(room.partyTest!.commandSeq??0)+1};
+  room=await request(host,"party:test-command",repeatPacket);const miniPhase=room.partyGame!.phaseId;
+  room=await request(host,"party:test-command",repeatPacket);assert.equal(room.partyGame!.phaseId,miniPhase,"Doppelte Testaktion verändert die Partie nicht; vergangene Bot-Phasen blockieren die Auswahl nicht");
   assert.equal((await emit(host,"party:test-command",{command:"mini",miniId:"unknown",token,phaseId:room.partyGame!.phaseId})).ok,false);
   room=await request(host,"party:action",{action:{type:"ready"},seq:1,token,phaseId:room.partyGame!.phaseId});
   // Die Bots müssen selbst bereit werden und anschließend normale Steuerung senden.

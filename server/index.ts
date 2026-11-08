@@ -176,16 +176,22 @@ io.on("connection", (socket) => {
     if(!isCharacterId(payload?.characterId))return callback({ok:false,error:"Diese Figur ist nicht verfügbar."});
     player.characterId=payload.characterId;player.ready=false;broadcast(room);callback({ok:true,data:publicRoom(room,player.id)});
   });
-  socket.on("party:test-command",(payload:{token?:string;phaseId?:number;command?:string;miniId?:string},callback:(ack:Ack<RoomState>)=>void)=>{
+  socket.on("party:test-command",(payload:{token?:string;phaseId?:number;seq?:number;command?:string;miniId?:string},callback:(ack:Ack<RoomState>)=>void)=>{
     const member=socketMembership.get(socket.id),room=member?rooms.get(member.roomCode):undefined,g=room?.partyGame;
     if(!member||!room?.partyTest||!g||room.hostId!==member.playerId||payload?.token!==partyTokens.get(room.code)?.get(member.playerId))return callback({ok:false,error:"Testwerkzeuge sind nur für den Host einer Testpartie verfügbar."});
-    if(g.pausedAt||payload.phaseId!==g.phaseId)return callback({ok:false,error:"Die Testpartie ist pausiert oder hat sich geändert."});
+    // Testwerkzeuge unterbrechen bewusst auch laufende Bot-Züge. Die Folge
+    // schützt vor doppelten Anfragen, während normale Spielaktionen ihre Phase prüfen.
+    const seq=payload.seq??(room.partyTest.commandSeq??0)+1;
+    if(!Number.isSafeInteger(seq)||seq<1)return callback({ok:false,error:"Ungültige Testaktion."});
+    if(seq<=(room.partyTest.commandSeq??0))return callback({ok:true,data:publicRoom(room,member.playerId)});
+    if(g.pausedAt)return callback({ok:false,error:"Die Testpartie ist pausiert."});
     if(payload.command==="restart"){
       room.partyGame=createPartyGame(room.players,room.config.party,true,room.partyTest.seed);
       room.partyGame.phaseId=g.phaseId+1;room.partyGame.seq={...g.seq};botDrivers.set(room.code,new PartyBotDriver());
     }else if(payload.command==="mini"&&isArenaId(payload.miniId??""))room.partyGame=selectPartyTestMini(g,payload.miniId as import("../shared/partyArena").ArenaId);
     else if(payload.command==="skip-bots")room.partyGame=botDrivers.get(room.code)!.skipTurns(g,Date.now());
     else return callback({ok:false,error:"Unbekanntes Testwerkzeug."});
+    room.partyTest.commandSeq=seq;
     broadcast(room);callback({ok:true,data:publicRoom(room,member.playerId)});
   });
   socket.on("party:control",(payload:{phaseId?:number;token?:string;seq?:number;input?:ArenaInput},callback?:(ack:Ack<{accepted:boolean}>)=>void)=>{

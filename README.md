@@ -19,7 +19,9 @@ Neue Partien beginnen mit einem etwa vier Sekunden langen 3D-Intro: Bei Durak si
 
 Kribbeln ist für zwei bis fünf Personen lokal und online spielbar: sechs Farbwürfel, bis zu drei Würfe mit frei wählbarem Behalten, sechs Farbaufgaben und vier streng ansteigende Kribbelfelder. Bei einer nicht erfüllten Aufgabe kann auf ein freies Kribbelfeld derselben Gruppe ausgewichen werden; danach gibt es drei neue Versuche. Jede abgeschlossene Zeile wird nach Platzierung gewertet, Gleichstände erhalten den niedrigeren Platz. Bei gleichen Endpunkten entscheidet das vierte Kribbelfeld.
 
-Die App verwendet ein eigenes festes digitales Aufgabenblatt und eine dokumentierte zyklische Farbverteilung: Die sechs Farben Rot, Gelb, Grün, Blau, Orange und Violett werden für jeden weiteren Würfel um eine Zahl versetzt. Diese Materialausführung ist nicht als identische Kopie sämtlicher Original-Wertungsblätter oder der Originalwürfel verifiziert.
+Die App verwendet ein eigenes festes digitales Aufgabenblatt und eine dokumentierte zyklische Farbverteilung: Die sechs Farben Rot, Gelb, Grün, Blau, Orange und Violett werden für jeden weiteren Würfel um eine Zahl versetzt. Jeder Würfel trägt jede Zahl von 1 bis 6 und jede Farbe genau einmal. Über alle 36 Seiten kommt jedes Zahl-Farbe-Paar genau einmal vor; Wurflogik und sichtbare Würfelseiten verwenden dieselbe geprüfte Tabelle. Diese Materialausführung ist nicht als identische Kopie sämtlicher Original-Wertungsblätter oder der Originalwürfel verifiziert.
+
+Die aktuelle Kribbeln-Aufgabe wird als Mengenbild mit Würfeln, Farbgruppen oder Summenziel dargestellt. Fallende Würfel bleiben neutral; Farben, Beschriftungen, Aufgabenzähler und Summe erscheinen erst nach dem Landen. Behaltene Würfel bleiben auch für die anderen Online-Spieler sichtbar liegen. Reduzierte Bewegung zeigt das Ergebnis sofort. Die Ansicht nutzt auf dem PC zwei Spalten und auf dem Handy einen kompakten Spieltisch. Mehr dazu in [Kribbeln: Aufgabe und Wurf](docs/kribbeln-visuals.md).
 
 ## Automatische Prüfungen
 

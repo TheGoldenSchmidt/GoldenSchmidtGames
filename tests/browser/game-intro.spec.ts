@@ -15,6 +15,8 @@ async function localSetup(page: Page, game: string, count = 2) {
 
 test("Durak: sechs sitzende Spieler, echte Kamerafahrt und geschützter Spielbeginn", async ({ page }, info) => {
   const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
+  const clockTime=new Date("2026-01-01T00:00:00Z");
+  await page.clock.install({time:clockTime});await page.clock.pauseAt(new Date(clockTime.getTime()+1000));
   await localSetup(page, "Durak", 6);
   const intro = page.getByRole("dialog", { name: "Durak", exact: true });
   const world = intro.locator(".game-intro__world");
@@ -25,11 +27,16 @@ test("Durak: sechs sitzende Spieler, echte Kamerafahrt und geschützter Spielbeg
   const start = JSON.parse(await world.getAttribute("data-camera") ?? "{}");
   expect(start.polar).toBeGreaterThan(.8);
   await page.screenshot({ path: info.outputPath("durak-runde.png") });
+  await page.clock.fastForward(2000);
+  const middle=JSON.parse(await world.getAttribute("data-camera")??"{}");
+  expect(middle.polar).toBeGreaterThan(0);expect(middle.polar).toBeLessThan(start.polar);
+  await page.clock.fastForward(1100);
   await expect(intro).toHaveAttribute("data-stage", "overhead", { timeout: 10000 });
   const end = JSON.parse(await world.getAttribute("data-camera") ?? "{}");
   expect(end.polar).toBe(0); expect(end.distance).toBeLessThan(start.distance);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: info.outputPath("durak-von-oben.png") });
+  await page.clock.fastForward(1000);await page.clock.resume();
   await expect(intro).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Gerät weitergeben" })).toBeVisible();
   await expect(page.locator(".game-entrance")).not.toHaveAttribute("inert");
@@ -110,12 +117,12 @@ for (const gameId of ["durak", "qwixx", "kribbeln", "party"] as const) test(`Onl
     const intro = page.getByRole("dialog");
     await expect(intro).toBeVisible();
     await expect(intro.locator(".game-intro__world")).toHaveAttribute("data-webgl", "ready");
-    if (gameId === "party") await page.screenshot({ path: info.outputPath("insel-anflug.png") });
     await page.getByRole("button", { name: "Intro überspringen" }).click();
     await expect(intro).toHaveCount(0);
     await expect(page.locator(".game-entrance")).not.toHaveAttribute("inert");
     if (gameId === "party") {
       await expect(page.locator('.party-world[data-webgl="ready"] canvas')).toBeVisible();
+      await page.screenshot({ path: info.outputPath("insel-spielstart.png") });
       await page.getByRole("button", { name: "Verlassen", exact: true }).click();
       await page.getByRole("button", { name: "Online-Inselparty wieder beitreten", exact: true }).click();
       await expect(page.locator('.party-world[data-webgl="ready"] canvas')).toBeVisible();

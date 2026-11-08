@@ -15,6 +15,12 @@ test("Echte 3D-Insel: Kamera, Felder, sichtbare Hauptaktion und Wiederbeitritt",
     await expect.poll(()=>page.locator(".party-world").getAttribute("data-frames")).not.toBeNull();
     const rollBox=await page.getByRole("button",{name:"Würfeln & losziehen",exact:true}).boundingBox();
     expect(rollBox!.y+rollBox!.height).toBeLessThanOrEqual(page.viewportSize()!.height);
+    const viewport=page.viewportSize()!;
+    await page.setViewportSize({width:320,height:740});
+    const smallBox=await page.getByRole("button",{name:"Würfeln & losziehen",exact:true}).boundingBox();
+    expect(smallBox!.y+smallBox!.height).toBeLessThanOrEqual(740);
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBe(320);
+    await page.setViewportSize(viewport);
     const camera=await page.locator(".party-world").getAttribute("data-camera");
     await page.getByRole("button",{name:"Kamera nach rechts drehen",exact:true}).click();
     await expect.poll(()=>page.locator(".party-world").getAttribute("data-camera")).not.toBe(camera);
@@ -33,10 +39,6 @@ test("Echte 3D-Insel: Kamera, Felder, sichtbare Hauptaktion und Wiederbeitritt",
     await expect(page.getByRole("button",{name:"Lokale Inselparty fortsetzen",exact:true})).toHaveCount(0);
     await page.getByRole("button",{name:"Online-Inselparty wieder beitreten",exact:true}).click();
     await expect(page.locator('.party-world[data-webgl="ready"] canvas')).toBeVisible();
-    await page.setViewportSize({width:320,height:740});
-    const smallBox=await page.getByRole("button",{name:"Würfeln & losziehen",exact:true}).boundingBox();
-    expect(smallBox!.y+smallBox!.height).toBeLessThanOrEqual(740);
-    expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBe(320);
   }finally{session.close();}
 });
 
@@ -55,8 +57,8 @@ for(const mini of ACTION_MINI_IDS)test(`3D-Minispiel ${mini}: eigene Figur mit e
     await page.keyboard.down(direction);await page.waitForTimeout(380);await page.keyboard.up(direction);
     if(mini==="crates")await expect.poll(async()=>(await read())?.x).toBeGreaterThan(start.x+.15);
     else await expect.poll(async()=>(await read())?.z).toBeLessThan(start.z-.15);
-    if(ARENA_META[mini].jump){await page.keyboard.down("Space");await expect.poll(async()=>(await read())?.y).toBeGreaterThan(.2);await page.keyboard.up("Space");}
-    if(ARENA_META[mini].punch){await page.keyboard.down("e");await expect.poll(async()=>(await read())?.punch).toBe(true);await page.keyboard.up("e");}
+    if(ARENA_META[mini].jump){const before=(await read()).jumpAt;await page.keyboard.down("Space");await expect.poll(async()=>(await read())?.jumpAt).toBeGreaterThan(before);await page.keyboard.up("Space");}
+    if(ARENA_META[mini].punch){const before=(await read()).punchAt;await page.keyboard.down("e");await expect.poll(async()=>(await read())?.punchAt).toBeGreaterThan(before);await page.keyboard.up("e");}
     // Pointer movement on the on-screen stick works on phones and desktop.
     const stick=await dialog.getByRole("group",{name:"Bewegungsstick"}).boundingBox();
     await page.mouse.move(stick!.x+stick!.width/2,stick!.y+stick!.height/2);await page.mouse.down();await page.mouse.move(stick!.x+stick!.width*.75,stick!.y+stick!.height/2);await page.waitForTimeout(200);await page.mouse.up();

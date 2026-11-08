@@ -289,6 +289,12 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .kribbel-die-slot:focus-visible { outline-color: #ffd166; }
 .kribbel-die-caption { font-size: .63rem; color: #d4e4e2; }.kribbel-die-slot.is-kept .kribbel-die-caption { color: #ffe09a; font-weight: 900; }
 .kribbel-cube-scene { --die-size: clamp(40px, 12vw, 56px); --die-bg: #fffcf2; --pip: white; }
+.kribbel-cube-view { position: absolute; inset: 0; transform-style: preserve-3d; transform: rotateX(-14deg) rotateY(16deg); }
+.kribbel-cube-scene .die-cube { animation: none; transform: rotateX(var(--end-x)) rotateY(var(--end-y)); }
+.kribbel-cube-scene::after { animation: none; }
+.kribbel-die-slot.is-rolling .die-cube { animation: die-tumble .95s cubic-bezier(.18,.8,.24,1) var(--roll-delay) both; }
+.kribbel-die-slot.is-rolling .die-scene::after { animation: die-shadow .95s cubic-bezier(.18,.8,.24,1) var(--roll-delay) both; }
+.kribbel-face--hidden { --die-bg: #d4e1df; --pip: #728e91; }
 .kribbel-face-color--red { --die-bg: #c63b48; }.kribbel-face-color--yellow { --die-bg: #f6cb49; --pip: #473910; }.kribbel-face-color--green { --die-bg: #318463; }.kribbel-face-color--blue { --die-bg: #3476af; }.kribbel-face-color--orange { --die-bg: #c86418; }.kribbel-face-color--purple { --die-bg: #8353a0; }
 .kribbel-die-slot.is-kept .die-cube { animation: none; transform: rotateX(var(--end-x)) rotateY(var(--end-y)); }.kribbel-die-slot.is-kept .die-scene::after { animation: none; }
 .kribbel-die-placeholder { width: 50px; height: 50px; border: 1px dashed #8eaeaf; border-radius: 12px; display: grid; place-items: center; color: #a4c4c6; font-size: 2rem; transform: rotate(-8deg); }
@@ -305,3 +311,45 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .kribbel-game .kribbel-sheet .is-current { background: #d8ecde; }
 .kribbel-finale { text-align: center; padding: 25px 8px 10px; }.kribbel-finale > span { display: inline-grid; place-items: center; width: 80px; height: 80px; border-radius: 50%; background: #ffd166; color: #735112; font-size: 3rem; animation: kribbel-score-pop .5s ease-out; }.kribbel-finale h1 { letter-spacing: -.04em; }.kribbel-finale ol { list-style: none; padding: 0; }.kribbel-finale li { display: flex; justify-content: space-between; padding: 14px; border-bottom: 1px solid #cbded6; }
 @media (prefers-reduced-motion: reduce) { .kribbel-die-slot { transition: none; }.kribbel-cube-scene .die-cube { animation: none; transform: rotateX(var(--end-x)) rotateY(var(--end-y)); } }
+
+/* The task card explains the target; color is always paired with text or letters. */
+.kribbel-task { margin: 0 0 16px; border: 1px solid #d4dfd6; border-radius: 18px; overflow: hidden; background: #fff9e8; }
+.kribbel-task__picture { min-height: 88px; padding: 22px 12px 10px; display: flex; align-items: center; justify-content: center; gap: 7px; }
+.kribbel-goal-die { width: clamp(30px, 8vw, 42px); height: clamp(30px, 8vw, 42px); flex: 0 0 auto; position: relative; display: grid; place-items: center; background: var(--cue-color); color: #fff; border-radius: 9px; border: 1px solid #0002; box-shadow: 0 3px 0 color-mix(in srgb, var(--cue-color), #153f49 28%); font-size: 1rem; }
+.kribbel-goal-die i { width: 6px; height: 6px; border-radius: 50%; background: #809c9c; }
+.kribbel-goal-die.is-yellow { color: #473910; }
+.kribbel-goal-die.is-crossed::after { content: ""; position: absolute; left: -7px; right: -7px; height: 4px; background: #a52c3c; border: 1px solid #fff9e8; transform: rotate(-45deg); }
+.kribbel-goal-rest, .kribbel-goal-pair { display: flex; gap: 4px; }
+.kribbel-goal-rest .kribbel-goal-die { width: clamp(19px, 5vw, 28px); height: clamp(23px, 6vw, 32px); border-radius: 6px; }
+.kribbel-goal-pair { padding-bottom: 7px; border-bottom: 2px solid #b7c8bf; }
+.kribbel-goal-separator { color: #6a807f; font-size: 1.2rem; }
+.kribbel-goal-quantity { margin-inline: 8px; font-size: 2rem; color: #153f49; }
+.kribbel-goal-named { display: grid; justify-items: center; gap: 8px; }
+.kribbel-goal-named small { font-size: .7rem; color: #49616a; }
+.kribbel-goal-step { min-width: 65px; padding: 9px 12px; display: grid; justify-items: center; gap: 3px; border-radius: 9px; background: #dce7e3; font-size: 1.8rem; font-weight: 800; color: #153f49; font-variant-numeric: tabular-nums; }
+.kribbel-goal-step small { font-size: .65rem; font-weight: 400; }.kribbel-goal-step.is-next { background: #ffd166; transform: translateY(-6px); }
+.kribbel-goal-sigma { font-size: 2.4rem; color: #9c7426; }.kribbel-goal-sum { font-size: 2rem; margin-left: 12px; color: #153f49; }
+.kribbel-task__hint { margin: 5px 8px 16px; color: #49616a; text-align: center; font-size: .75rem; line-height: 1.4; text-wrap: balance; }
+.kribbel-task__hint small { display: block; margin-top: 4px; color: #667d7b; font-size: .63rem; }
+.kribbel-task__progress { display: flex; align-items: center; gap: 9px; min-height: 61px; padding: 11px 12px; border-top: 1px solid #d4dfd6; background: #e8eee6; color: #49616a; }
+.kribbel-task__progress > span:last-child { display: grid; gap: 4px; }.kribbel-task__progress strong { font-size: .75rem; }.kribbel-task__progress small { font-size: .65rem; line-height: 1.4; }
+.kribbel-task__check { display: grid; place-items: center; flex: 0 0 28px; height: 28px; border: 1px solid #a3b9b3; border-radius: 50%; font-weight: 800; }
+.kribbel-task.is-met { border-color: #7eb793; }.kribbel-task.is-met .kribbel-task__progress { background: #d8ecde; color: #245c3d; }.kribbel-task.is-met .kribbel-task__check { background: #318463; border-color: #318463; color: white; animation: kribbel-score-pop .25s ease-out; }
+@media (max-width: 899px) {
+  .kribbel-game .page__content { padding-top: 12px; }
+  .kribbel-score-strip > span { padding-block: 7px; }.kribbel-round { margin-top: 12px; }
+  .kribbel-mission { padding-top: 4px; padding-bottom: 12px; }.kribbel-mission h1 { margin-bottom: 12px; }
+  .kribbel-task { margin-bottom: 12px; }.kribbel-task__picture { min-height: 56px; padding-block: 10px 6px; }
+  .kribbel-task__hint { margin: 3px 8px 10px; font-size: .72rem; line-height: 1.3; }
+  .kribbel-task__progress { min-height: 48px; padding-block: 7px; }
+  .kribbel-tray { padding-top: 14px; }.kribbel-tray .kribbel-dice { row-gap: 12px; }
+  .kribbel-die-slot { min-height: 80px; padding-block: 5px 3px; gap: 8px; }.kribbel-tray > p { margin-top: 6px; }
+}
+@media (min-width: 900px) {
+  .app-shell:has(.kribbel-game) { width: min(100%, 1040px); }
+  .kribbel-game .page__content { max-width: 960px; margin: auto; padding: 24px 28px; }
+  .kribbel-play { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.1fr); gap: 38px; align-items: start; }
+  .kribbel-mission { padding: 12px 0 18px; }.kribbel-mission h1 { margin-bottom: 23px; font-size: 2rem; }
+  .kribbel-task__picture { min-height: 120px; }.kribbel-task__hint { margin-bottom: 22px; }.kribbel-task__progress { min-height: 70px; }
+  .kribbel-table-side { padding-top: 9px; }.kribbel-tray { padding-top: 24px; }.kribbel-tray .kribbel-dice { gap: 22px 4px; }
+}

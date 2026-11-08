@@ -6,7 +6,8 @@ import { socket } from "../lib/socket";
 export function PartyTestTools({room,onUpdate}:{room:RoomState;onUpdate:(room:RoomState)=>void}){
   const [selected,setSelected]=useState<ArenaId>("dash"),[busy,setBusy]=useState(false),[error,setError]=useState("");
   const panel=useRef<HTMLDetailsElement>(null);
-  function send(command:string,miniId?:string){setBusy(true);setError("");socket.timeout(8000).emit("party:test-command",{command,miniId,phaseId:room.partyGame!.phaseId,token:room.partyToken},(err:Error|null,response:{ok:boolean;data?:RoomState;error?:string})=>{setBusy(false);if(err||!response.ok||!response.data)setError(response?.error??"Der Server antwortet gerade nicht.");else{if(panel.current)panel.current.open=false;onUpdate(response.data);}});}
+  const commandSeq=useRef(0);
+  function send(command:string,miniId?:string){setBusy(true);setError("");commandSeq.current=Math.max(commandSeq.current,room.partyTest?.commandSeq??0)+1;socket.timeout(15000).emit("party:test-command",{command,miniId,seq:commandSeq.current,token:room.partyToken},(err:Error|null,response:{ok:boolean;data?:RoomState;error?:string})=>{setBusy(false);if(err||!response.ok||!response.data)setError(response?.error??"Der Server antwortet gerade nicht.");else{if(panel.current)panel.current.open=false;onUpdate(response.data);}});}
   return <details className="party-test-tools" ref={panel}><summary>Testpartie mit Bots <span>Startwert {room.partyTest!.seed}</span></summary>
     <div className="party-test-tools__body"><p>Deine Bots spielen selbstständig. Hier kannst du gezielt etwas ausprobieren.</p>
       <label>Minispiel auswählen<select value={selected} onChange={e=>setSelected(e.target.value as ArenaId)}>{ACTION_MINI_IDS.map(id=><option key={id} value={id}>{ARENA_META[id].name}</option>)}</select></label>

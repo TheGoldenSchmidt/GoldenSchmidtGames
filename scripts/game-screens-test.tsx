@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import React from "react";
 import { renderToString } from "react-dom/server";
-import { createKribbelnGame } from "../shared/kribbeln";
+import { createKribbelnGame, KRIBBEL_DICE_FACES, KRIBBEL_ROWS } from "../shared/kribbeln";
 import { createQwixxGame } from "../shared/qwixx";
 import { createDurakGame } from "../shared/durak";
 import { KribbelnGameScreen } from "../src/screens/KribbelnGameScreen";
 import { KribbelnDice } from "../src/components/KribbelnDice";
+import { KribbelnTask } from "../src/components/KribbelnTask";
 import { QwixxGameScreen } from "../src/screens/QwixxGameScreen";
 import { DurakGameScreen } from "../src/screens/DurakGameScreen";
 import type { RoomState } from "../shared/types";
@@ -28,11 +29,21 @@ assert.match(startScreen, /Würfeln/);
 assert.match(startScreen.replace(/<!--.*?-->/g, ""), /Runde 1 \/ 10/);
 assert.match(startScreen, /Würfelkiste/);
 assert.equal((startScreen.match(/kribbel-die-placeholder/g) ?? []).length, 6);
-const dice = renderToString(<KribbelnDice dice={Array.from({length: 6}, (_, i) => ({ color: "green", value: i + 1 }))} kept={[0, 2]} disabled={false} rollKey="1" onToggle={() => {}} />);
+const physicalDice = KRIBBEL_DICE_FACES.map(faces => ({ ...faces[0] }));
+const dice = renderToString(<KribbelnDice dice={physicalDice} kept={[0, 2]} disabled={false} rollKey="1" onToggle={() => {}} />);
 assert.equal((dice.match(/aria-pressed="true"/g) ?? []).length, 2);
 assert.equal((dice.match(/die-face die-face--/g) ?? []).length, 36);
 assert.match(dice, /Grün 1/);
 assert.match(dice, /✓ Bleibt/);
+const fallingDice = renderToString(<KribbelnDice dice={physicalDice} kept={[]} disabled rolling rollKey="2" onToggle={() => {}} />);
+assert.equal((fallingDice.match(/kribbel-face--hidden/g) ?? []).length, 36);
+assert.doesNotMatch(fallingDice, /kribbel-face-color--|Grün 1|Rot 1/);
+assert.match(fallingDice, /Würfel 1 fällt/);
+for (const row of KRIBBEL_ROWS) {
+  const task = renderToString(<KribbelnTask task={row.task} label={row.label} dice={physicalDice} rolling previousBest={17} />);
+  assert.match(task, /role="img"/); assert.match(task, /data-state="waiting"/);
+  assert.doesNotMatch(task, /Aufgabe erfüllt/);
+}
 room.kribbelnGame.finished = true; room.kribbelnGame.row = 10; room.kribbelnGame.winners = ["a"];
 assert.match(renderToString(<KribbelnGameScreen profile={profile} initialRoom={room} onExit={exit} />), /Partie beendet/);
 room.game = createQwixxGame(players); room.game.phase = "finished"; room.game.winnerIds = ["a"];
