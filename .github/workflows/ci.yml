@@ -21,5 +21,29 @@ jobs:
       - run: npm run test:pwa
       - run: npm run test:online
       - run: npm run test:production
+
+  browser:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [phone, desktop]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
       - run: npx playwright install --with-deps chromium
-      - run: npm run test:browser
+      - run: npm run test:browser -- --project=${{ matrix.project }} --reporter=list
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: browser-${{ matrix.project }}
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7
