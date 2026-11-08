@@ -1,4 +1,5 @@
 import { ACTION_MINI_IDS, advanceArena, ARENA_META, createArena, isArenaId, publicArena, setArenaControl, type ArenaId, type ArenaInput, type ArenaState } from "./partyArena";
+import { characterId, type CharacterId } from "./characters";
 export type PartyTempo = "slow" | "normal" | "fast";
 export interface PartyOptions { rounds: number; tempo: PartyTempo; analog: boolean }
 export const PARTY_DEFAULTS: PartyOptions = { rounds: 8, tempo: "normal", analog: false };
@@ -38,7 +39,7 @@ export const MINIS: Record<MiniId, { name: string; seconds: number; instruction:
 };
 export const SYMBOLS = ["☀", "☂", "♣", "★", "♥", "⚓"];
 export const COLORS = ["Rot", "Blau", "Grün", "Gelb"];
-export interface PartyPlayer { id: string; name: string; position: number; coins: number; trophies: number; wins: number; items: Item[]; shield: boolean; passive: boolean }
+export interface PartyPlayer { id: string; name: string; characterId?: CharacterId; bot?: boolean; position: number; coins: number; trophies: number; wins: number; items: Item[]; shield: boolean; passive: boolean }
 export interface MiniRun { ready: boolean; done: boolean; score: number; attempts: number; cursor: number; opened: number[]; matched: number[]; blockedUntil: number; bank: number; loot: number; feedback: string; lastInput: number }
 export interface PartyMini { id: MiniId; startAt: number; runs: Record<string, MiniRun>; cards: number[]; prompts: number[]; words: number[]; targets: number[]; trail: number[]; risk: number[]; reports: Record<string, number>; confirms: Record<string, boolean>; material: Record<string, boolean>; arenaSeed?:number; arena?:ArenaState }
 export type PartyPhase = "turn" | "path" | "trophy" | "shop" | "gift" | "summary" | "mini-intro" | "mini-play" | "analog-confirm" | "mini-result" | "finished" | "aborted";
@@ -73,9 +74,10 @@ function phase(g: PartyGame, next: PartyPhase, now: number) {
   g.deadline = g.online ? now + ({slow:35000,normal:20000,fast:12000}[g.options.tempo]) : 0;
   if (next === "finished" || next === "aborted") g.deadline=0;
 }
-export function createPartyGame(players: {id:string;name:string}[], options?: Partial<PartyOptions>, online=false, seed=Date.now(), now=Date.now()): PartyGame {
+export function createPartyGame(players: {id:string;name:string;characterId?:CharacterId;bot?:boolean}[], options?: Partial<PartyOptions>, online=false, seed=Date.now(), now=Date.now()): PartyGame {
   if (players.length<2 || players.length>6 || new Set(players.map(p=>p.id)).size!==players.length) throw new Error("Inselparty benötigt 2–6 unterschiedliche Spieler.");
   const g: PartyGame = { version:1, options:partyOptions(options), online, players:players.map(p=>({...p,position:0,coins:10,trophies:0,wins:0,items:[],shield:false,passive:false})), order:players.map(p=>p.id), round:1,turn:0,phase:"turn",phaseId:0,deadline:0,rng:seed>>>0,steps:0,dice:[],path:[],itemUsed:false,boost:0,double:false,trophyField:6,trophyBought:false,events:[],miniBag:[],localMiniIndex:0,log:[],winners:[],seq:{},disconnected:{},pausedAt:0,resumeOffered:false };
+  g.players.forEach((p,i)=>p.characterId=characterId(p.characterId,i));
   g.order=shuffle(g,g.order); phase(g,"turn",now); log(g,`${activePartyPlayer(g).name} eröffnet die Inselparty.`); return g;
 }
 function lose(g: PartyGame, p: PartyPlayer, amount: number) { if (p.shield) { p.shield=false; log(g,`${p.name}: Schutzschild wehrt den Verlust ab.`); return 0; } const n=Math.min(amount,p.coins); p.coins-=n; return n; }
@@ -122,7 +124,7 @@ function selectMini(g:PartyGame,now:number,forceDigital=false) {
 }
 function startMini(g:PartyGame,now:number) {
   const m=g.mini!;m.startAt=now+3000;
-  if(isArenaId(m.id))m.arena=createArena(m.id,g.players.filter((p,i)=>!p.passive&&(g.online||i===g.localMiniIndex)).map(p=>({id:p.id,style:g.players.indexOf(p)})),m.arenaSeed??1);
+  if(isArenaId(m.id))m.arena=createArena(m.id,g.players.filter((p,i)=>!p.passive&&(g.online||i===g.localMiniIndex)).map(p=>({id:p.id,style:g.players.indexOf(p),characterId:p.characterId})),m.arenaSeed??1);
   phase(g,"mini-play",now);g.deadline=m.startAt+MINIS[m.id].seconds*1000;
 }
 
@@ -252,4 +254,13 @@ export function publicParty(current:PartyGame,viewer:string,now=Date.now()):Part
 export function createPartyPractice(id:MiniId,now=Date.now()):PartyGame {
   const g=createPartyGame([{id:"practice",name:"Du"},{id:"spectator",name:"Übung"}],{rounds:5},false,now,now);
   g.players[1].passive=true;g.miniBag=[id];selectMini(g,now);startMini(g,now);return g;
+}
+
+/** Nur der Server darf dies nach Prüfung eines Testraums aufrufen. */
+export function selectPartyTestMini(current:PartyGame,id:ArenaId,now=Date.now()):PartyGame {
+  if(!isArenaId(id))throw new Error("Unbekanntes Minispiel.");
+  const seed=current.mini?.id===id?current.mini.arenaSeed:undefined;
+  const g=structuredClone(current);g.miniBag=[id];selectMini(g,now);
+  if(seed!==undefined)g.mini!.arenaSeed=seed;
+  return g;
 }

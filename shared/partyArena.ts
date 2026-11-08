@@ -14,6 +14,7 @@ export const ARENA_META:Record<ArenaId,{name:string;seconds:number;instruction:s
 export interface ArenaInput {x:number;z:number;jump:boolean;punch:boolean}
 export const NEUTRAL_INPUT:ArenaInput={x:0,z:0,jump:false,punch:false};
 export interface ArenaActor {
+  characterId?: import("./characters").CharacterId;
   id:string;style:number;x:number;z:number;y:number;vx:number;vz:number;vy:number;heading:number;
   score:number;checkpoint:number;falls:number;finished:boolean;played:boolean;
   input:ArenaInput;inputUntil:number;inputSeq:number;jumpHeld:boolean;punchHeld:boolean;
@@ -34,7 +35,7 @@ export function checkedInput(input:unknown):ArenaInput {
   const length=Math.max(1,Math.hypot(value.x,value.z));
   return {x:value.x/length,z:value.z/length,jump:value.jump,punch:value.punch};
 }
-export function createArena(id:ArenaId,players:{id:string;style:number}[],seed:number):ArenaState {
+export function createArena(id:ArenaId,players:{id:string;style:number;characterId?:import("./characters").CharacterId}[],seed:number):ArenaState {
   let randomSeed=seed>>>0;
   const random=()=>{randomSeed=(Math.imul(randomSeed,1664525)+1013904223)>>>0;return randomSeed/4294967296;};
   const race=id==="hurdles"||id==="balance";

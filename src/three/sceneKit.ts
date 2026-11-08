@@ -1,4 +1,5 @@
 import * as T from "three";
+import { figureCharacter } from "../figures/character";
 
 export const PLAYER_COLORS=[0xe65c65,0x398fe2,0x67b94b,0xa16bd0,0xf4a53e,0xe8ca3b];
 export class SceneKit {
@@ -74,7 +75,13 @@ export class SceneKit {
 }
 
 export interface Character {group:T.Group;pose:(heading:number,speed:number,time:number,jump:number,punch:boolean,reduce:boolean)=>void}
-export function character(kit:SceneKit,parent:T.Object3D,index:number,name?:string):Character {
+export function character(kit:SceneKit,parent:T.Object3D,index:number,name?:string,selected?:string):Character {
+  if(selected){
+    const figure=figureCharacter(parent,selected);
+    const ring=kit.mesh(figure.group,new T.TorusGeometry(.4,.045,6,24),PLAYER_COLORS[index%6],0,.045,0);ring.rotation.x=Math.PI/2;
+    if(name){const label=kit.label(figure.group,name,"#10485b",2.1);label.position.set(0,1.9,0);}
+    return figure;
+  }
   const group=new T.Group();parent.add(group);const color=PLAYER_COLORS[index%PLAYER_COLORS.length],body=new T.Group();group.add(body);
   kit.ball(body,color,0,.48,0,.29,.36,.24);kit.ball(body,0xffe6bb,0,.95,.015,.34,.32,.31);
   kit.ball(body,0xffd1a6,-.29,.95,.015,.075);kit.ball(body,0xffd1a6,.29,.95,.015,.075);

@@ -51,7 +51,7 @@ export function createArenaWorld(host:HTMLElement,read:()=>ArenaFrame,onError:()
     cameraZ=source.reduce?targetZ:T.MathUtils.damp(cameraZ,targetZ,5,dt);cameraX=source.reduce?targetX:T.MathUtils.damp(cameraX,targetX,5,dt);
     kit.camera.position.set(cameraX,race?13:narrow?12:13,cameraZ+(race?13:narrow?10.5:16));kit.camera.lookAt(cameraX,0,cameraZ-1.3);
     for(const actor of view.actors){
-      let figure=actors.get(actor.id);if(!figure){figure=character(kit,world,actor.style,source.names[actor.id]);figure.group.scale.setScalar(1.2);actors.set(actor.id,figure);figure.group.position.set(actor.x,actor.y,actor.z);if(id==="tilt"){const ball=kit.ball(world,PLAYER_COLORS[actor.style%6],actor.x,.46,actor.z,.46);balls.set(actor.id,ball);}}
+      let figure=actors.get(actor.id);if(!figure){figure=character(kit,world,actor.style,source.names[actor.id],actor.characterId);figure.group.scale.setScalar(1.2);actors.set(actor.id,figure);figure.group.position.set(actor.x,actor.y,actor.z);if(id==="tilt"){const ball=kit.ball(world,PLAYER_COLORS[actor.style%6],actor.x,.46,actor.z,.46);balls.set(actor.id,ball);}}
       const respawning=view.time<actor.respawnAt;figure.group.visible=!respawning||Math.floor(view.time/120)%2===0;
       const target=new T.Vector3(actor.x,actor.y+(id==="tilt"?.92:0),actor.z);
       figure.group.position.lerp(target,source.reduce?1:1-Math.exp(-dt*22));figure.pose(actor.heading,Math.hypot(actor.vx,actor.vz),time,actor.y,view.time<actor.punchUntil,source.reduce);

@@ -5,6 +5,8 @@ import { ScreenHeader } from "../components/ScreenHeader";
 import { socket } from "../lib/socket";
 import { PartySettings } from "../components/PartySettings";
 import type { PartyOptions } from "../../shared/party";
+import { PartyCharacterPicker } from "../components/PartyCharacterPicker";
+import { CHARACTERS, characterId, type CharacterId } from "../../shared/characters";
 
 export function RoomScreen({
   profile,
@@ -53,6 +55,8 @@ export function RoomScreen({
     });
   }
 
+  function chooseCharacter(id:CharacterId){setError("");socket.timeout(8000).emit("room:character",{characterId:id},(err:Error|null,response:{ok:boolean;data?:RoomState;error?:string})=>{if(err||!response.ok||!response.data)setError(response?.error??"Die Figur konnte nicht gespeichert werden.");else setRoom(response.data);});}
+
   async function copyCode() {
     await navigator.clipboard?.writeText(room.code);
     setCopied(true);
@@ -63,10 +67,12 @@ export function RoomScreen({
     <main className="page screen-enter">
       <ScreenHeader title="Spielraum" onBack={onBack} />
       <section className="page__content room">
-        <button className="room-code" onClick={copyCode} aria-label="Raumcode kopieren">
+        {room.partyTest?<div className="party-test-notice"><strong>Deine Testpartie</strong><br/>Du und {room.players.filter(p=>p.bot).length} Bots. Nur du musst dich bereit melden.</div>:<button className="room-code" onClick={copyCode} aria-label="Raumcode kopieren">
           <small>{copied ? "Code kopiert" : "Raumcode antippen zum Kopieren"}</small>
           <strong>{room.code}</strong>
-        </button>
+        </button>}
+
+        {room.config.gameId==="party"&&<PartyCharacterPicker value={room.players.find(p=>p.id===profile.id)?.characterId} index={Math.max(0,room.players.findIndex(p=>p.id===profile.id))} onChange={chooseCharacter}/>}
 
         <div className="section-heading section-heading--row">
           <div>
@@ -82,7 +88,7 @@ export function RoomScreen({
               <span className="player-avatar">{player.name.slice(0, 1).toUpperCase()}</span>
               <span className="player-row__name">
                 <strong>{player.name}{player.id === profile.id ? " (du)" : ""}</strong>
-                <small>{player.id === room.hostId ? "Host" : player.connected ? "Verbunden" : "Verbindung getrennt"}</small>
+                <small>{player.bot?"Bot":player.id === room.hostId ? "Host" : player.connected ? "Verbunden" : "Verbindung getrennt"}{room.config.gameId==="party"?` · ${CHARACTERS.find(c=>c.id===characterId(player.characterId,room.players.indexOf(player)))!.name}`:""}</small>
               </span>
               <span className={`ready-mark ${player.ready ? "is-ready" : ""}`}>{player.ready ? "Bereit" : "Wartet"}</span>
             </div>
@@ -100,7 +106,7 @@ export function RoomScreen({
             <span>Ausgewähltes Spiel</span>
             <select
               value={room.config.gameId}
-              disabled={!isHost}
+              disabled={!isHost||Boolean(room.partyTest)}
               onChange={(event) => {
                 const nextGame = getGame(event.target.value as GameId);
                 configure(nextGame.id, Math.max(nextGame.minPlayers, Math.min(nextGame.maxPlayers, room.config.playerCount)));
@@ -113,7 +119,7 @@ export function RoomScreen({
           </label>
           <label>
             <span>Spielerzahl</span>
-            <select value={room.config.playerCount} disabled={!isHost} onChange={(event) => configure(room.config.gameId, Number(event.target.value))}>
+            <select value={room.config.playerCount} disabled={!isHost||Boolean(room.partyTest)} onChange={(event) => configure(room.config.gameId, Number(event.target.value))}>
               {options.map((option) => <option key={option} value={option}>{option}</option>)}
             </select>
           </label>

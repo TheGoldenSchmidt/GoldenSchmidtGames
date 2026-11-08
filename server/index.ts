@@ -7,8 +7,10 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { Server } from "socket.io";
 import { getGame } from "../shared/games";
-import { applyPartyAction, applyPartyControl, createPartyGame, partyOptions, publicParty, tickParty, type PartyAction, type PartyOptions } from "../shared/party";
-import { NEUTRAL_INPUT, publicArena, type ArenaInput } from "../shared/partyArena";
+import { applyPartyAction, applyPartyControl, createPartyGame, partyOptions, publicParty, selectPartyTestMini, tickParty, type PartyAction, type PartyOptions } from "../shared/party";
+import { characterId, isCharacterId } from "../shared/characters";
+import { PartyBotDriver } from "../shared/partyBots";
+import { isArenaId, NEUTRAL_INPUT, publicArena, type ArenaInput } from "../shared/partyArena";
 import { createKribbelnGame, rollKribbeln, submitKribbeln } from "../shared/kribbeln";
 import { accuseDurak, attackDurak, cheatDefendDurak, cheatThrowInDurak, createDurakGame, defendDurak, finishDurakBout, takeDurak, throwInDurak, transferDurak } from "../shared/durak";
 import {
@@ -41,6 +43,7 @@ export function createSpielraumServer() {
 const rooms = new Map<string, RoomState>();
 const socketMembership = new Map<string, { roomCode: string; playerId: string }>();
 const partyTokens = new Map<string, Map<string, string>>();
+const botDrivers = new Map<string,PartyBotDriver>();
 
 app.get("/api/health", (_request, response) => {
   response.json({ ok: true, version: "0.1.0", rooms: rooms.size });
@@ -141,8 +144,10 @@ function startRoom(room: RoomState) {
   else if (room.config.gameId === "durak") room.durakGame = createDurakGame(players, Math.random, room.config.durakCheatMode ?? false);
   else if (room.config.gameId === "kribbeln") room.kribbelnGame = createKribbelnGame(players);
   else if (room.config.gameId === "party") {
-    room.partyGame = createPartyGame(players, room.config.party, true, randomInt(0x100000000));
-    partyTokens.set(room.code, new Map(players.map(p => [p.id, randomUUID()])));
+    players.forEach((p,i)=>p.characterId=characterId(p.characterId,i));
+    room.partyGame = createPartyGame(players, room.config.party, true, room.partyTest?.seed??randomInt(0x100000000));
+    partyTokens.set(room.code, new Map(players.filter(p=>!p.bot).map(p => [p.id, randomUUID()])));
+    if(room.partyTest)botDrivers.set(room.code,new PartyBotDriver());
   }
   else throw new Error("Dieses Spiel ist noch nicht verfügbar.");
   broadcast(room);
@@ -157,6 +162,32 @@ function enterRoom(socketId: string, room: RoomState, playerId: string) {
 
 io.on("connection", (socket) => {
   let lastPartyControl=0;
+  socket.on("party:test-create",(payload:{playerId?:string;name?:string;bots?:number;seed?:number},callback:(ack:Ack<RoomState>)=>void)=>{
+    if(!Number.isInteger(payload?.bots)||payload.bots!<1||payload.bots!>5||!Number.isInteger(payload.seed)||payload.seed!<0||payload.seed!>0xffffffff)return callback({ok:false,error:"Wähle 1–5 Bots und einen Startwert von 0 bis 4294967295."});
+    const id=cleanPlayerId(payload.playerId),code=createCode();
+    const players:Player[]=[{id,name:cleanName(payload.name,"Gast"),connected:true,ready:false,score:0,characterId:characterId(undefined)}];
+    for(let i=0;i<payload.bots!;i++)players.push({id:`bot-${randomUUID()}`,name:`Inselbot ${i+1}`,connected:true,ready:true,score:0,bot:true,characterId:characterId(undefined,i+1)});
+    const room:RoomState={code,hostId:id,players,phase:"lobby",config:{gameId:"party",playerCount:players.length,party:partyOptions({rounds:5})},partyTest:{seed:payload.seed!}};
+    rooms.set(code,room);enterRoom(socket.id,room,id);callback({ok:true,data:publicRoom(room,id)});
+  });
+  socket.on("room:character",(payload:{characterId?:unknown},callback:(ack:Ack<RoomState>)=>void)=>{
+    const member=socketMembership.get(socket.id),room=member?rooms.get(member.roomCode):undefined,player=room?.players.find(p=>p.id===member?.playerId);
+    if(!room||!player||room.phase!=="lobby"||room.config.gameId!=="party")return callback({ok:false,error:"Die Figur kann nur vor der Inselparty gewählt werden."});
+    if(!isCharacterId(payload?.characterId))return callback({ok:false,error:"Diese Figur ist nicht verfügbar."});
+    player.characterId=payload.characterId;player.ready=false;broadcast(room);callback({ok:true,data:publicRoom(room,player.id)});
+  });
+  socket.on("party:test-command",(payload:{token?:string;phaseId?:number;command?:string;miniId?:string},callback:(ack:Ack<RoomState>)=>void)=>{
+    const member=socketMembership.get(socket.id),room=member?rooms.get(member.roomCode):undefined,g=room?.partyGame;
+    if(!member||!room?.partyTest||!g||room.hostId!==member.playerId||payload?.token!==partyTokens.get(room.code)?.get(member.playerId))return callback({ok:false,error:"Testwerkzeuge sind nur für den Host einer Testpartie verfügbar."});
+    if(g.pausedAt||payload.phaseId!==g.phaseId)return callback({ok:false,error:"Die Testpartie ist pausiert oder hat sich geändert."});
+    if(payload.command==="restart"){
+      room.partyGame=createPartyGame(room.players,room.config.party,true,room.partyTest.seed);
+      room.partyGame.phaseId=g.phaseId+1;room.partyGame.seq={...g.seq};botDrivers.set(room.code,new PartyBotDriver());
+    }else if(payload.command==="mini"&&isArenaId(payload.miniId??""))room.partyGame=selectPartyTestMini(g,payload.miniId as import("../shared/partyArena").ArenaId);
+    else if(payload.command==="skip-bots")room.partyGame=botDrivers.get(room.code)!.skipTurns(g,Date.now());
+    else return callback({ok:false,error:"Unbekanntes Testwerkzeug."});
+    broadcast(room);callback({ok:true,data:publicRoom(room,member.playerId)});
+  });
   socket.on("party:control",(payload:{phaseId?:number;token?:string;seq?:number;input?:ArenaInput},callback?:(ack:Ack<{accepted:boolean}>)=>void)=>{
     const member=socketMembership.get(socket.id),room=member?rooms.get(member.roomCode):undefined,g=room?.partyGame;
     const fail=(error:string)=>callback?.({ok:false,error});
@@ -244,6 +275,7 @@ io.on("connection", (socket) => {
       const room = rooms.get(code);
       if (!room) return callback({ ok: false, error: "Dieser Raum wurde nicht gefunden." });
       const playerId = cleanPlayerId(payload?.playerId);
+      if(room.partyTest&&(playerId!==room.hostId||room.players.find(p=>p.id===playerId)?.bot))return callback({ok:false,error:"Dieser Testraum gehört einer einzelnen Person und ihren Bots."});
       if(room.partyGame&&payload.partyToken!==partyTokens.get(code)?.get(playerId))return callback({ok:false,error:"Diese Inselparty kann nur mit der ursprünglichen Sitzung fortgesetzt werden."});
       if (room.phase !== "lobby") {
         const returning = room.players.some((player) => player.id === playerId);
@@ -285,6 +317,7 @@ io.on("connection", (socket) => {
         return callback({ ok: false, error: "Nur der Host kann das Spiel einstellen." });
       }
       if(room.phase!=="lobby")return callback({ok:false,error:"Die Partie läuft bereits."});
+      if(room.partyTest&&((payload.gameId&&payload.gameId!=="party")||(payload.playerCount!==undefined&&payload.playerCount!==room.config.playerCount)))return callback({ok:false,error:"Ein Testraum bleibt eine Inselparty mit der gewählten Botanzahl."});
       let options: PartyOptions;
       try { options=partyOptions(payload.party??room.config.party); } catch {return callback({ok:false,error:"Ungültige Inselparty-Einstellungen."});}
       let game;
@@ -299,7 +332,7 @@ io.on("connection", (socket) => {
         party: options
       };
       room.players.forEach((player) => {
-        player.ready = false;
+        player.ready = Boolean(player.bot);
       });
       broadcast(room);
       callback({ ok: true, data: publicRoom(room, membership.playerId) });
@@ -328,6 +361,7 @@ io.on("connection", (socket) => {
     if (room.hostId !== membership.playerId) {
       return callback({ ok: false, error: "Nur der Host kann die Partie starten." });
     }
+    if(room.phase!=="lobby")return callback({ok:false,error:"Die Partie läuft bereits."});
     const players = connectedPlayers(room);
     if (players.length !== room.config.playerCount) {
       return callback({
@@ -481,7 +515,7 @@ io.on("connection", (socket) => {
     player.connected = false;
     if(room.partyGame&&!room.partyGame.players.find(p=>p.id===player.id)?.passive){room.partyGame.disconnected[player.id]=Date.now();if(!room.partyGame.pausedAt)room.partyGame.pausedAt=Date.now();room.partyGame.mini?.arena?.actors.forEach(a=>{a.input={...NEUTRAL_INPUT};a.inputUntil=0;});}
     player.ready = false;
-    const connectedPlayers = room.players.filter((entry) => entry.connected);
+    const connectedPlayers = room.players.filter((entry) => entry.connected&&!entry.bot);
     if (room.hostId === player.id && connectedPlayers.length > 0) {
       room.hostId = connectedPlayers[0].id;
     }
@@ -490,8 +524,8 @@ io.on("connection", (socket) => {
     setTimeout(() => {
       const currentRoom = rooms.get(room.code);
       if (!currentRoom) return;
-      const stillConnected = currentRoom.players.some((entry) => entry.connected);
-      if (!stillConnected) {rooms.delete(currentRoom.code);partyTokens.delete(currentRoom.code);}
+      const stillConnected = currentRoom.players.some((entry) => entry.connected&&!entry.bot);
+      if (!stillConnected) {rooms.delete(currentRoom.code);partyTokens.delete(currentRoom.code);botDrivers.delete(currentRoom.code);}
     }, 5 * 60 * 1000).unref();
   });
 });
@@ -503,7 +537,8 @@ io.on("connection", (socket) => {
       const before=room.partyGame;if(!before||['finished','aborted'].includes(before.phase))continue;
       const realtime=before.phase==="mini-play"&&Boolean(before.mini?.arena)&&!before.pausedAt;
       if(!realtime&&pulse%5!==0)continue;
-      room.partyGame=tickParty(before);const after=room.partyGame;
+      const withBots=room.partyTest?botDrivers.get(room.code)!.step(before,Date.now()):before;
+      room.partyGame=tickParty(withBots);const after=room.partyGame;
       if(realtime&&after.phaseId===before.phaseId&&after.mini?.arena){
         if(pulse%2===0)for(const socketId of io.sockets.adapter.rooms.get(room.code)??[]){const viewer=socketMembership.get(socketId)?.playerId??"";io.sockets.sockets.get(socketId)?.emit("party:arena",{code:room.code,phaseId:after.phaseId,arena:publicArena(after.mini.arena,viewer),serverTime:Date.now()});}
       }else broadcast(room);

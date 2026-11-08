@@ -1,0 +1,232 @@
+// Baut eine 3D-Figur rein aus den `visual`-Daten einer Karte (keine figur-
+// spezifische Logik). Primitive werden zu benannten Bausteinen zusammengesetzt;
+// der Animations-Player adressiert sie später über ihre id.
+//
+// Auto-Fit: jede Figur wird auf eine einheitliche Zielhöhe skaliert und mittig
+// auf den Boden (y=0) gesetzt – so passt sie zur Slot-Skalierung im Battlefield.
+
+import * as THREE from 'three';
+import type { DetailLevel, Visual, VisualPart } from './types';
+
+/** Muss zu NOMINAL_HEIGHT in Battlefield3D passen. */
+export const FIGURE_HEIGHT = 1.8;
+
+export interface BuiltFigure {
+  /** Wurzel der Figur; von Animationen als Baustein "root" adressiert. */
+  root: THREE.Group;
+  /** Baustein-id → Objekt (inkl. "root"). */
+  parts: Map<string, THREE.Object3D>;
+}
+
+// ---- Geteilter Geometrie-Cache (Geometrien teilbar, Materialien nicht) ----
+const geoCache = new Map<string, THREE.BufferGeometry>();
+function geo(
+  key: string,
+  make: () => THREE.BufferGeometry,
+  useGeometryCache: boolean
+): THREE.BufferGeometry {
+  if (!useGeometryCache) return make();
+  let g = geoCache.get(key);
+  if (!g) {
+    g = make();
+    geoCache.set(key, g);
+  }
+  return g;
+}
+
+const DETAIL: Record<DetailLevel, { ico: number; seg: number }> = {
+  low: { ico: 0, seg: 6 },
+  mid: { ico: 1, seg: 10 },
+  high: { ico: 2, seg: 16 }
+};
+
+const numOf = (s: number | number[] | undefined): number =>
+  typeof s === 'number' ? s : Array.isArray(s) ? (s[0] ?? 1) : 1;
+
+function tripleOf(s: number | number[] | undefined): [number, number, number] {
+  if (typeof s === 'number') return [s, s, s];
+  if (Array.isArray(s)) return [s[0] ?? 1, s[1] ?? s[0] ?? 1, s[2] ?? s[0] ?? 1];
+  return [1, 1, 1];
+}
+
+function buildGeometry(
+  part: VisualPart,
+  detail: DetailLevel,
+  useGeometryCache: boolean
+): THREE.BufferGeometry | null {
+  const d = DETAIL[detail];
+  const s = part.size;
+  switch (part.shape) {
+    case 'mesh': {
+      const surface = part.mesh!;
+      return geo(`mesh:${JSON.stringify(surface)}`, () => {
+        const g = new THREE.BufferGeometry();
+        g.setAttribute('position', new THREE.Float32BufferAttribute(surface.vertices.flat(), 3));
+        g.setIndex(surface.indices);
+        if (surface.colors) {
+          const colors = surface.colors.flatMap(hex => new THREE.Color(hex).toArray());
+          g.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+        }
+        g.computeVertexNormals();
+        g.computeBoundingBox();
+        g.computeBoundingSphere();
+        return g;
+      }, useGeometryCache);
+    }
+    case 'group':
+      return null;
+    case 'ico': {
+      const r = numOf(s);
+      return geo(`i${r},${d.ico}`, () => new THREE.IcosahedronGeometry(r, d.ico), useGeometryCache);
+    }
+    case 'sph': {
+      const r = numOf(s);
+      const a = part.arc;
+      const key = `s${r},${d.seg}${a ? ',' + a.join(',') : ''}`;
+      return geo(
+        key,
+        () => a
+          ? new THREE.SphereGeometry(r, d.seg, Math.max(4, d.seg - 2), a[0], a[1], a[2], a[3])
+          : new THREE.SphereGeometry(r, d.seg, Math.max(4, d.seg - 1)),
+        useGeometryCache
+      );
+    }
+    case 'morphHead': {
+      const r = numOf(s); const morph = part.morph ?? {};
+      const seg = Math.max(24, d.seg * 2);
+      const key = `mh${r},${seg},${JSON.stringify(morph)}`;
+      return geo(key, () => {
+        const g = new THREE.SphereGeometry(r, seg, Math.max(18, seg - 6));
+        const p = g.attributes.position;
+        const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
+        const gaussian = (v: number, center: number, width: number) => {
+          const n = (v - center) / width;
+          return Math.exp(-0.5 * n * n);
+        };
+        for (let i = 0; i < p.count; i += 1) {
+          let x = p.getX(i); const y = p.getY(i); let z = p.getZ(i);
+          const nx = x / r; const ny = y / r; const nz = z / r;
+          const lower = clamp01((-ny - 0.05) / 0.95);
+          x *= 1 - (morph.lowerTaper ?? 0.18) * lower * lower;
+          if (nz > -0.08) {
+            const frontLinear = clamp01((nz + 0.08) / 0.72);
+            const front = frontLinear * frontLinear * (3 - 2 * frontLinear);
+            const noseX = morph.noseX ?? 0.05;
+            const bridge = gaussian(nx, noseX, morph.bridgeWidth ?? 0.22)
+              * gaussian(ny, morph.bridgeY ?? 0.08, morph.bridgeHeight ?? 0.46);
+            const nose = gaussian(nx, noseX, morph.noseWidth ?? 0.25)
+              * gaussian(ny, morph.noseY ?? -0.18, morph.noseHeight ?? 0.20);
+            const chin = gaussian(nx, morph.chinX ?? 0.08, morph.chinWidth ?? 0.36)
+              * gaussian(ny, morph.chinY ?? -0.80, morph.chinHeight ?? 0.22);
+            z += r * front * (
+              bridge * (morph.bridgeDepth ?? 0.18)
+              + nose * (morph.noseDepth ?? 0.76)
+              + chin * (morph.chinDepth ?? 0.12)
+            );
+          }
+          p.setXYZ(i, x, y, z);
+        }
+        p.needsUpdate = true;
+        g.computeVertexNormals();
+        g.computeBoundingBox();
+        g.computeBoundingSphere();
+        return g;
+      }, useGeometryCache);
+    }
+    case 'box': {
+      const [x, y, z] = tripleOf(s);
+      return geo(`b${x},${y},${z}`, () => new THREE.BoxGeometry(x, y, z), useGeometryCache);
+    }
+    case 'cyl': {
+      const [rt, rb, h] = tripleOf(s);
+      return geo(`c${rt},${rb},${h},${d.seg}`, () => new THREE.CylinderGeometry(rt, rb, h, d.seg), useGeometryCache);
+    }
+    case 'cone': {
+      const arr = Array.isArray(s) ? s : [numOf(s), numOf(s)];
+      const r = arr[0] ?? 1;
+      const h = arr[1] ?? 1;
+      return geo(`k${r},${h},${d.seg}`, () => new THREE.ConeGeometry(r, h, Math.max(4, d.seg - 2)), useGeometryCache);
+    }
+    case 'capsule': {
+      const arr = Array.isArray(s) ? s : [numOf(s), numOf(s)];
+      const r = arr[0] ?? 1;
+      const len = arr[1] ?? 1;
+      const cap = Math.max(2, Math.round(d.seg / 3));
+      return geo(`p${r},${len},${d.seg}`, () => new THREE.CapsuleGeometry(r, len, cap, d.seg), useGeometryCache);
+    }
+    case 'torus': {
+      const arr = Array.isArray(s) ? s : [numOf(s), numOf(s)];
+      const r = arr[0] ?? 1;
+      const tube = arr[1] ?? 0.3;
+      return geo(`t${r},${tube},${d.seg}`, () => new THREE.TorusGeometry(r, tube, Math.max(4, d.seg - 4), d.seg), useGeometryCache);
+    }
+  }
+}
+
+function resolveColor(color: string | undefined, palette?: Record<string, string>): string {
+  if (!color) return '#888888';
+  if (color.startsWith('#')) return color;
+  return palette?.[color] ?? '#888888';
+}
+
+function makeMaterial(part: VisualPart, palette?: Record<string, string>): THREE.MeshStandardMaterial {
+  return new THREE.MeshStandardMaterial({
+    color: part.shape === 'mesh' && part.mesh?.colors ? '#ffffff' : resolveColor(part.color, palette),
+    vertexColors: part.shape === 'mesh' && !!part.mesh?.colors,
+    flatShading: !part.smoothShading,
+    roughness: part.roughness ?? 0.85,
+    metalness: part.metalness ?? 0.05,
+    transparent: part.transparent ?? false,
+    opacity: part.opacity ?? 1
+  });
+}
+
+export function buildFigure(
+  visual: Visual,
+  options: { useGeometryCache?: boolean } = {}
+): BuiltFigure {
+  const detail = visual.detailLevel ?? 'mid';
+  const useGeometryCache = options.useGeometryCache ?? true;
+  const model = new THREE.Group();
+  const parts = new Map<string, THREE.Object3D>();
+  parts.set('root', model);
+
+  const objs = new Map<string, THREE.Object3D>();
+  for (const part of visual.parts) {
+    let obj: THREE.Object3D;
+    if (part.shape === 'group') {
+      obj = new THREE.Group();
+    } else {
+      const g = buildGeometry(part, part.detail ?? detail, useGeometryCache)!;
+      const m = new THREE.Mesh(g, makeMaterial(part, visual.palette));
+      m.castShadow = true;
+      obj = m;
+    }
+    if (part.pos) obj.position.set(part.pos[0], part.pos[1], part.pos[2]);
+    if (part.rot) obj.rotation.set(part.rot[0], part.rot[1], part.rot[2]);
+    if (part.scale !== undefined) {
+      if (typeof part.scale === 'number') obj.scale.setScalar(part.scale);
+      else obj.scale.set(part.scale[0], part.scale[1], part.scale[2]);
+    }
+    objs.set(part.id, obj);
+    parts.set(part.id, obj);
+  }
+
+  // Hierarchie erst nach dem Erzeugen aufbauen (parent darf später kommen).
+  for (const part of visual.parts) {
+    const obj = objs.get(part.id)!;
+    const parent = part.parent && part.parent !== 'root' ? objs.get(part.parent) : undefined;
+    (parent ?? model).add(obj);
+  }
+
+  // Auto-Fit auf einheitliche Zielhöhe, mittig, Füße bei y=0.
+  const box = new THREE.Box3().setFromObject(model);
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+  const targetH = FIGURE_HEIGHT * (visual.height ?? 1);
+  const s = size.y > 0 ? targetH / size.y : 1;
+  model.scale.setScalar(s);
+  model.position.set(-center.x * s, -box.min.y * s, -center.z * s);
+
+  return { root: model, parts };
+}

@@ -65,7 +65,7 @@ export function createBoardWorld(host:HTMLElement,read:()=>BoardFrame,select:(id
     const choiceIds=g.phase==="path"?BOARD[g.players.find(p=>p.id===g.order[g.turn])!.position].next:[],choiceKey=choiceIds.join();
     if(choiceKey!==lastChoices){choices.traverse(object=>{const mesh=object as T.Mesh;mesh.geometry?.dispose();});choices.clear();for(const id of choiceIds){const p=boardPoint(id);const marker=kit.mesh(choices,new T.TorusGeometry(.83,.08,8,28),0xfff6bf,p.x,p.y+.25,p.z);marker.rotation.x=Math.PI/2;}lastChoices=choiceKey;}
     for(const [index,player] of g.players.entries()){
-      let pawn=pawns.get(player.id);if(!pawn){pawn=character(kit,world,index,player.name);pawn.group.scale.setScalar(1.6);pawns.set(player.id,pawn);pawn.group.position.copy(boardPoint(state.positions[player.id]??player.position));}
+      let pawn=pawns.get(player.id);if(!pawn){pawn=character(kit,world,index,player.name,player.characterId);pawn.group.scale.setScalar(1.6);pawns.set(player.id,pawn);pawn.group.position.copy(boardPoint(state.positions[player.id]??player.position));}
       const point=boardPoint(state.positions[player.id]??player.position),others=g.players.filter(p=>(state.positions[p.id]??p.position)===(state.positions[player.id]??player.position)),slot=others.findIndex(p=>p.id===player.id);
       point.y+=.28;if(others.length>1){point.x+=(slot%3-1)*.72;point.z+=Math.floor(slot/3)*.7;}
       const old=pawn.group.position.clone(),delta=point.clone().sub(old),heading=Math.atan2(delta.x,delta.z),speed=delta.length()/Math.max(.01,dt);

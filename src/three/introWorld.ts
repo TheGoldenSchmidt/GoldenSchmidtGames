@@ -2,7 +2,7 @@ import * as T from "three";
 import type { GameId } from "../../shared/types";
 import { character, PLAYER_COLORS, SceneKit } from "./sceneKit";
 
-export interface IntroPlayer { id: string; name: string }
+export interface IntroPlayer { id: string; name: string; characterId?: string }
 export type IntroStage = "seated" | "approach" | "overhead";
 
 const FELT = 0x205b50;
@@ -147,7 +147,7 @@ function islandScene(kit: SceneKit, world: T.Group, players: IntroPlayer[]) {
   kit.mesh(world, new T.ConeGeometry(1.45, .9, 4), 0xe87565, .3, 1.99, .5).rotation.y = Math.PI / 4;
   for (let i = 0; i < 7; i++) kit.box(world, WOOD, 0, .47, 4.2 + i * .3, 1.5, .13, .25);
   players.forEach((player, index) => {
-    const pawn = character(kit, world, index, player.name);
+    const pawn = character(kit, world, index, player.name, player.characterId);
     pawn.group.position.set((index - (players.length - 1) / 2) * .9, .65, 2.1 + (index % 2) * .5);
     pawn.group.rotation.y = Math.PI;
   });

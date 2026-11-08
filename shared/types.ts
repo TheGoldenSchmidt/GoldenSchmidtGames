@@ -83,6 +83,8 @@ export interface Player {
   connected: boolean;
   ready: boolean;
   score: number;
+  characterId?: import("./characters").CharacterId;
+  bot?: boolean;
 }
 
 export interface RoomConfig {
@@ -103,6 +105,7 @@ export interface RoomState {
   kribbelnGame?: import("./kribbeln").KribbelnGame;
   partyGame?: import("./party").PartyGame;
   partyToken?: string;
+  partyTest?: { seed: number };
 }
 
 export interface GuestProfile {

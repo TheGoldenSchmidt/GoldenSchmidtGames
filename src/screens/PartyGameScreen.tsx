@@ -7,6 +7,7 @@ import { Celebration, MINI_LOOK, MiniPreview } from "../components/PartyArt";
 import { PartyDice } from "../components/PartyDice";
 import { PartyMini, PartyPractice } from "../components/PartyMini";
 import { PartyTraining } from "../components/PartyTraining";
+import { PartyTestTools } from "../components/PartyTestTools";
 import { socket } from "../lib/socket";
 
 export const PARTY_ONLINE_SAVE="spielraum.party.online.v1";
@@ -72,6 +73,7 @@ export function PartyGameScreen({profile,initialRoom,onExit}:{profile:GuestProfi
   const replaceControl=<label>Welches Item möchtest du ersetzen?<select value={replace} onChange={e=>setReplace(Number(e.target.value))}>{p.items.map((item,i)=><option value={i} key={i}>{ITEMS[item].name}</option>)}</select></label>;
   return <main className={`party-screen ${boardPhase?"party-screen--board":"party-screen--stage"} ${g.phase==="mini-play"?"party-screen--playing":""}`}>
     <header className="party-header"><div><strong>Inselparty<span aria-hidden="true">✦</span></strong><small>Raum {room.code}</small></div><div className="party-round"><span>Runde <b>{g.round}</b> / {g.options.rounds}</span><div aria-hidden="true">{Array.from({length:g.options.rounds},(_,i)=><i key={i} className={i<g.round?"is-complete":""}/>)}</div></div><button className="text-button" onClick={onExit}>Verlassen</button></header>
+    {room.partyTest&&host&&connection&&<PartyTestTools room={room} onUpdate={setRoom}/>}
     {g.phase!=="mini-play"&&g.phase!=="finished"&&<div className="party-standings" aria-label="Punktestand">{standings.map((player,rank)=>{const i=g.players.indexOf(player);return <div key={player.id} className={player.id===p.id&&boardPhase?"is-active":""}><span className={`party-avatar party-player-color-${i}`}>{FIGURES[i]}</span><strong>{player.name}</strong><small><span aria-label={`${player.trophies} Trophäen`}>★ {player.trophies}</span><span aria-label={`${player.coins} Münzen`}>◉ {player.coins}</span>{player.shield&&<span title="Schutzschild aktiv">⬡</span>}{player.passive&&<span>pausiert</span>}</small><em>{rank+1}.</em></div>;})}</div>}
     {(!connection||g.pausedAt>0)&&<section className="party-connection" role="status"><h2>Wir warten auf die Verbindung</h2><p>Die Partie pausiert bis zu 60 Sekunden. Nach einem Serverneustart sind Online-Partien nicht wiederherstellbar.</p>{host&&g.resumeOffered&&<button className="button button--primary" disabled={busy} onClick={()=>send({type:"resume"})}>Ohne getrennte Spieler fortsetzen</button>}{host&&<button className="button button--ghost" disabled={busy} onClick={()=>send({type:"abort"})}>Partie abbrechen</button>}</section>}
     <div className="party-layout">
