@@ -1,3 +1,5 @@
+> Aktueller Regelstand und Erweiterungen: [Inselparty-Regeln](island-party-rules.md).
+
 # Inselparty in 3D
 
 Die Spielwelt orientiert sich an den räumlichen Spielzeuglandschaften und direkt gesteuerten Figuren von [Mario Party Jamboree](https://www.nintendo.com/au/news-and-articles/super-mario-party-jamboree-heres-a-quick-overview-of-the-game/). Eigene Geometrie und Figuren bilden Hafen, Dschungel, Vulkan, Markt und erhöhte Brücken. Das Brett und die Minispiele werden mit WebGL und Three.js tatsächlich räumlich gerendert.

@@ -118,6 +118,14 @@ function broadcast(room: RoomState) {
   }
 }
 
+function closePartyRoom(room:RoomState){
+  const reason=room.partyGame?.phase;if(reason!=="finished"&&reason!=="aborted")return;
+  io.to([room.code,`party-status:${room.code}`]).emit("party:closed",{code:room.code,reason});
+  for(const [socketId,member] of socketMembership)if(member.roomCode===room.code){socketMembership.delete(socketId);io.sockets.sockets.get(socketId)?.leave(room.code);}
+  io.in(`party-status:${room.code}`).socketsLeave(`party-status:${room.code}`);
+  rooms.delete(room.code);partyTokens.delete(room.code);botDrivers.delete(room.code);
+}
+
 function broadcastGameStarted(room: RoomState) {
   for (const socketId of io.sockets.adapter.rooms.get(room.code) ?? []) {
     const membership = socketMembership.get(socketId);
@@ -162,6 +170,12 @@ function enterRoom(socketId: string, room: RoomState, playerId: string) {
 
 io.on("connection", (socket) => {
   let lastPartyControl=0;
+  socket.on("party:session-status",(payload:{code?:string;playerId?:string;partyToken?:string},callback:(ack:Ack<{available:boolean}>)=>void)=>{
+    const room=rooms.get(cleanName(payload?.code,"").toUpperCase()),id=cleanPlayerId(payload?.playerId);
+    const available=Boolean(room?.partyGame&&!['finished','aborted'].includes(room.partyGame.phase)&&payload?.partyToken&&partyTokens.get(room.code)?.get(id)===payload.partyToken&&room.players.some(p=>p.id===id&&!p.bot));
+    if(available)socket.join(`party-status:${room!.code}`);
+    callback({ok:true,data:{available}});
+  });
   socket.on("party:test-create",(payload:{playerId?:string;name?:string;bots?:number;seed?:number;characterId?:unknown},callback:(ack:Ack<RoomState>)=>void)=>{
     if(!isCharacterId(payload?.characterId))return callback({ok:false,error:"Wähle zuerst eine Spielfigur."});
     if(!Number.isInteger(payload?.bots)||payload.bots!<1||payload.bots!>5||!Number.isInteger(payload.seed)||payload.seed!<0||payload.seed!>0xffffffff)return callback({ok:false,error:"Wähle 1–5 Bots und einen Startwert von 0 bis 4294967295."});
@@ -211,7 +225,7 @@ io.on("connection", (socket) => {
     if(payload.seq! <= (g.seq[member.playerId]??0))return callback({ok:true,data:publicRoom(room,member.playerId)});
     if(payload.phaseId!==g.phaseId)return callback({ok:false,error:"Der Spielzug hat sich geändert. Bitte erneut wählen."});
     if((payload.action.type==="resume"||payload.action.type==="abort")&&room.hostId!==member.playerId)return callback({ok:false,error:"Nur der Host kann fortsetzen oder abbrechen."});
-    try {room.partyGame=applyPartyAction(g,member.playerId,payload.action);room.partyGame.seq[member.playerId]=payload.seq!;broadcast(room);callback({ok:true,data:publicRoom(room,member.playerId)});}
+    try {room.partyGame=applyPartyAction(g,member.playerId,payload.action);room.partyGame.seq[member.playerId]=payload.seq!;broadcast(room);callback({ok:true,data:publicRoom(room,member.playerId)});closePartyRoom(room);}
     catch(error){callback({ok:false,error:error instanceof Error?error.message:"Aktion nicht möglich."});}
   });
   socket.on("kribbeln:roll", (payload: { keep?: number[] }, callback: (ack: Ack<RoomState>) => void) => {
@@ -282,7 +296,7 @@ io.on("connection", (socket) => {
     ) => {
       const code = cleanName(payload?.code, "").toUpperCase();
       const room = rooms.get(code);
-      if (!room) return callback({ ok: false, error: "Dieser Raum wurde nicht gefunden." });
+      if (!room||room.partyGame&&["finished","aborted"].includes(room.partyGame.phase)) return callback({ ok: false, error: "Dieser Raum ist geschlossen oder wurde nicht gefunden." });
       const playerId = cleanPlayerId(payload?.playerId);
       if(room.partyTest&&(playerId!==room.hostId||room.players.find(p=>p.id===playerId)?.bot))return callback({ok:false,error:"Dieser Testraum gehört einer einzelnen Person und ihren Bots."});
       if(room.partyGame&&payload.partyToken!==partyTokens.get(code)?.get(playerId))return callback({ok:false,error:"Diese Inselparty kann nur mit der ursprünglichen Sitzung fortgesetzt werden."});
@@ -311,7 +325,7 @@ io.on("connection", (socket) => {
       }
 
       enterRoom(socket.id, room, playerId);
-      if(room.partyGame){delete room.partyGame.disconnected[playerId];if(!Object.keys(room.partyGame.disconnected).length&&room.partyGame.pausedAt){const pause=Date.now()-room.partyGame.pausedAt;if(room.partyGame.deadline)room.partyGame.deadline+=pause;if(room.partyGame.mini?.startAt)room.partyGame.mini.startAt+=pause;room.partyGame.pausedAt=0;room.partyGame.resumeOffered=false;}}
+      if(room.partyGame){delete room.partyGame.disconnected[playerId];if(!Object.keys(room.partyGame.disconnected).length&&room.partyGame.pausedAt){const pause=Date.now()-room.partyGame.pausedAt;if(room.partyGame.deadline)room.partyGame.deadline+=pause;if(room.partyGame.movement){room.partyGame.movement.departAt+=pause;room.partyGame.movement.arriveAt+=pause;}if(room.partyGame.mini?.startAt)room.partyGame.mini.startAt+=pause;room.partyGame.pausedAt=0;room.partyGame.resumeOffered=false;}}
       callback({ ok: true, data: publicRoom(room, playerId) });
       broadcast(room);
     }
@@ -556,6 +570,7 @@ io.on("connection", (socket) => {
       if(realtime&&after.phaseId===before.phaseId&&after.mini?.arena){
         if(pulse%2===0)for(const socketId of io.sockets.adapter.rooms.get(room.code)??[]){const viewer=socketMembership.get(socketId)?.playerId??"";io.sockets.sockets.get(socketId)?.emit("party:arena",{code:room.code,phaseId:after.phaseId,arena:publicArena(after.mini.arena,viewer),serverTime:Date.now()});}
       }else broadcast(room);
+      closePartyRoom(room);
     }
   },50);
   partyClock.unref();

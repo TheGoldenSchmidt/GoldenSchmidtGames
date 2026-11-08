@@ -1,11 +1,20 @@
-import { activePartyPlayer, applyPartyAction, applyPartyControl, BOARD, ITEMS, type PartyAction, type PartyGame } from "./party";
+import {COMMAND_ZONES,DUO_SWITCHES,GOLF_GATES,HEX_PLATFORMS,hexCue,photoSpot,saysCue,wallHoles,wallCellPoint} from "./arenaChallenges";
+import { activePartyPlayer, applyPartyAction, applyPartyControl, BOARD, ITEMS, tickParty, type PartyAction, type PartyGame } from "./party";
 import { bridgeCenter, clamp, DASH_BLOCKS, HURDLES, TILT_HOLES, type ArenaActor, type ArenaInput, type ArenaState } from "./partyArena";
 
 /** Bots kennen nur die sichtbare Arena und senden normale Eingaben. */
 export function botArenaInput(s:ArenaState,a:ArenaActor):ArenaInput {
   let x=0,z=-1,jump=false,punch=false;
   const steer=(tx:number,tz:number,gain=2)=>{x=clamp((tx-a.x)*gain,-1,1);z=clamp((tz-a.z)*gain,-1,1);};
-  if(s.id==="balance")steer(bridgeCenter(a.z-1),a.z-1);
+  if(s.id==="walls"){const target=wallHoles(s).map(wallCellPoint).sort((p,q)=>Math.hypot(p.x-a.x,p.z-a.z)-Math.hypot(q.x-a.x,q.z-a.z))[0];steer(target.x,target.z);}
+  else if(s.id==="hex"){const p=HEX_PLATFORMS[hexCue(s)];steer(p.x,p.z);punch=s.time%900<100;}
+  else if(s.id==="photo"){const p=photoSpot(s);steer(p.x,p.z);punch=s.time%800<100;}
+  else if(s.id==="says"){const p=COMMAND_ZONES[saysCue(s).expected];steer(p.x,p.z);}
+  else if(s.id==="bumper"){const target=s.actors.filter(b=>b.id!==a.id&&!b.finished).sort((p,q)=>Math.hypot(p.x-a.x,p.z-a.z)-Math.hypot(q.x-a.x,q.z-a.z))[0];if(Math.hypot(a.x,a.z)>4.7||!target)steer(0,0);else steer(target.x,target.z);}
+  else if(s.id==="stack"){steer(Math.sin(s.time*.0007)*4,Math.cos(s.time*.0006)*3);jump=s.time%1000<150;}
+  else if(s.id==="golf"){const gate=GOLF_GATES.find(g=>a.z>g.z-.7);if(gate)steer(gate.gapX,gate.z-1);else steer(0,-21.8);x=clamp(x-a.vx*.15,-1,1);z=clamp(z-a.vz*.15,-1,1);}
+  else if(s.id==="duos"){const index=s.gates?.findIndex(open=>!open)??-1;if(index>=0){const plate=DUO_SWITCHES[index],side=s.actors.length===1?(s.switches?.[index*2]?1:0):s.actors.indexOf(a)%2;steer(side?plate.right:plate.left,plate.z);}else steer(0,-23);jump=[-7,-16,-19].some(bar=>a.z>bar&&a.z-bar<1.8)&&a.grounded;}
+  else if(s.id==="balance")steer(bridgeCenter(a.z-1),a.z-1);
   else if(s.id==="hurdles")jump=HURDLES.some(h=>a.z>h&&a.z-h<1.8)&&a.y===0;
   else {
     const targets=s.id==="crates"?s.crates.filter(c=>c.hp>0):s.pickups.filter(p=>p.readyAt<=s.time);
@@ -67,6 +76,7 @@ export class PartyBotDriver {
   skipTurns(current:PartyGame,now:number):PartyGame {
     let g=current;
     for(let i=0;i<64&&activePartyPlayer(g).bot&&!g.phase.startsWith("mini-");i++){
+      if(g.phase==="moving"&&g.movement){g=tickParty(g,g.movement.arriveAt);continue;}
       const next=this.step(g,now,true);if(next===g)break;g=next;
     }
     return g;

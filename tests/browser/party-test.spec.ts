@@ -29,7 +29,7 @@ test("Solo-Test: eigene JSON-Figur wählen, drehen und mit echten Bots spielen",
   await page.getByRole("button",{name:/Figurenwahl schließen/}).click();
   await page.getByRole("button",{name:"Ich bin bereit",exact:true}).click();
   const intro=page.getByRole("button",{name:"Intro überspringen"});if(await intro.count())await intro.click();
-  await expect(page.locator(".party-world")).toHaveAttribute("data-webgl","ready");
+  await expect(page.locator(".party-mini-intro")).toBeVisible();
   await expect(page.getByText("Testpartie mit Bots",{exact:false}).first()).toBeVisible();
   await page.locator(".party-test-tools>summary").click();
   await page.getByLabel("Minispiel auswählen").selectOption("crates");

@@ -1,3 +1,5 @@
+> Aktueller Regelstand und Erweiterungen: [Inselparty-Regeln](island-party-rules.md).
+
 # Inselparty: Spielerlebnis
 
 Dieser Entwurf beschreibt den früheren 2D-Stand. Die aktuelle, ausschließlich online gespielte 3D-Version ist in [Inselparty in 3D](inselparty-3d.md) dokumentiert.

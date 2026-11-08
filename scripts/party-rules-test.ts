@@ -1,11 +1,12 @@
+import {boardGame,settleMovement} from "./party-fixtures";
 import assert from "node:assert/strict";
 import { activePartyPlayer, applyPartyAction as act, BOARD, createPartyGame, createPartyPractice, ITEM_IDS, ITEMS, MINI_IDS, partyMiniResults, partyOptions, partyStanding, publicParty, tickParty, type PartyGame, type PartyAction, type MiniId } from "../shared/party";
 import { ACTION_MINI_IDS } from "../shared/partyArena";
 
 const players=[{id:"a",name:"Ada"},{id:"b",name:"Ben"}];
 let now=100000;
-function make(){return createPartyGame(players,{rounds:5},false,23,now);}
-function command(g:PartyGame,a:PartyAction){return act(g,activePartyPlayer(g).id,a,now+=100);}
+function make(){return boardGame(players,{rounds:5},false,23,now);}
+function command(g:PartyGame,a:PartyAction){const next=settleMovement(act(g,activePartyPlayer(g).id,a,now+=100));now=Math.max(now,next.movement?.arriveAt??now);return next;}
 assert.equal(BOARD.length,34);assert.deepEqual(BOARD[8].next,[9,28]);assert.deepEqual(BOARD[18].next,[19,31]);assert.deepEqual(BOARD[30].next,[12]);assert.deepEqual(BOARD[33].next,[22]);
 assert.throws(()=>partyOptions({rounds:4}));assert.throws(()=>partyOptions({rounds:16}));assert.throws(()=>createPartyGame(players.slice(0,1)));
 let g=make(),id=activePartyPlayer(g).id;
@@ -45,7 +46,7 @@ for(let count=2;count<=6;count++)for(let rounds=5;rounds<=15;rounds++){
   let game=createPartyGame(Array.from({length:count},(_,i)=>({id:`p${i}`,name:`P${i}`})),{rounds},true,count*100+rounds,now);
   let actions=0;
   while(game.phase!=="finished"&&actions++<5000){const player=activePartyPlayer(game).id;let a:PartyAction;
-    switch(game.phase){case "turn":a={type:"roll"};break;case "path":a={type:"path",destination:BOARD[activePartyPlayer(game).position].next[actions%2]??BOARD[activePartyPlayer(game).position].next[0]};break;case "trophy":a={type:"trophy",buy:true};break;case "shop":a={type:"shop"};break;case "gift":a={type:"gift",accept:true,replace:0};break;case "summary":case "mini-result":a={type:"next"};break;
+    switch(game.phase){case "moving":game=tickParty(game,now=Math.max(now,game.movement!.arriveAt));continue;case "turn":a={type:"roll"};break;case "path":a={type:"path",destination:BOARD[activePartyPlayer(game).position].next[actions%2]??BOARD[activePartyPlayer(game).position].next[0]};break;case "trophy":a={type:"trophy",buy:true};break;case "shop":a={type:"shop"};break;case "gift":a={type:"gift",accept:true,replace:0};break;case "summary":case "mini-result":a={type:"next"};break;
     case "mini-intro":for(const p of game.players)if(!game.mini!.runs[p.id].ready)game=act(game,p.id,{type:"ready"},now+=100);continue;
     case "mini-play":for(const p of game.players)if(!game.mini!.runs[p.id].done)game=act(game,p.id,{type:"finish"},now+=100);continue;
     default:throw new Error(`Unerwartete Phase ${game.phase}`);}
@@ -54,7 +55,7 @@ for(let count=2;count<=6;count++)for(let rounds=5;rounds<=15;rounds++){
   assert.equal(game.phase,"finished",`${count} Spieler / ${rounds} Runden`);assert.ok(game.winners.length>=1);assert.equal(game.round,rounds);completed++;
 }
 // Online-Fristen und Unterbrechung.
-g=createPartyGame(players,{rounds:5},true,9,now);const before=g.deadline;g=tickParty(g,before+1);assert.notEqual(g.phase,"turn");
+g=boardGame(players,{rounds:5},true,9,now);const before=g.deadline;g=tickParty(g,now+600000);assert.equal(g.phase,"turn");assert.equal(before,0);
 g.pausedAt=now;g=tickParty(g,now+60001);assert.equal(g.resumeOffered,true);g=act(g,activePartyPlayer(g).id,{type:"resume"},now+60002);assert.equal(g.pausedAt,0);
 assert.ok(partyStanding(g).length===2);
 for(const analog of ["words","bridge"] as MiniId[]){
@@ -69,7 +70,7 @@ for(const analog of ["words","bridge"] as MiniId[]){
   for(const player of game.players)game=act(game,player.id,{type:"report",score:10},now+=100);
   assert.throws(()=>act(game,actor,{type:"report",score:-1},now));
   game=act(game,actor,{type:"confirm",accept:true},now);
-  assert.equal(game.phase,"mini-result");assert.ok(game.players.every(p=>p.coins===17),"Gleicher erster Platz erhält 7 Münzen");
+  assert.equal(game.phase,"mini-result");assert.deepEqual(game.players.map(p=>p.coins).sort((a,b)=>a-b),[14,20],"Auch bei Gleichstand eindeutige Plätze");
   let replacement=make();replacement.options.analog=true;replacement.phase="summary";replacement.turn=1;replacement.miniBag=[analog];replacement=command(replacement,{type:"next"});replacement=act(replacement,replacement.players[0].id,{type:"material",available:false},now);assert.ok(ACTION_MINI_IDS.includes(replacement.mini!.id as typeof ACTION_MINI_IDS[number]));
 }
 assert.equal(partyOptions({analog:true}).analog,false,"Alte analoge Einstellungen werden nicht mehr aktiviert");
@@ -82,8 +83,8 @@ for(const scores of [[4,3,3,0],[3,3,3,0]]) {
   payout.mini!.runs=Object.fromEntries(payout.players.map((p,i)=>[p.id,{...base,done:i>0,score:scores[i],attempts:i===0?2:3,lastInput:i===3?0:now+4000}]));
   payout=act(payout,"practice",{type:"finish"},now+4001);
   assert.equal(payout.phase,"mini-result");
-  assert.deepEqual(partyMiniResults(payout).map(r=>[r.place,r.coins]),[[1,10],[3,5],[3,5],[0,0]]);
-  assert.deepEqual(payout.players.map(p=>p.coins),[20,15,15,10]);
+  assert.deepEqual(partyMiniResults(payout).map(r=>[r.place,r.coins]),[[1,10],[2,4],[3,2],[0,0]]);
+  assert.deepEqual(payout.players.map(p=>p.coins),[20,14,12,10]);
   for(const result of partyMiniResults(publicParty(payout,"practice",now+4002)))assert.equal(result.coins,result.player.coins-10);
 }
-console.log(`Inselparty-Regeltests erfolgreich: Felder, Items, Trophäen, sechs Minispiele, Belohnungsanzeige, Datenschutz und ${completed} vollständige Partien`);
+console.log(`Inselparty-Regeltests erfolgreich: Felder, Items, Trophäen, 14 Minispiele, Belohnungsanzeige, Datenschutz und ${completed} vollständige Partien`);

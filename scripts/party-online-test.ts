@@ -22,13 +22,14 @@ try{
   const byId:Record<string,Socket>={[a]:host,[b]:guest},tokens:Record<string,string>={[a]:hostToken,[b]:guestToken};
   const actor=activePartyPlayer(room.partyGame).id,actorSocket=byId[actor];
   await assert.rejects(request(actorSocket,"party:action",{seq:1,phaseId:room.partyGame.phaseId,token:"wrong",action:{type:"roll"}}));
-  const packet={seq:1,phaseId:room.partyGame.phaseId,token:tokens[actor],action:{type:"roll"}};
+  const packet={seq:1,phaseId:room.partyGame.phaseId,token:tokens[actor],action:{type:"ready"}};
   room=await request(actorSocket,"party:action",packet);const same=await request(actorSocket,"party:action",packet);assert.deepEqual(same.partyGame?.dice,room.partyGame?.dice);assert.equal(same.partyGame?.seq[actor],1);
-  await assert.rejects(request(actorSocket,"party:action",{...packet,seq:2}));
+  await assert.rejects(request(actorSocket,"party:action",{...packet,seq:2,phaseId:room.partyGame.phaseId-1}));
   const command=async(action:PartyAction)=>{const id=activePartyPlayer(room.partyGame!).id;room=await request(byId[id],"party:action",{seq:(room.partyGame!.seq[id]??0)+1,phaseId:room.partyGame!.phaseId,token:tokens[id],action});};
   // Beide Brettzüge bis zur gemeinsamen Minispielrunde durchspielen.
   for(let count=0;count<30&&room.partyGame!.phase!=="mini-intro";count++){
     const g=room.partyGame!,p=activePartyPlayer(g);
+    if(g.phase==="moving"){await new Promise(r=>setTimeout(r,300));room=await request(host,"qwixx:state");continue;}
     if(g.phase==="turn")await command({type:"roll"});
     else if(g.phase==="path")await command({type:"path",destination:p.position===8?9:19});
     else if(g.phase==="gift")await command({type:"gift",accept:false});
@@ -47,7 +48,7 @@ try{
   byId[b]=restored;room=returned;
   const sendAs=async(id:string,action:PartyAction)=>{room=await request(byId[id],"party:action",{seq:(room.partyGame!.seq[id]??0)+1,phaseId:room.partyGame!.phaseId,token:tokens[id],action});};
   // Both devices control separate figures in the same server-authoritative arena.
-  await sendAs(a,{type:"ready"});await sendAs(b,{type:"ready"});
+  if(!room.partyGame!.mini!.runs[a].ready)await sendAs(a,{type:"ready"});if(room.partyGame!.phase==="mini-intro"&&!room.partyGame!.mini!.runs[b].ready)await sendAs(b,{type:"ready"});
   assert.equal(room.partyGame!.mini!.arena!.actors.length,2);
   const start=room.partyGame!.mini!.startAt;
   await new Promise(resolve=>setTimeout(resolve,Math.max(0,start-Date.now()+75)));
@@ -74,6 +75,7 @@ try{
   const arenaRejoin=await connect();room=await request(arenaRejoin,"room:join",{characterId:"alpha_rick_prime",code:room.code,playerId:b,name:"Ben",partyToken:guestToken});byId[b]=arenaRejoin;assert.equal(room.partyGame!.pausedAt,0);
   for(let count=0;count<400&&room.partyGame!.phase!=="finished";count++){
     const g=room.partyGame!,p=activePartyPlayer(g);
+    if(g.phase==="moving"){await new Promise(r=>setTimeout(r,300));room=await request(host,"qwixx:state");continue;}
     if(g.phase==="turn")await command({type:"roll"});
     else if(g.phase==="path")await command({type:"path",destination:p.position===8?9:19});
     else if(g.phase==="gift")await command({type:"gift",accept:false});
@@ -88,5 +90,7 @@ try{
     }else throw new Error(`Unerwartete Phase ${g.phase}`);
   }
   assert.equal(room.partyGame!.phase,"finished");assert.ok(room.partyGame!.winners.length>0);
+  await assert.rejects(request(host,"room:join",{code:room.code,playerId:a,partyToken:hostToken}));
+  assert.equal((await request<{available:boolean}>(host,"party:session-status",{code:room.code,playerId:a,partyToken:hostToken})).available,false);
   console.log("Inselparty online erfolgreich: vollständige Partie, gemeinsame Echtzeit-Arena, getrennte Figurensteuerung, Eingabe-/Sitzungsschutz, doppelte/veraltete Aktionen, Pause und Wiederbeitritt");
 }finally{sockets.forEach(s=>s.disconnect());await server.close();}

@@ -2,6 +2,15 @@ import type { CSSProperties } from "react";
 import type { MiniId } from "../../shared/party";
 
 export const MINI_LOOK: Record<MiniId, { icon: string; action: string; hint: string; goal: string }> = {
+  walls:{icon:"▥",action:"Finde die Lücke",hint:"Bewege dich unter eine Öffnung",goal:"Wände sicher überstehen"},
+  hex:{icon:"⬡",action:"Rette dich auf die richtige Farbe",hint:"Achte auf die Ansage",goal:"Auf der sicheren Plattform bleiben"},
+  photo:{icon:"▣",action:"Das Foto gehört dir",hint:"Kämpfe um den goldenen Platz",goal:"Beim Auslösen vorne stehen"},
+  bumper:{icon:"◉",action:"Kugel gegen Kugel",hint:"Remple und halte dein Gleichgewicht",goal:"Auf der Insel bleiben"},
+  says:{icon:"⚓",action:"Hör auf den Kapitän",hint:"Erkenne die Täuschungen",goal:"Zum richtigen Zeichen laufen"},
+  stack:{icon:"▤",action:"Hoch hinaus im Kistenregen",hint:"Ausweichen und hinaufspringen",goal:"Oben Punkte sammeln"},
+  golf:{icon:"⚑",action:"Mit Gefühl ins Zielloch",hint:"Neigung oder Stick lenken die Kugel",goal:"Den Parcours schnell schaffen"},
+  duos:{icon:"⚒",action:"Gemeinsam öffnet ihr den Weg",hint:"Besetzt zusammen die Schalter",goal:"Durch beide Tore ins Ziel"},
+
   dash:{icon:"◆",action:"Deine Figur auf Schatzjagd",hint:"Laufe, springe und sammle Schätze.",goal:"Laufen & springen · 30 Sekunden"},
   crates:{icon:"✦",action:"Mach die Kisten klein!",hint:"Laufe zu den Kisten und schlage sie auf.",goal:"Laufen, springen & schlagen · 30 Sekunden"},
   hurdles:{icon:"↑",action:"Ab zum Leuchtturm!",hint:"Springe über die Hürden auf dem Weg zum Ziel.",goal:"Hindernisrennen · 35 Sekunden"},

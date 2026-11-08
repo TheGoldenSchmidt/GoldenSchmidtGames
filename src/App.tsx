@@ -28,6 +28,7 @@ export default function App() {
   const [localDurakCheatMode, setLocalDurakCheatMode] = useState(false);
   const [playIntro, setPlayIntro] = useState(false);
   const [resumeError,setResumeError]=useState("");
+  const [canResumeParty,setCanResumeParty]=useState(false);
 
   useEffect(() => {
     const updateOnline = () => setOnline(navigator.onLine);
@@ -39,6 +40,23 @@ export default function App() {
       socket.disconnect();
     };
   }, []);
+
+  useEffect(()=>{
+    const closed=({code}:{code:string})=>{if(readPartySave<PartySavedSession>(PARTY_ONLINE_SAVE)?.code===code){localStorage.removeItem(PARTY_ONLINE_SAVE);setCanResumeParty(false);}};
+    socket.on("party:closed",closed);return()=>{socket.off("party:closed",closed);};
+  },[]);
+  useEffect(()=>{
+    if(view!=="home")return;let cancelled=false;setCanResumeParty(false);
+    const check=()=>{
+      const saved=readPartySave<PartySavedSession>(PARTY_ONLINE_SAVE);if(!saved?.partyToken||!online){setCanResumeParty(false);return;}
+      socket.connect();socket.timeout(8000).emit("party:session-status",{...saved,playerId:profile.id},(err:Error|null,response:{ok:boolean;data?:{available:boolean}})=>{
+        if(cancelled)return;const available=!err&&response?.ok&&response.data?.available===true;setCanResumeParty(available);
+        if(!err&&response?.ok&&!available&&readPartySave<PartySavedSession>(PARTY_ONLINE_SAVE)?.code===saved.code)localStorage.removeItem(PARTY_ONLINE_SAVE);
+      });
+    };
+    check();window.addEventListener("focus",check);window.addEventListener("online",check);
+    return()=>{cancelled=true;window.removeEventListener("focus",check);window.removeEventListener("online",check);};
+  },[view,profile.id,online]);
 
   const openOnlineGame = useCallback((nextRoom: RoomState, intro = true) => {
     setRoom(nextRoom);
@@ -62,7 +80,7 @@ export default function App() {
     setResumeError("");
     const saved=readPartySave<PartySavedSession>(PARTY_ONLINE_SAVE);
     if(!saved?.partyToken)return setResumeError("Keine Online-Sitzung gespeichert.");
-    socket.connect();socket.timeout(8000).emit("room:join",{code:saved.code,playerId:profile.id,name:profile.username,partyToken:saved.partyToken},(err:Error|null,response:{ok:boolean;data?:RoomState;error?:string})=>{if(err||!response.ok||!response.data){setResumeError(response?.error??"Der Raum ist nicht erreichbar. Nach einem Serverneustart muss eine neue Inselparty begonnen werden.");return;}openOnlineGame(response.data, false);});
+    socket.connect();socket.timeout(8000).emit("room:join",{code:saved.code,playerId:profile.id,name:profile.username,partyToken:saved.partyToken},(err:Error|null,response:{ok:boolean;data?:RoomState;error?:string})=>{if(err||!response.ok||!response.data){setCanResumeParty(false);if(!err)localStorage.removeItem(PARTY_ONLINE_SAVE);setResumeError(response?.error??"Der Raum ist nicht erreichbar. Nach einem Serverneustart muss eine neue Inselparty begonnen werden.");return;}openOnlineGame(response.data, false);});
   }
 
   return (
@@ -74,7 +92,7 @@ export default function App() {
           onProfile={() => setShowProfile(true)}
           onLocal={() => setView("local-setup")}
           onOnline={() => setView("online-entry")}
-          onResumeOnline={readPartySave<PartySavedSession>(PARTY_ONLINE_SAVE)?.partyToken?resumeParty:undefined}
+          onResumeOnline={canResumeParty?resumeParty:undefined}
           resumeError={resumeError}
         />
       )}

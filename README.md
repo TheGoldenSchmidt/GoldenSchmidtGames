@@ -10,7 +10,7 @@ Eine installierbare Smartphone-PWA für lokale und Online-Spiele. Das aktuelle G
 - Qwixx-, Durak- und Kribbeln-Spielmodule für lokale und Online-Partien
 - Offline-Cache als installierbare PWA
 - 13 freigegebene alpha_-Charaktere mit Pflichtauswahl vor Raumzugang und zufälliger Bot-Zuordnung; dieselbe Figur in allen Spielen
-- Inselparty für 2–6 Personen ausschließlich online: eine echte 3D-Insel, eigene steuerbare Figuren, 34 Felder, fünf Items und sechs gemeinsame 3D-Minispiele mit Touch-, Tastatur- und Neigungssteuerung
+- Inselparty für 2–6 Personen ausschließlich online: eine echte 3D-Insel, eigene steuerbare Figuren, 34 Felder, fünf Items und 14 gemeinsame 3D-Minispiele mit Touch-, Tastatur- und Neigungssteuerung
 
 Das Qwixx-Modul enthält den gemeinsamen weißen Wurf, die zusätzliche Farbaktion der aktiven Person, vier getrennte Wertungsblätter, Fehlwürfe, Reihenschlüsse, automatische Wertung und die Spielergebnisanzeige.
 
@@ -36,7 +36,7 @@ Auf dem Startbildschirm prüft „Nach Updates suchen“ den Service Worker ohne
 
 Die Partyinsel wird ausschließlich online gespielt. Jede Person öffnet den Link auf dem eigenen Handy oder PC und tritt dem Raum bei. Die anderen Spielmodule behalten ihren lokalen Modus. Die Lobby bietet 5–15 Runden und drei Tempostufen. Standard sind acht Runden; die tatsächliche Dauer hängt von der Spielerzahl und den Entscheidungen ab. Startkapital: 10 Münzen. Eine Trophäe kostet 20 Münzen. Trophäen, danach Münzen, danach Minispielsiege entscheiden über den Sieg. Auf dem Brett wirken normale Felder beim Landen. Am Hafen gibt es beim Überqueren 3 Münzen. Die Trophäe wechselt nach dem Kauf zwischen den Shops 6, 15 und 24. Inventarlimit: drei Items, ein Einsatz vor dem Würfeln.
 
-Nach jeder Brett-Runde folgt eines von sechs 3D-Minispielen. Alle spielen nach einem gemeinsamen Countdown gleichzeitig in derselben Arena und steuern die eigene Figur. Wer nicht teilnimmt, bekommt keine Münzen. Platzierungen erhalten 10/7/5/3/2/1 Münzen; Gleichstände zählen zum niedrigeren Platz. Minispiel-Anleitungen erhalten bis zu 90 Sekunden, damit ein Übungsversuch möglich ist. Die Lobby und das Spiel bieten außerdem eine Übersicht zum Ausprobieren ohne Wertung.
+Nach jeder Brett-Runde folgt eines von 14 3D-Minispielen. Alle spielen nach einem gemeinsamen Countdown gleichzeitig in derselben Arena und steuern die eigene Figur. Wer nicht teilnimmt, bekommt keine Münzen. Platzierungen erhalten 10/4/2/0 Münzen; Gleichstände werden eindeutig aufgelöst. Der erste Sturz halbiert die aktuellen Punkte, der zweite beendet den Versuch mit dem bestehenden Stand. Ein zufälliger Auftakt bestimmt die feste Zugreihenfolge. Minispiel-Anleitungen erhalten bis zu 90 Sekunden, damit ein Übungsversuch möglich ist. Die Lobby und das Spiel bieten außerdem eine Übersicht zum Ausprobieren ohne Wertung.
 
 | Minispiel | Aufgabe | Steuerung |
 | --- | --- | --- |
@@ -77,8 +77,10 @@ npm run test:production
 npm run test:browser
 ```
 
-Für die Browsertests einmal `npx playwright install chromium` ausführen. Die CI installiert Chromium automatisch und nutzt Software-WebGL. Die Tests umfassen 55 vollständige simulierte Online-Partien, die Brett-/Item-Regeln, deterministische Replays aller sechs Arenen, Sprünge, Schläge, Hindernisse, Wellen, Stürze, Checkpoints und Sensorachsen. Echte Socket-Tests prüfen getrennte Figurensteuerung, Sitzungsschutz, veraltete Eingaben, Pause, Wiederbeitritt und eine vollständige Partie. 66 Handy-/Desktop-Browsertests prüfen die Spiel-Intros mit Kamerafahrt, Überspringen, reduzierter Bewegung und WebGL-Ersatz, neue Online-Spielstarts sowie echte WebGL-Szenen, Kamerasteuerung, alle sechs Minispiele, Touch-Stick und Tastatur, gemeinsame Figuren sowie freigegebene/verweigerte/ausbleibende Sensoren. Die Sensordaten sind dabei simuliert; physische Geräte müssen zusätzlich praktisch geprüft werden. Screenshots und Fehlertraces liegen lokal unter `test-results/` (nicht versioniert).
+Für die Browsertests einmal `npx playwright install chromium` ausführen. Die CI installiert Chromium automatisch und nutzt Software-WebGL. Die Tests umfassen 55 vollständige simulierte Online-Partien, die Brett-/Item-Regeln, deterministische Replays aller 14 Arenen, Sprünge, Schläge, Hindernisse, Wellen, Stürze, Checkpoints und Sensorachsen. Echte Socket-Tests prüfen getrennte Figurensteuerung, Sitzungsschutz, veraltete Eingaben, Pause, Wiederbeitritt und eine vollständige Partie. 102 Handy-/Desktop-Browsertests prüfen die Spiel-Intros mit Kamerafahrt, Überspringen, reduzierter Bewegung und WebGL-Ersatz, neue Online-Spielstarts sowie echte WebGL-Szenen, Kamerasteuerung, alle 14 Minispiele, Touch-Stick und Tastatur, gemeinsame Figuren sowie freigegebene/verweigerte/ausbleibende Sensoren. Die Sensordaten sind dabei simuliert; physische Geräte müssen zusätzlich praktisch geprüft werden. Screenshots und Fehlertraces liegen lokal unter `test-results/` (nicht versioniert).
 
 Die Schritte für einen öffentlichen HTTPS-Link und einen Docker-fähigen Hoster stehen in [DEPLOYMENT.md](DEPLOYMENT.md).
 
 Für den echten Online-Betrieb müssen Client und Socket.IO-Server unter einer öffentlich erreichbaren HTTPS-Adresse bereitgestellt werden. Der lokale Modus bleibt nach dem ersten Laden offline verfügbar.
+
+Der aktuelle Ablauf, alle acht neuen Minispiele und die Raum-Schließung sind in [Inselparty-Regeln](docs/island-party-rules.md) beschrieben.

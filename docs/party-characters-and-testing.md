@@ -1,3 +1,5 @@
+> Aktueller Regelstand und Erweiterungen: [Inselparty-Regeln](island-party-rules.md).
+
 # Eigene Figuren und Solo-Test
 
 ## Im Spiel
@@ -107,12 +109,12 @@ Handy- und PC-Größe. Diese Befehle laufen bereits im GitHub-CI-Workflow; die
 neuen Prüfungen sind darin enthalten. Jedes Modell wird als separates Modul nachgeladen. Modelle und Portraits
 liegen im PWA-Cache, sodass die Auswahl auch offline nutzbar bleibt.
 
-Die Browserprüfungen laufen für Handy und PC in jeweils zwei parallelen
+Die Browserprüfungen laufen für Handy und PC in jeweils drei parallelen
 Teilläufen nach den Regel- und Serverprüfungen. Beide Projekte werden vollständig ausgeführt;
 ein fehlgeschlagenes Projekt bricht das andere nicht ab. Fortschritte stehen
 einzeln im Protokoll. Screenshots und Fehler-Traces bleiben sieben Tage als
-`browser-phone-1`, `browser-phone-2`, `browser-desktop-1` und
-`browser-desktop-2` abrufbar.
+`browser-phone-1` bis `browser-phone-3` und
+`browser-desktop-1` bis `browser-desktop-3` abrufbar.
 
 Die Figurenprüfungen vergleichen die Originaldateien mit ihren Herkunfts-Hashes
 und prüfen alle 13 Hierarchien. Für jeden Animationsclip werden Gelenkmatrizen

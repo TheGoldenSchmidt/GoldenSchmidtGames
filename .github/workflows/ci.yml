@@ -30,7 +30,7 @@ jobs:
       fail-fast: false
       matrix:
         project: [phone, desktop]
-        shard: [1, 2]
+        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -40,7 +40,7 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npx playwright install --with-deps chromium
-      - run: npm run test:browser -- --project=${{ matrix.project }} --shard=${{ matrix.shard }}/2 --reporter=list
+      - run: npm run test:browser -- --project=${{ matrix.project }} --shard=${{ matrix.shard }}/3 --reporter=list
       - uses: actions/upload-artifact@v7
         if: always()
         with:

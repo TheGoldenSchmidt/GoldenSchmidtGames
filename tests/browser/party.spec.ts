@@ -2,6 +2,9 @@ import { test,expect } from "@playwright/test";
 import { ACTION_MINI_IDS, ARENA_META } from "../../shared/partyArena";
 import { onlineSession, toMini } from "./party-session";
 
+// Independent rooms allow the expanded arena palette to be evenly sharded in CI.
+test.describe.configure({mode:"parallel"});
+
 test("Partyinsel wird ausschließlich online angeboten",async({page})=>{
   await page.goto("/");await page.getByRole("button",{name:/Lokal spielen/}).click();
   await expect(page.getByRole("button",{name:/Inselparty/})).toHaveCount(0);

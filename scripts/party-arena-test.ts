@@ -27,7 +27,7 @@ s=make("hurdles");a=s.actors[0];a.z=-20.9;a.checkpoint=5;a.score=50;drive(s,{...
 s=make("shock");a=s.actors[0];a.x=2;a.z=0;a.score=10;advanceArena(s,1500);assert.ok(a.score<10);const waveScore=a.score;advanceArena(s,1700);assert.equal(a.score,waveScore);
 s=make("shock");a=s.actors[0];a.x=2;a.z=0;a.score=10;advanceArena(s,1050);drive(s,{...NEUTRAL_INPUT,jump:true},400);assert.equal(a.score,10);assert.equal(a.stunnedUntil,0);
 // The narrow bridge checks its curved surface and preserves checkpoints after a fall.
-s=make("balance");a=s.actors[0];a.z=-8;a.x=bridgeCenter(a.z);a.checkpoint=2;a.score=20;advanceArena(s,50);assert.equal(a.falls,0);a.x+=2;advanceArena(s,100);assert.equal(a.falls,1);assert.equal(a.checkpoint,2);assert.equal(a.score,18);assert.ok(Math.abs(a.x-bridgeCenter(a.z))<.01);
+s=make("balance");a=s.actors[0];a.z=-8;a.x=bridgeCenter(a.z);a.checkpoint=2;a.score=20;advanceArena(s,50);assert.equal(a.falls,0);a.x+=2;advanceArena(s,100);assert.equal(a.falls,1);assert.equal(a.checkpoint,2);assert.equal(a.score,10);assert.ok(Math.abs(a.x-bridgeCenter(a.z))<.01);
 drive(s,{...NEUTRAL_INPUT,jump:true},1200);assert.equal(a.y,0,"Balance-Spiele haben keinen Sprungknopf");
 s=make("tilt");a=s.actors[0];a.score=1;a.x=-2.5;a.z=-1;advanceArena(s,50);assert.equal(a.falls,1);assert.equal(a.score,0);assert.ok(a.respawnAt>s.time);drive(s,{...NEUTRAL_INPUT,x:1},200);assert.equal(a.x,0,"Während der Rückkehr ist die Figur nicht steuerbar");
 // Complete deterministic simulations of every arena, including all six players.

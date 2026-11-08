@@ -36,7 +36,7 @@ try{
   const original=structuredClone(room.partyGame!);
   assert.equal((await emit(host,"party:test-command",{command:"restart",token:"wrong",phaseId:original.phaseId})).ok,false);
   assert.equal((await emit(host,"party:test-command",{command:"restart",token,seq:-1})).ok,false);
-  room=await command("skip-bots");assert.equal(activePartyPlayer(room.partyGame!).id,id);
+  room=await command("skip-bots");assert.equal(room.partyGame!.phase,"mini-intro");
   room=await command("mini","crates");assert.equal(room.partyGame!.phase,"mini-intro");
   const repeatPacket={command:"mini",miniId:"crates",token,phaseId:0,seq:(room.partyTest!.commandSeq??0)+1};
   room=await request(host,"party:test-command",repeatPacket);const miniPhase=room.partyGame!.phaseId;
@@ -49,7 +49,7 @@ try{
   assert.equal(room.partyGame!.phase,"mini-play");
   assert.equal(room.partyGame!.mini!.arena!.actors.find(a=>a.id===id)!.characterId,"alpha_eric_cartman");
   assert.ok(room.partyGame!.mini!.arena!.actors.some(a=>a.id!==id&&a.played),"Bots bewegen sich über den echten Server");
-  room=await command("restart");assert.equal(room.partyGame!.phase,"turn");assert.deepEqual(room.partyGame!.order,original.order);assert.equal(room.partyToken,token);
+  room=await command("restart");assert.equal(room.partyGame!.phase,"mini-intro");assert.deepEqual(room.partyGame!.order,original.order);assert.equal(room.partyToken,token);
   host.disconnect();await new Promise(r=>setTimeout(r,100));host.connect();await new Promise<void>(r=>host.once("connect",r));
   room=await request(host,"room:join",{characterId:"alpha_rick_prime",code,playerId:id,partyToken:token});
   assert.equal(room.hostId,id,"Bot übernimmt niemals den Host");assert.equal(room.partyGame!.pausedAt,0);assert.equal(room.players[0].characterId,"alpha_eric_cartman");

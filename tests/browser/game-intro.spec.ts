@@ -125,11 +125,11 @@ for (const gameId of ["durak", "qwixx", "kribbeln", "party"] as const) test(`Onl
     await expect(intro).toHaveCount(0);
     await expect(page.locator(".game-entrance")).not.toHaveAttribute("inert");
     if (gameId === "party") {
-      await expect(page.locator('.party-world[data-webgl="ready"] canvas')).toBeVisible();
+      await expect(page.locator(".party-mini-intro")).toBeVisible();
       await page.screenshot({ path: info.outputPath("insel-spielstart.png") });
       await page.getByRole("button", { name: "Verlassen", exact: true }).click();
       await page.getByRole("button", { name: "Online-Inselparty wieder beitreten", exact: true }).click();
-      await expect(page.locator('.party-world[data-webgl="ready"] canvas')).toBeVisible();
+      await expect(page.locator(".party-mini-intro")).toBeVisible();
       await expect(page.locator(".game-intro")).toHaveCount(0);
     } else {
       await expect(page.getByRole("button", { name: "Beenden", exact: true })).toBeVisible();

@@ -1,3 +1,5 @@
+import {CHALLENGE_IDS} from "../../shared/arenaChallenges";
+import {challengeWorld} from "./challengeWorld";
 import * as T from "three";
 import { advanceArena, bridgeCenter, clamp, DASH_BLOCKS, HURDLES, TILT_HOLES, type ArenaInput, type ArenaState } from "../../shared/partyArena";
 import { character, PLAYER_COLORS, SceneKit, type Character } from "./sceneKit";
@@ -5,9 +7,11 @@ import { character, PLAYER_COLORS, SceneKit, type Character } from "./sceneKit";
 export interface ArenaFrame {arena:ArenaState;viewer:string;elapsed:number;input:ArenaInput;reduce:boolean;names:Record<string,string>;paused:boolean}
 export function createArenaWorld(host:HTMLElement,read:()=>ArenaFrame,onError:()=>void) {
   const initial=read(),id=initial.arena.id,kit=new SceneKit(host,onError),world=new T.Group();kit.scene.add(world);kit.water(world,-.8);
-  const race=id==="balance"||id==="hurdles";
+  const race=["balance","hurdles","golf","duos"].includes(id);
   const actors=new Map<string,Character>(),balls=new Map<string,T.Mesh>(),pickups=new Map<number,T.Group>(),crates=new Map<number,T.Group>(),waves:T.Mesh[]=[];
-  if(id==="balance"){
+  let challenge:((s:ArenaState)=>void)|undefined;
+  if((CHALLENGE_IDS as readonly string[]).includes(id))challenge=challengeWorld(kit,world,initial.arena);
+  else if(id==="balance"){
     for(let z=3;z>=-23;z-=.5){const plank=kit.box(world,0xd9ab6b,bridgeCenter(z),-.12,z,2,.22,.56);plank.rotation.y=-Math.atan(Math.cos((z-2)*.35)*.595);if(Math.round(z*2)%8===0)kit.cylinder(world,0x986e47,bridgeCenter(z),-1.5,z,.18,3);}
     kit.box(world,0xffe5a1,0,-.3,3.2,4,.5,3);kit.box(world,0xffe5a1,bridgeCenter(-22),-.3,-22.5,5,.5,3);kit.lighthouse(world,bridgeCenter(-22)+2.2,0,-23);
   }else if(id==="hurdles"){
@@ -47,20 +51,21 @@ export function createArenaWorld(host:HTMLElement,read:()=>ArenaFrame,onError:()
     const view=structuredClone(source.arena),own=view.actors.find(a=>a.id===source.viewer);
     if(own&&!source.paused&&!own.finished){own.input=source.input;own.inputUntil=view.time+300;advanceArena(view,Math.min(source.elapsed,view.time+180));}
     const narrow=kit.camera.aspect<1;
-    const myActor=view.actors.find(a=>a.id===source.viewer),targetZ=race?clamp((myActor?.z??2)-2,-18,0):narrow?clamp((myActor?.z??0)*.5,-2.2,2.2):0,targetX=narrow&&!race?clamp((myActor?.x??0)*.7,-3.5,3.5):0;
+    const viewerActor=view.actors.find(a=>a.id===source.viewer),myActor=viewerActor?.eliminated?(view.actors.find(a=>!a.finished)??viewerActor):viewerActor,targetZ=race?clamp((myActor?.z??2)-2,-18,0):narrow?clamp((myActor?.z??0)*.5,-2.2,2.2):0,targetX=narrow&&!race?clamp((myActor?.x??0)*.7,-3.5,3.5):0;
     cameraZ=source.reduce?targetZ:T.MathUtils.damp(cameraZ,targetZ,5,dt);cameraX=source.reduce?targetX:T.MathUtils.damp(cameraX,targetX,5,dt);
-    kit.camera.position.set(cameraX,race?13:narrow?12:13,cameraZ+(race?13:narrow?10.5:16));kit.camera.lookAt(cameraX,0,cameraZ-1.3);
+    if((CHALLENGE_IDS as readonly string[]).includes(id)&&!race){kit.camera.position.set(0,narrow?26:18,narrow?11:13);kit.camera.lookAt(0,0,0);}else{kit.camera.position.set(cameraX,race?13:narrow?12:13,cameraZ+(race?13:narrow?10.5:16));kit.camera.lookAt(cameraX,0,cameraZ-1.3);}
     for(const actor of view.actors){
-      let figure=actors.get(actor.id);if(!figure){figure=character(kit,world,actor.style,source.names[actor.id],actor.characterId);figure.group.scale.setScalar(1.2);actors.set(actor.id,figure);figure.group.position.set(actor.x,actor.y,actor.z);if(id==="tilt"){const ball=kit.ball(world,PLAYER_COLORS[actor.style%6],actor.x,.46,actor.z,.46);balls.set(actor.id,ball);}}
-      const respawning=view.time<actor.respawnAt;figure.group.visible=!respawning||Math.floor(view.time/120)%2===0;
-      const target=new T.Vector3(actor.x,actor.y+(id==="tilt"?.92:0),actor.z);
+      let figure=actors.get(actor.id);if(!figure){figure=character(kit,world,actor.style,source.names[actor.id],actor.characterId);const size=new T.Box3().setFromObject(figure.group.children[0],true).getSize(new T.Vector3()),radius=Math.hypot(size.x,size.z)/2,fit=Math.min(1.2,.42/Math.max(.01,radius));figure.group.scale.setScalar(fit);for(const child of figure.group.children)if(child instanceof T.Sprite)child.scale.multiplyScalar(.8/fit);actors.set(actor.id,figure);figure.group.position.set(actor.x,actor.y,actor.z);if(["tilt","golf","bumper"].includes(id)){const ball=kit.ball(world,PLAYER_COLORS[actor.style%6],actor.x,.46,actor.z,.46);balls.set(actor.id,ball);}}
+      const respawning=view.time<actor.respawnAt;figure.group.visible=!actor.eliminated&&(!respawning||Math.floor(view.time/120)%2===0);
+      const target=new T.Vector3(actor.x,actor.y+(["tilt","golf","bumper"].includes(id)?.92:0),actor.z);
       figure.group.position.lerp(target,source.reduce?1:1-Math.exp(-dt*22));figure.pose(actor.heading,Math.hypot(actor.vx,actor.vz),time,actor.y,view.time<actor.punchUntil,source.reduce);
       const ball=balls.get(actor.id);if(ball){ball.visible=figure.group.visible;ball.position.set(figure.group.position.x,.46,figure.group.position.z);ball.rotation.x+=actor.vz*dt;ball.rotation.z-=actor.vx*dt;}
     }
     for(const pickup of view.pickups){const mesh=pickups.get(pickup.id)!;mesh.visible=view.time>=pickup.readyAt;if(!source.reduce){mesh.rotation.y=time*.0016;mesh.position.y=pickup.y+Math.sin(time*.002+pickup.id)*.08;}}
     for(const crate of view.crates){const mesh=crates.get(crate.id)!;mesh.visible=crate.hp>0;mesh.scale.setScalar(crate.hp===1?.9:1);}
     if(id==="shock")for(let i=0;i<waves.length;i++){const phase=(view.time-700)/1000-i*3.5,radius=phase<0?-1:phase%10.5*2.7;waves[i].visible=radius>=0&&radius<6.9;waves[i].scale.setScalar(Math.max(.001,radius));}
-    kit.render();host.dataset.actors=JSON.stringify(view.actors.map(a=>({id:a.id,characterId:a.characterId,x:Number(a.x.toFixed(2)),z:Number(a.z.toFixed(2)),y:Number(a.y.toFixed(2)),jumpAt:a.jumpAt,punchAt:a.punchAt,punch:view.time<a.punchUntil})));
+    challenge?.(view);
+    kit.render();host.dataset.actors=JSON.stringify(view.actors.map(a=>({id:a.id,characterId:a.characterId,score:a.score,falls:a.falls,eliminated:a.eliminated,finished:a.finished,x:Number(a.x.toFixed(2)),z:Number(a.z.toFixed(2)),y:Number(a.y.toFixed(2)),jumpAt:a.jumpAt,punchAt:a.punchAt,punch:view.time<a.punchUntil})));
     frame=requestAnimationFrame(animate);
   };
   frame=requestAnimationFrame(animate);

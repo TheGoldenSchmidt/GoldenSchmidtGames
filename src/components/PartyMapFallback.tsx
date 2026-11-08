@@ -1,5 +1,5 @@
 import {characterId,characterPortrait} from "../../shared/characters";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { activePartyPlayer, BOARD, FIELD_ICONS, FIELD_LABELS, type PartyGame } from "../../shared/party";
 
 
@@ -14,21 +14,9 @@ function Palm({x,y,size=1}:{x:number;y:number;size?:number}) {
 
 export function PartyMapFallback({game,rolling=false,onTravelChange}:{game:PartyGame;rolling?:boolean;onTravelChange?:(moving:boolean)=>void}) {
   const [zoom,setZoom]=useState(1),[selected,setSelected]=useState<number>(),[animated,setAnimated]=useState<number>();
-  const progress=useRef({turn:"",path:[] as number[],index:0});
-  const p=activePartyPlayer(game),key=game.path.join(","),turn=`${game.round}-${game.turn}`;
-  useEffect(()=>{
-    const path=game.path,previous=progress.current;
-    if(!path.length){progress.current={turn,path:[],index:0};setAnimated(undefined);onTravelChange?.(false);return;}
-    const continued=previous.turn===turn&&previous.path.every((field,i)=>path[i]===field);
-    const index=continued?Math.min(previous.index,path.length-1):0;
-    progress.current={turn,path:[...path],index};setAnimated(path[index]);
-    if(window.matchMedia("(prefers-reduced-motion: reduce)").matches){progress.current.index=path.length-1;setAnimated(path.at(-1));onTravelChange?.(false);return;}
-    onTravelChange?.(index<path.length-1||rolling);
-    if(rolling)return;
-    const delay={slow:230,normal:150,fast:90}[game.options.tempo];
-    const timer=setInterval(()=>{const next=Math.min(++progress.current.index,path.length-1);setAnimated(path[next]);if(next===path.length-1){clearInterval(timer);onTravelChange?.(false);}},delay);
-    return()=>clearInterval(timer);
-  },[key,turn,rolling,game.options.tempo,onTravelChange]);
+
+  const p=activePartyPlayer(game);
+  useEffect(()=>{setAnimated(game.phase==="moving"?game.movement?.destination:undefined);onTravelChange?.(game.phase==="moving");},[game.phase,game.movement?.destination,onTravelChange]);
   const route=new Set(game.path),choices=game.phase==="path"?BOARD[p.position].next:[];
   return <section className="party-board-wrap" aria-label="Inselkarte">
     <div className="party-map-tools"><span><b>★</b> Trophäe auf Feld {game.trophyField}<small>20 Münzen</small></span><button onClick={()=>setZoom(Math.max(1,zoom-.5))} disabled={zoom===1} aria-label="Karte verkleinern">−</button><button onClick={()=>setZoom(Math.min(2,zoom+.5))} disabled={zoom===2} aria-label="Karte vergrößern">+</button></div>
@@ -55,7 +43,7 @@ export function PartyMapFallback({game,rolling=false,onTravelChange}:{game:Party
       {BOARD.flatMap(f=>f.next.map(next=>{const a=MAP[f.id],b=MAP[next],traversed=route.has(f.id)&&route.has(next);return <g key={`${f.id}-${next}`}><line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#bba365" strokeWidth="2.7" strokeLinecap="round"/><line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={traversed?"#ffcc4d":"#fff5d7"} strokeWidth="1.7" strokeLinecap="round"/></g>;}))}
       <text x="49" y="27" className="party-region">Hafen</text><text x="53" y="53" className="party-region">Jahrmarkt</text><text x="72" y="73" className="party-region">Dschungel</text><text x="25" y="58" className="party-region">Vulkan</text>
       {MAP.map(f=><g key={f.id} role="button" tabIndex={0} aria-label={`Feld ${f.id}: ${FIELD_LABELS[f.type]}${f.id===game.trophyField?", Trophäenstand":""}`} onClick={()=>setSelected(f.id)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();setSelected(f.id);}}} className={`party-field party-field--${f.type} ${selected===f.id?"is-selected":""} ${choices.includes(f.id)?"is-choice":""}`}>
-        <circle cx={f.x} cy={f.y} r="2.65" filter="url(#party-field-shadow)"/><text x={f.x} y={f.y+.95}>{FIELD_ICONS[f.type]}</text>
+        <circle cx={f.x} cy={f.y} r="3.1" filter="url(#party-field-shadow)"/><text x={f.x} y={f.y+.95}>{f.id}</text>
         {f.id===game.trophyField&&<g className="party-map-trophy" transform={`translate(${f.x} ${f.y-6})`}><path d="m0 5-3-5h6Z" fill="#ffcc4d"/><circle r="3.6" fill="#ffcc4d" stroke="#fff7d6" strokeWidth=".8"/><text y="1.2">★</text></g>}
       </g>)}
       {game.players.map((player,i)=>{const field=MAP[player.id===p.id&&animated!==undefined?animated:player.position],occupants=game.players.filter(q=>q.position===player.position),same=occupants.findIndex(q=>q.id===player.id);const shift=occupants.length>1?(same%3-1)*2.6:0;return <g key={player.id} data-player={player.id} data-field={field.id} className={`party-pawn party-pawn--${i} ${player.id===p.id?"is-active":""}`} style={{transform:`translate(${field.x+shift}px,${field.y-2.5-Math.floor(same/3)*3}px)`}}><title>{`${player.name}: Feld ${player.position}`}</title><ellipse cy="3" rx="2" ry=".65" fill="#10485b" opacity=".3"/><path d="M-1.8 1.4q-1-3.5 1.8-4.2 2.8.7 1.8 4.2L0 3Z"/><circle cy="-.9" r="1.65"/><image href={characterPortrait(characterId(player.characterId,i))} x="-2.5" y="-3.5" width="5" height="6"/></g>;})}

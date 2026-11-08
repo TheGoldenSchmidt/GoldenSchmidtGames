@@ -1,3 +1,4 @@
+import {boardGame} from "./party-fixtures";
 import assert from "node:assert/strict";
 import React from "react";
 import { renderToString } from "react-dom/server";
@@ -63,7 +64,7 @@ room.game.phase = "finished"; room.game.winnerIds = ["a"];
 assert.match(renderToString(<QwixxGameScreen profile={profile} initialRoom={room} onExit={exit} />), /Fehlwürfe/);
 room.durakGame = createDurakGame(players); room.durakGame.phase = "finished"; room.durakGame.durakId = "b";
 assert.match(renderToString(<DurakGameScreen profile={profile} initialRoom={room} onExit={exit} />), /Ben ist der Durak/);
-room.partyGame=createPartyGame(players,{rounds:5},true,123);
+room.partyGame=boardGame(players,{rounds:5},true,123);
 const partyStart=renderToString(<PartyGameScreen profile={profile} initialRoom={room} onExit={exit}/>);
 assert.match(partyStart,/Inselparty/);assert.match(partyStart,/Inselkarte/);assert.match(partyStart,/Trophäenstand/);
 room.partyGame.phase="finished";room.partyGame.winners=["a"];
