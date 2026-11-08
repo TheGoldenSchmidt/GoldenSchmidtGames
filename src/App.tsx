@@ -11,6 +11,7 @@ import { DurakGameScreen } from "./screens/DurakGameScreen";
 import { KribbelnGameScreen } from "./screens/KribbelnGameScreen";
 import { PartyGameScreen, PARTY_ONLINE_SAVE, readPartySave, type PartySavedSession } from "./screens/PartyGameScreen";
 import { RoomScreen } from "./screens/RoomScreen";
+import { GameIntro } from "./components/GameIntro";
 
 type View = "home" | "local-setup" | "online-entry" | "room" | "game-local" | "game-online";
 
@@ -23,6 +24,7 @@ export default function App() {
   const [localNames, setLocalNames] = useState<string[]>([]);
   const [localGameId, setLocalGameId] = useState<GameId>("qwixx");
   const [localDurakCheatMode, setLocalDurakCheatMode] = useState(false);
+  const [playIntro, setPlayIntro] = useState(false);
   const [resumeError,setResumeError]=useState("");
 
   useEffect(() => {
@@ -36,8 +38,9 @@ export default function App() {
     };
   }, []);
 
-  const openOnlineGame = useCallback((nextRoom: RoomState) => {
+  const openOnlineGame = useCallback((nextRoom: RoomState, intro = true) => {
     setRoom(nextRoom);
+    setPlayIntro(intro);
     setView("game-online");
   }, []);
 
@@ -57,7 +60,7 @@ export default function App() {
     setResumeError("");
     const saved=readPartySave<PartySavedSession>(PARTY_ONLINE_SAVE);
     if(!saved?.partyToken)return setResumeError("Keine Online-Sitzung gespeichert.");
-    socket.connect();socket.timeout(8000).emit("room:join",{code:saved.code,playerId:profile.id,name:profile.username,partyToken:saved.partyToken},(err:Error|null,response:{ok:boolean;data?:RoomState;error?:string})=>{if(err||!response.ok||!response.data){setResumeError(response?.error??"Der Raum ist nicht erreichbar. Nach einem Serverneustart muss eine neue Inselparty begonnen werden.");return;}openOnlineGame(response.data);});
+    socket.connect();socket.timeout(8000).emit("room:join",{code:saved.code,playerId:profile.id,name:profile.username,partyToken:saved.partyToken},(err:Error|null,response:{ok:boolean;data?:RoomState;error?:string})=>{if(err||!response.ok||!response.data){setResumeError(response?.error??"Der Raum ist nicht erreichbar. Nach einem Serverneustart muss eine neue Inselparty begonnen werden.");return;}openOnlineGame(response.data, false);});
   }
 
   return (
@@ -80,6 +83,7 @@ export default function App() {
             setLocalGameId(gameId);
             setLocalNames(names);
             setLocalDurakCheatMode(options?.durakCheatMode ?? false);
+            setPlayIntro(true);
             setView("game-local");
           }}
         />
@@ -90,6 +94,7 @@ export default function App() {
           onBack={() => setView("home")}
           onJoined={(nextRoom) => {
             setRoom(nextRoom);
+            setPlayIntro(false);
             setView(nextRoom.phase==="playing"?"game-online":"room");
           }}
         />
@@ -103,18 +108,22 @@ export default function App() {
         />
       )}
       {view === "game-local" && (
-        localGameId === "qwixx"
-          ? <QwixxGameScreen profile={profile} localNames={localNames} onExit={() => setView("home")} />
-          : localGameId === "durak" ? <DurakGameScreen profile={profile} localNames={localNames} cheatMode={localDurakCheatMode} onExit={() => setView("home")} />
-          : localGameId === "kribbeln" && <KribbelnGameScreen profile={profile} localNames={localNames} onExit={() => setView("home")} />
+        <GameIntro gameId={localGameId} players={localNames.map((name, index) => ({ id: `local-${index}`, name }))} enabled={playIntro}>
+          {localGameId === "qwixx"
+            ? <QwixxGameScreen profile={profile} localNames={localNames} onExit={() => setView("home")} />
+            : localGameId === "durak" ? <DurakGameScreen profile={profile} localNames={localNames} cheatMode={localDurakCheatMode} onExit={() => setView("home")} />
+            : localGameId === "kribbeln" && <KribbelnGameScreen profile={profile} localNames={localNames} onExit={() => setView("home")} />}
+        </GameIntro>
       )}
       {view === "game-online" && room && (
-        room.config.gameId === "qwixx"
-          ? <QwixxGameScreen profile={profile} initialRoom={room} onExit={leaveOnline} />
-          : room.config.gameId === "durak" ? <DurakGameScreen profile={profile} initialRoom={room} onExit={leaveOnline} />
-          : room.config.gameId === "kribbeln" && <KribbelnGameScreen profile={profile} initialRoom={room} onExit={leaveOnline} />
+        <GameIntro gameId={room.config.gameId} players={room.players.filter(player => player.connected)} enabled={playIntro}>
+          {room.config.gameId === "qwixx"
+            ? <QwixxGameScreen profile={profile} initialRoom={room} onExit={leaveOnline} />
+            : room.config.gameId === "durak" ? <DurakGameScreen profile={profile} initialRoom={room} onExit={leaveOnline} />
+            : room.config.gameId === "kribbeln" ? <KribbelnGameScreen profile={profile} initialRoom={room} onExit={leaveOnline} />
+            : room.config.gameId === "party" && <PartyGameScreen profile={profile} initialRoom={room} onExit={leaveOnline}/>}
+        </GameIntro>
       )}
-      {view === "game-online" && room?.config.gameId === "party" && <PartyGameScreen profile={profile} initialRoom={room} onExit={leaveOnline}/>}
       {showProfile && (
         <ProfileDialog profile={profile} onSave={updateProfile} onClose={() => setShowProfile(false)} />
       )}

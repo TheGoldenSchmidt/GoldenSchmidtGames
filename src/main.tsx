@@ -4,6 +4,7 @@ import App from "./App";
 import "./styles/global.css";
 import "./styles/party.css";
 import "./styles/party3d.css";
+import "./styles/gameIntro.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
