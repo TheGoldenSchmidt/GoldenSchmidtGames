@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { canEnterKribbelSum, createKribbelnGame, KRIBBEL_ROWS, kribbelTaskMet, rollKribbeln, submitKribbeln, type KribbelnGame } from "../../shared/kribbeln";
-import { KRIBBEL_ROLL_DURATION, KribbelnDice } from "../components/KribbelnDice";
+import { KRIBBEL_ROLL_DURATION } from "../components/KribbelnDice";
+import { KribbelnTable, type KribbelnCupHandle } from "../components/KribbelnTable";
 import { KribbelnTask } from "../components/KribbelnTask";
 import type { GuestProfile, RoomState } from "../../shared/types";
 import { socket } from "../lib/socket";
@@ -12,6 +13,8 @@ export function KribbelnGameScreen({ profile, localNames, initialRoom, onExit }:
   const [kept, setKept] = useState<number[]>([]);
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
+  const [preparing, setPreparing] = useState(false);
+  const cup = useRef<KribbelnCupHandle>(null);
   const requestLock = useRef(false);
   const game = online ? room?.kribbelnGame : local;
   const rollKey = `${game?.row}-${game?.playerIndex}-${game?.rolls}`;
@@ -45,7 +48,7 @@ export function KribbelnGameScreen({ profile, localNames, initialRoom, onExit }:
   const row = KRIBBEL_ROWS[Math.min(game.row, KRIBBEL_ROWS.length - 1)];
   const sum = game.dice.reduce((total, die) => total + die.value, 0);
   const met = kribbelTaskMet(row.task, game.dice);
-  const busy = pending || rolling;
+  const busy = pending || rolling || preparing;
   const cribRows = [2, 5, 8, 9];
   const previous = cribRows.filter(i => i < game.row).map(i => game.results[active][i]);
   const previousSums = previous.filter((value): value is number => typeof value === "number" && value >= 6);
@@ -55,7 +58,7 @@ export function KribbelnGameScreen({ profile, localNames, initialRoom, onExit }:
   const fallback = row.task !== -1 && !met && target !== undefined && canEnterKribbelSum(cribRows.filter(i => i < target).map(i => game.results[active][i]), sum);
   const standings = [...game.order].sort((a, b) => game.scores[b] - game.scores[a]);
   function action(event: "roll" | "submit", payload: { keep: number[] } | { choice: "score" | "skip" | "fallback" }) {
-    if (requestLock.current || busy || !canAct) return;
+    if (requestLock.current || pending || rolling || !canAct || (preparing && event === "submit")) return;
     setError("");
     if (event === "roll") { try { navigator.vibrate?.(25); } catch { /* Haptik ist optional. */ } }
     if (online) {
@@ -80,13 +83,13 @@ export function KribbelnGameScreen({ profile, localNames, initialRoom, onExit }:
         <div className="kribbel-play">
         <section className="kribbel-mission"><span>{canAct ? `${game.names[active]}, du bist dran!` : `${game.names[active]} ist am Zug`}</span><h1>{row.label}</h1><KribbelnTask task={row.task} label={row.label} dice={game.dice} rolling={rolling} previousBest={previousBest} /><div className="kribbel-attempts" aria-label={`Wurf ${game.rolls} von 3`}>{[1, 2, 3].map(n => <span className={n <= game.rolls ? "is-used" : ""} key={n}>{n}</span>)}<small>{3 - game.rolls} Würfe übrig</small></div></section>
         <div className="kribbel-table-side">
-        <section className={`kribbel-tray ${rolling ? "is-rolling" : ""}`} aria-label="Würfelkiste">
-          <KribbelnDice dice={game.dice} kept={rolling || !canAct ? game.keptDice ?? [] : kept} rolling={rolling} disabled={!canAct || busy} rollKey={rollKey} onToggle={i => setKept(kept.includes(i) ? kept.filter(n => n !== i) : [...kept, i])} />
-          <p>{rolling ? "Die Würfel fallen …" : !game.rolls ? "Sechs Würfel. Dein erster Versuch!" : canAct ? `${kept.length} behalten · Tippe auf Würfel zum Behalten oder Freigeben` : "Schau zu, wie die Würfel fallen."}</p>
-        </section>
+        <KribbelnTable ref={cup} dice={game.dice} kept={rolling || !canAct ? game.keptDice ?? [] : kept}
+          rolling={rolling} pending={pending} canAct={canAct} canRoll={canAct && !pending && !rolling && game.rolls < 3 && kept.length < 6}
+          reducedMotion={reducedMotion} rollKey={rollKey} turnKey={`${game.row}-${game.playerIndex}`} onPreparingChange={setPreparing}
+          onRoll={() => action("roll", { keep: kept })} onToggle={i => setKept(kept.includes(i) ? kept.filter(n => n !== i) : [...kept, i])} />
         <div className={`kribbel-feedback ${valid && !rolling ? "is-success" : ""}`} role="status" aria-live="polite"><strong key={`${rollKey}-${rolling}`}>{rolling ? "…" : game.rolls ? sum : "–"}</strong><span>{rolling ? "Gleich steht das Ergebnis fest" : !game.rolls ? "Wie hoch kommst du?" : valid ? "Geschafft! Eintragen oder mehr riskieren?" : game.rolls < 3 ? "Da geht noch was. Noch einmal würfeln?" : fallback ? "Zweite Chance: Nutze dein Kribbelfeld!" : "Diesmal kein Treffer. Aufgabe streichen."}</span></div>
         {canAct ? <div className="kribbel-actions">
-          {game.rolls < 3 && <button className="button button--primary kribbel-roll" disabled={busy || kept.length === 6} onClick={() => action("roll", { keep: kept })}>{pending ? "Warte auf den Tisch …" : rolling ? "Würfel rollen …" : game.rolls ? `${6 - kept.length} Würfel neu werfen` : "Würfeln"}</button>}
+          {game.rolls < 3 && <button className="button button--primary kribbel-roll" disabled={busy || kept.length === 6} onClick={() => cup.current?.roll()}>{pending ? "Warte auf den Tisch …" : preparing ? "Becher schütteln …" : rolling ? "Würfel rollen …" : game.rolls ? `${6 - kept.length} Würfel neu werfen` : "Würfeln"}</button>}
           {game.rolls > 0 && <><button className="button button--secondary" disabled={busy || !valid} onClick={() => action("submit", { choice: "score" })}>Ergebnis eintragen</button>{row.task !== -1 && !met && <button className="button button--secondary" disabled={busy || !fallback} onClick={() => action("submit", { choice: "fallback" })}>Auf Kribbelfeld ausweichen</button>}<button className="button button--ghost kribbel-skip" disabled={busy} onClick={() => action("submit", { choice: "skip" })}>Aufgabe streichen</button></>}
         </div> : <p className="kribbel-waiting">Du bist gleich wieder dran. {game.names[active]} entscheidet gerade.</p>}
         {error && <p role="alert" className="error-message">{error}</p>}

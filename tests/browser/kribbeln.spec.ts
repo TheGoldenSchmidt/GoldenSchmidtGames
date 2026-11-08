@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
 import { KRIBBEL_COLORS, KRIBBEL_ROWS } from "../../shared/kribbeln";
+import { CUP_PREPARE_MS, CUP_READY_MS } from "../../src/lib/kribbelnCup";
 
 async function localGame(page: Page, reduced = false) {
   await page.emulateMedia({ reducedMotion: reduced ? "reduce" : "no-preference" });
@@ -24,20 +25,52 @@ async function checkVisibleMaterial(page: Page) {
   }
 }
 
-test("Würfel bleiben beim Fallen neutral und zeigen danach 36 eindeutige Farbseiten", async ({ page }, info) => {
+async function swipeCup(page: Page, touch: boolean, shakeOnly = false) {
+  const cup = page.getByRole("button", { name: "Würfelbecher schütteln oder nach unten wischen", exact: true });
+  await cup.scrollIntoViewIfNeeded();
+  const box = (await cup.boundingBox())!, x = box.x + box.width / 2, y = box.y + box.height / 2;
+  const points = shakeOnly ? [[x - 24, y], [x + 24, y], [x - 24, y], [x, y]] : [[x, y + 20], [x, y + 40], [x, y + 65], [x, y + 85]];
+  if (touch) {
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y }] });
+    for (const [px, py] of points) { await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: px, y: py }] }); await page.waitForTimeout(35); }
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] }); await cdp.detach();
+  } else {
+    await page.mouse.move(x, y); await page.mouse.down();
+    for (const [px, py] of points) { await page.mouse.move(px, py, { steps: 2 }); await page.waitForTimeout(35); }
+    await page.mouse.up();
+  }
+}
+
+async function motionSample(page: Page, x = 0, beta = 0) {
+  await page.evaluate(({ x, beta }) => window.dispatchEvent(new DeviceMotionEvent("devicemotion", {
+    acceleration: { x, y: 0, z: 0 }, accelerationIncludingGravity: { x, y: 0, z: 9.81 }, rotationRate: { alpha: 0, beta, gamma: 0 }, interval: 16
+  })), { x, beta });
+}
+
+test("Sechs feste Farbwürfel fliegen aus dem Becher und behalten ihre Identität", async ({ page }, info) => {
   await localGame(page);
+  await checkVisibleMaterial(page);
+  await expect(page.locator(".kribbel-die-slot.is-in-cup")).toHaveCount(6);
+  await page.evaluate(() => { (window as unknown as { cupDice: Element[] }).cupDice = Array.from(document.querySelectorAll(".kribbel-cube-scene .die-cube")); });
   await page.clock.install(); await page.clock.pauseAt(new Date());
   await page.getByRole("button", { name: "Würfeln", exact: true }).click();
+  await expect(page.locator(".kribbel-cup-table")).toHaveAttribute("data-cup-state", "preparing");
+  await page.clock.runFor(CUP_PREPARE_MS);
   await expect(page.locator(".kribbel-die-slot.is-rolling")).toHaveCount(6);
-  await expect(page.locator(".kribbel-face--hidden")).toHaveCount(36);
-  await expect(page.locator('.kribbel-cube-scene [class*="kribbel-face-color--"]')).toHaveCount(0);
-  await expect(page.getByRole("button", { name: /^Würfel \d fällt$/ })).toHaveCount(6);
+  await checkVisibleMaterial(page);
+  await expect(page.getByRole("button", { name: /^Würfel \d fliegt$/ })).toHaveCount(6);
   await expect(page.locator(".kribbel-task")).toHaveAttribute("data-state", "waiting");
   await expect(page.locator(".kribbel-feedback > strong")).toHaveText("…");
-  const backgrounds = await page.locator(".kribbel-face--hidden").evaluateAll(elements => elements.map(element => getComputedStyle(element).backgroundColor));
-  expect(new Set(backgrounds)).toEqual(new Set(["rgb(212, 225, 223)"]));
+  await page.clock.runFor(400);
+  await page.evaluate(() => {
+    for (const animation of document.getAnimations()) {
+      const target = (animation.effect as KeyframeEffect | null)?.target;
+      if (target instanceof Element && target.closest(".kribbel-cup-table")) { animation.pause(); animation.currentTime = 550; }
+    }
+  });
   await page.screenshot({ path: info.outputPath("kribbeln-wuerfel-fallen.png"), fullPage: true });
-  await page.clock.runFor(1250);
+  await page.clock.runFor(850);
   await expect(page.locator(".kribbel-die-slot.is-rolling")).toHaveCount(0);
   await checkVisibleMaterial(page);
   await expect(page.locator(".kribbel-task")).toHaveAttribute("data-state", "met");
@@ -50,11 +83,13 @@ test("Würfel bleiben beim Fallen neutral und zeigen danach 36 eindeutige Farbse
   await first.click(); await second.click();
   const heldLabels = await page.locator(".kribbel-die-slot.is-kept").evaluateAll(elements => elements.map(element => element.getAttribute("aria-label")));
   await page.getByRole("button", { name: "4 Würfel neu werfen", exact: true }).click();
+  await page.clock.runFor(CUP_PREPARE_MS);
   await expect(page.locator(".kribbel-die-slot.is-rolling")).toHaveCount(4);
-  await expect(page.locator(".kribbel-face--hidden")).toHaveCount(24);
+  await checkVisibleMaterial(page);
   expect(await page.locator(".kribbel-die-slot.is-kept").evaluateAll(elements => elements.map(element => element.getAttribute("aria-label")))).toEqual(heldLabels);
   await page.clock.runFor(1250);
   await checkVisibleMaterial(page);
+  expect(await page.evaluate(() => (window as unknown as { cupDice: Element[] }).cupDice.every((die, index) => die === document.querySelectorAll(".kribbel-cube-scene .die-cube")[index]))).toBe(true);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
@@ -80,11 +115,84 @@ test("Reduzierte Bewegung beendet einen laufenden Wurf ohne weitere Wartezeit", 
   await localGame(page);
   await page.clock.install(); await page.clock.pauseAt(new Date());
   await page.getByRole("button", { name: "Würfeln", exact: true }).click();
-  await expect(page.locator(".kribbel-face--hidden")).toHaveCount(36);
+  await page.clock.runFor(CUP_PREPARE_MS);
+  await expect(page.locator(".kribbel-die-slot.is-rolling")).toHaveCount(6);
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await expect(page.locator(".kribbel-face--hidden")).toHaveCount(0);
+  await expect(page.locator(".kribbel-die-slot.is-rolling")).toHaveCount(0);
   await expect(page.locator(".kribbel-feedback > strong")).toHaveText("6");
   await expect(page.getByRole("button", { name: "Ergebnis eintragen", exact: true })).toBeEnabled();
+});
+
+test("Becher schütteln und per Touch oder Maus auswerfen verbraucht genau einen Wurf", async ({ page }, info) => {
+  await localGame(page, true);
+  await swipeCup(page, info.project.name === "phone", true);
+  await expect(page.locator(".kribbel-cup-table")).toHaveAttribute("data-cup-state", "ready");
+  await expect(page.getByLabel("Wurf 0 von 3", { exact: true })).toBeVisible();
+  await page.screenshot({ path: info.outputPath("kribbeln-becher-bereit.png"), fullPage: true });
+  await swipeCup(page, info.project.name === "phone");
+  await expect(page.getByLabel("Wurf 1 von 3", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "6 Würfel neu werfen", exact: true })).toBeEnabled();
+  await checkVisibleMaterial(page);
+  for (let index = 0; index < 6; index++) await page.locator(".kribbel-die-slot").nth(index).click();
+  await expect(page.getByRole("button", { name: "0 Würfel neu werfen", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: /Würfelbecher schütteln/ })).toBeDisabled();
+  for (let index = 0; index < 6; index++) await page.locator(".kribbel-die-slot").nth(index).click();
+  await page.getByRole("button", { name: "6 Würfel neu werfen", exact: true }).click();
+  await expect(page.getByLabel("Wurf 2 von 3", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "6 Würfel neu werfen", exact: true }).click();
+  await expect(page.getByLabel("Wurf 3 von 3", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Würfelbecher schütteln/ })).toBeDisabled();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test("Handybewegung braucht Freigabe, schüttelt vor dem Kippen und wirft nicht automatisch weiter", async ({ page }) => {
+  await page.addInitScript(() => {
+    const state = { requests: 0, listeners: new Set<EventListenerOrEventListenerObject>() };
+    Object.assign(window, { cupMotionState: state });
+    Object.defineProperty(DeviceMotionEvent, "requestPermission", { configurable: true, value: async () => { state.requests++; return "granted"; } });
+    const add = window.addEventListener, remove = window.removeEventListener;
+    Object.defineProperty(window, "addEventListener", { value: (...args: unknown[]) => { if (args[0] === "devicemotion") state.listeners.add(args[1] as EventListener); return Reflect.apply(add, window, args); } });
+    Object.defineProperty(window, "removeEventListener", { value: (...args: unknown[]) => { if (args[0] === "devicemotion") state.listeners.delete(args[1] as EventListener); return Reflect.apply(remove, window, args); } });
+  });
+  await localGame(page);
+  await page.clock.install(); await page.clock.pauseAt(new Date());
+  const read = () => page.evaluate(() => { const state = (window as unknown as { cupMotionState: { requests: number; listeners: Set<unknown> } }).cupMotionState; return { requests: state.requests, listeners: state.listeners.size }; });
+  expect(await read()).toEqual({ requests: 0, listeners: 0 });
+  await page.getByRole("button", { name: "Handybewegung aktivieren", exact: true }).click();
+  await motionSample(page, 0, 200);
+  expect(await read()).toEqual({ requests: 1, listeners: 1 });
+  await expect(page.getByLabel("Wurf 0 von 3", { exact: true })).toBeVisible();
+  for (const x of [20, -20, 20]) { await motionSample(page, x); await page.clock.runFor(140); }
+  await expect(page.locator(".kribbel-cup-table")).toHaveAttribute("data-cup-state", "ready");
+  await expect(page.getByLabel("Wurf 0 von 3", { exact: true })).toBeVisible();
+  await page.clock.runFor(350); await motionSample(page, 0, 200); await page.clock.runFor(CUP_READY_MS);
+  await expect(page.getByLabel("Wurf 1 von 3", { exact: true })).toBeVisible();
+  await expect(page.locator(".kribbel-die-slot.is-rolling")).toHaveCount(6);
+  await motionSample(page, 0, 200); await page.clock.runFor(1250); await motionSample(page, 0, 200);
+  await expect(page.getByLabel("Wurf 1 von 3", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Handybewegung ausschalten", exact: true }).click();
+  expect((await read()).listeners).toBe(0);
+  await page.getByRole("button", { name: "Handybewegung aktivieren", exact: true }).click();
+  await motionSample(page);
+  await page.getByRole("button", { name: "Beenden", exact: true }).click();
+  expect((await read()).listeners).toBe(0);
+  await motionSample(page, 0, 200);
+  await expect(page.getByRole("button", { name: /Lokal spielen/ })).toBeVisible();
+});
+
+test("Verweigerte oder ausbleibende Handybewegung erhält den Würfeln-Knopf", async ({ page }) => {
+  await page.addInitScript(() => Object.defineProperty(DeviceMotionEvent, "requestPermission", { configurable: true, value: async () => "denied" }));
+  await localGame(page, true);
+  await page.getByRole("button", { name: "Handybewegung aktivieren", exact: true }).click();
+  await expect(page.getByText(/Bewegungsfreigabe abgelehnt/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Würfeln", exact: true })).toBeEnabled();
+  await page.evaluate(() => Object.defineProperty(DeviceMotionEvent, "requestPermission", { configurable: true, value: async () => "granted" }));
+  await page.clock.install(); await page.clock.pauseAt(new Date());
+  await page.getByRole("button", { name: "Handybewegung aktivieren", exact: true }).click();
+  await page.clock.runFor(3001);
+  await expect(page.getByText(/Kein Bewegungssignal verfügbar/)).toBeVisible();
+  await page.getByRole("button", { name: "Würfeln", exact: true }).click();
+  await expect(page.getByLabel("Wurf 1 von 3", { exact: true })).toBeVisible();
 });
 
 test("Online sehen beide Geräte behaltene Würfel und dieselben gelandeten Farben", async ({ page, browser }) => {
@@ -114,16 +222,16 @@ test("Online sehen beide Geräte behaltene Würfel und dieselben gelandeten Farb
     await expect(page.locator(".kribbel-die-slot.is-rolling")).toHaveCount(6);
     await expect(observer.locator(".kribbel-die-slot.is-rolling")).toHaveCount(6);
     await expect(page.getByRole("button", { name: "6 Würfel neu werfen", exact: true })).toBeEnabled();
-    await expect(observer.locator(".kribbel-face--hidden")).toHaveCount(0);
+    await expect(observer.locator(".kribbel-die-slot.is-rolling")).toHaveCount(0);
     await page.locator(".kribbel-die-slot").nth(0).click();
     await page.locator(".kribbel-die-slot").nth(1).click();
     await page.getByRole("button", { name: "4 Würfel neu werfen", exact: true }).click();
     await expect(page.locator(".kribbel-die-slot.is-rolling")).toHaveCount(4);
     await expect(observer.locator(".kribbel-die-slot.is-rolling")).toHaveCount(4);
     await expect(observer.locator(".kribbel-die-slot.is-kept")).toHaveCount(2);
-    await expect(observer.locator(".kribbel-face--hidden")).toHaveCount(24);
+    await checkVisibleMaterial(observer);
     await expect(page.getByRole("button", { name: "4 Würfel neu werfen", exact: true })).toBeEnabled();
-    await expect(observer.locator(".kribbel-face--hidden")).toHaveCount(0);
+    await expect(observer.locator(".kribbel-die-slot.is-rolling")).toHaveCount(0);
     const labels = (target: Page) => target.locator(".kribbel-die-caption").allTextContents();
     expect(await labels(observer)).toEqual(await labels(page));
     await checkVisibleMaterial(observer);

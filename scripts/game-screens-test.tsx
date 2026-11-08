@@ -28,7 +28,9 @@ const startScreen = renderToString(<KribbelnGameScreen profile={profile} initial
 assert.match(startScreen, /Würfeln/);
 assert.match(startScreen.replace(/<!--.*?-->/g, ""), /Runde 1 \/ 10/);
 assert.match(startScreen, /Würfelkiste/);
-assert.equal((startScreen.match(/kribbel-die-placeholder/g) ?? []).length, 6);
+assert.match(startScreen, /Würfelbecher schütteln/);
+assert.equal((startScreen.match(/data-die-index=/g) ?? []).length, 6);
+assert.equal((startScreen.match(/die-face die-face--/g) ?? []).length, 36);
 const physicalDice = KRIBBEL_DICE_FACES.map(faces => ({ ...faces[0] }));
 const dice = renderToString(<KribbelnDice dice={physicalDice} kept={[0, 2]} disabled={false} rollKey="1" onToggle={() => {}} />);
 assert.equal((dice.match(/aria-pressed="true"/g) ?? []).length, 2);
@@ -36,9 +38,9 @@ assert.equal((dice.match(/die-face die-face--/g) ?? []).length, 36);
 assert.match(dice, /Grün 1/);
 assert.match(dice, /✓ Bleibt/);
 const fallingDice = renderToString(<KribbelnDice dice={physicalDice} kept={[]} disabled rolling rollKey="2" onToggle={() => {}} />);
-assert.equal((fallingDice.match(/kribbel-face--hidden/g) ?? []).length, 36);
-assert.doesNotMatch(fallingDice, /kribbel-face-color--|Grün 1|Rot 1/);
-assert.match(fallingDice, /Würfel 1 fällt/);
+assert.equal((fallingDice.match(/kribbel-face-color--/g) ?? []).length, 36);
+assert.doesNotMatch(fallingDice, /kribbel-face--hidden|Grün 1|Rot 1/);
+assert.match(fallingDice, /Würfel 1 fliegt/);
 for (const row of KRIBBEL_ROWS) {
   const task = renderToString(<KribbelnTask task={row.task} label={row.label} dice={physicalDice} rolling previousBest={17} />);
   assert.match(task, /role="img"/); assert.match(task, /data-state="waiting"/);

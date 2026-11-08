@@ -296,7 +296,6 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .kribbel-cube-scene::after { animation: none; }
 .kribbel-die-slot.is-rolling .die-cube { animation: die-tumble .95s cubic-bezier(.18,.8,.24,1) var(--roll-delay) both; }
 .kribbel-die-slot.is-rolling .die-scene::after { animation: die-shadow .95s cubic-bezier(.18,.8,.24,1) var(--roll-delay) both; }
-.kribbel-face--hidden { --die-bg: #d4e1df; --pip: #728e91; }
 .kribbel-face-color--red { --die-bg: #c63b48; }.kribbel-face-color--yellow { --die-bg: #f6cb49; --pip: #473910; }.kribbel-face-color--green { --die-bg: #318463; }.kribbel-face-color--blue { --die-bg: #3476af; }.kribbel-face-color--orange { --die-bg: #c86418; }.kribbel-face-color--purple { --die-bg: #8353a0; }
 .kribbel-die-slot.is-kept .die-cube { animation: none; transform: rotateX(var(--end-x)) rotateY(var(--end-y)); }.kribbel-die-slot.is-kept .die-scene::after { animation: none; }
 .kribbel-die-placeholder { width: 50px; height: 50px; border: 1px dashed #8eaeaf; border-radius: 12px; display: grid; place-items: center; color: #a4c4c6; font-size: 2rem; transform: rotate(-8deg); }

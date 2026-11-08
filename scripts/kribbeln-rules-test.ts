@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import "./kribbeln-cup-test";
 import { canEnterKribbelSum, rankKribbelnResults, createKribbelnGame, rollKribbeln, submitKribbeln, kribbelTaskMet, KRIBBEL_COLORS, KRIBBEL_DICE_FACES, type KribbelDie } from "../shared/kribbeln";
 
 const players = [{ id: "a", name: "A" }, { id: "b", name: "B" }];
