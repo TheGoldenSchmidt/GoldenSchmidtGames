@@ -122,6 +122,8 @@ export function GameIntro({ gameId, players, enabled, children }: { gameId: Game
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
     const change = () => { if (media.matches) finish(); };
     media.addEventListener("change", change);
+    // The preference may have changed between the initial render and effect registration.
+    change();
     return () => media.removeEventListener("change", change);
   }, [finish]);
   useEffect(() => {

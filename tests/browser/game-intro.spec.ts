@@ -140,3 +140,17 @@ for (const gameId of ["durak", "qwixx", "kribbeln", "party"] as const) test(`Onl
     }
   } finally { socket.disconnect(); }
 });
+
+test("Bereits geänderte Bewegungspräferenz wird bei Listener-Registrierung berücksichtigt",async({page})=>{
+  await page.clock.install({time:new Date("2026-01-01T00:00:00Z")});await page.clock.pauseAt(new Date("2026-01-01T00:00:01Z"));
+  await page.addInitScript(()=>{
+    const original=window.matchMedia.bind(window);let changed=false;
+    window.matchMedia=(query:string)=>{const media=original(query);if(query!=="(prefers-reduced-motion: reduce)")return media;const initial=media.matches,add=media.addEventListener;
+      Object.defineProperty(media,"matches",{configurable:true,get:()=>changed||initial});
+      Object.defineProperty(media,"addEventListener",{configurable:true,value:(type:string,listener:EventListenerOrEventListenerObject,options?:boolean|AddEventListenerOptions)=>{if(type==="change")changed=true;Reflect.apply(add,media,[type,listener,options]);}});
+      return media;
+    };
+  });
+  await localSetup(page,"Qwixx");await expect(page.locator(".game-intro")).toHaveCount(0);
+  await expect(page.locator(".game-entrance")).not.toHaveAttribute("inert");await expect(page.getByRole("button",{name:"Würfeln",exact:true})).toBeEnabled();
+});
