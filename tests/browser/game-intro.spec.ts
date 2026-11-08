@@ -42,7 +42,8 @@ for (const game of ["Qwixx", "Kribbeln"]) test(`${game}: eigene 3D-Szene und Üb
   await localSetup(page, game, game === "Qwixx" ? 5 : 2);
   const intro = page.getByRole("dialog", { name: game, exact: true });
   await expect(intro.locator(".game-intro__world")).toHaveAttribute("data-webgl", "ready");
-  await page.screenshot({ path: info.outputPath(`${game.toLowerCase()}-intro.png`) });
+  // Sofort überspringen: Eine WebGL-Aufnahme kann auf CI länger als das
+  // viersekündige Intro dauern und würde den Klick gegen dessen Ende testen.
   await page.getByRole("button", { name: "Intro überspringen" }).click();
   await expect(intro).toHaveCount(0);
   expect(await page.evaluate(() => scrollY)).toBe(0);
@@ -50,6 +51,7 @@ for (const game of ["Qwixx", "Kribbeln"]) test(`${game}: eigene 3D-Szene und Üb
   await expect(page.locator(".game-entrance")).not.toHaveAttribute("inert");
   if (game === "Kribbeln") await expect(page.getByRole("button", { name: /Würfel neu werfen/ })).toBeEnabled();
   else await expect(page.locator(".dice-tray")).toBeVisible();
+  await page.screenshot({ path: info.outputPath(`${game.toLowerCase()}-spielstart.png`) });
 });
 
 test("Escape beendet das Intro, und eine neue Partie erhält wieder ein Intro", async ({ page }) => {
