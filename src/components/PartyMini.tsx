@@ -1,3 +1,4 @@
+import type {CharacterId} from "../../shared/characters";
 import { useEffect, useRef, useState } from "react";
 import { applyPartyAction, applyPartyControl, COLORS, createPartyPractice, MINIS, publicParty, SYMBOLS, tickParty, type MiniId, type PartyAction, type PartyGame } from "../../shared/party";
 import { isArenaId, type ArenaInput } from "../../shared/partyArena";
@@ -61,8 +62,8 @@ function ClassicPartyMini({game,id,now,send,busy=false}:MiniProps) {
   </section>;
 }
 
-export function PartyPractice({miniId,onClose}:{miniId:MiniId;onClose:()=>void}) {
-  const [game,setGame]=useState(()=>createPartyPractice(miniId)),[now,setNow]=useState(Date.now()),[error,setError]=useState("");
+export function PartyPractice({miniId,onClose,characterId}:{miniId:MiniId;onClose:()=>void;characterId?:CharacterId}) {
+  const [game,setGame]=useState(()=>createPartyPractice(miniId,Date.now(),characterId)),[now,setNow]=useState(Date.now()),[error,setError]=useState("");
   const dialog=useRef<HTMLDivElement>(null),close=useRef(onClose),controlSeq=useRef(0);close.current=onClose;
   useEffect(()=>{const previous=document.activeElement as HTMLElement|null,overflow=document.body.style.overflow;document.body.style.overflow="hidden";document.body.dataset.partyPractice="true";dialog.current?.focus();const timer=setInterval(()=>{const time=Date.now();setNow(time);setGame(g=>tickParty(g,time));},50);return()=>{clearInterval(timer);document.body.style.overflow=overflow;delete document.body.dataset.partyPractice;previous?.focus();};},[]);
   const control=(input:ArenaInput)=>setGame(g=>{try{return applyPartyControl(g,"practice",input,++controlSeq.current,Date.now());}catch{return g;}});
@@ -70,5 +71,5 @@ export function PartyPractice({miniId,onClose}:{miniId:MiniId;onClose:()=>void})
   return <div className="party-overlay"><div className="party-practice" role="dialog" aria-modal="true" aria-label={`Übung: ${MINIS[miniId].name}`} tabIndex={-1} ref={dialog} onKeyDown={e=>{
     if(e.key==="Escape"){e.stopPropagation();close.current();}
     if(e.key==="Tab"){const buttons=dialog.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)');if(!buttons?.length)return;const first=buttons[0],last=buttons[buttons.length-1];if(e.shiftKey&&(document.activeElement===first||document.activeElement===dialog.current)){e.preventDefault();last.focus();}else if(!e.shiftKey&&(document.activeElement===last||document.activeElement===dialog.current)){e.preventDefault();first.focus();}}
-  }}><p className="party-practice-label">Übung · zählt nicht zur Wertung</p><PartyMini game={publicParty(game,"practice",now)} id="practice" now={now} send={send} control={control}/>{error&&<p role="alert">{error}</p>}{game.mini?.runs.practice.done&&<button className="button button--primary button--wide" onClick={()=>{setGame(createPartyPractice(miniId));setError("");}}>Noch einmal üben</button>}<button className="button button--secondary button--wide" onClick={onClose}>Übung schließen</button></div></div>;
+  }}><p className="party-practice-label">Übung · zählt nicht zur Wertung</p><PartyMini game={publicParty(game,"practice",now)} id="practice" now={now} send={send} control={control}/>{error&&<p role="alert">{error}</p>}{game.mini?.runs.practice.done&&<button className="button button--primary button--wide" onClick={()=>{setGame(createPartyPractice(miniId,Date.now(),characterId));setError("");}}>Noch einmal üben</button>}<button className="button button--secondary button--wide" onClick={onClose}>Übung schließen</button></div></div>;
 }

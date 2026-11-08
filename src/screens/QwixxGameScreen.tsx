@@ -1,3 +1,5 @@
+import {CharacterAvatar,playerCharacters} from "../components/CharacterAvatar";
+import type {CharacterId} from "../../shared/characters";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import {
   QWIXX_COLORS,
@@ -58,11 +60,13 @@ function hasAnswered(game: QwixxGameState, playerId: string) {
 export function QwixxGameScreen({
   profile,
   localNames,
+  localCharacters,
   initialRoom,
   onExit
 }: {
   profile: GuestProfile;
   localNames?: string[];
+  localCharacters?:CharacterId[];
   initialRoom?: RoomState;
   onExit: () => void;
 }) {
@@ -102,6 +106,7 @@ export function QwixxGameScreen({
     return <main className="game-screen"><p>Die Partie wird geladen …</p></main>;
   }
 
+  const characters=playerCharacters(room,localNames,localCharacters);
   const activeName = game.sheets[activeId].playerName;
   const ownWhiteAnswer = hasAnswered(game, viewerId);
   const canRoll = game.phase === "awaiting-roll" && (!online || activeId === profile.id);
@@ -175,7 +180,7 @@ export function QwixxGameScreen({
       </header>
 
       <section className="qwixx-turn" aria-live="polite">
-        <span className="qwixx-turn__avatar">{sheet.playerName.slice(0, 1).toUpperCase()}</span>
+        <CharacterAvatar id={characters[viewerId]} className="qwixx-turn__avatar"/>
         <div><strong>{sheet.playerName}</strong><p>{phaseText()}</p></div>
       </section>
 
@@ -262,7 +267,7 @@ export function QwixxGameScreen({
           <ol>
             {standings.map((entry) => (
               <li className="result-player" key={entry.id}>
-                <div className="result-player__total"><span>{entry.name}</span><strong>{entry.score} Punkte</strong></div>
+                <div className="result-player__total"><span><CharacterAvatar id={characters[entry.id]} decorative/>{entry.name}</span><strong>{entry.score} Punkte</strong></div>
                 <div className="result-player__breakdown" aria-label={`Punkte von ${entry.name}`}>
                   {QWIXX_COLORS.map((color) => (
                     <span className={`result-color result-color--${color}`} key={color}>

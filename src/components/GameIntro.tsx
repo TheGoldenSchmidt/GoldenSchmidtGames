@@ -1,3 +1,5 @@
+import {characterId,characterPortrait} from "../../shared/characters";
+import {preloadFigures} from "../figures/catalog";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { getGame } from "../../shared/games";
 import type { GameId } from "../../shared/types";
@@ -22,7 +24,7 @@ function IntroFallback({ gameId, players }: { gameId: GameId; players: IntroPlay
         const x = 300 + Math.sin(angle) * 230, y = 300 + Math.cos(angle) * 230;
         return <g key={player.id}>
           <circle cx={x} cy={y} r="28" fill={COLORS[index % COLORS.length]} />
-          <text x={x} y={y + 7} textAnchor="middle" fill="#fff9e8" fontSize="22" fontWeight="bold">{player.name.slice(0, 1).toUpperCase()}</text>
+          <image href={characterPortrait(characterId(player.characterId,index))} x={x-25} y={y-27} width="50" height="54"/>
         </g>;
       })}
       {gameId === "durak" ? <g transform="translate(270 255) rotate(-12 30 45)">
@@ -74,7 +76,7 @@ function IntroScene({ gameId, players, onComplete }: { gameId: GameId; players: 
 
     // Slow loading or missing WebGL must never prevent entering the game.
     const loadTimeout = setTimeout(useFallback, 1800);
-    void import("../three/introWorld").then(({ createIntroWorld }) => {
+    void Promise.all([import("../three/introWorld"),preloadFigures(players.map(p=>p.characterId))]).then(([{ createIntroWorld }]) => {
       if (cancelled || started || !host.current) return;
       try {
         world = createIntroWorld(host.current, gameId, players, useFallback);

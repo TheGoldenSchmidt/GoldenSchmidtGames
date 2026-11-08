@@ -1,26 +1,29 @@
-import type { CharacterId } from "../../shared/characters";
-import type { Animations, FigureBase, FigureDef, FigureVariant } from "./types";
-import { resolveFigure } from "./resolve";
-import rick from "./data/figures/rick_sanchez_3.json";
-import morty from "./data/figures/morty_smith.json";
-import cartman from "./data/figures/eric_cartman_3.json";
-import stan from "./data/figures/stan_marsh.json";
-import kyle from "./data/figures/kyle_broflovski.json";
-import kenny from "./data/figures/kenny_mccormick.json";
-import butters from "./data/figures/butters_stotch.json";
-import korvo from "./data/figures/korvo_3.json";
-import terry from "./data/figures/terry_solar_opposites.json";
-import pupa from "./data/figures/pupa.json";
-import ritter from "./data/figures/ritter.json";
-import rekrut from "./data/figures/rekrut.json";
-import humanoid from "./data/bases/humanoid-standard.json";
-import profile from "./data/profiles/humanoid-standard.json";
+import {characterId,type CharacterId} from "../../shared/characters";
+import type {Animations,FigureDef} from "./types";
+import {resolveFigure} from "./resolve";
 import defaults from "./data/animations.json";
-
-const sources={rick_sanchez_3:rick,morty_smith:morty,eric_cartman_3:cartman,stan_marsh:stan,kyle_broflovski:kyle,kenny_mccormick:kenny,butters_stotch:butters,korvo_3:korvo,terry_solar_opposites:terry,pupa,ritter,rekrut};
-const cache=new Map<CharacterId,FigureDef>();
-export function getFigure(id:CharacterId):FigureDef {
-  let figure=cache.get(id);
-  if(!figure){figure=resolveFigure(sources[id] as FigureDef|FigureVariant,{"humanoid-standard":humanoid as unknown as FigureBase},{"humanoid-standard":profile as unknown as {animations:Animations}},defaults as unknown as Animations);cache.set(id,figure);}
-  return figure;
+const loaders:Record<CharacterId,()=>Promise<{default:unknown}>>={
+  alpha_rick_prime:()=>import("./data/figures/alpha_rick_prime.json",{with:{type:"json"}}),
+  alpha_morty_smith:()=>import("./data/figures/alpha_morty_smith.json",{with:{type:"json"}}),
+  alpha_summer_smith:()=>import("./data/figures/alpha_summer_smith.json",{with:{type:"json"}}),
+  alpha_jerry_smith:()=>import("./data/figures/alpha_jerry_smith.json",{with:{type:"json"}}),
+  alpha_mr_nimbus:()=>import("./data/figures/alpha_mr_nimbus.json",{with:{type:"json"}}),
+  alpha_scary_terry:()=>import("./data/figures/alpha_scary_terry.json",{with:{type:"json"}}),
+  alpha_mr_poopybutthole:()=>import("./data/figures/alpha_mr_poopybutthole.json",{with:{type:"json"}}),
+  alpha_captain_diabetes:()=>import("./data/figures/alpha_captain_diabetes.json",{with:{type:"json"}}),
+  alpha_doctor_timothy:()=>import("./data/figures/alpha_doctor_timothy.json",{with:{type:"json"}}),
+  alpha_the_coon:()=>import("./data/figures/alpha_the_coon.json",{with:{type:"json"}}),
+  alpha_eric_cartman:()=>import("./data/figures/alpha_eric_cartman.json",{with:{type:"json"}}),
+  alpha_pupa:()=>import("./data/figures/alpha_pupa.json",{with:{type:"json"}}),
+  alpha_korvo:()=>import("./data/figures/alpha_korvo.json",{with:{type:"json"}})
+};
+const cache=new Map<CharacterId,FigureDef>(),pending=new Map<CharacterId,Promise<FigureDef>>();
+export function loadFigure(id:CharacterId):Promise<FigureDef>{
+  const cached=cache.get(id);if(cached)return Promise.resolve(cached);
+  const current=pending.get(id);if(current)return current;
+  const loader=loaders[id];if(!loader)return Promise.reject(new Error(`Figur nicht verfügbar: ${id}`));
+  const request=loader().then(module=>{const figure=resolveFigure(module.default as FigureDef,{}, {},defaults as unknown as Animations);cache.set(id,figure);return figure;}).finally(()=>pending.delete(id));
+  pending.set(id,request);return request;
 }
+export const preloadFigures=(ids:readonly unknown[])=>Promise.all([...new Set(ids.map((id,index)=>characterId(id,index)))].map(loadFigure));
+export function getFigure(id:CharacterId):FigureDef{const figure=cache.get(id);if(!figure)throw new Error(`Figur wird noch geladen: ${id}`);return figure;}

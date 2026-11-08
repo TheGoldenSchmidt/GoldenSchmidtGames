@@ -53,37 +53,13 @@ function scoresheet(kit: SceneKit, parent: T.Object3D, x: number, z: number, ang
   const pencil = kit.box(sheet, BRASS, .66, .025, 0, .045, .045, .9); pencil.rotation.y = -.18;
 }
 
-function seatedPlayer(kit: SceneKit, parent: T.Object3D, index: number, angle: number, name: string) {
-  const group = new T.Group(); group.position.set(Math.sin(angle) * 4.05, 0, Math.cos(angle) * 4.05);
-  group.rotation.y = angle + Math.PI; parent.add(group);
-  const color = PLAYER_COLORS[index % PLAYER_COLORS.length];
-  // A seat, bent legs, and arms resting on the table make the posture readable.
-  kit.box(group, WOOD, 0, 1.13, -.08, 1, .18, .92);
-  kit.box(group, WOOD, 0, 1.83, -.47, 1, 1.22, .14);
-  kit.box(group, 0x29464b, 0, 1.26, -.06, .87, .14, .77);
-  for (const side of [-1, 1]) {
-    for (const z of [-.4, .28]) kit.cylinder(group, WOOD, side * .4, .55, z, .045, 1.1);
-    kit.beam(group, 0x243b4b, new T.Vector3(side * .19, 1.26, 0), new T.Vector3(side * .19, 1.14, .49), .23);
-    kit.beam(group, 0x243b4b, new T.Vector3(side * .19, 1.14, .49), new T.Vector3(side * .19, .35, .5), .2);
-    kit.box(group, 0x302d30, side * .19, .27, .57, .26, .18, .4);
-    kit.beam(group, color, new T.Vector3(side * .3, 1.98, .04), new T.Vector3(side * .46, 1.94, .61), .18);
-    kit.ball(group, 0xffd7b5, side * .46, 1.96, .77, .12, .085, .15);
-  }
-  kit.ball(group, color, 0, 1.75, 0, .38, .5, .27);
-  const skin = [0xffd7b5, 0xb97954, 0xe6b084][index % 3];
-  kit.cylinder(group, skin, 0, 2.2, .01, .13, .2);
-  kit.ball(group, skin, 0, 2.51, .015, .33, .36, .31);
-  kit.ball(group, index % 2 ? 0x402e28 : 0x5b3c2c, 0, 2.72, -.045, .34, .19, .3);
-  for (const side of [-1, 1]) kit.ball(group, 0x193e43, side * .115, 2.54, .307, .034, .044, .018);
-  kit.ball(group, 0xc77761, 0, 2.4, .313, .06, .017, .015);
-  const canvas = document.createElement("canvas"); canvas.width = 512; canvas.height = 128;
-  const ctx = canvas.getContext("2d")!;
-  ctx.fillStyle = "#fff9e8"; ctx.beginPath(); ctx.roundRect(4, 8, 504, 104, 32); ctx.fill();
-  ctx.fillStyle = "#193e43"; ctx.font = "bold 88px 'Trebuchet MS',sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  ctx.fillText(name.length > 16 ? `${name.slice(0, 15)}…` : name, 256, 65, 462);
-  const texture = new T.CanvasTexture(canvas); texture.colorSpace = T.SRGBColorSpace;
-  const label = new T.Sprite(new T.SpriteMaterial({ map: texture }));
-  label.scale.set(2.1, .525, 1); label.position.set(0, 3.22, -.05); group.add(label);
+function seatedPlayer(kit:SceneKit,parent:T.Object3D,index:number,angle:number,player:IntroPlayer) {
+  const seat=new T.Group();seat.position.set(Math.sin(angle)*4.05,0,Math.cos(angle)*4.05);seat.rotation.y=angle+Math.PI;parent.add(seat);
+  kit.box(seat,WOOD,0,1.13,-.08,1,.18,.92);
+  kit.box(seat,WOOD,0,1.83,-.47,1,1.22,.14);
+  for(const side of [-1,1])for(const z of [-.4,.28])kit.cylinder(seat,WOOD,side*.4,.55,z,.045,1.1);
+  const pawn=character(kit,seat,index,player.name,player.characterId);
+  pawn.group.position.y=1.25;pawn.group.scale.setScalar(1.15);
 }
 
 function tableScene(kit: SceneKit, world: T.Group, gameId: GameId, players: IntroPlayer[]) {
@@ -106,7 +82,7 @@ function tableScene(kit: SceneKit, world: T.Group, gameId: GameId, players: Intr
 
   players.forEach((player, index) => {
     const angle = index / players.length * Math.PI * 2;
-    seatedPlayer(kit, world, index, angle, player.name);
+    seatedPlayer(kit, world, index, angle, player);
     if (gameId === "durak") {
       for (let n = 0; n < 3; n++) {
         const handAngle = angle + (n - 1) * .13;

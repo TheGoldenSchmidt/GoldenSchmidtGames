@@ -1,3 +1,5 @@
+> Die konkrete Auswahl und aktuelle Gestaltung stehen in [Freigegebene Charaktere](approved-character-design.md).
+
 # Figurenwahl und Solo-Test
 
 Die Figurenwahl ist eine kleine Bühne am Hafen: eine große, drehbare 3D-Figur

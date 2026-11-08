@@ -8,7 +8,7 @@ import path from "node:path";
 import { Server } from "socket.io";
 import { getGame } from "../shared/games";
 import { applyPartyAction, applyPartyControl, createPartyGame, partyOptions, publicParty, selectPartyTestMini, tickParty, type PartyAction, type PartyOptions } from "../shared/party";
-import { characterId, isCharacterId } from "../shared/characters";
+import { CHARACTERS, characterId, isCharacterId } from "../shared/characters";
 import { PartyBotDriver } from "../shared/partyBots";
 import { isArenaId, NEUTRAL_INPUT, publicArena, type ArenaInput } from "../shared/partyArena";
 import { createKribbelnGame, rollKribbeln, submitKribbeln } from "../shared/kribbeln";
@@ -162,17 +162,18 @@ function enterRoom(socketId: string, room: RoomState, playerId: string) {
 
 io.on("connection", (socket) => {
   let lastPartyControl=0;
-  socket.on("party:test-create",(payload:{playerId?:string;name?:string;bots?:number;seed?:number},callback:(ack:Ack<RoomState>)=>void)=>{
+  socket.on("party:test-create",(payload:{playerId?:string;name?:string;bots?:number;seed?:number;characterId?:unknown},callback:(ack:Ack<RoomState>)=>void)=>{
+    if(!isCharacterId(payload?.characterId))return callback({ok:false,error:"Wähle zuerst eine Spielfigur."});
     if(!Number.isInteger(payload?.bots)||payload.bots!<1||payload.bots!>5||!Number.isInteger(payload.seed)||payload.seed!<0||payload.seed!>0xffffffff)return callback({ok:false,error:"Wähle 1–5 Bots und einen Startwert von 0 bis 4294967295."});
     const id=cleanPlayerId(payload.playerId),code=createCode();
-    const players:Player[]=[{id,name:cleanName(payload.name,"Gast"),connected:true,ready:false,score:0,characterId:characterId(undefined)}];
-    for(let i=0;i<payload.bots!;i++)players.push({id:`bot-${randomUUID()}`,name:`Inselbot ${i+1}`,connected:true,ready:true,score:0,bot:true,characterId:characterId(undefined,i+1)});
+    const players:Player[]=[{id,name:cleanName(payload.name,"Gast"),connected:true,ready:false,score:0,characterId:payload.characterId}];
+    for(let i=0;i<payload.bots!;i++)players.push({id:`bot-${randomUUID()}`,name:`Inselbot ${i+1}`,connected:true,ready:true,score:0,bot:true,characterId:CHARACTERS[randomInt(CHARACTERS.length)].id});
     const room:RoomState={code,hostId:id,players,phase:"lobby",config:{gameId:"party",playerCount:players.length,party:partyOptions({rounds:5})},partyTest:{seed:payload.seed!}};
     rooms.set(code,room);enterRoom(socket.id,room,id);callback({ok:true,data:publicRoom(room,id)});
   });
   socket.on("room:character",(payload:{characterId?:unknown},callback:(ack:Ack<RoomState>)=>void)=>{
     const member=socketMembership.get(socket.id),room=member?rooms.get(member.roomCode):undefined,player=room?.players.find(p=>p.id===member?.playerId);
-    if(!room||!player||room.phase!=="lobby"||room.config.gameId!=="party")return callback({ok:false,error:"Die Figur kann nur vor der Inselparty gewählt werden."});
+    if(!room||!player||room.phase!=="lobby")return callback({ok:false,error:"Die Figur kann nur vor dem Spielstart gewählt werden."});
     if(!isCharacterId(payload?.characterId))return callback({ok:false,error:"Diese Figur ist nicht verfügbar."});
     player.characterId=payload.characterId;player.ready=false;broadcast(room);callback({ok:true,data:publicRoom(room,player.id)});
   });
@@ -248,12 +249,14 @@ io.on("connection", (socket) => {
 
   socket.on(
     "room:create",
-    (payload: { playerId?: string; name?: string }, callback: (ack: Ack<RoomState>) => void) => {
+    (payload: { playerId?: string; name?: string; characterId?: unknown }, callback: (ack: Ack<RoomState>) => void) => {
+      if(!isCharacterId(payload?.characterId))return callback({ok:false,error:"Wähle zuerst eine Spielfigur."});
       const playerId = cleanPlayerId(payload?.playerId);
       const code = createCode();
       const player: Player = {
         id: playerId,
         name: cleanName(payload?.name, "Gast"),
+        characterId: payload.characterId,
         connected: true,
         ready: false,
         score: 0
@@ -274,7 +277,7 @@ io.on("connection", (socket) => {
   socket.on(
     "room:join",
     (
-      payload: { code?: string; playerId?: string; name?: string; partyToken?: string },
+      payload: { code?: string; playerId?: string; name?: string; partyToken?: string; characterId?: unknown },
       callback: (ack: Ack<RoomState>) => void
     ) => {
       const code = cleanName(payload?.code, "").toUpperCase();
@@ -289,13 +292,17 @@ io.on("connection", (socket) => {
       }
 
       let player = room.players.find((entry) => entry.id === playerId);
+      const selectedCharacter=room.phase==="playing"&&player?player.characterId:payload.characterId;
+      if(!isCharacterId(selectedCharacter))return callback({ok:false,error:"Wähle zuerst eine Spielfigur."});
       if (player) {
         player.connected = true;
+        if(room.phase==="lobby"){if(player.characterId!==selectedCharacter)player.ready=false;player.characterId=selectedCharacter;}
         player.name = cleanName(payload?.name, player.name);
       } else {
         player = {
           id: playerId,
           name: cleanName(payload?.name, "Gast"),
+          characterId:selectedCharacter,
           connected: true,
           ready: false,
           score: 0
@@ -351,6 +358,7 @@ io.on("connection", (socket) => {
     const player = room?.players.find((entry) => entry.id === membership?.playerId);
     if (!room || !player) return callback({ ok: false, error: "Du bist in keinem Raum." });
     if (room.phase !== "lobby") return callback({ ok: false, error: "Die Partie läuft bereits." });
+    if(!isCharacterId(player.characterId))return callback({ok:false,error:"Wähle zuerst eine Spielfigur."});
     player.ready = !player.ready;
     if (allPlayersReady(room)) {
       startRoom(room);

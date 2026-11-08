@@ -10,6 +10,7 @@ async function localSetup(page: Page, game: string, count = 2) {
   await page.getByRole("button", { name: new RegExp(`^${game} `) }).first().click();
   for (let n = 2; n < count; n++) await page.getByRole("button", { name: "+", exact: true }).click();
   for (let n = 1; n <= count; n++) await page.getByRole("textbox", { name: `Name von Spieler ${n}`, exact: true }).fill(["Anna", "Ben", "Clara", "David", "Emma", "Finn"][n - 1]);
+  for(let n=1;n<=count;n++)await page.getByRole("combobox",{name:`Figur von Spieler ${n}`,exact:true}).selectOption("alpha_rick_prime");
   await page.getByRole("button", { name: `${game} starten`, exact: true }).click();
 }
 
@@ -70,6 +71,7 @@ test("Escape beendet das Intro, und eine neue Partie erhält wieder ein Intro", 
   await page.getByRole("button", { name: "Karten anzeigen", exact: true }).click();
   await page.getByRole("button", { name: "Beenden", exact: true }).click();
   await page.getByRole("button", { name: /Lokal spielen/ }).click();
+  for(let n=1;n<=2;n++)await page.getByRole("combobox",{name:`Figur von Spieler ${n}`,exact:true}).selectOption("alpha_morty_smith");
   await page.getByRole("button", { name: "Qwixx starten", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Qwixx", exact: true })).toBeVisible();
 });
@@ -82,6 +84,7 @@ test("Reduzierte Bewegung überspringt Intros und beendet eine laufende Kamerafa
   await page.getByRole("button", { name: "Beenden", exact: true }).click();
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.getByRole("button", { name: /Lokal spielen/ }).click();
+  for(let n=1;n<=2;n++)await page.getByRole("combobox",{name:`Figur von Spieler ${n}`,exact:true}).selectOption("alpha_morty_smith");
   await page.getByRole("button", { name: "Qwixx starten", exact: true }).click();
   await expect(page.locator(".game-intro")).toBeVisible();
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -107,9 +110,10 @@ for (const gameId of ["durak", "qwixx", "kribbeln", "party"] as const) test(`Onl
   const socket = io("http://127.0.0.1:4177", { transports: ["websocket"], forceNew: true, reconnection: false });
   await new Promise<void>((resolve, reject) => { socket.once("connect", resolve); socket.once("connect_error", reject); });
   try {
-    const room = await request<RoomState>(socket, "room:create", { playerId: randomUUID(), name: "Anna" });
+    const room = await request<RoomState>(socket, "room:create", {characterId:"alpha_rick_prime", playerId: randomUUID(), name: "Anna" });
     await request(socket, "room:configure", { gameId, playerCount: 2, party: { rounds: 5, tempo: "slow" } });
     await page.goto("/"); await page.getByRole("button", { name: /Online spielen/ }).click();
+    await page.getByRole("button",{name:"Morty Smith",exact:true}).click();
     await page.getByRole("textbox", { name: "Raumcode" }).fill(room.code);
     await page.getByRole("button", { name: "Raum beitreten", exact: true }).click();
     await page.getByRole("button", { name: "Ich bin bereit", exact: true }).click();

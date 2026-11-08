@@ -54,12 +54,12 @@ let guest: Socket | undefined;
 try {
   host = await connect(endpoint);
   guest = await connect(endpoint);
-  const created = await emit<RoomState>(host, "room:create", { playerId: hostPlayerId, name: "Host" });
+  const created = await emit<RoomState>(host, "room:create", {characterId:"alpha_rick_prime", playerId: hostPlayerId, name: "Host" });
   if (!/^[A-Z0-9]{5}$/.test(created.code)) throw new Error("Raumcode hat ein falsches Format");
   if (created.hostId !== hostPlayerId) throw new Error("Die vollständige Spieler-ID des Hosts wurde nicht gespeichert");
 
   const hostSeesGuest = waitForRoom(host, (room) => room.players.some((player) => player.id === guestPlayerId));
-  const joined = await emit<RoomState>(guest, "room:join", {
+  const joined = await emit<RoomState>(guest, "room:join", {characterId:"alpha_rick_prime",
     code: created.code,
     playerId: guestPlayerId,
     name: "Gast"
@@ -95,8 +95,8 @@ try {
   }
   if (nextTurn.game.sheets[hostPlayerId].failedThrows !== 1) throw new Error("Fehlwurf wurde nicht gewertet");
 
-  const kribbelnCreated = await emit<RoomState>(host, "room:create", { playerId: hostPlayerId, name: "Host" });
-  await emit<RoomState>(guest, "room:join", { code: kribbelnCreated.code, playerId: guestPlayerId, name: "Gast" });
+  const kribbelnCreated = await emit<RoomState>(host, "room:create", {characterId:"alpha_rick_prime", playerId: hostPlayerId, name: "Host" });
+  await emit<RoomState>(guest, "room:join", {characterId:"alpha_rick_prime", code: kribbelnCreated.code, playerId: guestPlayerId, name: "Gast" });
   await emit<RoomState>(host, "room:configure", { gameId: "kribbeln", playerCount: 2 });
   await emit<RoomState>(host, "room:ready");
   const kribbelnStarted = await emit<RoomState>(guest, "room:ready");
@@ -108,8 +108,8 @@ try {
   const submittedKribbeln = await emit<RoomState>(host, "kribbeln:submit", { choice: "skip" });
   if (submittedKribbeln.kribbelnGame?.order[submittedKribbeln.kribbelnGame.playerIndex] !== guestPlayerId) throw new Error("Kribbeln-Zugwechsel fehlgeschlagen");
 
-  const durakCreated = await emit<RoomState>(host, "room:create", { playerId: hostPlayerId, name: "Host" });
-  await emit<RoomState>(guest, "room:join", { code: durakCreated.code, playerId: guestPlayerId, name: "Gast" });
+  const durakCreated = await emit<RoomState>(host, "room:create", {characterId:"alpha_rick_prime", playerId: hostPlayerId, name: "Host" });
+  await emit<RoomState>(guest, "room:join", {characterId:"alpha_rick_prime", code: durakCreated.code, playerId: guestPlayerId, name: "Gast" });
   await emit<RoomState>(host, "room:configure", { gameId: "durak", playerCount: 2, durakCheatMode: true });
   await emit<RoomState>(host, "room:ready");
   const durakStarted = await emit<RoomState>(guest, "room:ready");

@@ -60,7 +60,7 @@ export function createArenaWorld(host:HTMLElement,read:()=>ArenaFrame,onError:()
     for(const pickup of view.pickups){const mesh=pickups.get(pickup.id)!;mesh.visible=view.time>=pickup.readyAt;if(!source.reduce){mesh.rotation.y=time*.0016;mesh.position.y=pickup.y+Math.sin(time*.002+pickup.id)*.08;}}
     for(const crate of view.crates){const mesh=crates.get(crate.id)!;mesh.visible=crate.hp>0;mesh.scale.setScalar(crate.hp===1?.9:1);}
     if(id==="shock")for(let i=0;i<waves.length;i++){const phase=(view.time-700)/1000-i*3.5,radius=phase<0?-1:phase%10.5*2.7;waves[i].visible=radius>=0&&radius<6.9;waves[i].scale.setScalar(Math.max(.001,radius));}
-    kit.render();host.dataset.actors=JSON.stringify(view.actors.map(a=>({id:a.id,x:Number(a.x.toFixed(2)),z:Number(a.z.toFixed(2)),y:Number(a.y.toFixed(2)),jumpAt:a.jumpAt,punchAt:a.punchAt,punch:view.time<a.punchUntil})));
+    kit.render();host.dataset.actors=JSON.stringify(view.actors.map(a=>({id:a.id,characterId:a.characterId,x:Number(a.x.toFixed(2)),z:Number(a.z.toFixed(2)),y:Number(a.y.toFixed(2)),jumpAt:a.jumpAt,punchAt:a.punchAt,punch:view.time<a.punchUntil})));
     frame=requestAnimationFrame(animate);
   };
   frame=requestAnimationFrame(animate);

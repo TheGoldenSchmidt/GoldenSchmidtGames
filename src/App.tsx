@@ -12,6 +12,7 @@ import { KribbelnGameScreen } from "./screens/KribbelnGameScreen";
 import { PartyGameScreen, PARTY_ONLINE_SAVE, readPartySave, type PartySavedSession } from "./screens/PartyGameScreen";
 import { RoomScreen } from "./screens/RoomScreen";
 import { GameIntro } from "./components/GameIntro";
+import type {CharacterId} from "../shared/characters";
 
 type View = "home" | "local-setup" | "online-entry" | "room" | "game-local" | "game-online";
 
@@ -22,6 +23,7 @@ export default function App() {
   const [online, setOnline] = useState(navigator.onLine);
   const [room, setRoom] = useState<RoomState>();
   const [localNames, setLocalNames] = useState<string[]>([]);
+  const [localCharacters,setLocalCharacters]=useState<CharacterId[]>([]);
   const [localGameId, setLocalGameId] = useState<GameId>("qwixx");
   const [localDurakCheatMode, setLocalDurakCheatMode] = useState(false);
   const [playIntro, setPlayIntro] = useState(false);
@@ -82,6 +84,7 @@ export default function App() {
           onStart={(gameId, names, options) => {
             setLocalGameId(gameId);
             setLocalNames(names);
+            setLocalCharacters(options?.characters??[]);
             setLocalDurakCheatMode(options?.durakCheatMode ?? false);
             setPlayIntro(true);
             setView("game-local");
@@ -92,6 +95,7 @@ export default function App() {
         <OnlineEntryScreen
           profile={profile}
           onBack={() => setView("home")}
+          onCharacterChange={id=>updateProfile({...profile,characterId:id})}
           onJoined={(nextRoom) => {
             setRoom(nextRoom);
             setPlayIntro(false);
@@ -108,11 +112,11 @@ export default function App() {
         />
       )}
       {view === "game-local" && (
-        <GameIntro gameId={localGameId} players={localNames.map((name, index) => ({ id: `local-${index}`, name }))} enabled={playIntro}>
+        <GameIntro gameId={localGameId} players={localNames.map((name, index) => ({ id: `local-${index}`, name, characterId:localCharacters[index] }))} enabled={playIntro}>
           {localGameId === "qwixx"
-            ? <QwixxGameScreen profile={profile} localNames={localNames} onExit={() => setView("home")} />
-            : localGameId === "durak" ? <DurakGameScreen profile={profile} localNames={localNames} cheatMode={localDurakCheatMode} onExit={() => setView("home")} />
-            : localGameId === "kribbeln" && <KribbelnGameScreen profile={profile} localNames={localNames} onExit={() => setView("home")} />}
+            ? <QwixxGameScreen profile={profile} localNames={localNames} localCharacters={localCharacters} onExit={() => setView("home")} />
+            : localGameId === "durak" ? <DurakGameScreen profile={profile} localNames={localNames} localCharacters={localCharacters} cheatMode={localDurakCheatMode} onExit={() => setView("home")} />
+            : localGameId === "kribbeln" && <KribbelnGameScreen profile={profile} localNames={localNames} localCharacters={localCharacters} onExit={() => setView("home")} />}
         </GameIntro>
       )}
       {view === "game-online" && room && (

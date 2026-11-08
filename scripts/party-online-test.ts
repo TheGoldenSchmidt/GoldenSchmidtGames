@@ -13,7 +13,7 @@ const request=<T=RoomState>(s:Socket,event:string,payload?:unknown)=>new Promise
 async function connect(){const s=io(url,{transports:["websocket"],forceNew:true,reconnection:false});sockets.push(s);await new Promise<void>((resolve,reject)=>{s.once("connect",()=>resolve());s.once("connect_error",reject);});return s;}
 try{
   const host=await connect(),guest=await connect();const a="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",b="bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
-  let room=await request(host,"room:create",{playerId:a,name:"Ada"});await request(guest,"room:join",{playerId:b,name:"Ben",code:room.code});
+  let room=await request(host,"room:create",{characterId:"alpha_rick_prime",playerId:a,name:"Ada"});await request(guest,"room:join",{characterId:"alpha_rick_prime",playerId:b,name:"Ben",code:room.code});
   await assert.rejects(request(guest,"room:configure",{gameId:"party",playerCount:2}));
   await request(host,"room:configure",{gameId:"party",playerCount:2,party:{rounds:5,tempo:"fast",analog:true}});
   await request(host,"room:ready");room=await request(guest,"room:ready");
@@ -42,8 +42,8 @@ try{
   await assert.rejects(request(guest,"room:configure",{gameId:"qwixx",playerCount:2}));
   guest.disconnect();await new Promise(resolve=>setTimeout(resolve,50));
   const state=await request(host,"qwixx:state");assert.ok(state.partyGame!.pausedAt>0);
-  const restored=await connect();await assert.rejects(request(restored,"room:join",{code:room.code,playerId:b,name:"Ben"}));
-  const returned=await request(restored,"room:join",{code:room.code,playerId:b,name:"Ben",partyToken:guestToken});assert.equal(returned.partyGame!.pausedAt,0);assert.equal(returned.partyToken,guestToken);
+  const restored=await connect();await assert.rejects(request(restored,"room:join",{characterId:"alpha_rick_prime",code:room.code,playerId:b,name:"Ben"}));
+  const returned=await request(restored,"room:join",{characterId:"alpha_rick_prime",code:room.code,playerId:b,name:"Ben",partyToken:guestToken});assert.equal(returned.partyGame!.pausedAt,0);assert.equal(returned.partyToken,guestToken);
   byId[b]=restored;room=returned;
   const sendAs=async(id:string,action:PartyAction)=>{room=await request(byId[id],"party:action",{seq:(room.partyGame!.seq[id]??0)+1,phaseId:room.partyGame!.phaseId,token:tokens[id],action});};
   // Both devices control separate figures in the same server-authoritative arena.
@@ -71,7 +71,7 @@ try{
   restored.disconnect();await new Promise(resolve=>setTimeout(resolve,60));room=await request(host,"qwixx:state");assert.ok(room.partyGame!.pausedAt>0);
   const pausedTime=room.partyGame!.mini!.arena!.time;
   await new Promise(resolve=>setTimeout(resolve,200));room=await request(host,"qwixx:state");assert.equal(room.partyGame!.mini!.arena!.time,pausedTime,"Echtzeit-Physik pausiert mit dem Raum");
-  const arenaRejoin=await connect();room=await request(arenaRejoin,"room:join",{code:room.code,playerId:b,name:"Ben",partyToken:guestToken});byId[b]=arenaRejoin;assert.equal(room.partyGame!.pausedAt,0);
+  const arenaRejoin=await connect();room=await request(arenaRejoin,"room:join",{characterId:"alpha_rick_prime",code:room.code,playerId:b,name:"Ben",partyToken:guestToken});byId[b]=arenaRejoin;assert.equal(room.partyGame!.pausedAt,0);
   for(let count=0;count<400&&room.partyGame!.phase!=="finished";count++){
     const g=room.partyGame!,p=activePartyPlayer(g);
     if(g.phase==="turn")await command({type:"roll"});

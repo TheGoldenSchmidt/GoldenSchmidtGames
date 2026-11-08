@@ -1,3 +1,5 @@
+import {CharacterAvatar,playerCharacters} from "../components/CharacterAvatar";
+import type {CharacterId} from "../../shared/characters";
 import { useEffect, useRef, useState } from "react";
 import { canEnterKribbelSum, createKribbelnGame, KRIBBEL_ROWS, kribbelTaskMet, rollKribbeln, submitKribbeln, type KribbelnGame } from "../../shared/kribbeln";
 import { KRIBBEL_ROLL_DURATION } from "../components/KribbelnDice";
@@ -6,7 +8,8 @@ import { KribbelnTask } from "../components/KribbelnTask";
 import type { GuestProfile, RoomState } from "../../shared/types";
 import { socket } from "../lib/socket";
 
-export function KribbelnGameScreen({ profile, localNames, initialRoom, onExit }: { profile: GuestProfile; localNames?: string[]; initialRoom?: RoomState; onExit: () => void }) {
+export function KribbelnGameScreen({ profile, localNames, localCharacters, initialRoom, onExit }: { profile: GuestProfile; localNames?: string[]; localCharacters?:CharacterId[]; initialRoom?: RoomState; onExit: () => void }) {
+  const characters=playerCharacters(initialRoom,localNames,localCharacters);
   const online = Boolean(initialRoom);
   const [room, setRoom] = useState(initialRoom);
   const [local, setLocal] = useState<KribbelnGame | undefined>(() => localNames ? createKribbelnGame(localNames.map((name, i) => ({ id: `local-${i}`, name }))) : undefined);
@@ -77,11 +80,11 @@ export function KribbelnGameScreen({ profile, localNames, initialRoom, onExit }:
   return <main className="page screen-enter kribbel-game">
     <header className="game-header"><strong>Kribbeln</strong><span>{online ? `Online · ${room?.code}` : "Lokal"}</span><button className="text-button" onClick={onExit}>Beenden</button></header>
     <section className="page__content">
-      <div className="kribbel-score-strip" aria-label="Punktestand">{standings.map(id => <span key={id} className={id === active && !game.finished ? "is-active" : ""}>{game.names[id]} <strong>{game.scores[id]}</strong></span>)}</div>
-      {game.finished ? <section className="kribbel-finale"><span aria-hidden="true">★</span><h1>Partie beendet</h1><p>Gewonnen: {game.winners.map(id => game.names[id]).join(", ")}</p><ol>{standings.map(id => <li key={id}>{game.names[id]} <strong>{game.scores[id]} Punkte</strong></li>)}</ol></section> : <>
+      <div className="kribbel-score-strip" aria-label="Punktestand">{standings.map(id => <span key={id} className={id === active && !game.finished ? "is-active" : ""}><CharacterAvatar id={characters[id]} decorative/>{game.names[id]} <strong>{game.scores[id]}</strong></span>)}</div>
+      {game.finished ? <section className="kribbel-finale"><span aria-hidden="true">★</span><h1>Partie beendet</h1><p>Gewonnen: {game.winners.map(id => game.names[id]).join(", ")}</p><ol>{standings.map(id => <li key={id}><CharacterAvatar id={characters[id]} decorative/>{game.names[id]} <strong>{game.scores[id]} Punkte</strong></li>)}</ol></section> : <>
         <div className="kribbel-round"><span>Runde {game.row + 1} / 10</span><progress value={game.row} max={10} aria-label="Spielfortschritt" /></div>
         <div className="kribbel-play">
-        <section className="kribbel-mission"><span>{canAct ? `${game.names[active]}, du bist dran!` : `${game.names[active]} ist am Zug`}</span><h1>{row.label}</h1><KribbelnTask task={row.task} label={row.label} dice={game.dice} rolling={rolling} previousBest={previousBest} /><div className="kribbel-attempts" aria-label={`Wurf ${game.rolls} von 3`}>{[1, 2, 3].map(n => <span className={n <= game.rolls ? "is-used" : ""} key={n}>{n}</span>)}<small>{3 - game.rolls} Würfe übrig</small></div></section>
+        <section className="kribbel-mission"><span className="character-turn-label"><CharacterAvatar id={characters[active]} decorative/>{canAct ? `${game.names[active]}, du bist dran!` : `${game.names[active]} ist am Zug`}</span><h1>{row.label}</h1><KribbelnTask task={row.task} label={row.label} dice={game.dice} rolling={rolling} previousBest={previousBest} /><div className="kribbel-attempts" aria-label={`Wurf ${game.rolls} von 3`}>{[1, 2, 3].map(n => <span className={n <= game.rolls ? "is-used" : ""} key={n}>{n}</span>)}<small>{3 - game.rolls} Würfe übrig</small></div></section>
         <div className="kribbel-table-side">
         <KribbelnTable ref={cup} dice={game.dice} kept={rolling || !canAct ? game.keptDice ?? [] : kept}
           rolling={rolling} pending={pending} canAct={canAct} canRoll={canAct && !pending && !rolling && game.rolls < 3 && kept.length < 6}
@@ -96,7 +99,7 @@ export function KribbelnGameScreen({ profile, localNames, initialRoom, onExit }:
         </div>
         </div>
       </>}
-      <details className="kribbel-scorebook" open={game.finished}><summary>Wertungsblatt ansehen</summary><div className="kribbel-sheet"><table><thead><tr><th>Aufgabe</th>{game.order.map(id => <th key={id}>{game.names[id]}<br />{game.scores[id]} P.</th>)}</tr></thead><tbody>{KRIBBEL_ROWS.map((entry, i) => <tr key={i} className={i === game.row && !game.finished ? "is-current" : ""}><th>{entry.label}</th>{game.order.map(id => <td key={id}>{game.results[id][i] === -1 ? "–" : game.results[id][i] === null ? "×" : game.results[id][i]}</td>)}</tr>)}</tbody></table></div></details>
+      <details className="kribbel-scorebook" open={game.finished}><summary>Wertungsblatt ansehen</summary><div className="kribbel-sheet"><table><thead><tr><th>Aufgabe</th>{game.order.map(id => <th key={id}><CharacterAvatar id={characters[id]} decorative/>{game.names[id]}<br />{game.scores[id]} P.</th>)}</tr></thead><tbody>{KRIBBEL_ROWS.map((entry, i) => <tr key={i} className={i === game.row && !game.finished ? "is-current" : ""}><th>{entry.label}</th>{game.order.map(id => <td key={id}>{game.results[id][i] === -1 ? "–" : game.results[id][i] === null ? "×" : game.results[id][i]}</td>)}</tr>)}</tbody></table></div></details>
       <details><summary>Spielregeln · digitales Aufgabenblatt</summary><p>Bis zu drei Würfe pro Zug. Behaltene Würfel können jederzeit wieder freigegeben werden. Gewertet wird die Summe aller sechs Würfel, wenn die Farbaufgabe erfüllt ist. Bei Misserfolg kannst du streichen oder auf ein freies Kribbelfeld derselben Gruppe ausweichen und die Aufgabe erneut versuchen. Kribbelsummen müssen immer höher als die bisherigen eigenen Kribbelsummen sein.</p><p>Pro Zeile erhält der Beste so viele Punkte, wie Spieler teilnehmen. Jeder weitere Platz erhält einen Punkt weniger; gleiche Summen zählen zum niedrigeren Platz. Ein Kreuz ergibt null Punkte.</p><p>Jeder Würfel trägt die Zahlen 1 bis 6 und jede der sechs Farben genau einmal. Über alle sechs Würfel kommt jedes Zahl-Farbe-Paar genau einmal vor. Dieses digitale Blatt verwendet eigene Farb-Zahlen-Zuordnungen.</p></details>
       {game.finished && <button className="button button--primary button--wide" onClick={onExit}>Zum Startmenü</button>}
     </section>

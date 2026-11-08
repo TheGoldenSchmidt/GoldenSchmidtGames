@@ -1,3 +1,4 @@
+import {preloadFigures} from "../figures/catalog";
 import { useEffect, useRef, useState } from "react";
 import { ARENA_META, checkedInput, NEUTRAL_INPUT, type ArenaInput } from "../../shared/partyArena";
 import type { PartyGame } from "../../shared/party";
@@ -21,7 +22,7 @@ export function PartyArena({game,id,now,control,busy=false}:{game:PartyGame;id:s
   frame.current={arena,viewer:id,elapsed:Math.max(0,now-game.mini!.startAt),input:active?readInput():NEUTRAL_INPUT,reduce:reduced,names:Object.fromEntries(game.players.map(p=>[p.id,p.name])),paused:!active};
   useEffect(()=>{
     if(error)return;let cancelled=false,world:{dispose:()=>void}|undefined;
-    void import("../three/arenaWorld").then(({createArenaWorld})=>{if(cancelled||!host.current)return;try{world=createArenaWorld(host.current,()=>frame.current,()=>setError(true));setReady(true);}catch{setError(true);}}).catch(()=>setError(true));
+    void Promise.all([import("../three/arenaWorld"),preloadFigures(arena.actors.map(a=>a.characterId))]).then(([{createArenaWorld}])=>{if(cancelled||!host.current)return;try{world=createArenaWorld(host.current,()=>frame.current,()=>setError(true));setReady(true);}catch{setError(true);}}).catch(()=>setError(true));
     return()=>{cancelled=true;world?.dispose();};
   },[arena.id,game.mini!.startAt,id,error]);
   useEffect(()=>{

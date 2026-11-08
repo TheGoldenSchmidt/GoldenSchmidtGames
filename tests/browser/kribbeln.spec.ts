@@ -9,6 +9,7 @@ async function localGame(page: Page, reduced = false) {
   await page.goto("/");
   await page.getByRole("button", { name: /Lokal spielen/ }).click();
   await page.getByRole("button", { name: /^Kribbeln / }).first().click();
+  for(let n=1;n<=2;n++)await page.getByRole("combobox",{name:`Figur von Spieler ${n}`,exact:true}).selectOption("alpha_rick_prime");
   await page.getByRole("button", { name: "Kribbeln starten", exact: true }).click();
   if (!reduced) await page.getByRole("button", { name: "Intro überspringen" }).click();
   await expect(page.getByRole("heading", { name: KRIBBEL_ROWS[0].label, exact: true })).toBeVisible();
@@ -206,11 +207,13 @@ test("Online sehen beide Geräte behaltene Würfel und dieselben gelandeten Farb
     await page.addInitScript(profile => localStorage.setItem("spielraum.profile.v1", JSON.stringify(profile)), { id: randomUUID(), username: "Anna" });
     await observer.addInitScript(profile => localStorage.setItem("spielraum.profile.v1", JSON.stringify(profile)), { id: randomUUID(), username: "Ben" });
     await page.goto("/"); await page.getByRole("button", { name: /Online spielen/ }).click();
+    await page.getByRole("button",{name:"Prime Rick",exact:true}).click();
     await page.getByRole("button", { name: "Neuen Raum erstellen", exact: true }).click();
     await page.getByRole("combobox", { name: "Ausgewähltes Spiel", exact: true }).selectOption("kribbeln");
     const code = await page.locator(".room-code strong").innerText();
     await observer.goto(new URL("/", page.url()).href); await observer.getByRole("button", { name: /Online spielen/ }).click();
     await observer.getByRole("textbox", { name: "Raumcode" }).fill(code);
+    await observer.getByRole("button",{name:"Morty Smith",exact:true}).click();
     await observer.getByRole("button", { name: "Raum beitreten", exact: true }).click();
     await observer.getByRole("button", { name: "Ich bin bereit", exact: true }).click();
     await page.getByRole("button", { name: "Ich bin bereit", exact: true }).click();

@@ -1,0 +1,67 @@
+[
+  {
+    "id": "alpha_rick_prime",
+    "source": "packages/engine/src/data/figures/alpha_rick_prime.json",
+    "sha256": "78cc863b7482dfc3b1a253820199616675569b8b374bf5931712442635b04af3"
+  },
+  {
+    "id": "alpha_morty_smith",
+    "source": "packages/engine/src/data/figures/alpha_morty_smith.json",
+    "sha256": "c78f58585bee56fe543237b5a9c4889e975db772f7c25bb64d6957779be2562f"
+  },
+  {
+    "id": "alpha_summer_smith",
+    "source": "packages/engine/src/data/figures/alpha_summer_smith.json",
+    "sha256": "34096208922f07aefa78224b91c8528d6cf7f150b968659e5935e574116dba02"
+  },
+  {
+    "id": "alpha_jerry_smith",
+    "source": "packages/engine/src/data/figures/alpha_jerry_smith.json",
+    "sha256": "f45cf6938722c9aaa4e87b7b5853443bffd6e2765ec43e85f1ec1040fb7a3bb9"
+  },
+  {
+    "id": "alpha_mr_nimbus",
+    "source": "packages/engine/src/data/figures/alpha_mr_nimbus.json",
+    "sha256": "285430c72d83b69d2aea608ec172f811b40912e4ae396c0a22de1e68f5e5e4f9"
+  },
+  {
+    "id": "alpha_scary_terry",
+    "source": "packages/engine/src/data/figures/alpha_scary_terry.json",
+    "sha256": "7d56d3a1c94e729142dde99885b0ccd1c711b4f0b3686b8636a4fd492b3a4e9f"
+  },
+  {
+    "id": "alpha_mr_poopybutthole",
+    "source": "packages/engine/src/data/figures/alpha_mr_poopybutthole.json",
+    "sha256": "b17650e42e4ba24300fbc3c47d5e377d743991300a81537d79e15fbb5690a046"
+  },
+  {
+    "id": "alpha_captain_diabetes",
+    "source": "packages/engine/src/data/figures/alpha_captain_diabetes.json",
+    "sha256": "0e676dbb152533746aa663b938c9c30ee488bbbaea9c241b761e78254e654619"
+  },
+  {
+    "id": "alpha_doctor_timothy",
+    "source": "packages/engine/src/data/figures/alpha_doctor_timothy.json",
+    "sha256": "f4541a79b16a26405149b735f4fb8245764abf043e97aef9cde866cd456dce5f"
+  },
+  {
+    "id": "alpha_the_coon",
+    "source": "packages/engine/src/data/figures/alpha_the_coon.json",
+    "sha256": "dcfb85680feb160432d094106f1ab4904dd695a0528226774e821263eeacbf8b"
+  },
+  {
+    "id": "alpha_eric_cartman",
+    "source": "packages/engine/src/data/figures/alpha_eric_cartman.json",
+    "sha256": "a7323fffaea8636d4b98778a1d91baeb4884f0c15a5826b3ce1eee93ab0cd8bb"
+  },
+  {
+    "id": "alpha_pupa",
+    "source": "packages/engine/src/data/figures/alpha_pupa.json",
+    "sha256": "6480ac66192a78ff8b8efb495c367a13eb4499c9990437742d3c46342c6266b8"
+  },
+  {
+    "id": "alpha_korvo",
+    "source": "packages/engine/src/data/figures/alpha_korvo.json",
+    "sha256": "4b25da0717f6d01cf26cb463fb76670cb9fbb44007965fd2501be7e0a3f03b47"
+  }
+]

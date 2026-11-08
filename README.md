@@ -9,6 +9,7 @@ Eine installierbare Smartphone-PWA für lokale und Online-Spiele. Das aktuelle G
 - gemeinsame Spieldefinitionen für lokalen und Online-Modus
 - Qwixx-, Durak- und Kribbeln-Spielmodule für lokale und Online-Partien
 - Offline-Cache als installierbare PWA
+- 13 freigegebene alpha_-Charaktere mit Pflichtauswahl vor Raumzugang und zufälliger Bot-Zuordnung; dieselbe Figur in allen Spielen
 - Inselparty für 2–6 Personen ausschließlich online: eine echte 3D-Insel, eigene steuerbare Figuren, 34 Felder, fünf Items und sechs gemeinsame 3D-Minispiele mit Touch-, Tastatur- und Neigungssteuerung
 
 Das Qwixx-Modul enthält den gemeinsamen weißen Wurf, die zusätzliche Farbaktion der aktiven Person, vier getrennte Wertungsblätter, Fehlwürfe, Reihenschlüsse, automatische Wertung und die Spielergebnisanzeige.
@@ -74,7 +75,7 @@ npm run test:production
 npm run test:browser
 ```
 
-Für die Browsertests einmal `npx playwright install chromium` ausführen. Die CI installiert Chromium automatisch und nutzt Software-WebGL. Die Tests umfassen 55 vollständige simulierte Online-Partien, die Brett-/Item-Regeln, deterministische Replays aller sechs Arenen, Sprünge, Schläge, Hindernisse, Wellen, Stürze, Checkpoints und Sensorachsen. Echte Socket-Tests prüfen getrennte Figurensteuerung, Sitzungsschutz, veraltete Eingaben, Pause, Wiederbeitritt und eine vollständige Partie. 42 Handy-/Desktop-Browsertests prüfen die Spiel-Intros mit Kamerafahrt, Überspringen, reduzierter Bewegung und WebGL-Ersatz, neue Online-Spielstarts sowie echte WebGL-Szenen, Kamerasteuerung, alle sechs Minispiele, Touch-Stick und Tastatur, gemeinsame Figuren sowie freigegebene/verweigerte/ausbleibende Sensoren. Die Sensordaten sind dabei simuliert; physische Geräte müssen zusätzlich praktisch geprüft werden. Screenshots und Fehlertraces liegen lokal unter `test-results/` (nicht versioniert).
+Für die Browsertests einmal `npx playwright install chromium` ausführen. Die CI installiert Chromium automatisch und nutzt Software-WebGL. Die Tests umfassen 55 vollständige simulierte Online-Partien, die Brett-/Item-Regeln, deterministische Replays aller sechs Arenen, Sprünge, Schläge, Hindernisse, Wellen, Stürze, Checkpoints und Sensorachsen. Echte Socket-Tests prüfen getrennte Figurensteuerung, Sitzungsschutz, veraltete Eingaben, Pause, Wiederbeitritt und eine vollständige Partie. 66 Handy-/Desktop-Browsertests prüfen die Spiel-Intros mit Kamerafahrt, Überspringen, reduzierter Bewegung und WebGL-Ersatz, neue Online-Spielstarts sowie echte WebGL-Szenen, Kamerasteuerung, alle sechs Minispiele, Touch-Stick und Tastatur, gemeinsame Figuren sowie freigegebene/verweigerte/ausbleibende Sensoren. Die Sensordaten sind dabei simuliert; physische Geräte müssen zusätzlich praktisch geprüft werden. Screenshots und Fehlertraces liegen lokal unter `test-results/` (nicht versioniert).
 
 Die Schritte für einen öffentlichen HTTPS-Link und einen Docker-fähigen Hoster stehen in [DEPLOYMENT.md](DEPLOYMENT.md).
 

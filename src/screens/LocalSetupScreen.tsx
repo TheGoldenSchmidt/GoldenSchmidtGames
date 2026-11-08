@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { GAMES, getGame } from "../../shared/games";
 import type { GameId } from "../../shared/types";
+import {CHARACTERS,isCharacterId,type CharacterId} from "../../shared/characters";
+import {CharacterAvatar} from "../components/CharacterAvatar";
 import { ScreenHeader } from "../components/ScreenHeader";
 
 export function LocalSetupScreen({
@@ -8,11 +10,12 @@ export function LocalSetupScreen({
   onStart
 }: {
   onBack: () => void;
-  onStart: (gameId: GameId, names: string[], options?: { durakCheatMode: boolean }) => void;
+  onStart: (gameId: GameId, names: string[], options?: { durakCheatMode: boolean; characters:CharacterId[] }) => void;
 }) {
   const [gameId, setGameId] = useState<GameId>("qwixx");
   const game = getGame(gameId);
   const [count, setCount] = useState(2);
+  const [characters,setCharacters]=useState<Array<CharacterId|undefined>>([]);
   const [names, setNames] = useState(["Spieler 1", "Spieler 2"]);
   const [durakCheatMode, setDurakCheatMode] = useState(false);
 
@@ -72,7 +75,7 @@ export function LocalSetupScreen({
 
         <div className="player-fields">
           {visibleNames.map((name, index) => (
-            <label className="field field--player" key={index}>
+            <div className="local-player-setup" key={index}><label className="field field--player">
               <span className="player-number">{index + 1}</span>
               <input
                 value={name}
@@ -84,7 +87,7 @@ export function LocalSetupScreen({
                   setNames(next);
                 }}
               />
-            </label>
+            </label><label className="local-character-field"><CharacterAvatar id={characters[index]}/><span>Figur von Spieler {index+1}<select aria-label={`Figur von Spieler ${index+1}`} value={characters[index]??""} onChange={event=>{const id=event.target.value;if(isCharacterId(id))setCharacters(current=>{const next=[...current];next[index]=id;return next;});}}><option value="" disabled>Figur wählen</option>{CHARACTERS.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></span></label></div>
           ))}
         </div>
 
@@ -96,7 +99,7 @@ export function LocalSetupScreen({
         )}
       </section>
       <div className="sticky-action">
-        <button className="button button--primary button--wide" onClick={() => onStart(gameId, visibleNames.map((name, index) => name.trim() || `Spieler ${index + 1}`), { durakCheatMode })}>
+        <button className="button button--primary button--wide" disabled={visibleNames.some((_,i)=>!isCharacterId(characters[i]))} onClick={() => onStart(gameId, visibleNames.map((name, index) => name.trim() || `Spieler ${index + 1}`), { durakCheatMode, characters:characters.slice(0,count) as CharacterId[] })}>
           {game.name} starten
         </button>
       </div>

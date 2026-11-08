@@ -6,6 +6,8 @@ import { socket } from "../lib/socket";
 import { PartySettings } from "../components/PartySettings";
 import type { PartyOptions } from "../../shared/party";
 import { PartyCharacterPicker } from "../components/PartyCharacterPicker";
+import {CharacterAvatar} from "../components/CharacterAvatar";
+import {preloadFigures} from "../figures/catalog";
 import { CHARACTERS, characterId, type CharacterId } from "../../shared/characters";
 
 export function RoomScreen({
@@ -22,6 +24,7 @@ export function RoomScreen({
   const [room, setRoom] = useState(initialRoom);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
+  const [chooseFigure,setChooseFigure]=useState(false);
   const isHost = room.hostId === profile.id;
   const connectedCount = room.players.filter((player) => player.connected).length;
   const readyCount = room.players.filter((player) => player.connected && player.ready).length;
@@ -42,6 +45,8 @@ export function RoomScreen({
       socket.off("game:started", start);
     };
   }, [onGameStart]);
+
+  useEffect(()=>{void preloadFigures(room.players.map(p=>p.characterId)).catch(()=>{});},[room.players.map(p=>p.characterId).join()]);
 
   function configure(gameId: GameId, playerCount: number, durakCheatMode = room.config.durakCheatMode ?? false, party:PartyOptions|undefined=room.config.party) {
     socket.emit("room:configure", { gameId, playerCount, durakCheatMode, party }, (response: { ok: boolean; error?: string }) => {
@@ -72,7 +77,8 @@ export function RoomScreen({
           <strong>{room.code}</strong>
         </button>}
 
-        {room.config.gameId==="party"&&<PartyCharacterPicker value={room.players.find(p=>p.id===profile.id)?.characterId} index={Math.max(0,room.players.findIndex(p=>p.id===profile.id))} onChange={chooseCharacter}/>}
+        <button className="lobby-character-button" onClick={()=>setChooseFigure(value=>!value)} aria-expanded={chooseFigure}><CharacterAvatar id={room.players.find(p=>p.id===profile.id)?.characterId}/><span><small>Deine Spielfigur</small><strong>{CHARACTERS.find(c=>c.id===room.players.find(p=>p.id===profile.id)?.characterId)?.name}</strong></span><b>{chooseFigure?"Figurenwahl schließen":"Spielfigur ändern"}</b></button>
+        {chooseFigure&&<PartyCharacterPicker value={room.players.find(p=>p.id===profile.id)?.characterId} index={Math.max(0,room.players.findIndex(p=>p.id===profile.id))} onChange={chooseCharacter}/>}
 
         <div className="section-heading section-heading--row">
           <div>
@@ -85,10 +91,10 @@ export function RoomScreen({
         <div className="player-list">
           {room.players.map((player) => (
             <div className={`player-row ${!player.connected ? "is-disconnected" : ""}`} key={player.id}>
-              <span className="player-avatar">{player.name.slice(0, 1).toUpperCase()}</span>
+              <CharacterAvatar id={player.characterId} className="player-avatar"/>
               <span className="player-row__name">
                 <strong>{player.name}{player.id === profile.id ? " (du)" : ""}</strong>
-                <small>{player.bot?"Bot":player.id === room.hostId ? "Host" : player.connected ? "Verbunden" : "Verbindung getrennt"}{room.config.gameId==="party"?` · ${CHARACTERS.find(c=>c.id===characterId(player.characterId,room.players.indexOf(player)))!.name}`:""}</small>
+                <small>{player.bot?"Bot":player.id === room.hostId ? "Host" : player.connected ? "Verbunden" : "Verbindung getrennt"}{` · ${CHARACTERS.find(c=>c.id===characterId(player.characterId,room.players.indexOf(player)))!.name}`}</small>
               </span>
               <span className={`ready-mark ${player.ready ? "is-ready" : ""}`}>{player.ready ? "Bereit" : "Wartet"}</span>
             </div>
@@ -125,7 +131,7 @@ export function RoomScreen({
           </label>
         </div>
 
-        {room.config.gameId === "party" && <PartySettings value={room.config.party} disabled={!isHost} onChange={value=>configure("party",room.config.playerCount,false,value)}/>}
+        {room.config.gameId === "party" && <PartySettings characterId={room.players.find(p=>p.id===profile.id)?.characterId} value={room.config.party} disabled={!isHost} onChange={value=>configure("party",room.config.playerCount,false,value)}/>}
         {room.config.gameId === "durak" && (
           <label className="option-toggle">
             <span><strong>Schummelmodus</strong><small>Regelwidrig decken oder nachlegen – auf eigenes Risiko.</small></span>

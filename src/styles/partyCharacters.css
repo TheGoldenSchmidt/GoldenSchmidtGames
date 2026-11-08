@@ -32,3 +32,35 @@
 .party-test-tools button:disabled{opacity:.5}
 @media(min-width:760px){.app-shell:has(.party-character-picker){width:min(100%,1000px)}.room:has(.party-character-picker){max-width:900px;margin:auto}.party-character-picker{grid-template-columns:40% 60%}.party-character-stage{display:flex;align-items:center}.party-character-canvas{width:100%;height:340px}.party-character-choice{padding:24px}}
 @media(prefers-reduced-motion:reduce){.party-character-picker *{animation:none!important;transition:none!important}}
+
+/* One live stage, small static portraits: the roster stays light on phones. */
+.party-character-stage{background:radial-gradient(ellipse at 50% 90%,#d0f5e9 0%,#a2dfdf 52%,#87cbd4 100%)}
+.party-character-grid button{position:relative;display:flex;flex-direction:column;justify-content:flex-start;gap:5px;text-align:center;font-size:.76rem;line-height:1.2;padding:7px 4px 10px;transition:background .16s,border-color .16s,transform .16s}
+.party-character-grid button:hover{background:#fff6d6;transform:translateY(-2px)}
+.party-character-grid button:focus-visible{outline:3px solid #10485b;outline-offset:3px}
+.party-character-grid button img{width:70px;height:76px;max-width:100%;object-fit:contain;filter:drop-shadow(0 3px 2px #10485b22)}
+.party-character-grid button span{position:absolute;right:5px;top:5px;margin:0;border-radius:50%;background:#10485b;color:#fff;width:19px;height:19px;display:grid;place-items:center}
+.party-character-grid button[aria-pressed=true]{box-shadow:0 3px 0 #10485b22}
+.party-character-grid button:disabled{cursor:wait}
+.character-invitation{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;pointer-events:none;padding:20px}
+.character-invitation>span{width:76px;height:90px;border-radius:40% 40% 35% 35%;display:grid;place-items:center;background:#10485b;color:#ffd258;font-size:3rem;font-weight:900;box-shadow:0 10px 0 #10485b22;margin-bottom:20px;transform:rotate(-5deg)}
+.character-invitation strong{font-size:1.35rem}.character-invitation p{margin:8px 0}
+.character-avatar{display:inline-flex;flex:0 0 42px;align-items:center;justify-content:center;width:42px;height:44px;vertical-align:middle;overflow:hidden;background:#e3f1e9;border-radius:13px;border:1px solid #10485b22;color:#10485b;font-weight:800}
+.character-avatar img{width:100%;height:100%;object-fit:contain;display:block}
+.character-avatar.party-avatar{padding:0;overflow:hidden}.character-avatar.player-avatar{padding:0}
+.character-turn-label{display:flex!important;align-items:center;justify-content:center;gap:8px}
+.kribbel-score-strip .character-avatar{width:30px;height:32px;flex-basis:30px;margin-right:4px}
+.kribbel-scorebook .character-avatar{display:flex;margin:0 auto 4px;width:30px;height:32px}
+.party-ready-players .character-avatar{width:28px;height:30px;flex-basis:28px;margin-right:4px}
+.party-mini-player>.character-avatar{padding:0;background:#e3f1e9}
+.result-player__total>span{display:flex;align-items:center;gap:8px}
+.local-player-setup{margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid #10485b22}
+.local-character-field{display:flex;align-items:center;gap:10px;margin-top:8px}
+.local-character-field>span{display:grid;gap:5px;flex:1;min-width:0;font-size:.85rem}
+.local-character-field select{width:100%;min-height:44px;border-radius:10px;padding:8px;border:1px solid #a0b6bc;background:white;color:#10485b}
+@media(min-width:760px){.party-character-stage{align-items:center}.party-character-canvas{height:370px}.party-character-choice{padding:22px}.party-character-picker{grid-template-columns:36% 64%}.party-character-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(prefers-reduced-motion:reduce){.party-character-grid button:hover{transform:none}}
+
+.lobby-character-button{width:100%;display:flex;align-items:center;gap:12px;padding:12px;border:1px solid #bbd9d3;background:#e5f5ef;color:#10485b;border-radius:16px;text-align:left;cursor:pointer;margin:12px 0 24px}
+.lobby-character-button>span:nth-child(2){display:grid;gap:3px;flex:1}.lobby-character-button small{font-size:.75rem}.lobby-character-button b{max-width:12ch;font-size:.8rem;text-align:right}
+.lobby-character-button:focus-visible{outline:3px solid #10485b;outline-offset:3px}

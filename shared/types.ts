@@ -111,6 +111,7 @@ export interface RoomState {
 export interface GuestProfile {
   id: string;
   username: string;
+  characterId?: import("./characters").CharacterId;
 }
 
 export interface Ack<T = undefined> {

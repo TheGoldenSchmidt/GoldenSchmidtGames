@@ -1,3 +1,4 @@
+import {preloadFigures} from "../figures/catalog";
 import { useEffect, useRef, useState } from "react";
 import { activePartyPlayer, BOARD, FIELD_LABELS, type PartyGame } from "../../shared/party";
 import type { BoardFrame } from "../three/boardWorld";
@@ -14,7 +15,7 @@ export function PartyBoard({game,rolling=false,onTravelChange}:{game:PartyGame;r
   const current=useRef<BoardFrame>({game,positions,zoom,angle,follow,reduce:reduced});current.current={game,positions,zoom,angle,follow,reduce:reduced};
   useEffect(()=>{
     if(error)return;let cancelled=false,world:{dispose:()=>void}|undefined;
-    void import("../three/boardWorld").then(({createBoardWorld})=>{if(cancelled||!host.current)return;try{world=createBoardWorld(host.current,()=>current.current,setSelected,()=>setError(true));setReady(true);}catch{setError(true);}}).catch(()=>setError(true));
+    void Promise.all([import("../three/boardWorld"),preloadFigures(game.players.map(p=>p.characterId))]).then(([{createBoardWorld}])=>{if(cancelled||!host.current)return;try{world=createBoardWorld(host.current,()=>current.current,setSelected,()=>setError(true));setReady(true);}catch{setError(true);}}).catch(()=>setError(true));
     return()=>{cancelled=true;world?.dispose();};
   },[error]);
   useEffect(()=>{if(game.dice.length&&!reduced)setFollow(true);},[game.dice.join(),turn,reduced]);

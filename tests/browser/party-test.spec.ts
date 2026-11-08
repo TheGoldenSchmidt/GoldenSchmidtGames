@@ -6,22 +6,27 @@ test("Solo-Test: eigene JSON-Figur wählen, drehen und mit echten Bots spielen",
   await page.emulateMedia({reducedMotion:"reduce"});
   await page.addInitScript(profile=>localStorage.setItem("spielraum.profile.v1",JSON.stringify(profile)),{id:randomUUID(),username:"Anna"});
   await page.goto("/");await page.getByRole("button",{name:/Online spielen/}).click();
+  await expect(page.getByRole("button",{name:"Neuen Raum erstellen",exact:true})).toBeDisabled();
+  await expect(page.locator(".party-character-grid button")).toHaveCount(13);
+  await page.getByRole("button",{name:"Prime Rick",exact:true}).click();
   await page.getByText("Inselparty alleine testen",{exact:true}).click();
   await page.getByLabel("Bot-Mitspieler").selectOption("2");
   await page.getByRole("button",{name:"Testpartie mit Bots erstellen"}).click();
   await expect(page.getByText("Deine Testpartie",{exact:true})).toBeVisible();
+  await page.getByRole("button",{name:/Spielfigur ändern/}).click();
   const preview=page.getByRole("img",{name:/3D-Vorschau/});
   await expect(preview).toHaveAttribute("data-webgl","ready");
-  for(const name of ["Morty","Cartman","Rekrut","Kenny"]){
-    await page.getByRole("button",{name:new RegExp(`^${name}`)}).click();
-    await expect(page.getByRole("button",{name:new RegExp(`^${name}`)})).toHaveAttribute("aria-pressed","true");
+  for(const name of ["Morty Smith","Mr Nimbus","Pupa","Eric Cartman"]){
+    await page.getByRole("button",{name,exact:true}).click();
+    await expect(page.getByRole("button",{name,exact:true})).toHaveAttribute("aria-pressed","true");
     await expect(preview).toHaveAttribute("aria-label",`3D-Vorschau: ${name}`);
     await expect(preview).toHaveAttribute("data-webgl","ready");
   }
-  await expect(preview).toHaveAttribute("data-character","kenny_mccormick");
+  await expect(preview).toHaveAttribute("data-character","alpha_eric_cartman");
   for(let i=0;i<4;i++)await page.getByRole("button",{name:"Figur drehen"}).click();
   await page.screenshot({path:info.outputPath("figurenwahl.png"),fullPage:true});
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await page.getByRole("button",{name:/Figurenwahl schließen/}).click();
   await page.getByRole("button",{name:"Ich bin bereit",exact:true}).click();
   const intro=page.getByRole("button",{name:"Intro überspringen"});if(await intro.count())await intro.click();
   await expect(page.locator(".party-world")).toHaveAttribute("data-webgl","ready");

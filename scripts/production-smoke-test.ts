@@ -1,3 +1,4 @@
+import {CHARACTERS} from "../shared/characters";
 import assert from "node:assert/strict";
 import { createSpielraumServer } from "../server/index";
 
@@ -44,6 +45,11 @@ try {
   assert.match(workerSource,/assets\/characterPreview-[A-Za-z0-9_-]+\.js/,"Auch die Figuren-Vorschau muss im PWA-Cache liegen");
   for(const response of await Promise.all(worldModules.map(module=>fetch(`${origin}/${module}`)))){
     assert.equal(response.status,200);assert.match(response.headers.get("content-type")??"",/javascript/);assert.ok((await response.text()).length>1000);
+  }
+  for(const entry of CHARACTERS){
+    assert.ok(workerSource.includes(`characters/${entry.id}.png`),`${entry.name}: portrait in offline cache`);
+    assert.match(workerSource,new RegExp(`assets/${entry.id}-[A-Za-z0-9_-]+\\.js`),`${entry.name}: model in offline cache`);
+    const portrait=await fetch(`${origin}/characters/${entry.id}.png`);assert.equal(portrait.status,200);assert.match(portrait.headers.get("content-type")??"",/image\/png/);
   }
   assert.equal(health.status, 200);
   assert.equal((await health.json() as { ok?: boolean }).ok, true);

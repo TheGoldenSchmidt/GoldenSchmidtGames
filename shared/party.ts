@@ -251,8 +251,8 @@ export function publicParty(current:PartyGame,viewer:string,now=Date.now()):Part
   }return g;
 }
 
-export function createPartyPractice(id:MiniId,now=Date.now()):PartyGame {
-  const g=createPartyGame([{id:"practice",name:"Du"},{id:"spectator",name:"Übung"}],{rounds:5},false,now,now);
+export function createPartyPractice(id:MiniId,now=Date.now(),selectedCharacter?:CharacterId):PartyGame {
+  const g=createPartyGame([{id:"practice",name:"Du",characterId:selectedCharacter},{id:"spectator",name:"Übung"}],{rounds:5},false,now,now);
   g.players[1].passive=true;g.miniBag=[id];selectMini(g,now);startMini(g,now);return g;
 }
 

@@ -1,7 +1,8 @@
+import {characterId,characterPortrait} from "../../shared/characters";
 import { useEffect, useRef, useState } from "react";
 import { activePartyPlayer, BOARD, FIELD_ICONS, FIELD_LABELS, type PartyGame } from "../../shared/party";
 
-export const FIGURES=["●","▲","■","◆","✚","★"];
+
 // Visual coordinates only: rules and all 34 connections stay unchanged.
 const POSITIONS: Record<number,[number,number]>={28:[77,60],29:[67,63],30:[65,75],31:[33,69],32:[34,57],33:[24,49]};
 const MAP=BOARD.map(f=>({...f,x:POSITIONS[f.id]?.[0]??f.x,y:POSITIONS[f.id]?.[1]??f.y}));
@@ -57,7 +58,7 @@ export function PartyMapFallback({game,rolling=false,onTravelChange}:{game:Party
         <circle cx={f.x} cy={f.y} r="2.65" filter="url(#party-field-shadow)"/><text x={f.x} y={f.y+.95}>{FIELD_ICONS[f.type]}</text>
         {f.id===game.trophyField&&<g className="party-map-trophy" transform={`translate(${f.x} ${f.y-6})`}><path d="m0 5-3-5h6Z" fill="#ffcc4d"/><circle r="3.6" fill="#ffcc4d" stroke="#fff7d6" strokeWidth=".8"/><text y="1.2">★</text></g>}
       </g>)}
-      {game.players.map((player,i)=>{const field=MAP[player.id===p.id&&animated!==undefined?animated:player.position],occupants=game.players.filter(q=>q.position===player.position),same=occupants.findIndex(q=>q.id===player.id);const shift=occupants.length>1?(same%3-1)*2.6:0;return <g key={player.id} data-player={player.id} data-field={field.id} className={`party-pawn party-pawn--${i} ${player.id===p.id?"is-active":""}`} style={{transform:`translate(${field.x+shift}px,${field.y-2.5-Math.floor(same/3)*3}px)`}}><title>{`${player.name}: Feld ${player.position}`}</title><ellipse cy="3" rx="2" ry=".65" fill="#10485b" opacity=".3"/><path d="M-1.8 1.4q-1-3.5 1.8-4.2 2.8.7 1.8 4.2L0 3Z"/><circle cy="-.9" r="1.65"/><text y=".15">{FIGURES[i]}</text></g>;})}
+      {game.players.map((player,i)=>{const field=MAP[player.id===p.id&&animated!==undefined?animated:player.position],occupants=game.players.filter(q=>q.position===player.position),same=occupants.findIndex(q=>q.id===player.id);const shift=occupants.length>1?(same%3-1)*2.6:0;return <g key={player.id} data-player={player.id} data-field={field.id} className={`party-pawn party-pawn--${i} ${player.id===p.id?"is-active":""}`} style={{transform:`translate(${field.x+shift}px,${field.y-2.5-Math.floor(same/3)*3}px)`}}><title>{`${player.name}: Feld ${player.position}`}</title><ellipse cy="3" rx="2" ry=".65" fill="#10485b" opacity=".3"/><path d="M-1.8 1.4q-1-3.5 1.8-4.2 2.8.7 1.8 4.2L0 3Z"/><circle cy="-.9" r="1.65"/><image href={characterPortrait(characterId(player.characterId,i))} x="-2.5" y="-3.5" width="5" height="6"/></g>;})}
     </svg></div>
     <div className="party-map-caption" role="status">{selected!==undefined?<><strong>Feld {selected}: {FIELD_LABELS[BOARD[selected].type]}</strong><span>{selected===game.trophyField?"Hier kannst du für 20 Münzen eine Trophäe kaufen. ":""}{FIELD_HELP[BOARD[selected].type]}</span></>:<><strong>{game.phase==="path"?"Du stehst an einer Abzweigung.":"Deine Insel, dein Weg."}</strong><span>{game.phase==="path"?"Die markierten Felder zeigen deine beiden Wege.":"Felder antippen und entdecken, was dich erwartet."}</span></>}</div>
   </section>;

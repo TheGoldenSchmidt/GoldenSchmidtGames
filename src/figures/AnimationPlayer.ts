@@ -10,7 +10,7 @@ export interface AnimationPlayer {
   /** Pro Frame aufrufen; `nowMs` = performance.now(). */
   update(nowMs: number): void;
   /** Klip auslösen (idle läuft automatisch als Loop). */
-  play(name: string): void;
+  play(name: string, nowMs?:number): void;
   /** Alle Einzel-Klips beenden und die Figur lebendig in den Idle zurücksetzen. */
   reset(): void;
   isDeathFinished(nowMs: number): boolean;
@@ -48,10 +48,12 @@ function addAxis(target: THREE.Vector3 | THREE.Euler, axis: string, v: number): 
 export function createAnimationPlayer(
   parts: Map<string, THREE.Object3D>,
   clips: Animations,
-  opts: { reducedMotion?: boolean } = {}
+  opts: { reducedMotion?: boolean; idleWeight?:number; extraParts?:readonly string[] } = {}
 ): AnimationPlayer {
   const base = new Map<string, Base>();
+  const controlled=new Set(["root",...Object.values(clips).flatMap(clip=>clip.tracks.map(track=>track.part)),...opts.extraParts??[]]);
   for (const [name, obj] of parts) {
+    if(!controlled.has(name))continue;
     base.set(name, { p: obj.position.clone(), r: obj.rotation.clone(), s: obj.scale.clone() });
   }
 
@@ -104,10 +106,10 @@ export function createAnimationPlayer(
       oneShots = [];
       idleStart = performance.now() / 1000;
     },
-    play(name) {
+    play(name,nowMs=performance.now()) {
       const clip = clips[name];
       if (!clip) return;
-      const now = performance.now() / 1000;
+      const now = nowMs / 1000;
       if (name === 'death') {
         dead = true;
         oneShots = oneShots.filter((o) => o.name !== 'death');
@@ -118,6 +120,7 @@ export function createAnimationPlayer(
         idleStart = now;
         oneShots.push({ name, clip, start: now });
       } else {
+        oneShots=oneShots.filter(o=>o.name!==name);
         oneShots.push({ name, clip, start: now });
       }
     },
@@ -142,29 +145,30 @@ export function createAnimationPlayer(
         m.opacity = baseOpacity.get(m) ?? 1;
       }
 
-      const active: [AnimationClip, number][] = [];
+      const active: [AnimationClip, number, number][] = [];
       if (!dead && idle && !opts.reducedMotion) {
         const dur = idle.duration;
         const lt = (((now - idleStart) % dur) + dur) % dur;
-        active.push([idle, lt]);
+        active.push([idle, lt, opts.idleWeight??1]);
       }
       oneShots = oneShots.filter((os) => {
         const dur = os.clip.duration;
         let lt = now - os.start;
         if (os.clip.loop && dur > 0) {
-          active.push([os.clip, ((lt % dur) + dur) % dur]);
+          active.push([os.clip, ((lt % dur) + dur) % dur, Math.min(1,Math.max(0,lt)/.08)]);
           return true;
         }
         if (lt > dur) {
           if (os.name === 'death') lt = dur;
           else return false;
         }
-        active.push([os.clip, lt]);
+        const weight=os.name==="death"?Math.min(1,lt/.08):Math.max(0,Math.min(1,lt/.08,(dur-lt)/.12));
+        active.push([os.clip, lt, weight]);
         return true;
       });
 
-      for (const [clip, lt] of active) {
-        for (const tr of clip.tracks) applyTrack(tr, sampleTrack(tr.keys, lt));
+      for (const [clip, lt, weight] of active) {
+        for (const tr of clip.tracks) {const neutral=tr.prop==="scale"||tr.prop==="opacity"?1:0;applyTrack(tr,neutral+(sampleTrack(tr.keys,lt)-neutral)*weight);}
       }
     }
   };

@@ -1,0 +1,2 @@
+# Preserve the approved workshop originals byte for byte for provenance checks.
+src/figures/data/figures/alpha_*.json -text whitespace=cr-at-eol

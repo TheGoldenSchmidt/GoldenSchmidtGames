@@ -1,3 +1,5 @@
+import {CharacterAvatar,playerCharacters} from "../components/CharacterAvatar";
+import type {CharacterId} from "../../shared/characters";
 import { useEffect, useMemo, useState } from "react";
 import {
   DURAK_RANKS,
@@ -39,13 +41,15 @@ function actorId(game: DurakGameState) {
   return game.phase === "defend" ? game.defenderId : game.attackerId;
 }
 
-export function DurakGameScreen({ profile, localNames, initialRoom, cheatMode = false, onExit }: {
+export function DurakGameScreen({ profile, localNames, localCharacters, initialRoom, cheatMode = false, onExit }: {
   profile: GuestProfile;
   localNames?: string[];
+  localCharacters?:CharacterId[];
   initialRoom?: RoomState;
   cheatMode?: boolean;
   onExit: () => void;
 }) {
+  const characters=playerCharacters(initialRoom,localNames,localCharacters);
   const online = Boolean(initialRoom);
   const [room, setRoom] = useState(initialRoom);
   const [localGame, setLocalGame] = useState<DurakGameState | undefined>(() => localNames
@@ -174,7 +178,7 @@ export function DurakGameScreen({ profile, localNames, initialRoom, cheatMode = 
           <div>
             <span aria-hidden="true">🂠</span>
             <h1>Gerät weitergeben</h1>
-            <p><strong>{game.playerNames[viewerId]}</strong> ist jetzt am Zug.</p>
+            <p><CharacterAvatar id={characters[viewerId]}/><strong>{game.playerNames[viewerId]}</strong> ist jetzt am Zug.</p>
             <button className="button button--primary button--wide" onClick={() => setRevealedFor(viewerId)}>Karten anzeigen</button>
           </div>
         </section>
@@ -196,7 +200,7 @@ export function DurakGameScreen({ profile, localNames, initialRoom, cheatMode = 
       <section className="durak-players" aria-label="Spieler">
         {game.playerOrder.map((id) => (
           <div className={`${id === game.attackerId ? "is-attacker" : ""} ${id === game.defenderId ? "is-defender" : ""} ${game.finishedPlayerIds.includes(id) ? "is-finished" : ""}`} key={id}>
-            <span>{game.playerNames[id].slice(0, 1).toUpperCase()}</span>
+            <CharacterAvatar id={characters[id]}/>
             <strong>{game.playerNames[id]}</strong>
             <small>{game.finishedPlayerIds.includes(id) ? "Fertig" : `${game.handCounts[id]} Karten`}</small>
           </div>
@@ -258,7 +262,7 @@ export function DurakGameScreen({ profile, localNames, initialRoom, cheatMode = 
           <span className="result-sheet__seal">♠</span>
           <h1>Partie beendet</h1>
           <p>{phaseText()}</p>
-          <ol>{game.finishedPlayerIds.map((id, index) => <li key={id}><span>{index + 1}. {game.playerNames[id]}</span><strong>kartenfrei</strong></li>)}</ol>
+          <ol>{game.finishedPlayerIds.map((id, index) => <li key={id}><span><CharacterAvatar id={characters[id]} decorative/>{index + 1}. {game.playerNames[id]}</span><strong>kartenfrei</strong></li>)}</ol>
           <button className="button button--secondary button--wide" onClick={onExit}>Zum Startmenü</button>
         </section>
       )}

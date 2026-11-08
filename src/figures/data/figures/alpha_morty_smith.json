@@ -1,6 +1,5 @@
 {
-  "cardId": "morty_smith",
-  "displayName": "Morty Smith 1.0",
+  "cardId": "alpha_morty_smith",
   "visual": {
     "detailLevel": "high",
     "height": 0.85,

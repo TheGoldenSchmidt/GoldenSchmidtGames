@@ -1,3 +1,4 @@
+import {characterId} from "../../shared/characters";
 import * as T from "three";
 import { figureCharacter } from "../figures/character";
 
@@ -13,6 +14,7 @@ export class SceneKit {
   private cylinderGeometry=new T.CylinderGeometry(1,1,1,24);
   private coneGeometry=new T.ConeGeometry(1,1,24);
   private disposed=false;
+  private frameTime=0;private slowFrames=0;private qualityChanged=false;
   private lost:(event:Event)=>void;
   constructor(readonly host:HTMLElement,onError:()=>void) {
     this.renderer=new T.WebGLRenderer({antialias:true,powerPreference:"high-performance"});
@@ -64,7 +66,11 @@ export class SceneKit {
     const group=new T.Group();group.position.set(x,y,z);parent.add(group);
     this.cylinder(group,0xfff6d9,0,1.6,0,.6,3.2);this.cylinder(group,0xe96752,0,1.3,0,.61,.5);this.cylinder(group,0xe96752,0,2.5,0,.61,.5);this.cylinder(group,0x3d7691,0,3.3,0,.78,.25);this.cylinder(group,0xffdc67,0,3.65,0,.48,.5);this.cone(group,0xe96752,0,4.13,0,.82,.55);return group;
   }
-  render() {if(this.disposed||document.hidden)return;this.renderer.render(this.scene,this.camera);this.host.dataset.frames=String((Number(this.host.dataset.frames)||0)+1);}
+  render() {if(this.disposed||document.hidden)return;const now=performance.now();
+    if(this.frameTime&&now-this.frameTime>28&&now-this.frameTime<150)this.slowFrames++;else this.slowFrames=Math.max(0,this.slowFrames-1);
+    this.frameTime=now;
+    if(!this.qualityChanged&&this.slowFrames>70){this.qualityChanged=true;this.renderer.setPixelRatio(1);this.renderer.shadowMap.enabled=false;this.resize();}
+    this.renderer.render(this.scene,this.camera);this.host.dataset.drawCalls=String(this.renderer.info.render.calls);this.host.dataset.triangles=String(this.renderer.info.render.triangles);this.host.dataset.frames=String((Number(this.host.dataset.frames)||0)+1);}
   dispose() {
     if(this.disposed)return;this.disposed=true;this.observer.disconnect();this.renderer.domElement.removeEventListener("webglcontextlost",this.lost);
     const geometries=new Set<T.BufferGeometry>(),materials=new Set<T.Material>(),textures=new Set<T.Texture>();
@@ -76,28 +82,8 @@ export class SceneKit {
 
 export interface Character {group:T.Group;pose:(heading:number,speed:number,time:number,jump:number,punch:boolean,reduce:boolean)=>void}
 export function character(kit:SceneKit,parent:T.Object3D,index:number,name?:string,selected?:string):Character {
-  if(selected){
-    const figure=figureCharacter(parent,selected);
-    const ring=kit.mesh(figure.group,new T.TorusGeometry(.4,.045,6,24),PLAYER_COLORS[index%6],0,.045,0);ring.rotation.x=Math.PI/2;
-    if(name){const label=kit.label(figure.group,name,"#10485b",2.1);label.position.set(0,1.9,0);}
-    return figure;
-  }
-  const group=new T.Group();parent.add(group);const color=PLAYER_COLORS[index%PLAYER_COLORS.length],body=new T.Group();group.add(body);
-  kit.ball(body,color,0,.48,0,.29,.36,.24);kit.ball(body,0xffe6bb,0,.95,.015,.34,.32,.31);
-  kit.ball(body,0xffd1a6,-.29,.95,.015,.075);kit.ball(body,0xffd1a6,.29,.95,.015,.075);
-  for(const side of [-1,1]){kit.ball(body,0x173947,side*.115,.99,.3,.043,.062,.026);kit.ball(body,0xffffff,side*.115-.01,1.01,.322,.014);}
-  kit.ball(body,0xf6b191,0,.87,.302,.055,.023,.025);
-  kit.ball(body,color,0,1.19,-.015,.36,.17,.33);
-  if(index%3===0){kit.box(body,color,0,1.16,.31,.38,.07,.25);kit.ball(body,0xffd25f,0,1.34,0,.1);}
-  else if(index%3===1){kit.cone(body,color,-.2,1.39,0,.12,.4);kit.cone(body,color,.2,1.39,0,.12,.4);}
-  else {kit.ball(body,0xffd25f,0,1.37,0,.17);kit.box(body,0xfff0c2,0,1.18,.32,.21,.1,.04);}
-  kit.ball(body,0xfff6d8,0,.52,.23,.13,.13,.05);kit.box(body,0xa86f45,0,.54,-.23,.32,.36,.16);
-  const arms=[-1,1].map(side=>{const arm=new T.Group();arm.position.set(side*.3,.65,0);body.add(arm);kit.ball(arm,color,side*.04,-.13,0,.1,.2,.1);kit.ball(arm,0xffedcc,side*.05,-.32,.015,.12);return arm;});
-  const legs=[-1,1].map(side=>{const leg=new T.Group();leg.position.set(side*.15,.22,0);body.add(leg);kit.ball(leg,color,0,-.06,0,.1,.15,.1);kit.box(leg,0x5a5247,0,-.15,.07,.21,.17,.34);return leg;});
-  if(name){const label=kit.label(group,name,"#10485b",2.1);label.position.set(0,1.9,0);}
-  return {group,pose:(heading,speed,time,jump,punch,reduce)=>{
-    group.rotation.y=heading;const walk=Math.min(1,speed/4.8),swing=reduce?0:Math.sin(time*.014)*walk*.65;
-    legs[0].rotation.x=swing;legs[1].rotation.x=-swing;arms[0].rotation.x=-swing;arms[1].rotation.x=punch?-1.65:swing;
-    body.position.y=reduce?0:Math.abs(Math.sin(time*.014))*walk*.045;body.rotation.z=jump>0?.035:0;
-  }};
+  const figure=figureCharacter(parent,characterId(selected,index));
+  const ring=kit.mesh(figure.group,new T.TorusGeometry(.4,.045,6,24),PLAYER_COLORS[index%6],0,.045,0);ring.rotation.x=Math.PI/2;
+  if(name){const label=kit.label(figure.group,name,"#10485b",2.1);label.position.set(0,1.9,0);}
+  return figure;
 }
