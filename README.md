@@ -14,7 +14,7 @@ Eine installierbare Smartphone-PWA für lokale und Online-Spiele. Das aktuelle G
 
 Das Qwixx-Modul enthält den gemeinsamen weißen Wurf, die zusätzliche Farbaktion der aktiven Person, vier getrennte Wertungsblätter, Fehlwürfe, Reihenschlüsse, automatische Wertung und die Spielergebnisanzeige.
 
-Auch Qwixx verwendet den schüttelbaren Würfelbecher: mit Finger oder Maus bewegen und nach unten wischen, optional Handybewegung freigeben und nach dem Schütteln kippen, oder den Würfeln-Knopf nutzen. Zwei weiße und vier einfarbige Würfel behalten ihre Identität und Farben im Flug. Geschlossene Farbreihen nehmen ihren Würfel aus dem nächsten Wurf. Weiße Summe und Auswahlfelder werden nach dem Landen freigegeben; reduzierte Bewegung zeigt das Ergebnis sofort. Mehr dazu in [Qwixx mit Würfelbecher](docs/qwixx-cup.md).
+Qwixx bleibt nach dem Intro in einer runden 3D-Tischarena: Die aktive Figur rückt zum Becher vor, zwei weiße und vier einfarbige Würfel fliegen mit festen Identitäten auf wechselnde freie Landepunkte und können danach als gültige Kombination angehoben werden. Die Punktekarte liegt dauerhaft darunter. Der Becher lässt sich mit Finger oder Maus, optionaler Handybewegung oder dem Würfeln-Knopf bedienen; geschlossene Farbreihen nehmen ihren Würfel aus dem nächsten Wurf und reduzierte Bewegung zeigt Ergebnisse sofort. Mehr dazu in [Qwixx mit Würfelbecher](docs/qwixx-cup.md).
 
 Durak verwendet 36 Karten für zwei bis sechs Spieler. Enthalten sind Trumpf, Angriff und Verteidigung, Aufnehmen, Nachlegen, Weiterschieben sowie verdeckte Online-Handkarten. Im lokalen Modus schützt eine Übergabeansicht die Hand der jeweils aktiven Person.
 

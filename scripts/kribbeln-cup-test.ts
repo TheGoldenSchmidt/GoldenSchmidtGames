@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { CupMotionGesture, isCupSwipe, type CupMotionSample } from "../src/lib/kribbelnCup";
 
 assert.equal(isCupSwipe(8, 90, 230), true);
+assert.equal(isCupSwipe(8, 90, 900), true);
 assert.equal(isCupSwipe(90, 10, 230), false);
 assert.equal(isCupSwipe(0, -90, 230), false);
 assert.equal(isCupSwipe(0, 30, 230), false);

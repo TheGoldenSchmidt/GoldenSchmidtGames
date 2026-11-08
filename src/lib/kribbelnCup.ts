@@ -63,5 +63,5 @@ export class CupMotionGesture {
 }
 
 export function isCupSwipe(dx: number, dy: number, milliseconds: number) {
-  return dy >= 52 && dy > Math.abs(dx) * .8 && milliseconds > 0 && milliseconds < 1100 && dy / milliseconds > .12;
+  return dy >= 52 && dy > Math.abs(dx) * .8 && milliseconds > 0 && milliseconds < 1500 && dy / milliseconds > .08;
 }

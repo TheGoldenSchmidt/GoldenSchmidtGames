@@ -23,7 +23,7 @@ async function material(page: Page) {
     expect(die.faces.map(face => face.number)).toEqual([1, 2, 3, 4, 5, 6]);
     expect(die.faces.every(face => face.color === die.color)).toBe(true);
   }
-  await expect(page.locator(".qwixx-die button")).toHaveCount(0);
+  await expect(page.locator("button.qwixx-die")).toHaveCount(6);
 }
 
 async function swipe(page: Page, touch: boolean, shake = false) {
@@ -52,9 +52,11 @@ async function sensor(page: Page, x = 0, beta = 0) {
 test("Qwixx: sechs feste Würfel, farbiger Flug, Auswahl erst nach Landung und nächster Spieler", async ({ page }, info) => {
   const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
   await localQwixx(page); await material(page);
+  await expect(page.locator(".qwixx-arena")).toBeVisible();
+  await expect(page.locator(".qwixx-arena-world")).toHaveAttribute("data-active-player", "local-0");
   await expect(page.locator(".qwixx-die.is-in-cup")).toHaveCount(6);
   await page.evaluate(() => { (window as unknown as { qwixxModels: Element[] }).qwixxModels = Array.from(document.querySelectorAll(".qwixx-die .die-cube")); });
-  await page.clock.install(); await page.clock.pauseAt(new Date());
+  await page.clock.install(); await page.clock.pauseAt(new Date(Date.now() + 60_000));
   await page.getByRole("button", { name: "Würfeln", exact: true }).click(); await page.clock.runFor(CUP_PREPARE_MS);
   await expect(page.locator(".qwixx-die.is-rolling")).toHaveCount(6);
   await expect(page.locator(".qwixx-cell.is-selectable")).toHaveCount(0);
@@ -67,16 +69,22 @@ test("Qwixx: sechs feste Würfel, farbiger Flug, Auswahl erst nach Landung und n
   await page.clock.runFor(850);
   await expect(page.locator(".qwixx-die.is-rolling")).toHaveCount(0);
   await expect(page.locator(".qwixx-white-sum strong")).toHaveText("2");
+  await page.clock.resume();
+  await page.getByRole("button", { name: "Weißer Würfel 1: 1, auswählen", exact: true }).click({ force: true });
+  await expect(page.locator(".qwixx-die.is-chosen")).toHaveCount(2);
   await page.screenshot({ path: info.outputPath("qwixx-becher-gelandet.png"), fullPage: true });
   await expect(page.getByRole("button", { name: "Rot 2, auswählbar", exact: true })).toBeEnabled();
   await page.getByRole("button", { name: "Rot 2, auswählbar", exact: true }).click({ force: true });
   await page.getByRole("button", { name: "Weiße Aktion auslassen", exact: true }).click();
+  await page.getByRole("button", { name: "Weißer Würfel 1: 1, auswählen", exact: true }).click({ force: true });
+  await page.getByRole("button", { name: "Gelber Würfel: 1, auswählen", exact: true }).click({ force: true });
+  await expect(page.locator(".qwixx-die.is-chosen")).toHaveCount(2);
   await expect(page.getByRole("button", { name: "Gelb 2, auswählbar", exact: true })).toBeEnabled();
   await page.getByRole("button", { name: "Gelb 2, auswählbar", exact: true }).click({ force: true });
   await expect(page.getByRole("button", { name: "Würfeln", exact: true })).toBeEnabled();
-  await page.getByRole("button", { name: "Würfeln", exact: true }).click(); await page.clock.runFor(CUP_PREPARE_MS);
+  await page.getByRole("button", { name: "Würfeln", exact: true }).click();
   await expect(page.locator(".qwixx-die.is-rolling")).toHaveCount(6);
-  await page.clock.runFor(1250);
+  await expect(page.locator(".qwixx-die.is-rolling")).toHaveCount(0, { timeout: 3000 });
   expect(await page.evaluate(() => (window as unknown as { qwixxModels: Element[] }).qwixxModels.every((model, index) => model === document.querySelectorAll(".qwixx-die .die-cube")[index]))).toBe(true);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   expect(errors).toEqual([]);
@@ -91,7 +99,9 @@ test("Qwixx: Becher mit Touch oder Maus schütteln und auswerfen, kein Behalten"
   await expect(page.locator(".qwixx-white-sum strong")).toHaveText("2");
   await expect(page.locator(".qwixx-cell.is-selectable")).toHaveCount(2);
   await expect(page.getByRole("button", { name: /Würfelbecher schütteln/ })).toBeDisabled();
-  await expect(page.locator(".qwixx-die[aria-pressed]")).toHaveCount(0);
+  await expect(page.locator(".qwixx-die[aria-pressed]")).toHaveCount(2);
+  await page.getByRole("button", { name: "Weißer Würfel 1: 1, auswählen", exact: true }).click({ force: true });
+  await expect(page.locator(".qwixx-die.is-chosen")).toHaveCount(2);
   await material(page);
 });
 
@@ -100,7 +110,7 @@ test("Qwixx: Handybewegung mit Freigabe und reduzierte Bewegung während des Flu
     Object.assign(window, { qwixxPermissions: 0 });
     Object.defineProperty(DeviceMotionEvent, "requestPermission", { configurable: true, value: async () => { (window as unknown as { qwixxPermissions: number }).qwixxPermissions++; return "granted"; } });
   });
-  await localQwixx(page); await page.clock.install(); await page.clock.pauseAt(new Date());
+  await localQwixx(page); await page.clock.install(); await page.clock.pauseAt(new Date(Date.now() + 60_000));
   expect(await page.evaluate(() => (window as unknown as { qwixxPermissions: number }).qwixxPermissions)).toBe(0);
   await page.getByRole("button", { name: "Handybewegung aktivieren", exact: true }).click();
   await sensor(page, 0, 200);
@@ -125,7 +135,7 @@ test("Qwixx: bei verweigerter oder ausbleibender Handybewegung bleibt Würfeln v
   await page.getByRole("button", { name: "Handybewegung aktivieren", exact: true }).click();
   await expect(page.getByText(/Bewegungsfreigabe abgelehnt/)).toBeVisible();
   await page.evaluate(() => Object.defineProperty(DeviceMotionEvent, "requestPermission", { configurable: true, value: async () => "granted" }));
-  await page.clock.install(); await page.clock.pauseAt(new Date());
+  await page.clock.install(); await page.clock.pauseAt(new Date(Date.now() + 60_000));
   await page.getByRole("button", { name: "Handybewegung aktivieren", exact: true }).click(); await page.clock.runFor(3001);
   await expect(page.getByText(/Kein Bewegungssignal verfügbar/)).toBeVisible();
   await page.getByRole("button", { name: "Würfeln", exact: true }).click();
@@ -141,9 +151,9 @@ test("Qwixx: geschlossene Reihe entfernt ihren Würfel auch aus dem nächsten Be
     for (let player = 0; player < 2; player++) await page.getByRole("button", { name: `Rot ${value * 2}, auswählbar`, exact: true }).click();
     await page.getByRole("button", { name: "Zweite Aktion auslassen", exact: true }).click();
   }
-  await expect(page.getByRole("img", { name: "Roter Würfel entfernt", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Roter Würfel entfernt", exact: true })).toBeVisible();
   await expect(page.getByText("5 im Becher", { exact: true })).toBeVisible();
-  await page.emulateMedia({ reducedMotion: "no-preference" }); await page.clock.install(); await page.clock.pauseAt(new Date());
+  await page.emulateMedia({ reducedMotion: "no-preference" }); await page.clock.install(); await page.clock.pauseAt(new Date(Date.now() + 60_000));
   await page.getByRole("button", { name: "Würfeln", exact: true }).click(); await page.clock.runFor(CUP_PREPARE_MS);
   await expect(page.locator(".qwixx-die.is-rolling")).toHaveCount(5);
   await expect(page.locator('[data-die-id="red"]')).toHaveClass(/is-retired/);
