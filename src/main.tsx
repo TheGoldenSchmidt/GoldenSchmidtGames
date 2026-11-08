@@ -7,6 +7,7 @@ import "./styles/party3d.css";
 import "./styles/partyCharacters.css";
 import "./styles/gameIntro.css";
 import "./styles/kribbelnCup.css";
+import "./styles/qwixxCup.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

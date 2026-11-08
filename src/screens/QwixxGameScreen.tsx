@@ -1,6 +1,6 @@
 import {CharacterAvatar,playerCharacters} from "../components/CharacterAvatar";
 import type {CharacterId} from "../../shared/characters";
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   QWIXX_COLORS,
   QWIXX_COLOR_NAMES,
@@ -18,40 +18,9 @@ import {
 } from "../../shared/qwixx";
 import type { GuestProfile, QwixxColor, QwixxGameState, RoomState } from "../../shared/types";
 import { Brand } from "../components/Brand";
+import { DiceCupTable, DICE_CUP_ROLL_DURATION, type DiceCupHandle } from "../components/DiceCupTable";
+import { QwixxDice } from "../components/QwixxDice";
 import { socket } from "../lib/socket";
-
-const PIPS: Record<number, number[]> = {
-  1: [5],
-  2: [1, 9],
-  3: [1, 5, 9],
-  4: [1, 3, 7, 9],
-  5: [1, 3, 5, 7, 9],
-  6: [1, 3, 4, 6, 7, 9]
-};
-
-function DieFace({ value }: { value: number }) {
-  return (
-    <span className={`die-face die-face--${value}`} aria-hidden="true">
-      {Array.from({ length: 9 }, (_, index) => (
-        <i className={PIPS[value].includes(index + 1) ? "is-on" : ""} key={index} />
-      ))}
-    </span>
-  );
-}
-
-function Die({ value, color, index }: { value: number | null; color: "white" | QwixxColor; index: number }) {
-  const style = { "--roll-delay": `${index * 55}ms` } as CSSProperties;
-  if (value === null) {
-    return <span className={`die-scene die-scene--${color} is-removed`} aria-label={`${color} entfernt`}><span>×</span></span>;
-  }
-  return (
-    <span className={`die-scene die-scene--${color}`} style={style} aria-label={`${color} ${value}`}>
-      <span className={`die-cube die-cube--show-${value}`}>
-        {[1, 2, 3, 4, 5, 6].map((face) => <DieFace value={face} key={face} />)}
-      </span>
-    </span>
-  );
-}
 
 function hasAnswered(game: QwixxGameState, playerId: string) {
   return Object.prototype.hasOwnProperty.call(game.whiteChoices, playerId);
@@ -78,6 +47,8 @@ export function QwixxGameScreen({
       : undefined
   );
   const [error, setError] = useState("");
+  const [pending, setPending] = useState(false), [preparing, setPreparing] = useState(false);
+  const requestLock = useRef(false), cup = useRef<DiceCupHandle>(null);
 
   useEffect(() => {
     if (!online) return;
@@ -90,6 +61,23 @@ export function QwixxGameScreen({
   }, [online]);
 
   const game = online ? room?.game : localGame;
+  const turnKey = `${game?.round}-${game?.turnIndex}`;
+  const rollKey = `${turnKey}-${game?.dice ? 1 : 0}`;
+  const [settledRollKey, setSettledRollKey] = useState(rollKey);
+  const [reducedMotion, setReducedMotion] = useState(() => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  const rolling = Boolean(game?.dice && settledRollKey !== rollKey && !reducedMotion);
+  const busy = pending || preparing || rolling;
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setReducedMotion(media.matches);
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+  useEffect(() => {
+    if (!game?.dice || reducedMotion) { setSettledRollKey(rollKey); return; }
+    const timer = window.setTimeout(() => setSettledRollKey(rollKey), DICE_CUP_ROLL_DURATION);
+    return () => window.clearTimeout(timer);
+  }, [rollKey, reducedMotion]);
   const activeId = game ? activePlayerId(game) : "";
   const pendingLocalId = game?.phase === "white-choice"
     ? game.playerOrder.find((id) => !hasAnswered(game, id))
@@ -108,33 +96,49 @@ export function QwixxGameScreen({
 
   const characters=playerCharacters(room,localNames,localCharacters);
   const activeName = game.sheets[activeId].playerName;
+  const activeGame = game;
+  const ownTurn = !online || activeId === profile.id;
   const ownWhiteAnswer = hasAnswered(game, viewerId);
-  const canRoll = game.phase === "awaiting-roll" && (!online || activeId === profile.id);
-  const canChooseWhite = game.phase === "white-choice" && !ownWhiteAnswer;
-  const canChooseColor = game.phase === "color-choice" && (!online || activeId === profile.id);
+  const canRoll = game.phase === "awaiting-roll" && ownTurn && !pending && !rolling;
+  const canChooseWhite = game.phase === "white-choice" && !ownWhiteAnswer && !busy;
+  const canChooseColor = game.phase === "color-choice" && ownTurn && !busy;
 
-  function handleResponse(response: { ok: boolean; data?: RoomState; error?: string }) {
-    if (!response.ok) setError(response.error ?? "Die Aktion konnte nicht ausgeführt werden.");
-    else if (response.data) setRoom(response.data);
+  function send(event: string, payload?: object) {
+    requestLock.current = true; setPending(true);
+    const done = (timeout: Error | null, response?: { ok: boolean; data?: RoomState; error?: string }) => {
+      requestLock.current = false; setPending(false);
+      if (timeout) setError("Der Server antwortet nicht.");
+      else if (!response?.ok) setError(response?.error ?? "Die Aktion konnte nicht ausgeführt werden.");
+      else if (response.data) setRoom(response.data);
+    };
+    if (payload) socket.timeout(5000).emit(event, payload, done); else socket.timeout(5000).emit(event, done);
+  }
+
+  function updateLocal(action: () => QwixxGameState) {
+    try { setLocalGame(action()); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "Aktion nicht möglich."); }
   }
 
   function roll() {
+    if (!canRoll || requestLock.current) return;
     setError("");
-    navigator.vibrate?.(35);
-    if (online) socket.emit("qwixx:roll", handleResponse);
-    else setLocalGame((current) => current ? rollQwixx(current, activeId) : current);
+    try { navigator.vibrate?.(35); } catch { /* Haptik ist optional. */ }
+    if (online) send("qwixx:roll");
+    else updateLocal(() => rollQwixx(activeGame, activeId));
   }
 
   function chooseWhite(color: QwixxColor | null) {
+    if (!canChooseWhite || requestLock.current) return;
     setError("");
-    if (online) socket.emit("qwixx:white-choice", { color }, handleResponse);
-    else setLocalGame((current) => current ? submitWhiteChoice(current, viewerId, color) : current);
+    if (online) send("qwixx:white-choice", { color });
+    else updateLocal(() => submitWhiteChoice(activeGame, viewerId, color));
   }
 
   function chooseColor(choice: QwixxColorChoice | null) {
+    if (!canChooseColor || requestLock.current) return;
     setError("");
-    if (online) socket.emit("qwixx:color-choice", { choice }, handleResponse);
-    else setLocalGame((current) => current ? submitColorChoice(current, activeId, choice) : current);
+    if (online) send("qwixx:color-choice", { choice });
+    else updateLocal(() => submitColorChoice(activeGame, activeId, choice));
   }
 
   function selectableChoice(color: QwixxColor, value: number) {
@@ -149,6 +153,9 @@ export function QwixxGameScreen({
   }
 
   function phaseText() {
+    if (preparing) return "Die Würfel kommen in den Becher …";
+    if (rolling) return "Die Würfel fliegen aus dem Becher …";
+    if (pending) return "Warte auf die Bestätigung vom Tisch …";
     if (game!.phase === "awaiting-roll") {
       return activeId === viewerId ? "Du bist am Zug. Würfle alle verfügbaren Würfel." : `${activeName} ist am Zug.`;
     }
@@ -184,24 +191,20 @@ export function QwixxGameScreen({
         <div><strong>{sheet.playerName}</strong><p>{phaseText()}</p></div>
       </section>
 
-      <section className={`dice-tray ${game.dice ? "has-result" : ""}`} aria-label="Virtuelle Würfelkiste">
-        <span className="dice-tray__label">Würfelkiste</span>
-        {game.dice ? (
-          <>
-            <div className="dice-group">
-              <Die value={game.dice.white[0]} color="white" index={0} />
-              <Die value={game.dice.white[1]} color="white" index={1} />
-              {QWIXX_COLORS.map((color, index) => <Die key={color} value={game.dice!.colors[color]} color={color} index={index + 2} />)}
-            </div>
-            <strong className="white-total"><span>Weiß</span>{whiteSum}</strong>
-          </>
-        ) : (
-          <div className="dice-tray__empty">
-            <span aria-hidden="true">⚄</span>
-            <p>Sechs Würfel warten auf den nächsten Wurf.</p>
-          </div>
-        )}
-      </section>
+      <div className="qwixx-play">
+      <div className="qwixx-table-side">
+        <DiceCupTable ref={cup} className="dice-tray qwixx-cup-table" label="Virtuelle Würfelkiste" hasResult={Boolean(game.dice)}
+          availableCount={6 - game.closedRows.length} rolling={rolling} pending={pending} canRoll={canRoll} canAct={ownTurn && game.phase !== "finished"}
+          reducedMotion={reducedMotion} rollKey={rollKey} turnKey={turnKey} onRoll={roll} onPreparingChange={setPreparing}
+          idleText={game.phase === "awaiting-roll" ? "Schütteln und wischen. Oder einfach Würfeln." : "Erst die weiße Summe, dann die Farbaktion."}
+          renderDice={({ cupRef, inCup }) => <QwixxDice dice={game.dice} closedRows={game.closedRows} rolling={rolling} inCup={inCup} cupRef={cupRef} rollKey={rollKey} />} />
+        <div className="qwixx-cup-controls">
+          <p className="qwixx-white-sum" role="status"><span>Weiße Summe</span><strong>{rolling || preparing ? "…" : whiteSum ?? "–"}</strong></p>
+          {ownTurn && (game.phase === "awaiting-roll" || busy) && <button className="button button--primary button--wide" disabled={busy || !canRoll} onClick={() => cup.current?.roll()}>{preparing ? "Becher schütteln …" : pending ? "Warte auf den Tisch …" : rolling ? "Würfel rollen …" : "Würfeln"}</button>}
+          {game.phase === "awaiting-roll" && !ownTurn && <p className="waiting-note">Warte auf {activeName} …</p>}
+        </div>
+      </div>
+      <div className="qwixx-score-side">
 
       <section className="qwixx-sheet" aria-label={`Wertungsblatt von ${sheet.playerName}`}>
         {QWIXX_COLORS.map((color) => {
@@ -246,8 +249,6 @@ export function QwixxGameScreen({
       </section>
 
       <section className="qwixx-actions">
-        {canRoll && <button className="button button--primary button--wide" onClick={roll}>Würfeln</button>}
-        {game.phase === "awaiting-roll" && !canRoll && <p className="waiting-note">Warte auf {activeName} …</p>}
         {canChooseWhite && <button className="button button--ghost button--wide" onClick={() => chooseWhite(null)}>Weiße Aktion auslassen</button>}
         {game.phase === "white-choice" && ownWhiteAnswer && <p className="waiting-note">Entscheidung gespeichert · warte auf die Mitspieler</p>}
         {canChooseColor && (
@@ -258,6 +259,8 @@ export function QwixxGameScreen({
         {game.phase === "color-choice" && !canChooseColor && <p className="waiting-note">Warte auf {activeName} …</p>}
         {error && <p className="error-message" role="alert">{error}</p>}
       </section>
+      </div>
+      </div>
 
       {game.phase === "finished" && (
         <section className="result-sheet" aria-labelledby="result-title">

@@ -1,0 +1,27 @@
+.qwixx-cup-table { display: block; color: #fffdf8; padding: 15px 10px 9px; }
+.qwixx-cup-table .qwixx-dice { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.qwixx-cup-table .qwixx-die { cursor: default; }
+.qwixx-cup-table > p { font-size: .68rem; color: #dce4f4; }
+.qwixx-cup-table .kribbel-face-color--white { --die-bg: #fffdf8; --pip: #171a31; }
+.qwixx-cup-table .kribbel-face-color--red { --die-bg: var(--qwixx-red); --pip: white; }
+.qwixx-cup-table .kribbel-face-color--yellow { --die-bg: var(--qwixx-yellow); --pip: #3d3108; }
+.qwixx-cup-table .kribbel-face-color--green { --die-bg: var(--qwixx-green); --pip: white; }
+.qwixx-cup-table .kribbel-face-color--blue { --die-bg: var(--qwixx-blue); --pip: white; }
+.qwixx-cup-table .is-retired { border: 1px dashed #a9bad14a; opacity: .65; }
+.qwixx-cup-table .is-retired .die-scene { visibility: hidden; }
+.qwixx-die__removed { position: absolute; inset: 0; display: grid; place-items: center; font-size: 2rem; color: #c6d2e6; }
+.qwixx-cup-controls { padding: 10px 16px 14px; }
+.qwixx-white-sum { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 0 0 10px; padding: 3px 4px; min-height: 35px; color: #53607a; font-size: .8rem; }
+.qwixx-white-sum strong { min-width: 36px; text-align: center; color: #273c75; font-size: 1.7rem; font-variant-numeric: tabular-nums; }
+.qwixx-score-side { min-width: 0; }
+@media (max-width: 360px) { .qwixx-cup-table .qwixx-dice { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 900px) {
+  .app-shell:has(.qwixx-screen) { width: min(100%, 1100px); }
+  .qwixx-play { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.15fr); gap: 26px; align-items: start; padding: 22px 24px; }
+  .qwixx-table-side .dice-tray { margin: 0; }
+  .qwixx-score-side { border: 1px solid #e3e0d7; border-radius: 18px; overflow: hidden; background: #fbfaf6; }
+  .qwixx-cup-controls { padding: 16px 4px; }
+  .qwixx-sheet { padding: 20px 14px 14px; }.qwixx-row { margin-bottom: 13px; }
+  .qwixx-row__name { margin-bottom: 6px; font-size: .72rem; }
+  .qwixx-turn { padding-inline: 24px; }
+}

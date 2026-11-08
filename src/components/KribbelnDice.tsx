@@ -1,33 +1,17 @@
-import { useLayoutEffect, useRef, type CSSProperties, type RefObject } from "react";
+import type { CSSProperties, RefObject } from "react";
 import { KRIBBEL_DICE_FACES, type KribbelDie } from "../../shared/kribbeln";
+import { useDiceCupLayout } from "./useDiceCupLayout";
+import { DICE_CUP_ROLL_DURATION } from "./DiceCupTable";
 
 export const KRIBBEL_COLOR_NAMES = { red: "Rot", yellow: "Gelb", green: "Grün", blue: "Blau", orange: "Orange", purple: "Violett" };
 const PIPS: Record<number, number[]> = { 1: [5], 2: [1, 9], 3: [1, 5, 9], 4: [1, 3, 7, 9], 5: [1, 3, 5, 7, 9], 6: [1, 3, 4, 6, 7, 9] };
 
-export const KRIBBEL_ROLL_DURATION = 1250;
+export const KRIBBEL_ROLL_DURATION = DICE_CUP_ROLL_DURATION;
 
 export function KribbelnDice({ dice, kept, disabled, rolling = false, inCup = false, cupRef, rollKey, onToggle }: {
   dice: KribbelDie[]; kept: number[]; disabled: boolean; rolling?: boolean; inCup?: boolean; cupRef?: RefObject<HTMLButtonElement | null>; rollKey: string; onToggle: (index: number) => void;
 }) {
-  const root = useRef<HTMLDivElement>(null);
-  useLayoutEffect(() => {
-    if (!root.current || !cupRef?.current) return;
-    const measure = () => {
-      const cup = cupRef.current?.getBoundingClientRect();
-      if (!cup) return;
-      root.current?.querySelectorAll<HTMLElement>(".kribbel-die-anchor").forEach(anchor => {
-        const target = anchor.getBoundingClientRect(), scene = anchor.querySelector<HTMLElement>(".die-scene");
-        if (!scene) return;
-        scene.style.setProperty("--pour-x", `${cup.left + cup.width * .95 - target.left - target.width / 2}px`);
-        scene.style.setProperty("--pour-y", `${cup.top + cup.height * .4 - target.top - target.height / 2}px`);
-        scene.style.setProperty("--stash-x", `${cup.left + cup.width * .5 - target.left - target.width / 2}px`);
-        scene.style.setProperty("--stash-y", `${cup.top + cup.height * .3 - target.top - target.height / 2}px`);
-      });
-    };
-    measure();
-    const observer = new ResizeObserver(measure); observer.observe(root.current); observer.observe(cupRef.current);
-    return () => observer.disconnect();
-  }, [cupRef]);
+  const root = useDiceCupLayout(cupRef);
   return <div ref={root} className="kribbel-dice" aria-label="Sechs Farbwürfel">
     {Array.from({ length: 6 }, (_, index) => {
       const die = dice[index];

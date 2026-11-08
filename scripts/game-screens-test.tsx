@@ -8,6 +8,7 @@ import { KribbelnGameScreen } from "../src/screens/KribbelnGameScreen";
 import { KribbelnDice } from "../src/components/KribbelnDice";
 import { KribbelnTask } from "../src/components/KribbelnTask";
 import { QwixxGameScreen } from "../src/screens/QwixxGameScreen";
+import { QwixxDice } from "../src/components/QwixxDice";
 import { DurakGameScreen } from "../src/screens/DurakGameScreen";
 import type { RoomState } from "../shared/types";
 import { InstallPrompt } from "../src/components/InstallPrompt";
@@ -48,7 +49,17 @@ for (const row of KRIBBEL_ROWS) {
 }
 room.kribbelnGame.finished = true; room.kribbelnGame.row = 10; room.kribbelnGame.winners = ["a"];
 assert.match(renderToString(<KribbelnGameScreen profile={profile} initialRoom={room} onExit={exit} />), /Partie beendet/);
-room.game = createQwixxGame(players); room.game.phase = "finished"; room.game.winnerIds = ["a"];
+room.game = createQwixxGame(players);
+const qwixxStart = renderToString(<QwixxGameScreen profile={profile} initialRoom={room} onExit={exit} />);
+assert.match(qwixxStart, /Würfelbecher schütteln/);
+assert.equal((qwixxStart.match(/data-die-id=/g) ?? []).length, 6);
+assert.equal((qwixxStart.match(/kribbel-face-color--white/g) ?? []).length, 12);
+const qwixxDice = renderToString(<QwixxDice dice={{ white: [2, 3], colors: { red: null, yellow: 4, green: 5, blue: 6 } }} closedRows={["red"]} rolling inCup={false} cupRef={{ current: null }} rollKey="1-0-1" />);
+assert.equal((qwixxDice.match(/die-face die-face--/g) ?? []).length, 36);
+assert.equal((qwixxDice.match(/is-rolling/g) ?? []).length, 5);
+assert.match(qwixxDice, /Roter Würfel entfernt/);
+assert.doesNotMatch(qwixxDice, /antippen zum Behalten|aria-pressed/);
+room.game.phase = "finished"; room.game.winnerIds = ["a"];
 assert.match(renderToString(<QwixxGameScreen profile={profile} initialRoom={room} onExit={exit} />), /Fehlwürfe/);
 room.durakGame = createDurakGame(players); room.durakGame.phase = "finished"; room.durakGame.durakId = "b";
 assert.match(renderToString(<DurakGameScreen profile={profile} initialRoom={room} onExit={exit} />), /Ben ist der Durak/);
