@@ -79,8 +79,9 @@ Handy- und PC-Größe. Diese Befehle laufen bereits im GitHub-CI-Workflow; die
 neuen Prüfungen sind darin enthalten. Die Modell-Daten werden mit dem
 nachgeladenen 3D-Modul gebündelt und im PWA-Cache mitgespeichert.
 
-Die Browserprüfungen laufen in getrennten CI-Jobs für Handy und PC nach den
-Regel- und Serverprüfungen. Beide Projekte werden vollständig ausgeführt;
+Die Browserprüfungen laufen für Handy und PC in jeweils zwei parallelen
+Teilläufen nach den Regel- und Serverprüfungen. Beide Projekte werden vollständig ausgeführt;
 ein fehlgeschlagenes Projekt bricht das andere nicht ab. Fortschritte stehen
 einzeln im Protokoll. Screenshots und Fehler-Traces bleiben sieben Tage als
-`browser-phone` beziehungsweise `browser-desktop` abrufbar.
+`browser-phone-1`, `browser-phone-2`, `browser-desktop-1` und
+`browser-desktop-2` abrufbar.

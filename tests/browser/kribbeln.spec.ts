@@ -91,6 +91,10 @@ test("Online sehen beide Geräte behaltene Würfel und dieselben gelandeten Farb
   const secondContext = await browser.newContext({ viewport: page.viewportSize()! });
   const observer = await secondContext.newPage();
   try {
+    // Die Einführungen werden separat geprüft. Beide Geräte treten hier
+    // ohne Intro bei, damit der zweite Klick dessen automatisches Ende nicht überholt.
+    await page.emulateMedia({reducedMotion:"reduce"});
+    await observer.emulateMedia({reducedMotion:"reduce"});
     await page.addInitScript(profile => localStorage.setItem("spielraum.profile.v1", JSON.stringify(profile)), { id: randomUUID(), username: "Anna" });
     await observer.addInitScript(profile => localStorage.setItem("spielraum.profile.v1", JSON.stringify(profile)), { id: randomUUID(), username: "Ben" });
     await page.goto("/"); await page.getByRole("button", { name: /Online spielen/ }).click();
@@ -102,8 +106,10 @@ test("Online sehen beide Geräte behaltene Würfel und dieselben gelandeten Farb
     await observer.getByRole("button", { name: "Raum beitreten", exact: true }).click();
     await observer.getByRole("button", { name: "Ich bin bereit", exact: true }).click();
     await page.getByRole("button", { name: "Ich bin bereit", exact: true }).click();
-    await page.getByRole("button", { name: "Intro überspringen" }).click();
-    await observer.getByRole("button", { name: "Intro überspringen" }).click();
+    await expect(page.getByRole("heading",{name:KRIBBEL_ROWS[0].label,exact:true})).toBeVisible();
+    await expect(observer.getByRole("heading",{name:KRIBBEL_ROWS[0].label,exact:true})).toBeVisible();
+    await page.emulateMedia({reducedMotion:"no-preference"});
+    await observer.emulateMedia({reducedMotion:"no-preference"});
     await page.getByRole("button", { name: "Würfeln", exact: true }).click();
     await expect(page.locator(".kribbel-die-slot.is-rolling")).toHaveCount(6);
     await expect(observer.locator(".kribbel-die-slot.is-rolling")).toHaveCount(6);

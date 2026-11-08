@@ -30,6 +30,7 @@ jobs:
       fail-fast: false
       matrix:
         project: [phone, desktop]
+        shard: [1, 2]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -39,11 +40,11 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npx playwright install --with-deps chromium
-      - run: npm run test:browser -- --project=${{ matrix.project }} --reporter=list
+      - run: npm run test:browser -- --project=${{ matrix.project }} --shard=${{ matrix.shard }}/2 --reporter=list
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: browser-${{ matrix.project }}
+          name: browser-${{ matrix.project }}-${{ matrix.shard }}
           path: test-results/
           if-no-files-found: ignore
           retention-days: 7
