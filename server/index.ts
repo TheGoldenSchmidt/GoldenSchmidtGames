@@ -576,6 +576,6 @@ if (isMainModule) {
   const server = createSpielraumServer();
   const port = Number(process.env.PORT ?? 3001);
   server.listen(port).then(() => {
-    console.log(`Spielraum-Server läuft auf http://localhost:${port}`);
+    console.log(`GoldenSchmidtGames-Server läuft auf http://localhost:${port}`);
   });
 }

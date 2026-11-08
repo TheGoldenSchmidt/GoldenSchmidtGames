@@ -39,16 +39,18 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .screen-enter { animation: reveal .28s ease-out both; }
 @keyframes reveal { from { opacity: 0; transform: translateY(8px); } }
 
-.brand { display: inline-flex; align-items: center; gap: 10px; color: white; }
-.brand__tokens { display: flex; align-items: center; height: 28px; }
-.token { width: 20px; height: 20px; border-radius: 50%; border: 3px solid var(--night); margin-left: -5px; }
-.token:first-child { margin-left: 0; }
-.token--coral { background: var(--coral); }
-.token--mint { background: var(--mint); }
-.token--cream { background: var(--cream); }
+.brand { display: inline-flex; align-items: center; gap: 10px; color: white; flex-shrink: 0; }
+.brand__icon { display: block; width: 44px; height: 44px; flex: 0 0 auto; }
 .brand__name { font-weight: 800; font-size: 1.22rem; letter-spacing: -.04em; }
+.brand__name--short { display: none; }
+.brand--compact { justify-content: center; }
 .brand--compact .brand__name { display: none; }
-.brand--compact .brand__tokens { transform: scale(.82); transform-origin: right center; }
+.brand--compact .brand__icon { width: 36px; height: 36px; }
+
+@media (max-width: 400px) {
+  .brand__name--full { display: none; }
+  .brand__name--short { display: inline; }
+}
 
 .home {
   min-height: 100dvh;
@@ -59,7 +61,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
   flex-direction: column;
 }
 .home__topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.profile-chip { border: 0; border-radius: 999px; background: rgba(255,255,255,.09); color: white; padding: 6px 10px 6px 6px; display: flex; align-items: center; gap: 7px; font-size: .78rem; max-width: 48%; }
+.profile-chip { border: 0; border-radius: 999px; background: rgba(255,255,255,.09); color: white; padding: 6px 10px 6px 6px; display: flex; align-items: center; gap: 7px; font-size: .78rem; min-width: 0; max-width: 48%; }
 .profile-chip__avatar { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--mint); color: var(--night); font-weight: 800; flex: 0 0 auto; }
 .profile-chip > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 

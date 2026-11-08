@@ -65,7 +65,7 @@ export function RoomScreen({
 
   return (
     <main className="page screen-enter">
-      <ScreenHeader title="Spielraum" onBack={onBack} />
+      <ScreenHeader title="Lobby" onBack={onBack} />
       <section className="page__content room">
         {room.partyTest?<div className="party-test-notice"><strong>Deine Testpartie</strong><br/>Du und {room.players.filter(p=>p.bot).length} Bots. Nur du musst dich bereit melden.</div>:<button className="room-code" onClick={copyCode} aria-label="Raumcode kopieren">
           <small>{copied ? "Code kopiert" : "Raumcode antippen zum Kopieren"}</small>

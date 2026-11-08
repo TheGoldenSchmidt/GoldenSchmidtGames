@@ -62,7 +62,7 @@ export function InstallPrompt() {
     <aside className="install-card" aria-label="App installieren">
       <button onClick={install}>
         <span className="install-card__icon" aria-hidden="true">↓</span>
-        <span><strong>Als App installieren</strong><small>{installEvent ? "Installationsdialog öffnen" : "So kommt Spielraum auf deinen Startbildschirm"}</small></span>
+        <span><strong>Als App installieren</strong><small>{installEvent ? "Installationsdialog öffnen" : "So kommt GSG auf deinen Startbildschirm"}</small></span>
         <span aria-hidden="true">{showHelp ? "−" : "+"}</span>
       </button>
       {installError && <p role="alert">{installError}</p>}
@@ -71,7 +71,7 @@ export function InstallPrompt() {
           {isIos ? <p>Öffne diesen Link in <strong>Safari</strong>. Wähle <strong>Teilen → Zum Home-Bildschirm</strong> und, falls angezeigt, <strong>Als Web-App öffnen → Hinzufügen</strong>.</p>
             : <p>Öffne diesen Link direkt in <strong>Chrome</strong> oder deinem normalen Browser. Wähle im <strong>⋮-Menü</strong> den Eintrag <strong>App installieren</strong> oder <strong>Zum Startbildschirm hinzufügen</strong>. Auf dem PC findest du die Installation meist oben in der Adressleiste.</p>}
           <p>„Aktuelle Version“ bedeutet nur, dass diese Webseite aktuell ist. Du kannst sie trotzdem als App installieren.</p>
-          {!isIos && <p>Falls der Browser „Öffnen“ statt „Installieren“ anbietet: Prüfe in den Handy-Einstellungen unter <strong>Apps → Spielraum</strong>, ob die App noch installiert ist. Ein entferntes Startbildschirm-Symbol deinstalliert sie nicht unbedingt.</p>}
+          {!isIos && <p>Falls der Browser „Öffnen“ statt „Installieren“ anbietet: Prüfe in den Handy-Einstellungen unter <strong>Apps → GoldenSchmidtGames</strong>, ob die App noch installiert ist. Ein entferntes Startbildschirm-Symbol deinstalliert sie nicht unbedingt.</p>}
         </div>
       )}
     </aside>

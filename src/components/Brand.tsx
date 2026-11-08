@@ -1,12 +1,9 @@
 export function Brand({ compact = false }: { compact?: boolean }) {
   return (
-    <div className={`brand ${compact ? "brand--compact" : ""}`} aria-label="Spielraum">
-      <div className="brand__tokens" aria-hidden="true">
-        <span className="token token--coral" />
-        <span className="token token--mint" />
-        <span className="token token--cream" />
-      </div>
-      <span className="brand__name">Spielraum</span>
+    <div className={`brand ${compact ? "brand--compact" : ""}`} role="img" aria-label="GoldenSchmidtGames" title="GoldenSchmidtGames">
+      <img className="brand__icon" src="/gsg-icon.svg" alt="" width="44" height="44" />
+      <span className="brand__name brand__name--full">GoldenSchmidtGames</span>
+      <span className="brand__name brand__name--short" aria-hidden="true">GSG</span>
     </div>
   );
 }

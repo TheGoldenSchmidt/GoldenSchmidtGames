@@ -1,4 +1,4 @@
-# Spielraum über einen Link bereitstellen
+# GoldenSchmidtGames über einen Link bereitstellen
 
 Die Produktionsanwendung besteht aus einem gemeinsamen Node-Prozess. Er liefert die gebaute PWA aus und hält gleichzeitig die Socket.IO-Verbindungen für Online-Räume offen.
 
@@ -27,8 +27,8 @@ Der Server liefert App, Manifest, Service Worker und WebSocket-Endpunkt anschlie
 ## Start mit Docker
 
 ```bash
-docker build -t spielraum .
-docker run --rm -p 3000:3000 -e PORT=3000 spielraum
+docker build -t goldenschmidtgames .
+docker run --rm -p 3000:3000 -e PORT=3000 goldenschmidtgames
 ```
 
 Nach dem Veröffentlichen wird nur noch die HTTPS-Adresse geteilt. Android bietet die Installation direkt im Browser an. Auf dem iPhone wird die Seite in Safari über „Teilen“ und „Zum Home-Bildschirm“ installiert.

@@ -1,4 +1,4 @@
-# Spielraum
+# GoldenSchmidtGames (GSG)
 
 Eine installierbare Smartphone-PWA für lokale und Online-Spiele. Das aktuelle Grundgerüst enthält:
 

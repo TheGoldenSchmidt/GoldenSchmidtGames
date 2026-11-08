@@ -8,11 +8,11 @@ export default defineConfig({
     VitePWA({
       registerType: "prompt",
       injectRegister: false,
-      includeAssets: ["icon.svg", "icon-192.png", "icon-512.png", "apple-touch-icon.png"],
+      includeAssets: ["gsg-icon.svg", "gsg-icon-192.png", "gsg-icon-512.png", "gsg-apple-touch-icon.png"],
       manifest: {
         id: "/",
-        name: "Spielraum",
-        short_name: "Spielraum",
+        name: "GoldenSchmidtGames",
+        short_name: "GSG",
         description: "Deine Sammlung für lokale und gemeinsame Spiele.",
         lang: "de-DE",
         categories: ["games", "entertainment"],
@@ -25,19 +25,19 @@ export default defineConfig({
         scope: "/",
         icons: [
           {
-            src: "/icon-192.png",
+            src: "/gsg-icon-192.png",
             sizes: "192x192",
             type: "image/png",
             purpose: "any"
           },
           {
-            src: "/icon-512.png",
+            src: "/gsg-icon-512.png",
             sizes: "512x512",
             type: "image/png",
             purpose: "any"
           },
           {
-            src: "/icon-512.png",
+            src: "/gsg-icon-512.png",
             sizes: "512x512",
             type: "image/png",
             purpose: "maskable"
