@@ -13,7 +13,22 @@ try {
     fetch(`${origin}/api/health`)
   ]);
   assert.equal(page.status, 200);
-  assert.match(await page.text(), /<title>GoldenSchmidtGames<\/title>/);
+  const html = await page.text();
+  assert.match(html, /<title>GoldenSchmidtGames<\/title>/);
+  // Messenger lesen das HTML ohne JavaScript und laden das Vorschaubild separat.
+  const metadata = Object.fromEntries([...html.matchAll(/<meta\s+(?:property|name)="([^"]+)"\s+content="([^"]*)"/g)].map(([, key, value]) => [key, value]));
+  assert.equal(metadata["og:title"], "GoldenSchmidtGames");
+  assert.equal(metadata["og:site_name"], "GoldenSchmidtGames");
+  const shareImageUrl = new URL(metadata["og:image"]);
+  assert.equal(shareImageUrl.protocol, "https:");
+  assert.equal(shareImageUrl.origin, new URL(metadata["og:url"]).origin);
+  const shareImage = await fetch(`${origin}${shareImageUrl.pathname}`, { headers: { "User-Agent": "WhatsApp/2.0" } });
+  assert.equal(shareImage.status, 200);
+  assert.match(shareImage.headers.get("content-type") ?? "", /image\/png/);
+  const imageData = Buffer.from(await shareImage.arrayBuffer());
+  assert.equal(imageData.readUInt32BE(16), Number(metadata["og:image:width"]));
+  assert.equal(imageData.readUInt32BE(20), Number(metadata["og:image:height"]));
+  assert.ok(imageData.readUInt32BE(16) >= 200, "Das Vorschaubild muss auch als Messenger-Miniatur lesbar sein");
   assert.equal(manifest.status, 200);
   const manifestData = await manifest.json() as { name?: string; short_name?: string; icons?: unknown[]; display?: string };
   assert.equal(manifestData.name, "GoldenSchmidtGames");
