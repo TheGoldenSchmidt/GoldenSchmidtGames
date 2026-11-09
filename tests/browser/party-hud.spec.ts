@@ -70,8 +70,14 @@ for(const motion of ['no-preference','reduce'] as const) {
         const read=()=>page.locator('.party-action-world').getAttribute('data-actors').then(v=>JSON.parse(v??'[]').find((a:{id:string})=>a.id===viewer));
         const before=(await read()).punchAt;
         const punch=page.getByRole('button',{name:'Schlagen',exact:true});
-        if(info.project.name==='phone')await punch.tap();else {await punch.focus();await page.keyboard.press('Enter');}
-        await expect.poll(async()=>(await read()).punchAt).toBeGreaterThan(before);
+        if(info.project.name==='phone'){
+          // Bots can stun the player; retry separate presses so the rising-edge
+          // action can occur after the existing gameplay lock has expired.
+          await expect.poll(async()=>{await punch.tap();return (await read()).punchAt;},{timeout:8000,intervals:[200]}).toBeGreaterThan(before);
+        }else {
+          await punch.focus();await page.keyboard.press('Enter');
+          await expect.poll(async()=>(await read()).punchAt).toBeGreaterThan(before);
+        }
       }
     }
   });

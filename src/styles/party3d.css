@@ -63,7 +63,7 @@
 
 .party-roll-status { display:none; }
 @media(max-width:899px){
- .party-screen--board:has(.party-roll-dock) { padding-bottom:calc(136px + env(safe-area-inset-bottom)); }
+ .party-screen--board:has(.party-roll-dock) { padding-bottom:calc(164px + env(safe-area-inset-bottom)); }
  .party-screen--board:has(.party-roll-dock) .party-turn-title { display:none; }
  .party-roll-dock { position:fixed; left:50%; bottom:max(10px,env(safe-area-inset-bottom)); translate:-50% 0; width:min(508px,calc(100% - 24px)); z-index:15; padding:10px; border:1px solid #bfd2c2; border-radius:20px; background:#edf4e9; box-shadow:0 4px 22px #10485b33; }
  .party-roll-status { display:grid; gap:3px; margin:0 4px 9px; color:var(--deep); }
@@ -78,3 +78,21 @@
 .party-final-awards{margin:18px 0;text-align:left;border-top:1px solid #bfd2c2;padding-top:8px}
 .party-final-awards summary{min-height:44px;padding:12px 0;cursor:pointer;font-weight:800;font-size:.85rem}
 .party-final-awards ul{list-style:none;padding:0;margin:0}.party-final-awards ul li{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 0;font-size:.8rem}.party-final-awards ul strong{font-size:.8rem}
+
+/* Progress uses existing coins and practice actions; it never awards points. */
+.party-trophy-goal { margin:14px 0; padding:12px 0; border-block:1px solid #bfd2c2; color:var(--deep); }
+.party-trophy-goal > div { display:flex; flex-wrap:wrap; justify-content:space-between; gap:6px; }
+.party-trophy-goal strong { font-size:.85rem; }.party-trophy-goal span,.party-trophy-goal small { font-size:.72rem; }
+.party-trophy-goal meter { display:block; width:100%; height:12px; margin:8px 0; accent-color:#b58a18; }
+.party-trophy-goal small { display:block; }.party-trophy-goal p { margin:8px 0 0; font-weight:800; }
+.party-trophy-goal.is-rewarded { border-color:#a77a20; animation:party-reward-glow 1s ease-out; }
+.party-coin-reward { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:8px 14px; padding:12px; background:#fff0bb; border-radius:12px; color:#573b14; }
+.party-coin-reward strong { font-size:1.1rem; }.party-coin-reward span { font-size:.8rem; }
+.party-practice-goals { margin-bottom:12px; color:#10485b; }
+.party-practice-goals ul { display:flex; flex-wrap:wrap; gap:6px 14px; list-style:none; margin:0; padding:0; font-size:.78rem; }
+.party-practice-goals li.is-complete { color:#236b43; font-weight:800; }
+.party-practice-goals p { margin:6px 0 0; font-size:.72rem; }
+@keyframes party-reward-glow { from { background:#fff0bb; } to { background:transparent; } }
+@media(prefers-reduced-motion:reduce) { .party-trophy-goal.is-rewarded { animation:none; } }
+
+.party-roll-status .party-roll-goal { color:#715418; font-weight:800; margin-top:3px; }
