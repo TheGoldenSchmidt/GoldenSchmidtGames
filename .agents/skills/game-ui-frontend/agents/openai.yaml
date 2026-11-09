@@ -1,0 +1,4 @@
+interface:
+  display_name: "Game UI Frontend"
+  short_description: "Design browser-game HUDs, menus, and overlays"
+  default_prompt: "Use $game-ui-frontend to design a browser-game UI layer that supports the play experience without crowding the playfield."
