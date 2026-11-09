@@ -8,3 +8,8 @@ services:
     dockerContext: .
     healthCheckPath: /api/health
     autoDeployTrigger: commit
+    envVars:
+      - key: TURSO_DATABASE_URL
+        sync: false
+      - key: TURSO_AUTH_TOKEN
+        sync: false

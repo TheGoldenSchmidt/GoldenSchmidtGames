@@ -1,6 +1,6 @@
 import {characterId,characterPortrait} from "../../shared/characters";
 import {preloadFigures} from "../figures/catalog";
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { getGame } from "../../shared/games";
 import type { GameId } from "../../shared/types";
 import type { IntroPlayer, IntroStage } from "../three/introWorld";
@@ -109,6 +109,8 @@ function IntroScene({ gameId, players, onComplete }: { gameId: GameId; players: 
   </section>;
 }
 
+export const GameIntroActive = createContext(false);
+
 /** Keep the live game subscribed, but shield its controls until the camera arrives. */
 export function GameIntro({ gameId, players, enabled, children }: { gameId: GameId; players: IntroPlayer[]; enabled: boolean; children: ReactNode }) {
   const [active, setActive] = useState(() => enabled && typeof window !== "undefined" && !window.matchMedia("(prefers-reduced-motion: reduce)").matches);
@@ -131,7 +133,9 @@ export function GameIntro({ gameId, players, enabled, children }: { gameId: Game
   }, [active]);
 
   return <>
-    <div className="game-entrance" ref={gameRoot} tabIndex={-1} inert={active} aria-hidden={active || undefined}>{children}</div>
+    <div className="game-entrance" ref={gameRoot} tabIndex={-1} inert={active} aria-hidden={active || undefined}>
+      <GameIntroActive.Provider value={active}>{children}</GameIntroActive.Provider>
+    </div>
     {active && <IntroScene gameId={gameId} players={cast.current} onComplete={finish} />}
   </>;
 }

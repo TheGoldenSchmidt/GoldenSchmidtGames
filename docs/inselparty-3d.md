@@ -21,7 +21,7 @@ Die Welt besteht aus echten Meshes, räumlicher Beleuchtung, Schatten, einer dre
 
 ## Ablauf und Steuerung
 
-- Online: gemeinsame Arena und serverseitige Simulation mit 20 Schritten pro Sekunde; Clients senden ausschließlich normalisierte Steuerwerte, keine Positionen oder Punkte.
+- Mehrspieler: gemeinsame Arena mit 20 Simulationsschritten pro Sekunde, wahlweise auf Node oder im Worker des Host-Handys; Clients senden ausschließlich normalisierte Steuerwerte, keine Positionen oder Punkte. Beide Wege verwenden `shared/roomCore.ts`; die [Hosting-Auswahl](../README.md#zwei-hostingarten) gilt für den gesamten Raum.
 - Die Partyinsel ist ausschließlich online. Jede Person spielt auf dem eigenen Gerät; alle Minispiele laufen gleichzeitig. Analoge Aufgaben und ein lokaler Partiemodus entfallen auf ausdrücklichen Nutzerwunsch. Eine kurze Übung vor dem Spiel ist ohne Wertung möglich.
 - Handy: analoger Touch-Stick, getrennte Aktionsknöpfe; PC: WASD/Pfeile, Leertaste und E/J.
 - Auf kleinen Bildschirmen stehen Zugstatus und Würfelaktion zusammen in einer festen unteren Leiste. Im laufenden 3D-Minispiel nutzt das Querformat bis 600 Pixel Höhe die verfügbare Bildschirmhöhe: Status und Steuerungsoptionen behalten ihren Platz, die Arena füllt den Rest. Stick und Aktionsknöpfe bleiben ohne Scrollen erreichbar.

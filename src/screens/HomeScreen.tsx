@@ -10,6 +10,7 @@ export function HomeScreen({
   onProfile,
   onLocal,
   onOnline,
+  onResumeHost,
   onResumeOnline,
   resumeError
 }: {
@@ -18,6 +19,7 @@ export function HomeScreen({
   onProfile: () => void;
   onLocal: () => void;
   onOnline: () => void;
+  onResumeHost?: () => void;
   onResumeOnline?: () => void;
   resumeError?: string;
 }) {
@@ -50,23 +52,25 @@ export function HomeScreen({
           <span className="mode-card__chevron" aria-hidden="true">›</span>
         </button>
 
-        <button className="mode-card mode-card--online" onClick={onOnline} disabled={!online}>
+        <button className="mode-card mode-card--online" onClick={onOnline}>
           <span className="mode-card__signal" aria-hidden="true"><i /><i /><i /></span>
           <span className="mode-card__copy">
             <strong>Online spielen</strong>
-            <small>{online ? "Raum erstellen oder beitreten" : "Keine Internetverbindung"}</small>
+            <small>Node-Server oder Handy-Hosting</small>
           </span>
           <span className="mode-card__chevron" aria-hidden="true">›</span>
         </button>
       </section>
 
       <InstallPrompt />
-      {onResumeOnline&&<section className="party-resume" aria-label="Inselparty fortsetzen"><button className="button button--secondary button--wide" onClick={onResumeOnline} disabled={!online}>Online-Inselparty wieder beitreten</button>{resumeError&&<p role="alert">{resumeError}</p>}</section>}
+      {onResumeHost && <button className="button button--secondary button--wide" onClick={onResumeHost}>Handy-Tisch fortsetzen</button>}
+      {onResumeOnline&&<section className="party-resume" aria-label="Inselparty fortsetzen"><button className="button button--secondary button--wide" onClick={onResumeOnline} disabled={!online}>Online-Inselparty wieder beitreten</button></section>}
+      {resumeError && <p role="alert">{resumeError}</p>}
       <AppUpdate />
 
       <footer className="home__footer">
         <span className={`connection-dot ${online ? "is-online" : ""}`} />
-        {online ? "Online bereit" : "Offline – lokale Spiele sind verfügbar"}
+        {online ? "Online bereit" : "Offline · Handy-Hosting im WLAN oder Hotspot verfügbar"}
       </footer>
     </main>
   );

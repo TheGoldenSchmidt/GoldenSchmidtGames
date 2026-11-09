@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
 import { CUP_PREPARE_MS, CUP_READY_MS } from "../../src/lib/kribbelnCup";
+import { DICE_CUP_ROLL_DURATION } from "../../src/components/DiceCupTable";
 
 async function localQwixx(page: Page, reduced = false) {
   await page.emulateMedia({ reducedMotion: reduced ? "reduce" : "no-preference" });
@@ -69,7 +70,6 @@ test("Qwixx: sechs feste Würfel, farbiger Flug, Auswahl erst nach Landung und n
   await page.clock.runFor(850);
   await expect(page.locator(".qwixx-die.is-rolling")).toHaveCount(0);
   await expect(page.locator(".qwixx-white-sum strong")).toHaveText("2");
-  await page.clock.resume();
   await page.getByRole("button", { name: "Weißer Würfel 1: 1, auswählen", exact: true }).click({ force: true });
   await expect(page.locator(".qwixx-die.is-chosen")).toHaveCount(2);
   await page.screenshot({ path: info.outputPath("qwixx-becher-gelandet.png"), fullPage: true });
@@ -83,8 +83,10 @@ test("Qwixx: sechs feste Würfel, farbiger Flug, Auswahl erst nach Landung und n
   await page.getByRole("button", { name: "Gelb 2, auswählbar", exact: true }).click({ force: true });
   await expect(page.getByRole("button", { name: "Würfeln", exact: true })).toBeEnabled();
   await page.getByRole("button", { name: "Würfeln", exact: true }).click();
+  await page.clock.runFor(CUP_PREPARE_MS);
   await expect(page.locator(".qwixx-die.is-rolling")).toHaveCount(6);
-  await expect(page.locator(".qwixx-die.is-rolling")).toHaveCount(0, { timeout: 3000 });
+  await page.clock.runFor(DICE_CUP_ROLL_DURATION);
+  await expect(page.locator(".qwixx-die.is-rolling")).toHaveCount(0);
   expect(await page.evaluate(() => (window as unknown as { qwixxModels: Element[] }).qwixxModels.every((model, index) => model === document.querySelectorAll(".qwixx-die .die-cube")[index]))).toBe(true);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   expect(errors).toEqual([]);

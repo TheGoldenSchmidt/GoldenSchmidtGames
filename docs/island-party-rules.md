@@ -1,7 +1,8 @@
 # Inselparty: aktueller Regelstand
 
-Eine vollständige Partie findet ausschließlich online auf den eigenen Geräten
-statt. Die 13 freigegebenen alpha_-Figuren bleiben erhalten. Vor der ersten
+Eine vollständige Partie findet im Mehrspieler-Raum auf den eigenen Geräten
+statt, wahlweise mit Node-Server oder [Handy-Host](../README.md#zwei-hostingarten).
+Die 13 freigegebenen alpha_-Figuren bleiben erhalten. Vor der ersten
 Brett-Runde spielen alle ein zufälliges Auftakt-Minispiel. Das Ergebnis legt
 die feste Zugreihenfolge für sämtliche Runden fest; der Auftakt verteilt noch
 keine Münzen. Bei Punktgleichheit entscheiden weniger Stürze und danach die

@@ -1,6 +1,18 @@
 # GoldenSchmidtGames über einen Link bereitstellen
 
-Die Produktionsanwendung besteht aus einem gemeinsamen Node-Prozess. Er liefert die gebaute PWA aus und hält gleichzeitig die Socket.IO-Verbindungen für Online-Räume offen.
+Die Anwendung bietet zwei Raumtypen. Der bisherige Node-Prozess liefert die PWA aus und hält die Socket.IO-Verbindungen für Serverräume offen. Beim Handy-Hosting liefert der Webhost nur die App-Dateien; Spielstand und Spielverkehr bleiben bei der Gruppe.
+
+## Handy-Hosting
+
+1. Auf jedem Gerät die aktuelle App über HTTPS vollständig laden und möglichst installieren, solange Internet vorhanden ist. Die PWA speichert auch Worker, QR-Leser und Spielmodule offline.
+2. Alle Geräte mit demselben WLAN oder Hotspot verbinden. Der Host wählt beim Erstellen **Dieses Handy** und spielt selbst mit. Für jeden Gast **Gerät verbinden** öffnen; der Gast scannt die Einladung unter **Einem Handy-Host per QR beitreten**, anschließend scannt der Host die Antwort. Mehrteilige Codes vollständig durchblättern. Alternativ können die Textcodes übertragen werden.
+3. Das Host-Handy bleibt in der App und entsperrt. Ein Wechsel in den Hintergrund pausiert die Simulation; nach der Rückkehr läuft sie weiter. Bei einem vollständigen App-Neustart stellt dasselbe Gerät den Tisch aus IndexedDB wieder her. Gäste benötigen nach verlorener Direktverbindung eine neue QR-Paarung. Es gibt keinen automatischen Wechsel auf ein anderes Host-Gerät.
+
+Für diese Räume sind keine Turso-Zugangsdaten und kein laufender Spielserver erforderlich. `npm run build` erzeugt zusätzlich eine statisch auslieferbare PWA in `dist/`. Ein vorhandener Node-Webhost darf diese weiterhin ausliefern. Reines statisches Hosting ermöglicht ausschließlich Handy-Räume und lokale Spiele; die Node-Auswahl benötigt weiterhin einen erreichbaren Socket.IO-Server.
+
+Die direkte WebRTC-Verbindung verwendet keine externen ICE-Server. Geräte müssen einander im lokalen Netz erreichen können; Gastnetze mit Geräteisolation und manche Hotspots verhindern das. Die Kamera benötigt HTTPS und ausdrückliche Freigabe. Bei gesperrter Kamera bleibt die Textcode-Eingabe verfügbar. Browserdaten nicht löschen und nicht im privaten Modus spielen, wenn der Tisch erhalten bleiben soll. Ein Gerätespeicherfehler führt zu einer Unterbrechung, bevor ein ungespeicherter Zug bestätigt wird.
+
+`tests/browser/nearby.spec.ts` prüft echte Datenkanäle und Wiederherstellung mit Chromium. Vor praktischer Freigabe zusätzlich mit echten Android-/iPhone-Geräten im vorgesehenen Hotspot prüfen: fünf Personen, gleichzeitige Arena-Steuerung, Kamerapaarung, kurzzeitiger App-Wechsel, gesperrter Bildschirm, vollständiger Host-Neustart und Start ohne Internet. Browseremulation ersetzt diese Prüfung nicht.
 
 ## Anforderungen an den Hoster
 
@@ -12,7 +24,13 @@ Die Produktionsanwendung besteht aus einem gemeinsamen Node-Prozess. Er liefert 
 
 ## Render Blueprint
 
-Die Datei `render.yaml` beschreibt bereits einen kostenlosen Docker-Web-Service in der Region Frankfurt. In Render genügt deshalb „New → Blueprint“ und die Auswahl dieses Repositorys. Build, Startbefehl und Health-Check werden automatisch übernommen.
+Die [Render-Konfiguration](render.yaml) verwendet einen einzelnen Docker-Web-Service im Free-Tarif. Dessen [lokales Dateisystem ist flüchtig](https://render.com/docs/free). Richte den Spielstandspeicher einmalig vor dem ersten Deployment dieser Version ein:
+
+1. Im [Turso-Free-Tarif](https://turso.tech/pricing) eine eigene Datenbank für die Spielesammlung anlegen. Free auswählen und kostenpflichtige Zusatznutzung ausgeschaltet lassen.
+2. Die Datenbankadresse und ein Schreib-Token für **diese** Datenbank im Render-Service unter **Environment** als `TURSO_DATABASE_URL` und `TURSO_AUTH_TOKEN` hinterlegen. Bei einem neuen Blueprint werden diese Werte abgefragt. Nur der Server benötigt sie.
+3. Den Service deployen. Der Server legt die Tabellen an und lädt die Räume, bevor er Verbindungen annimmt. `/api/health` meldet HTTP 200, wenn der Server spielbereit ist. Für einen Handtest auf zwei Handys einen Zug durchführen, den Dienst neu starten und beide Spielansichten geöffnet lassen.
+
+Die Kombination ist innerhalb der Freikontingente kostenfrei. Cold Starts können die Wiederverbindung verlängern. Bei einem Schreibfehler bestätigt der Server den Zug erst nach einem erfolgreichen Speichervorgang. Er trennt die Verbindungen und lädt den letzten gespeicherten Stand erneut. Für die erste Umstellung einen Zeitpunkt zwischen zwei Partien wählen: Die Vorgängerversion hielt ihre Räume ausschließlich im Arbeitsspeicher.
 
 ## Start ohne Docker
 
@@ -28,11 +46,15 @@ Der Server liefert App, Manifest, Service Worker und WebSocket-Endpunkt anschlie
 
 ```bash
 docker build -t goldenschmidtgames .
-docker run --rm -p 3000:3000 -e PORT=3000 goldenschmidtgames
+docker run --rm -p 3000:3000 -e PORT=3000 -v gsg-spielstaende:/app/.gsg-data goldenschmidtgames
 ```
 
 Nach dem Veröffentlichen wird nur noch die HTTPS-Adresse geteilt. Android bietet die Installation direkt im Browser an. Auf dem iPhone wird die Seite in Safari über „Teilen“ und „Zum Home-Bildschirm“ installiert.
 
-## Aktuelle Servergrenze
+## Spielstände und Wiederherstellung
 
-Räume werden momentan im Arbeitsspeicher gehalten. Für die private erste Version sollte deshalb genau eine Serverinstanz laufen. Ein Neustart beendet offene Räume. Vor einer Skalierung auf mehrere Instanzen benötigen wir einen gemeinsamen Raum- und Socket-Speicher.
+Ohne Cloud-Konfiguration verwendet der Server beim lokalen Start `.gsg-data/rooms.db`. Über `GSG_DATABASE_FILE` lässt sich eine Datei auf einem dauerhaften Datenträger angeben. Die Datenbank enthält auch verdeckte Karten und Sitzungsschlüssel. Sie gehört weder ins Repository noch in öffentlich ausgelieferte Verzeichnisse.
+
+Jeder bestätigte Spielzug wird gemeinsam mit dem vollständigen Raumzustand gespeichert. Wiederholte Zugnachrichten moderner Clients werden über die gespeicherte Zugnummer erkannt. Die Inselparty sichert zusätzlich während laufender Arenen ungefähr einmal pro Sekunde die Simulation. Bei einem harten Abbruch kann eine noch unbestätigte Bewegung bis zum letzten gespeicherten Stand zurückspringen. Die Spieluhr pausiert während der Unterbrechung. Mehrere Instanzen dürfen nicht gleichzeitig spielen: Beim Deployment übernimmt die neue Instanz das Schreibrecht.
+
+Ein vollständig verwaister Spielraum bleibt sieben Tage wiederherstellbar, eine leere Lobby fünf Minuten. Abgeschlossene oder abgebrochene Inselpartys werden unmittelbar geschlossen. Die lokalen Neustart- und Speicherfehlertests laufen mit `npm run test:restart` und sind Teil von `npm run test:online`.

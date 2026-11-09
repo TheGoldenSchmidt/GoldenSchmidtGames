@@ -27,6 +27,7 @@ for(const motion of ['no-preference','reduce'] as const)test(`Trophäenziel, Üb
     await page.keyboard.press('Escape');await expect(dialog).toHaveCount(0);
     await toMini(session);
     for(const id of session.ids)await session.action({type:'ready'},id);
+    await expect(page.locator('.party-action-world')).toBeVisible();
     await expect(page.locator('.party-action-countdown')).toHaveCount(0,{timeout:10000});
     await session.control(viewer,{x:.2,z:0,jump:false,punch:false},100);
     await page.waitForTimeout(200);

@@ -21,7 +21,7 @@ import {
 } from "../../shared/durak";
 import type { DurakCard, DurakGameState, GuestProfile, RoomState } from "../../shared/types";
 import { Brand } from "../components/Brand";
-import { socket } from "../lib/socket";
+import { sendGameMove, socket } from "../lib/socket";
 
 function Card({ card, selected, playable, onClick }: { card: DurakCard; selected?: boolean; playable?: boolean; onClick?: () => void }) {
   const red = card.suit === "hearts" || card.suit === "diamonds";
@@ -109,8 +109,10 @@ export function DurakGameScreen({ profile, localNames, localCharacters, initialR
 
   function send(event: string, payload?: object) {
     setError("");
-    if (payload) socket.emit(event, payload, handleResponse);
-    else socket.emit(event, handleResponse);
+    sendGameMove(room, event, payload, (error, response) => {
+      if (error) setError("Der Server antwortet gerade nicht.");
+      else handleResponse(response);
+    });
   }
 
   function playAttack() {

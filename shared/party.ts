@@ -195,11 +195,26 @@ export function partyInput(g:PartyGame,id:string,value:number|string,now:number)
   else throw new Error("Analoge Ergebnisse gemeinsam eintragen.");
 }
 
+/** Arena simulation time is relative to mini.startAt. Only wall-clock deadlines move. */
+export function shiftPartyClock(game: PartyGame, elapsed: number) {
+  const offset = Math.max(0, elapsed);
+  if (game.deadline) game.deadline += offset;
+  if (game.movement) {
+    game.movement.departAt += offset;
+    game.movement.arriveAt += offset;
+  }
+  if (game.mini?.startAt) game.mini.startAt += offset;
+  for (const run of Object.values(game.mini?.runs ?? {})) {
+    if (run.blockedUntil) run.blockedUntil += offset;
+    if (run.lastInput) run.lastInput += offset;
+  }
+}
+
 export function applyPartyAction(current:PartyGame,id:string,action:PartyAction,now=Date.now()):PartyGame {
   if(!current.players.some(p=>p.id===id)||current.phase==="finished"||current.phase==="aborted")throw new Error("Diese Partie ist nicht aktiv.");
   const g=structuredClone(current),p=activePartyPlayer(g),own=g.players.find(p=>p.id===id)!;
   if(action.type==="abort"){phase(g,"aborted",now);return g;}
-  if(action.type==="resume"){if(!g.resumeOffered)throw new Error("Die Wartezeit läuft noch.");Object.keys(g.disconnected).forEach(id=>{g.players.find(p=>p.id===id)!.passive=true;if(g.mini){g.mini.runs[id].done=true;const actor=g.mini.arena?.actors.find(a=>a.id===id);if(actor){actor.finished=true;actor.inputUntil=0;}}});const pause=now-g.pausedAt;if(g.deadline)g.deadline+=pause;if(g.movement){g.movement.departAt+=pause;g.movement.arriveAt+=pause;}if(g.mini?.startAt)g.mini.startAt+=pause;g.pausedAt=0;g.resumeOffered=false;return g;}
+  if(action.type==="resume"){if(!g.resumeOffered)throw new Error("Die Wartezeit läuft noch.");Object.keys(g.disconnected).forEach(id=>{g.players.find(p=>p.id===id)!.passive=true;if(g.mini){g.mini.runs[id].done=true;const actor=g.mini.arena?.actors.find(a=>a.id===id);if(actor){actor.finished=true;actor.inputUntil=0;}}});shiftPartyClock(g,now-g.pausedAt);g.pausedAt=0;g.resumeOffered=false;return g;}
   if(g.pausedAt)throw new Error("Die Partie wartet auf die Verbindung.");
   const miniPhase=["mini-intro","mini-play","analog-confirm"].includes(g.phase);
   if(!miniPhase && id!==p.id)throw new Error("Du bist nicht am Zug.");

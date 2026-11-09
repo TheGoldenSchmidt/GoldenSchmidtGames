@@ -1,6 +1,6 @@
 import {CharacterAvatar,playerCharacters} from "../components/CharacterAvatar";
 import type {CharacterId} from "../../shared/characters";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   QWIXX_COLORS,
   QWIXX_COLOR_NAMES,
@@ -21,7 +21,8 @@ import { Brand } from "../components/Brand";
 import { DiceCupTable, DICE_CUP_ROLL_DURATION, type DiceCupHandle } from "../components/DiceCupTable";
 import { QwixxDice } from "../components/QwixxDice";
 import { QwixxArenaWorld, type QwixxArenaAction } from "../components/QwixxArenaWorld";
-import { socket } from "../lib/socket";
+import { GameIntroActive } from "../components/GameIntro";
+import { sendGameMove, socket } from "../lib/socket";
 
 function hasAnswered(game: QwixxGameState, playerId: string) {
   return Object.prototype.hasOwnProperty.call(game.whiteChoices, playerId);
@@ -41,6 +42,7 @@ export function QwixxGameScreen({
   onExit: () => void;
 }) {
   const online = Boolean(initialRoom);
+  const introActive = useContext(GameIntroActive);
   const [room, setRoom] = useState(initialRoom);
   const [localGame, setLocalGame] = useState<QwixxGameState | undefined>(() =>
     localNames
@@ -124,7 +126,7 @@ export function QwixxGameScreen({
       else if (!response?.ok) setError(response?.error ?? "Die Aktion konnte nicht ausgeführt werden.");
       else if (response.data) setRoom(response.data);
     };
-    if (payload) socket.timeout(5000).emit(event, payload, done); else socket.timeout(5000).emit(event, done);
+    sendGameMove(room, event, payload, done);
   }
 
   function updateLocal(action: () => QwixxGameState) {
@@ -214,7 +216,7 @@ export function QwixxGameScreen({
 
       <div className="qwixx-play">
       <section className="qwixx-arena" aria-label="Qwixx-Arena">
-      <QwixxArenaWorld players={arenaPlayers} activeId={activeId} action={arenaAction} reducedMotion={reducedMotion}/>
+      {!introActive && <QwixxArenaWorld players={arenaPlayers} activeId={activeId} action={arenaAction} reducedMotion={reducedMotion}/>}
       <section className="qwixx-turn" aria-live="polite">
         <CharacterAvatar id={characters[activeId]} className="qwixx-turn__avatar"/>
         <div><strong>{activeName}</strong><p>{phaseText()}</p></div>

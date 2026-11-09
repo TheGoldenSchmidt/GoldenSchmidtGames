@@ -104,6 +104,9 @@ export interface RoomState {
   durakGame?: DurakGameState;
   kribbelnGame?: import("./kribbeln").KribbelnGame;
   partyGame?: import("./party").PartyGame;
+  /** Private to the receiving player, including while the room is in the lobby. */
+  sessionToken?: string;
+  moveSequence?: number;
   partyToken?: string;
   partyTest?: { seed: number; commandSeq?: number };
 }
@@ -115,6 +118,7 @@ export interface GuestProfile {
 }
 
 export interface Ack<T = undefined> {
+  retryable?: boolean;
   ok: boolean;
   data?: T;
   error?: string;

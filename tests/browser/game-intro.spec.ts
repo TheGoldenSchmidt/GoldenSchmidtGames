@@ -77,6 +77,10 @@ test("Escape beendet das Intro, und eine neue Partie erhält wieder ein Intro", 
 });
 
 test("Reduzierte Bewegung überspringt Intros und beendet eine laufende Kamerafahrt", async ({ page }) => {
+  // Only the preference change may dismiss the second intro, not its four-second timer.
+  const start = new Date("2026-01-01T00:00:00Z");
+  await page.clock.install({ time: start });
+  await page.clock.pauseAt(new Date(start.getTime() + 1000));
   await page.emulateMedia({ reducedMotion: "reduce" });
   await localSetup(page, "Qwixx");
   await expect(page.locator(".game-intro")).toHaveCount(0);
@@ -87,8 +91,11 @@ test("Reduzierte Bewegung überspringt Intros und beendet eine laufende Kamerafa
   for(let n=1;n<=2;n++)await page.getByRole("combobox",{name:`Figur von Spieler ${n}`,exact:true}).selectOption("alpha_morty_smith");
   await page.getByRole("button", { name: "Qwixx starten", exact: true }).click();
   await expect(page.locator(".game-intro")).toBeVisible();
+  await expect(page.locator(".qwixx-arena-world")).toHaveCount(0);
   await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.clock.runFor(16);
   await expect(page.locator(".game-intro")).toHaveCount(0);
+  await expect(page.locator(".qwixx-arena-world")).toBeVisible();
   expect(await page.evaluate(() => document.body.style.overflow)).not.toBe("hidden");
   await page.getByRole("button", { name: "Würfeln", exact: true }).click();
 });

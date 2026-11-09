@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { GAMES, getGame } from "../../shared/games";
 import type { GameId, GuestProfile, RoomState } from "../../shared/types";
 import { ScreenHeader } from "../components/ScreenHeader";
+import { HostInvite } from "../nearby/Pairing";
 import { socket } from "../lib/socket";
 import { PartySettings } from "../components/PartySettings";
 import type { PartyOptions } from "../../shared/party";
@@ -72,7 +73,8 @@ export function RoomScreen({
     <main className="page screen-enter">
       <ScreenHeader title="Lobby" onBack={onBack} />
       <section className="page__content room">
-        {room.partyTest?<div className="party-test-notice"><strong>Deine Testpartie</strong><br/>Du und {room.players.filter(p=>p.bot).length} Bots. Nur du musst dich bereit melden.</div>:<button className="room-code" onClick={copyCode} aria-label="Raumcode kopieren">
+        {socket.tableRoute?.role==="host" && !room.partyTest && <HostInvite code={room.code}/>}
+        {room.partyTest?<div className="party-test-notice"><strong>Deine Testpartie</strong><br/>Du und {room.players.filter(p=>p.bot).length} Bots. Nur du musst dich bereit melden.</div>:socket.tableRoute?<div className="room-code"><small>Handy-Tisch · Beitritt per QR beim Host</small><strong>{room.code}</strong></div>:<button className="room-code" onClick={copyCode} aria-label="Raumcode kopieren">
           <small>{copied ? "Code kopiert" : "Raumcode antippen zum Kopieren"}</small>
           <strong>{room.code}</strong>
         </button>}
@@ -102,7 +104,7 @@ export function RoomScreen({
           {Array.from({ length: Math.max(0, room.config.playerCount - connectedCount) }, (_, index) => (
             <div className="player-row player-row--empty" key={`empty-${index}`}>
               <span className="player-avatar">+</span>
-              <span className="player-row__name"><strong>Freier Platz</strong><small>Code teilen und einladen</small></span>
+              <span className="player-row__name"><strong>Freier Platz</strong><small>{socket.tableRoute?"Beim Host per QR verbinden":"Code teilen und einladen"}</small></span>
             </div>
           ))}
         </div>

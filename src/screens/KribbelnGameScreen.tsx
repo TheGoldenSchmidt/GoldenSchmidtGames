@@ -6,7 +6,7 @@ import { KRIBBEL_ROLL_DURATION } from "../components/KribbelnDice";
 import { KribbelnTable, type KribbelnCupHandle } from "../components/KribbelnTable";
 import { KribbelnTask } from "../components/KribbelnTask";
 import type { GuestProfile, RoomState } from "../../shared/types";
-import { socket } from "../lib/socket";
+import { sendGameMove, socket } from "../lib/socket";
 
 export function KribbelnGameScreen({ profile, localNames, localCharacters, initialRoom, onExit }: { profile: GuestProfile; localNames?: string[]; localCharacters?:CharacterId[]; initialRoom?: RoomState; onExit: () => void }) {
   const characters=playerCharacters(initialRoom,localNames,localCharacters);
@@ -66,7 +66,7 @@ export function KribbelnGameScreen({ profile, localNames, localCharacters, initi
     if (event === "roll") { try { navigator.vibrate?.(25); } catch { /* Haptik ist optional. */ } }
     if (online) {
       requestLock.current = true; setPending(true);
-      socket.timeout(5000).emit(`kribbeln:${event}`, payload, (timeout: Error | null, response: { ok: boolean; data?: RoomState; error?: string }) => {
+      sendGameMove(room, `kribbeln:${event}`, payload, (timeout: Error | null, response: { ok: boolean; data?: RoomState; error?: string }) => {
       requestLock.current = false; setPending(false);
       if (timeout) setError("Der Server antwortet nicht.");
       else if (!response.ok) setError(response.error ?? "Aktion nicht möglich.");
