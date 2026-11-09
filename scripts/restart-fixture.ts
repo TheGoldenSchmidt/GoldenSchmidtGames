@@ -5,13 +5,13 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 
 /** Run the real server entry point, crash it, then reuse its port and database. */
-export async function restartFixture() {
+export async function restartFixture(options: { render?: boolean } = {}) {
   const dir = await mkdtemp(path.join(tmpdir(), "gsg-restart-"));
   let child: ChildProcess | undefined;
   let port = 0;
   async function start() {
     const env = { ...process.env, PORT: String(port), GSG_DATABASE_FILE: path.join(dir, "rooms.db").replaceAll("\\", "/"),
-      TURSO_DATABASE_URL: "", TURSO_AUTH_TOKEN: "", RENDER: "" };
+      TURSO_DATABASE_URL: "", TURSO_AUTH_TOKEN: "", RENDER: options.render ? "true" : "" };
     const proc = spawn(process.execPath, ["--import", "tsx", "server/index.ts"], {
       env, stdio: ["ignore", "pipe", "pipe"], windowsHide: true
     });

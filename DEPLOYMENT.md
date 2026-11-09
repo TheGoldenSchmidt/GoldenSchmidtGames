@@ -24,10 +24,12 @@ Die direkte WebRTC-Verbindung verwendet keine externen ICE-Server. Geräte müss
 
 ## Render Blueprint
 
-Die [Render-Konfiguration](render.yaml) verwendet einen einzelnen Docker-Web-Service im Free-Tarif. Dessen [lokales Dateisystem ist flüchtig](https://render.com/docs/free). Richte den Spielstandspeicher einmalig vor dem ersten Deployment dieser Version ein:
+Die [Render-Konfiguration](render.yaml) verwendet einen einzelnen Docker-Web-Service im Free-Tarif und startet **ohne Turso-Zugangsdaten**. Beide Hostingarten sind damit auswählbar. Der Node-Modus speichert dann lokal in `.gsg-data/rooms.db`. Dessen [lokales Dateisystem ist auf Render Free flüchtig](https://render.com/docs/free): Node-Partien können bei einem Neustart, Einschlafen oder Deployment verloren gehen. Der Server weist beim Start darauf hin. Das betrifft nicht die auf dem Host-Handy gespeicherten Partien.
+
+Für das Testen beider Hostingarten sind keine Datenbankeinrichtung und keine Turso-Variablen erforderlich. Eine neue Blueprint-Installation fragt keine Zugangsdaten ab. Für Node-Spielstände, die auch den Verlust des Render-Dateisystems überstehen sollen, kann optional externer Speicher eingerichtet werden:
 
 1. Im [Turso-Free-Tarif](https://turso.tech/pricing) eine eigene Datenbank für die Spielesammlung anlegen. Free auswählen und kostenpflichtige Zusatznutzung ausgeschaltet lassen.
-2. Die Datenbankadresse und ein Schreib-Token für **diese** Datenbank im Render-Service unter **Environment** als `TURSO_DATABASE_URL` und `TURSO_AUTH_TOKEN` hinterlegen. Bei einem neuen Blueprint werden diese Werte abgefragt. Nur der Server benötigt sie.
+2. Die Datenbankadresse und ein Schreib-Token für **diese** Datenbank im Render-Service unter **Environment** als `TURSO_DATABASE_URL` und `TURSO_AUTH_TOKEN` hinterlegen. Nur der Server benötigt sie. Beide Werte entweder gemeinsam setzen oder gemeinsam entfernen. Bei unvollständiger oder ungültiger Cloud-Konfiguration stoppt der Start; der Server wechselt dann nicht unbemerkt auf einen leeren lokalen Speicher.
 3. Den Service deployen. Der Server legt die Tabellen an und lädt die Räume, bevor er Verbindungen annimmt. `/api/health` meldet HTTP 200, wenn der Server spielbereit ist. Für einen Handtest auf zwei Handys einen Zug durchführen, den Dienst neu starten und beide Spielansichten geöffnet lassen.
 
 Die Kombination ist innerhalb der Freikontingente kostenfrei. Cold Starts können die Wiederverbindung verlängern. Bei einem Schreibfehler bestätigt der Server den Zug erst nach einem erfolgreichen Speichervorgang. Er trennt die Verbindungen und lädt den letzten gespeicherten Stand erneut. Für die erste Umstellung einen Zeitpunkt zwischen zwei Partien wählen: Die Vorgängerversion hielt ihre Räume ausschließlich im Arbeitsspeicher.
@@ -53,8 +55,8 @@ Nach dem Veröffentlichen wird nur noch die HTTPS-Adresse geteilt. Android biete
 
 ## Spielstände und Wiederherstellung
 
-Ohne Cloud-Konfiguration verwendet der Server beim lokalen Start `.gsg-data/rooms.db`. Über `GSG_DATABASE_FILE` lässt sich eine Datei auf einem dauerhaften Datenträger angeben. Die Datenbank enthält auch verdeckte Karten und Sitzungsschlüssel. Sie gehört weder ins Repository noch in öffentlich ausgelieferte Verzeichnisse.
+Ohne Cloud-Konfiguration verwendet der Server `.gsg-data/rooms.db`, auch auf Render. Über `GSG_DATABASE_FILE` lässt sich eine andere Datei angeben; sie übersteht den Verlust des Host-Dateisystems nur auf einem dauerhaften Datenträger. Die Datenbank enthält auch verdeckte Karten und Sitzungsschlüssel. Sie gehört weder ins Repository noch in öffentlich ausgelieferte Verzeichnisse.
 
 Jeder bestätigte Spielzug wird gemeinsam mit dem vollständigen Raumzustand gespeichert. Wiederholte Zugnachrichten moderner Clients werden über die gespeicherte Zugnummer erkannt. Die Inselparty sichert zusätzlich während laufender Arenen ungefähr einmal pro Sekunde die Simulation. Bei einem harten Abbruch kann eine noch unbestätigte Bewegung bis zum letzten gespeicherten Stand zurückspringen. Die Spieluhr pausiert während der Unterbrechung. Mehrere Instanzen dürfen nicht gleichzeitig spielen: Beim Deployment übernimmt die neue Instanz das Schreibrecht.
 
-Ein vollständig verwaister Spielraum bleibt sieben Tage wiederherstellbar, eine leere Lobby fünf Minuten. Abgeschlossene oder abgebrochene Inselpartys werden unmittelbar geschlossen. Die lokalen Neustart- und Speicherfehlertests laufen mit `npm run test:restart` und sind Teil von `npm run test:online`.
+Solange der Speicher erhalten bleibt, ist ein vollständig verwaister Spielraum sieben Tage wiederherstellbar, eine leere Lobby fünf Minuten. Abgeschlossene oder abgebrochene Inselpartys werden unmittelbar geschlossen. Die lokalen Neustart- und Speicherfehlertests laufen mit `npm run test:restart` und sind Teil von `npm run test:online`. Der Neustarttest startet den echten Server mit `RENDER=true` ohne Turso, prüft App-Auslieferung und alle vier Spiele und behält seine Testdatei über Prozessabbrüche hinweg. Er simuliert keinen dauerhaften Datenträger auf Render Free.

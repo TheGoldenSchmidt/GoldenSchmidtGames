@@ -6,15 +6,18 @@ export type { SavedRoom } from "../shared/roomPorts";
 
 export function deploymentDatabase(): Config {
   const url = process.env.TURSO_DATABASE_URL;
-  if (url || process.env.RENDER) {
+  if (url || process.env.TURSO_AUTH_TOKEN) {
     if (!url || !/^(libsql|https):\/\//.test(url) || !process.env.TURSO_AUTH_TOKEN) {
-      throw new Error("Für Render TURSO_DATABASE_URL und TURSO_AUTH_TOKEN konfigurieren.");
+      throw new Error("Für Turso sowohl TURSO_DATABASE_URL als auch TURSO_AUTH_TOKEN konfigurieren.");
     }
     if (new URL(url).searchParams.get("tls") === "0") throw new Error("Der externe Speicher benötigt TLS.");
     return { url, authToken: process.env.TURSO_AUTH_TOKEN,
       fetch: (request: Request) => fetch(request, {
         signal: AbortSignal.any([request.signal, AbortSignal.timeout(10000)])
       }) };
+  }
+  if (process.env.RENDER) {
+    console.warn("Render verwendet lokalen Spielstandspeicher. Ohne dauerhaften Datenträger können Node-Partien bei Neustarts oder Deployments verloren gehen.");
   }
   if (process.env.GSG_DATABASE_FILE) return { url: "file:" + process.env.GSG_DATABASE_FILE };
   mkdirSync(".gsg-data", { recursive: true, mode: 0o700 });

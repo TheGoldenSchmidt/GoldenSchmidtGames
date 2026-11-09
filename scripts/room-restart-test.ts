@@ -5,7 +5,9 @@ import { io, type Socket } from "socket.io-client";
 import type { Ack, RoomState } from "../shared/types";
 import { restartFixture } from "./restart-fixture";
 
-const server = await restartFixture();
+// Exercise the deployed entry point with Render's environment and no Turso credentials.
+// This test retains its local file; Render may discard that file on restart/deployment.
+const server = await restartFixture({ render: true });
 const sockets: Socket[] = [];
 async function connect(url: string) {
   const s = io(url, { autoConnect: false, reconnection: false, transports: ["websocket"] });
@@ -39,6 +41,10 @@ async function rejoin(url: string, seats: Seats) {
 }
 try {
   const url = await server.start();
+  assert.equal((await fetch(url + "/api/health")).status, 200);
+  const page = await fetch(url);
+  assert.equal(page.status, 200);
+  assert.match(await page.text(), /<title>GoldenSchmidtGames<\/title>/);
   const q = await startRoom(url, "qwixx"), d = await startRoom(url, "durak");
   const k = await startRoom(url, "kribbeln"), p = await startRoom(url, "party");
   await reply(q.a, "qwixx:roll");

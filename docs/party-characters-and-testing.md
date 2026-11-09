@@ -20,7 +20,7 @@ Der Startwert bestimmt Würfelreihenfolge und Arenaaufbau. Eingaben, Kollisionen
 und Zeitablauf beeinflussen das Ergebnis weiterhin. Ein Testraum ist privat
 für seine erstellende Person und deren Bots; andere Personen können ihm nicht
 beitreten. Die Partie läuft auf dem gewählten Node-Server oder Host-Handy. Nach einem
-Verbindungsabbruch kann dieselbe Sitzung wieder beitreten. Nach einem Serverneustart lädt der Server auch Testraum, Startwert und Bots aus dem [Spielstandspeicher](../DEPLOYMENT.md).
+Verbindungsabbruch kann dieselbe Sitzung wieder beitreten. Nach einem Serverneustart lädt der Server auch Testraum, Startwert und Bots aus dem [Spielstandspeicher](../DEPLOYMENT.md), sofern dieser erhalten geblieben ist. Render Free benötigt dafür optionalen externen Speicher; zum Starten und Testen ist Turso nicht erforderlich.
 
 In allen Spielen wählt jede Person ihre Figur vor dem Erstellen oder Beitreten.
 Die Auswahl wird im Gastprofil gespeichert und ist in der Lobby änderbar.
