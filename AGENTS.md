@@ -24,6 +24,8 @@ Playwright startet den Server mit dem Inhalt von `dist/`. Nach Clientänderungen
 
 ## Projektwissen und Übergabe
 
+Nutze [documentation-audit](.agents/skills/documentation-audit/SKILL.md) auf ausdrückliche Anforderung, für regelmäßige Dokumentationsprüfungen oder nach größeren Entwicklungsmeilensteinen (z. B. Architektur-, Hosting- oder Spielmodulerweiterungen). Kleine Codeänderungen lösen keinen vollständigen Audit aus.
+
 [README](README.md) für den Einstieg, [Deployment](DEPLOYMENT.md) für Hosting und Speichergrenzen, [Inselparty-Regeln](docs/island-party-rules.md) und [Figurenfreigabe](docs/approved-character-design.md) für verbindliche Spielentscheidungen. Änderungen an solchen Entscheidungen im zuständigen Dokument festhalten.
 
 Bei parallelen Codex-Chats pro unabhängiger Änderung einen eigenen Worktree nutzen. Zur Übergabe Ziel, Branch und Commit, offene lokale Änderungen sowie geprüfte und noch offene Punkte nennen.
