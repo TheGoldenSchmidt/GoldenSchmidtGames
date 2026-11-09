@@ -1,3 +1,4 @@
+import { isPartyMode } from "../../shared/games";
 import { useEffect, useMemo, useState } from "react";
 import { GAMES, getGame } from "../../shared/games";
 import type { GameId, GuestProfile, RoomState } from "../../shared/types";
@@ -133,7 +134,7 @@ export function RoomScreen({
           </label>
         </div>
 
-        {room.config.gameId === "party" && <PartySettings characterId={room.players.find(p=>p.id===profile.id)?.characterId} value={room.config.party} disabled={!isHost} onChange={value=>configure("party",room.config.playerCount,false,value)}/>}
+        {isPartyMode(room.config.gameId) && <PartySettings rollItUp={room.config.gameId==="roll-it-up"} characterId={room.players.find(p=>p.id===profile.id)?.characterId} value={room.config.party} disabled={!isHost} onChange={value=>configure(room.config.gameId,room.config.playerCount,false,value)}/>}
         {room.config.gameId === "durak" && (
           <label className="option-toggle">
             <span><strong>Schummelmodus</strong><small>Regelwidrig decken oder nachlegen – auf eigenes Risiko.</small></span>

@@ -12,6 +12,7 @@ export function HomeScreen({
   onOnline,
   onResumeHost,
   onResumeOnline,
+  resumeGameName="Inselparty",
   resumeError
 }: {
   profile: GuestProfile;
@@ -21,6 +22,7 @@ export function HomeScreen({
   onOnline: () => void;
   onResumeHost?: () => void;
   onResumeOnline?: () => void;
+  resumeGameName?: string;
   resumeError?: string;
 }) {
   return (
@@ -64,7 +66,7 @@ export function HomeScreen({
 
       <InstallPrompt />
       {onResumeHost && <button className="button button--secondary button--wide" onClick={onResumeHost}>Handy-Tisch fortsetzen</button>}
-      {onResumeOnline&&<section className="party-resume" aria-label="Inselparty fortsetzen"><button className="button button--secondary button--wide" onClick={onResumeOnline} disabled={!online}>Online-Inselparty wieder beitreten</button></section>}
+      {onResumeOnline&&<section className="party-resume" aria-label={resumeGameName+" fortsetzen"}><button className="button button--secondary button--wide" onClick={onResumeOnline} disabled={!online}>{resumeGameName==="Inselparty"?"Online-Inselparty":resumeGameName} wieder beitreten</button></section>}
       {resumeError && <p role="alert">{resumeError}</p>}
       <AppUpdate />
 

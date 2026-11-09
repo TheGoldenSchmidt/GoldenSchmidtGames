@@ -1,4 +1,4 @@
-import { getGame } from "./games";
+import { getGame, isPartyMode } from "./games";
 import { applyPartyAction, applyPartyControl, createPartyGame, partyOptions, publicParty, selectPartyTestMini, shiftPartyClock, tickParty, type PartyAction, type PartyOptions } from "./party";
 import { CHARACTERS, characterId, isCharacterId } from "./characters";
 import { PartyBotDriver } from "./partyBots";
@@ -209,9 +209,9 @@ function startRoom(room: RoomState) {
   if (room.config.gameId === "qwixx") room.game = createQwixxGame(players);
   else if (room.config.gameId === "durak") room.durakGame = createDurakGame(players, Math.random, room.config.durakCheatMode ?? false);
   else if (room.config.gameId === "kribbeln") room.kribbelnGame = createKribbelnGame(players);
-  else if (room.config.gameId === "party") {
+  else if (isPartyMode(room.config.gameId)) {
     players.forEach((p,i)=>p.characterId=characterId(p.characterId,i));
-    room.partyGame = createPartyGame(players, room.config.party, true, room.partyTest?.seed??randomInt(0x100000000));
+    room.partyGame = createPartyGame(players, room.config.party, true, room.partyTest?.seed??randomInt(0x100000000), Date.now(), room.config.gameId);
     if(room.partyTest)botDrivers.set(room.code,new PartyBotDriver());
   }
   else throw new Error("Dieses Spiel ist noch nicht verfügbar.");
@@ -300,15 +300,17 @@ hub.onPeer((socket) => {
     if(available)socket.join(`party-status:${room!.code}`);
     callback({ok:true,data:{available}});
   });
-  withPayload("party:test-create",(payload:{playerId?:string;name?:string;bots?:number;seed?:number;characterId?:unknown},callback:(ack:Ack<RoomState>)=>void)=>{
+  withPayload("party:test-create",(payload:{playerId?:string;name?:string;bots?:number;seed?:number;gameId?:GameId;characterId?:unknown},callback:(ack:Ack<RoomState>)=>void)=>{
     if (ownerPeer && socket.id !== ownerPeer) return callback({ok:false,error:"Nur das Host-Gerät kann Räume erstellen."});
     if(!isCharacterId(payload?.characterId))return callback({ok:false,error:"Wähle zuerst eine Spielfigur."});
     if(!Number.isInteger(payload?.bots)||payload.bots!<1||payload.bots!>5||!Number.isInteger(payload.seed)||payload.seed!<0||payload.seed!>0xffffffff)return callback({ok:false,error:"Wähle 1–5 Bots und einen Startwert von 0 bis 4294967295."});
+    const mode = payload.gameId ?? "party";
+    if (!isPartyMode(mode)) return callback({ok:false,error:"Unbekannter Partymodus."});
     const id=cleanPlayerId(payload.playerId),code=createCode();
     if (!id) return callback({ok:false,error:"Ungültige Spieler-ID."});
     const players:Player[]=[{id,name:cleanName(payload.name,"Gast"),connected:true,ready:false,score:0,characterId:payload.characterId}];
     for(let i=0;i<payload.bots!;i++)players.push({id:`bot-${randomUUID()}`,name:`Inselbot ${i+1}`,connected:true,ready:true,score:0,bot:true,characterId:CHARACTERS[randomInt(CHARACTERS.length)].id});
-    const room:RoomState={code,hostId:id,players,phase:"lobby",config:{gameId:"party",playerCount:players.length,party:partyOptions({rounds:5})},partyTest:{seed:payload.seed!}};
+    const room:RoomState={code,hostId:id,players,phase:"lobby",config:{gameId:mode,playerCount:players.length,party:partyOptions({rounds:5})},partyTest:{seed:payload.seed!}};
     registerRoom(room);enterRoom(socket.id,room,id);callback({ok:true,data:publicRoom(room,id)});
   });
   withPayload("room:character",(payload:{characterId?:unknown},callback:(ack:Ack<RoomState>)=>void)=>{
@@ -327,13 +329,13 @@ hub.onPeer((socket) => {
     if(seq<=(room.partyTest.commandSeq??0))return callback({ok:true,data:publicRoom(room,member.playerId)});
     if(g.pausedAt)return callback({ok:false,error:"Die Testpartie ist pausiert."});
     if(payload.command==="restart"){
-      room.partyGame=createPartyGame(room.players,room.config.party,true,room.partyTest.seed);
+      room.partyGame=createPartyGame(room.players,room.config.party,true,room.partyTest.seed,Date.now(),g.mode);
       room.partyGame.phaseId=g.phaseId+1;room.partyGame.seq={...g.seq};botDrivers.set(room.code,new PartyBotDriver());
     }else if(payload.command==="mini"&&isArenaId(payload.miniId??""))room.partyGame=selectPartyTestMini(g,payload.miniId as import("../shared/partyArena").ArenaId);
     else if(payload.command==="skip-bots")room.partyGame=botDrivers.get(room.code)!.skipTurns(g,Date.now());
     else return callback({ok:false,error:"Unbekanntes Testwerkzeug."});
     room.partyTest.commandSeq=seq;
-    broadcast(room);callback({ok:true,data:publicRoom(room,member.playerId)});
+    broadcast(room);callback({ok:true,data:publicRoom(room,member.playerId)});closePartyRoom(room);
   });
   withPayload("party:control",(payload:{phaseId?:number;token?:string;seq?:number;input?:ArenaInput},callback:(ack:Ack<{accepted:boolean}>)=>void, acknowledged:boolean)=>{
     const member=socketMembership.get(socket.id),room=member?rooms.get(member.roomCode):undefined,g=room?.partyGame;
@@ -493,7 +495,7 @@ hub.onPeer((socket) => {
         return callback({ ok: false, error: "Nur der Host kann das Spiel einstellen." });
       }
       if(room.phase!=="lobby")return callback({ok:false,error:"Die Partie läuft bereits."});
-      if(room.partyTest&&((payload.gameId&&payload.gameId!=="party")||(payload.playerCount!==undefined&&payload.playerCount!==room.config.playerCount)))return callback({ok:false,error:"Ein Testraum bleibt eine Inselparty mit der gewählten Botanzahl."});
+      if(room.partyTest&&((payload.gameId&&payload.gameId!==room.config.gameId)||(payload.playerCount!==undefined&&payload.playerCount!==room.config.playerCount)))return callback({ok:false,error:"Spiel und Botanzahl des Testraums stehen bereits fest."});
       let options: PartyOptions;
       try { options=partyOptions(payload.party??room.config.party); } catch {return callback({ok:false,error:"Ungültige Inselparty-Einstellungen."});}
       let game;

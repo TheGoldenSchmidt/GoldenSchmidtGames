@@ -6,6 +6,7 @@ import type { GameId } from "../../shared/types";
 import type { IntroPlayer, IntroStage } from "../three/introWorld";
 
 const CAPTIONS: Record<string, Record<IntroStage, string>> = {
+  "roll-it-up": { seated: "Willkommen in der Bauschale.", approach: "Sechs Kaufstellen am Rand.", overhead: "Euer Ziel ist die Bank auf dem Hügel." },
   durak: { seated: "Nehmt Platz. Die Karten liegen bereit.", approach: "Die Runde rückt zusammen.", overhead: "Der Tisch gehört euch." },
   qwixx: { seated: "Eure Runde. Sechs Würfel. Vier Farben.", approach: "Alle Augen auf den nächsten Wurf.", overhead: "Jeder Wurf zählt." },
   kribbeln: { seated: "Nehmt Platz an der Würfelkiste.", approach: "Sechs Farben, neue Möglichkeiten.", overhead: "Jetzt kribbelt’s." },
@@ -27,7 +28,7 @@ function IntroFallback({ gameId, players }: { gameId: GameId; players: IntroPlay
           <image href={characterPortrait(characterId(player.characterId,index))} x={x-25} y={y-27} width="50" height="54"/>
         </g>;
       })}
-      {gameId === "durak" ? <g transform="translate(270 255) rotate(-12 30 45)">
+      {gameId === "roll-it-up" ? <g fill="#e0a96a"><ellipse cx="300" cy="300" rx="105" ry="90" fill="#798351"/><path d="M250 267h100v12H250zm0 19h100v12H250zm-5 22h110v12H245zm9 12h8v16h-8zm84 0h8v16h-8z"/></g> : gameId === "durak" ? <g transform="translate(270 255) rotate(-12 30 45)">
         <rect width="60" height="90" rx="5" fill="#fff9e8" /><rect x="5" y="5" width="50" height="80" rx="3" fill="#274f69" />
         <path d="M30 29 42 45 30 61 18 45Z" fill="#d8b575" />
       </g> : gameId === "party" ? <text x="300" y="320" textAnchor="middle" fontSize="70" fill="#fff9e8">⚑</text>

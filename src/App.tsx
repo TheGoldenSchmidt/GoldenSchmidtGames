@@ -1,3 +1,4 @@
+import { isPartyMode } from "../shared/games";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { GameId, GuestProfile, RoomState } from "../shared/types";
 import { ProfileDialog } from "./components/ProfileDialog";
@@ -196,6 +197,7 @@ export default function App() {
           onLocal={() => setView("local-setup")}
           onOnline={() => {useTableTransport(); setView("online-entry");}}
           onResumeHost={loadLastHost(profile.id)?resumeHost:undefined}
+          resumeGameName={readPartySave<PartySavedSession>(PARTY_ONLINE_SAVE)?.gameId==="roll-it-up"?"Roll It Up!":"Inselparty"}
           onResumeOnline={canResumeParty?resumeParty:undefined}
           resumeError={resumeError}
         />
@@ -249,7 +251,7 @@ export default function App() {
             ? <QwixxGameScreen profile={profile} initialRoom={room} onExit={leaveOnline} />
             : room.config.gameId === "durak" ? <DurakGameScreen profile={profile} initialRoom={room} onExit={leaveOnline} />
             : room.config.gameId === "kribbeln" ? <KribbelnGameScreen profile={profile} initialRoom={room} onExit={leaveOnline} />
-            : room.config.gameId === "party" && <PartyGameScreen profile={profile} initialRoom={room} onExit={leaveOnline}/>}
+            : isPartyMode(room.config.gameId) && <PartyGameScreen profile={profile} initialRoom={room} onExit={leaveOnline}/>}
         </GameIntro>
       )}
       {view==="game-online" && room && !room.partyTest && session?.nearby?.role==="host" && <HostInvite code={room.code}/>}

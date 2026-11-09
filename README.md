@@ -42,6 +42,14 @@ Auf dem Startbildschirm prüft „Nach Updates suchen“ den Service Worker ohne
 
 `.github/workflows/ci.yml` führt unter Node 22 bei Pushes und Pull Requests Installation, TypeScript-/PWA-Build, Regeltests aller vier Spiele, Socket-Integration, Produktionsprüfung und echte Chromium-Browsertests aus. Manuelle Starts sind ebenfalls möglich. Die Regeltests umfassen Feldgrenzen, Schlösser und Fehlwürfe bei Qwixx, Kartenvergleiche, Weiterschieben und Schummelmodus bei Durak sowie alle 46.656 Farbkombinationen und Runden-/Wertungslogik bei Kribbeln. Die Socket-Tests verwenden echte UUIDs und prüfen alle vier Spielstarts. Dies ist keine Garantie, dass jeder denkbare Browser- oder Netzwerkfehler abgedeckt ist.
 
+## Roll It Up!
+
+Wählt im Online-Raum **Roll It Up!** für 2–6 Personen. Der Modus läuft auf dem Node-Server und beim Handy-Hosting. Für eine Solopartie lässt sich im Online-Menü ein Testspiel mit Bots erstellen.
+
+Das Auftakt-Minispiel legt die Zugreihenfolge fest. Ihr würfelt, entscheidet an Abzweigungen und verdient in gemeinsamen Minispielen Münzen. In der Bauschale liegen sechs feste Kaufstellen jeweils fünf Felder auseinander. Der Grinder kostet 8 Münzen, Pape und Filter kosten je 3, jeder der drei Weedbuds kostet 5. Beim Passieren kann jede Figur an jeder Station einmal für ihr eigenes Set einkaufen. Die normalen Zug-Items haben weiterhin drei eigene Inventarplätze.
+
+Mit vollständigem Set könnt ihr auf einem der beiden Hügelwege von Feld 31 oder 33 zur Bank auf Feld 34 abbiegen. Die erste Ankunft am Jayspot beendet die Partie sofort, auch bei übrigen Würfelschritten. Es gibt kein Rundenlimit.
+
 ## Inselparty
 
 Die Partyinsel wird ausschließlich online gespielt. Jede Person öffnet den Link auf dem eigenen Handy oder PC und tritt dem Raum bei. Die anderen Spielmodule behalten ihren lokalen Modus. Die Lobby bietet 5–15 Runden und drei Tempostufen. Standard sind acht Runden; die tatsächliche Dauer hängt von der Spielerzahl und den Entscheidungen ab. Startkapital: 10 Münzen. Eine Trophäe kostet 20 Münzen. Trophäen, danach Münzen, danach Minispielsiege entscheiden über den Sieg. Auf dem Brett wirken normale Felder beim Landen. Am Hafen gibt es beim Überqueren 3 Münzen. Die Trophäe wechselt nach dem Kauf zwischen den Shops 6, 15 und 24. Inventarlimit: drei Items, ein Einsatz vor dem Würfeln.

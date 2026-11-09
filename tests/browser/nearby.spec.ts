@@ -189,7 +189,7 @@ test("Handy-Host setzt seinen Tisch fort und entfernt geschlossene Partien",asyn
   expect(await page.evaluate(()=>localStorage.getItem("spielraum.last-host.v1"))).toBeNull();
 });
 
-for(const [game,marker] of [["qwixx",".qwixx-turn"],["kribbeln",".kribbel-score-strip"],["durak",".durak-players"],["party",".party-mini-intro"]]) {
+for(const [game,marker] of [["qwixx",".qwixx-turn"],["kribbeln",".kribbel-score-strip"],["durak",".durak-players"],["party",".party-mini-intro"],["roll-it-up",".roll-it-up .party-mini-intro"]]) {
   test(`Handy-Tisch spielt ${game} per direktem Datenkanal`,async({page,browser})=>{
     test.setTimeout(120000);
     const guest=await browser.newPage({viewport:page.viewportSize()!});

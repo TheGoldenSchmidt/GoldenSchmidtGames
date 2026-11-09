@@ -55,10 +55,11 @@ export function OnlineEntryScreen({
     return active.current;
   }
 
+  const [testMode,setTestMode]=useState("party");
   async function createTest(){
     if(!selected)return setError("Wähle zuerst deine Spielfigur.");
     setLoading(true);setError("");if (!await prepareHost()) return;
-    socket.timeout(15000).emit("party:test-create",{playerId:profile.id,name:displayName(profile),characterId:selected,bots,seed:Number(seed)},(err:Error|null,response:{ok:boolean;data?:RoomState;error?:string})=>{setLoading(false);if(err||!response.ok||!response.data)return setError(response?.error??"Der Spielhost antwortet gerade nicht.");onJoined(response.data);});
+    socket.timeout(15000).emit("party:test-create",{playerId:profile.id,name:displayName(profile),characterId:selected,bots,gameId:testMode,seed:Number(seed)},(err:Error|null,response:{ok:boolean;data?:RoomState;error?:string})=>{setLoading(false);if(err||!response.ok||!response.data)return setError(response?.error??"Der Spielhost antwortet gerade nicht.");onJoined(response.data);});
   }
 
   function ensureConnection() {
@@ -144,7 +145,8 @@ export function OnlineEntryScreen({
         }}><summary>Einem Handy-Host per QR beitreten</summary>
           {joinOpen && <GuestPair onReset={()=>setPairing(false)} onOffer={(code,table)=>{setPairing(true);invitationCode.current=code;useTableTransport({table,role:"guest"});}}/>}
         </details>}
-        <details className="party-test-entry"><summary>Inselparty alleine testen</summary><p>Eine vollständige Online-Partie mit Bots. Wähle deine Figur, spiele alle Runden oder starte ein bestimmtes Minispiel.</p>
+        <details className="party-test-entry"><summary><span>Inselparty alleine testen</span> · Roll It Up!</summary><p>Eine vollständige Online-Partie mit Bots. Wähle deine Figur, spiele alle Runden oder starte ein bestimmtes Minispiel.</p>
+          <label>Testspiel<select value={testMode} onChange={e=>setTestMode(e.target.value)}><option value="party">Inselparty</option><option value="roll-it-up">Roll It Up!</option></select></label>
           <label>Bot-Mitspieler<select value={bots} disabled={loading||!selected} onChange={e=>setBots(Number(e.target.value))}>{[1,2,3,4,5].map(n=><option key={n} value={n}>{n} {n===1?"Bot":"Bots"}</option>)}</select></label>
           <label>Startwert für wiederholbare Partien<input type="number" min="0" max="4294967295" step="1" value={seed} onChange={e=>setSeed(e.target.value)}/></label>
           <button className="button button--primary button--wide" disabled={loading||!selected||seed===""||!Number.isInteger(Number(seed))||Number(seed)<0||Number(seed)>0xffffffff} onClick={createTest}>{loading?"Testpartie wird vorbereitet …":"Testpartie mit Bots erstellen"}</button>

@@ -1,6 +1,11 @@
 import type { GameDefinition, GameId } from "./types";
 
+export function isPartyMode(id: unknown): id is "party" | "roll-it-up" {
+  return id === "party" || id === "roll-it-up";
+}
+
 export const GAMES: GameDefinition[] = [
+  { id: "roll-it-up", name: "Roll It Up!", shortDescription: "Sammle sechs Utensilien in der Bauschale und erreiche den Jayspot.", minPlayers: 2, maxPlayers: 6, status: "ready" },
   { id: "party", name: "Inselparty", shortDescription: "Eine Insel, Trophäen, Items und gemeinsame Minispiele.", minPlayers: 2, maxPlayers: 6, status: "ready" },
   {
     id: "qwixx",

@@ -96,3 +96,18 @@
 @media(prefers-reduced-motion:reduce) { .party-trophy-goal.is-rewarded { animation:none; } }
 
 .party-roll-status .party-roll-goal { color:#715418; font-weight:800; margin-top:3px; }
+
+.roll-it-up { --tray-ink:#24483d; --tray-rim:#d4a561; --tray-paper:#fbefd7; }
+.roll-it-up .party-map-view-switch,.roll-it-up .party-header { background:var(--tray-ink); }
+.roll-it-up .party-map-view-switch button[aria-pressed=true] { background:var(--tray-rim); border-color:var(--tray-rim); color:#27291f; }
+.roll-collection { margin:12px 0; border-block:1px solid var(--tray-rim); color:var(--tray-ink); }
+.roll-collection summary { padding:12px 2px; cursor:pointer; }
+.roll-collection summary span { float:right; font-variant-numeric:tabular-nums; }
+.roll-collection ul { list-style:none; padding:0; margin:0; }
+.roll-collection li { display:flex; justify-content:space-between; gap:6px; padding:5px 0; font-size:.82rem; }
+.roll-map-label rect { fill:#274d42; }
+.party-field .roll-map-label text { fill:#fff6dc; stroke:none; text-anchor:middle; font-size:1.85px; }
+.roll-it-up .party-map-tools,.roll-it-up .party-map-caption,.roll-it-up .party-field-browser { background:#325b52; }
+.roll-it-up .party-map-scroll { background:#423c30; }
+.roll-finale { background:var(--tray-paper); border-radius:14px; padding:24px; }
+.roll-sunset { display:block; width:100%; max-height:200px; margin:0 auto 16px; }

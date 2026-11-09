@@ -41,9 +41,9 @@ export class SceneKit {
   cylinder(parent:T.Object3D,color:number,x:number,y:number,z:number,r:number,h:number) {return this.mesh(parent,this.cylinderGeometry,color,x,y,z,r,h,r);}
   cone(parent:T.Object3D,color:number,x:number,y:number,z:number,r:number,h:number) {return this.mesh(parent,this.coneGeometry,color,x,y,z,r,h,r);}
   beam(parent:T.Object3D,color:number,from:T.Vector3,to:T.Vector3,width:number) {const mesh=this.box(parent,color,0,0,0,width,from.distanceTo(to),width);mesh.position.copy(from).add(to).multiplyScalar(.5);mesh.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),to.clone().sub(from).normalize());return mesh;}
-  label(parent:T.Object3D,text:string,color="#10485b",width=2.8) {
+  label(parent:T.Object3D,text:string,color="#10485b",width=2.8,fontSize=52) {
     const canvas=document.createElement("canvas");canvas.width=512;canvas.height=128;const ctx=canvas.getContext("2d")!;
-    ctx.fillStyle="rgba(255,251,226,.95)";ctx.beginPath();ctx.roundRect(4,8,504,104,36);ctx.fill();ctx.font="bold 52px 'Trebuchet MS',sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillStyle=color;ctx.fillText(text.slice(0,24),256,63,470);
+    ctx.fillStyle="rgba(255,251,226,.95)";ctx.beginPath();ctx.roundRect(4,8,504,104,36);ctx.fill();ctx.font=`bold ${fontSize}px 'Trebuchet MS',sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillStyle=color;ctx.fillText(text.slice(0,24),256,63,470);
     const texture=new T.CanvasTexture(canvas);texture.colorSpace=T.SRGBColorSpace;
     const sprite=new T.Sprite(new T.SpriteMaterial({map:texture,depthTest:true}));sprite.scale.set(width,width/4,1);parent.add(sprite);return sprite;
   }

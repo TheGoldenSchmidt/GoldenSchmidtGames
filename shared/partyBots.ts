@@ -1,5 +1,6 @@
+import { hasFullSet, partyPaths } from "./partyBoard";
 import {COMMAND_ZONES,DUO_SWITCHES,GOLF_GATES,HEX_PLATFORMS,hexCue,photoSpot,saysCue,wallHoles,wallCellPoint} from "./arenaChallenges";
-import { activePartyPlayer, applyPartyAction, applyPartyControl, BOARD, ITEMS, tickParty, type PartyAction, type PartyGame } from "./party";
+import { activePartyPlayer, applyPartyAction, applyPartyControl, ITEMS, tickParty, type PartyAction, type PartyGame } from "./party";
 import { bridgeCenter, clamp, DASH_BLOCKS, HURDLES, TILT_HOLES, type ArenaActor, type ArenaInput, type ArenaState } from "./partyArena";
 
 /** Bots kennen nur die sichtbare Arena und senden normale Eingaben. */
@@ -43,7 +44,13 @@ export function botBoardAction(g:PartyGame):PartyAction|undefined {
     const index=p.items.findIndex(i=>i==="sprint"||i==="double"||i==="shield"&&!p.shield);
     return !g.itemUsed&&index>=0?{type:"item",index}:{type:"roll"};
   }
-  if(g.phase==="path")return {type:"path",destination:BOARD[p.position].next[0]};
+  if(g.phase==="path"){
+    const paths = partyPaths(g,p);
+    // The second route leads uphill at both forks and onward to the bench.
+    const uphill = g.mode === "roll-it-up" && hasFullSet(p);
+    return {type:"path", destination: uphill ? paths[1] : paths[0]};
+  }
+  if(g.phase==="supply")return {type:"supply",buy:true};
   if(g.phase==="trophy")return {type:"trophy",buy:p.coins>=20};
   if(g.phase==="gift")return {type:"gift",accept:true,replace:0};
   if(g.phase==="shop")return {type:"shop",item:p.coins>=25&&p.items.length<3&&p.coins>=ITEMS.double.price?"double":undefined};
