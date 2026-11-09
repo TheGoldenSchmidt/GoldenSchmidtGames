@@ -23,7 +23,28 @@
 @media(pointer:coarse) { .party-key-hint { display:none; } }
 @media(min-width:900px) { .party-world { height:min(63dvh,650px); }.party-board-3d .party-map-tools > span { font-size:.83rem; }.party-board-3d .party-map-tools button { width:33px; }.party-board-3d .party-map-tools small { display:inline; }.party-action-stage { height:min(65dvh,640px); }.party-action-heading h2 { font-size:1.7rem; }.party-action-heading p { font-size:.8rem; }.party-action-heading > span { width:57px; height:57px; font-size:.9rem; }.party-action-heading > strong { min-width:70px; }.party-action-heading > strong b { font-size:1.9rem; }.party-game-controls { padding:24px; }.party-joystick { width:118px; height:118px; }.party-joystick > i { left:30px; top:30px; }.party-action-buttons button { width:83px; height:86px; }.party-action-buttons .party-punch { width:75px; height:78px; }.party-action-feedback { top:18px; font-size:.85rem; }.party-screen--playing .party-decision { padding:20px 24px; }.party-practice .party-action-stage { height:min(56dvh,520px); } }
 @media(max-width:359px) { .party-world { height:36dvh; }.party-action-heading { gap:8px; }.party-action-heading h2 { font-size:1.12rem; }.party-action-heading > span { width:43px; height:43px; font-size:.72rem; }.party-action-heading > strong b { font-size:1.35rem; }.party-game-controls { padding:12px; gap:8px; }.party-joystick { width:94px; height:94px; }.party-joystick > i { left:19px; top:19px; }.party-action-buttons { gap:8px; }.party-action-buttons button { width:62px; height:68px; }.party-action-buttons .party-punch { width:56px; height:61px; }.party-action-stage { min-height:330px; }.party-board-3d .party-map-tools > span { font-size:.62rem; } }
-@media(max-height:600px) and (min-width:600px) { .party-screen--playing .party-header,.party-screen--playing .party-mini-player,.party-screen--playing .party-key-hint { display:none; }.party-screen--playing .party-decision { padding:6px 12px; margin:0 auto; }.party-screen--playing .party-action-heading { padding-bottom:6px; }.party-screen--playing .party-action-stage { height:calc(100dvh - 85px); min-height:220px; }.party-screen--playing .party-action-heading p { display:none; } }
+/* Fit the whole live HUD, including controls, into a short viewport. */
+@media(max-height:600px) and (min-width:600px) {
+ body:has(.party-screen--playing .party-action-game) { padding-block:0; }
+ .app-shell:has(.party-screen--playing .party-action-game) { width:min(1240px,100%); min-height:0; border-radius:0; }
+ .party-screen--playing:has(.party-action-game) { height:100dvh; min-height:0; padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); display:flex; flex-direction:column; }
+ .party-screen--playing .party-header,.party-screen--playing .party-mini-player,.party-screen--playing .party-key-hint { display:none; }
+ .party-screen--playing:has(.party-action-game) .party-layout { flex:1; min-height:0; padding:0; }
+ .party-screen--playing:has(.party-action-game) .party-decision { display:flex; flex-direction:column; width:100%; max-width:none; height:100%; padding:6px 12px; margin:0; }
+ .party-screen--playing .party-action-game { display:flex; flex-direction:column; flex:1; min-height:0; }
+ .party-screen--playing .party-action-heading { flex-shrink:0; padding:0 0 6px; }
+ .party-screen--playing .party-action-heading h2 { font-size:1.15rem; }
+ .party-screen--playing .party-action-heading > span { width:40px; height:40px; font-size:.75rem; }
+ .party-screen--playing .party-action-heading p { display:none; }
+ .party-screen--playing .party-arena-status { flex-shrink:0; min-height:36px; padding:5px 10px; margin-bottom:6px; }
+ .party-screen--playing .party-arena-status p { font-size:.75rem; }
+ .party-screen--playing .party-action-stage { flex:1; height:auto; min-height:0; }
+ .party-screen--playing .party-game-controls { padding:10px; }
+ .party-screen--playing .party-tilt-panel { flex-shrink:0; margin-top:6px; padding:4px 8px; }
+ .party-screen--playing .party-tilt-panel > p { width:auto; flex:1; margin:0; text-align:left; }
+ .party-screen--playing .party-tilt-panel .button { min-height:36px; }
+ .party-screen--playing .party-end-attempt { flex-shrink:0; }
+}
 @media(prefers-reduced-motion:reduce) { .party-action-countdown > b { animation:none; }.party-joystick > i { transition:none; } }
 
 /* The numbered route takes precedence over scenery. */
@@ -40,9 +61,15 @@
 .party-arena-status p{margin:0;font-weight:800;font-size:.9rem}.party-arena-status>span{flex:0 0 auto;font-size:.75rem}
 @media(max-width:460px){.party-arena-status{align-items:flex-start;gap:6px;flex-direction:column}.party-arena-status p{font-size:.85rem}.party-host-menu summary{padding:8px 4px}.party-header-actions{gap:4px}}
 
+.party-roll-status { display:none; }
 @media(max-width:899px){
- .party-screen--board:has(.party-roll-button){padding-bottom:88px}
- .party-screen--board .party-roll-button{position:fixed;left:16px;right:16px;bottom:max(14px,env(safe-area-inset-bottom));width:calc(100% - 32px);z-index:15;min-height:54px;box-shadow:0 5px 0 #a77a20,0 4px 22px #10485b44}
+ .party-screen--board:has(.party-roll-dock) { padding-bottom:calc(136px + env(safe-area-inset-bottom)); }
+ .party-screen--board:has(.party-roll-dock) .party-turn-title { display:none; }
+ .party-roll-dock { position:fixed; left:50%; bottom:max(10px,env(safe-area-inset-bottom)); translate:-50% 0; width:min(508px,calc(100% - 24px)); z-index:15; padding:10px; border:1px solid #bfd2c2; border-radius:20px; background:#edf4e9; box-shadow:0 4px 22px #10485b33; }
+ .party-roll-status { display:grid; gap:3px; margin:0 4px 9px; color:var(--deep); }
+ .party-roll-status strong { font-size:.9rem; overflow-wrap:anywhere; }
+ .party-roll-status small { font-size:.7rem; color:#536d6b; }
+ .party-roll-dock .party-roll-button { min-height:54px; }
 }
 .party-spectator-notice{inset:12px 12px auto;display:block;padding:12px 16px;background:#10485be6;text-shadow:none;border-radius:12px;text-align:left}
 .party-spectator-notice>b{display:none}.party-spectator-notice>h3{font-size:1rem;margin:0 0 5px}.party-spectator-notice>span{font-size:.75rem}

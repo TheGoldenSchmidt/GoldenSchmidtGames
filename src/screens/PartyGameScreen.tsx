@@ -87,7 +87,10 @@ export function PartyGameScreen({profile,initialRoom,onExit}:{profile:GuestProfi
         </>}
         {canAct&&!g.pausedAt&&boardPhase&&<fieldset className="party-controls" disabled={busy||moving}>
           {g.phase==="turn"&&<>
-            <button className="button button--primary button--wide party-roll-button" onClick={()=>send({type:"roll"})}><span aria-hidden="true">⚄</span>Würfeln & losziehen</button>
+            <div className="party-roll-dock">
+              <div className="party-roll-status"><strong>{p.name}, du bist dran!</strong><small>{moving?(rolling?"Der Würfel fällt …":"Ab auf die Insel!"):`Zug ${g.turn+1} von ${g.players.length} · danach Minispiel`}</small></div>
+              <button className="button button--primary button--wide party-roll-button" onClick={()=>send({type:"roll"})}><span aria-hidden="true">⚄</span>Würfeln & losziehen</button>
+            </div>
             <details className="party-inventory" key={turnKey}><summary><span>Dein Inventar <b>{p.items.length}/3</b></span><span className="party-inventory-slots" aria-hidden="true">{[0,1,2].map(i=><i key={i}>{p.items[i]?ITEMS[p.items[i]].icon:"·"}</i>)}</span></summary>
               {p.items.length===0?<p>Geschenke und Inselmärkte bringen dir Items. Pro Zug kannst du eines einsetzen.</p>:<>
                 <div className="party-inventory-items">{p.items.map((item,i)=><button className={`party-item ${selectedItem===i?"is-selected":""}`} key={i} aria-pressed={selectedItem===i} disabled={g.itemUsed||(item==="shield"&&p.shield)} onClick={()=>setSelectedItem(selectedItem===i?undefined:i)}><span>{ITEMS[item].icon}</span><strong>{ITEMS[item].name}</strong><small>{ITEMS[item].description}</small></button>)}</div>
