@@ -3,17 +3,17 @@ import type { PartyGame, PartyPlayer } from "../../shared/party";
 import { hasFullSet, JAYSPOT, stationAt, STATIONS } from "../../shared/partyBoard";
 
 export function Collection({player}:{player:PartyPlayer}) {
-  return <details className="roll-collection">
-    <summary><strong>Dein Set</strong><span>{player.supplies?.length ?? 0} / {STATIONS.length}</span></summary>
+  return <section className="roll-collection">
+    <p><strong>{player.supplies?.length ?? 0} / {STATIONS.length} Utensilien gesammelt</strong></p>
     <ul>{STATIONS.map(s=><li key={s.field}><b>{player.supplies?.includes(s.field)?"✓ ":""}{s.name}</b><span>Feld {s.field} · {s.price} Münzen</span></li>)}</ul>
     <p>{hasFullSet(player)?"Der Weg zum Jayspot ist frei.":"Mit sechs Utensilien öffnet sich der Weg zur Bank."}</p>
-  </details>;
+  </section>;
 }
 
 export function mapObjective(game:PartyGame) {
   return game.mode === "roll-it-up"
     ? <span><b>⌖</b> Jayspot<small>Bank auf dem Hügel · Feld {JAYSPOT}</small></span>
-    : <span><b>★</b> Trophäe auf Feld {game.trophyField}<small>20 Münzen</small></span>;
+    : <span><b>★</b> Trophäenstand<small>Feld {game.trophyField} · 20 Münzen</small></span>;
 }
 
 export function objectiveHint(game:PartyGame, id:number) {

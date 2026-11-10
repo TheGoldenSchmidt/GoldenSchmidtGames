@@ -110,8 +110,13 @@ Vordergrund: größere Modelle, mehr Abstand auf gemeinsam belegten Feldern,
 schmale Wege und flache Feldnummern mit Tiefenprüfung. Die Ansicht startet bei
 der aktiven Figur; ein gelber Bodenring kennzeichnet sie. Kameratasten stehen
 außerhalb der Szene, „Zur Figur“ und „Ganze Insel/Schale“ setzen die Ansicht
-zurück. Feldsuche, Figurenpositionen und Legende sind gemeinsam aufklappbar.
-Die bestehende Farbwelt der jeweiligen Spielansicht bleibt erhalten.
+zurück. Ein einzelner Button wechselt zwischen 3D und 2D. Die Spielerleiste steht
+am unteren Kartenrand; Set, Trophäenziel und Inventar öffnen sich über halbtransparente
+Seitenbuttons. Feldsuche und Legende liegen in einem schließbaren Panel.
+Die normale mobile Brettansicht nutzt eine Bildschirmhöhe ohne Seitenscrollen;
+längere Auswahlen dürfen innerhalb eines Panels scrollen. Beim Schließen kehrt
+der Fokus zum Auslöser zurück. Minispiel-Auswahl und Regeltext stehen nicht mehr
+unter dem laufenden Brett. Die bestehende Farbwelt der Spielansicht bleibt erhalten.
 
 Menüs über `.party-menu`, das Gastprofil über `.party-dialog` und QR-Dialoge über
 `.pair-dialog` gestalten. Neue Menüregeln in `partyMenus.css` einordnen und die

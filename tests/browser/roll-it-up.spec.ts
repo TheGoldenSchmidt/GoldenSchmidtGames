@@ -8,9 +8,10 @@ test("Bauschale, persönliche Sammlung und Kaufstellen sind spielbar", async ({p
     await expect(page.locator(".party-screen")).not.toContainText("Trophäe");
     await expect(page.locator(".party-header")).toContainText("Roll It Up!");
     await page.screenshot({path:info.outputPath("bauschale.png")});
-    await page.getByText("Dein Set", {exact:true}).click();
+    await page.getByRole("button", {name:"Dein Set öffnen",exact:true}).click();
     await expect(page.locator(".roll-collection li")).toHaveCount(6);
-    await page.getByRole("button",{name:"Klare Übersicht"}).click();
+    await page.getByRole("button",{name:"Dein Set schließen",exact:true}).click();
+    await page.getByRole("button",{name:"Zur 2D-Übersicht wechseln"}).click();
     const field = page.getByRole("button",{name:"Feld 2: Grinder",exact:true});
     await field.focus();
     await page.keyboard.press("Enter");

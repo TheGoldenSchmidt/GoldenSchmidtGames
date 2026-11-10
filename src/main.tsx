@@ -6,6 +6,7 @@ import "./styles/home.css";
 import "./styles/pairing.css";
 import "./styles/party.css";
 import "./styles/party3d.css";
+import "./styles/partyBoardHud.css";
 import "./styles/partyCharacters.css";
 import "./styles/gameIntro.css";
 import "./styles/kribbelnCup.css";

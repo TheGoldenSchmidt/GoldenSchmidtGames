@@ -6,6 +6,7 @@ import { activePartyPlayer, BOARD, type PartyAction } from "../../shared/party";
 import type { RoomState } from "../../shared/types";
 import { getGame } from "../../shared/games";
 import type { MinigameOptions } from "../../shared/minigameModes";
+import type { ArenaId } from "../../shared/partyArena";
 
 export const request=<T=RoomState>(socket:Socket,event:string,payload?:unknown)=>new Promise<T>((resolve,reject)=>{
   const done=(err:Error|null,response:{ok:boolean;data?:T;error?:string})=>err?reject(err):!response.ok?reject(new Error(response.error)):resolve(response.data!);
@@ -35,6 +36,11 @@ export async function onlineSession(page:Page,followTurn=false,characters:Charac
     control:async(id:string,input:unknown,seq:number)=>{const current=await request(sockets[0],"qwixx:state");return request<{accepted:boolean}>(byId[id],"party:control",{token:tokens[id],phaseId:current.partyGame!.phaseId,seq,input});},
     close:()=>sockets.forEach(socket=>socket.disconnect()),
   };
+}
+export async function practiceSession(page:Page,miniId:ArenaId) {
+  const session=await onlineSession(page,false,undefined,false,"free-minigame",{rounds:1,miniId});
+  try{await page.getByRole("button",{name:"Erst kurz üben",exact:true}).click();return session;}
+  catch(error){session.close();throw error;}
 }
 export async function toMini(session:Awaited<ReturnType<typeof onlineSession>>) {
   for(let step=0;step<180;step++){

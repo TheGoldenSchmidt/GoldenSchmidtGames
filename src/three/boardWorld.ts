@@ -13,7 +13,7 @@ function islandPoint(id:number) {
   const lift=id>=14&&id<=21?Math.sin((id-14)/7*Math.PI)*1.5:id>=7&&id<=13?Math.sin((id-7)/6*Math.PI)*.6:id>=31?.9:0;
   return new T.Vector3((coords[0]-50)*.27,1.22+lift,(coords[1]-50)*.25);
 }
-export interface BoardFrame {game:PartyGame;positions:Record<string,number>;zoom:number;angle:number;follow:boolean;selected?:number;view:number;reduce:boolean;now:number}
+export interface BoardFrame {game:PartyGame;positions:Record<string,number>;zoom:number;angle:number;follow:boolean;selected?:number;view:number;reduce:boolean;now:number;blocked?:boolean}
 export function createBoardWorld(host:HTMLElement,read:()=>BoardFrame,select:(id:number)=>void,onError:()=>void,onZoom:(zoom:number)=>void) {
   const kit=new SceneKit(host,onError),world=new T.Group(),figures=new T.Group();kit.scene.add(world,figures);
   // Spread the scenery and routes without stretching the approved character models.
@@ -25,7 +25,8 @@ export function createBoardWorld(host:HTMLElement,read:()=>BoardFrame,select:(id
   const controls=new OrbitControls(kit.camera,kit.renderer.domElement);controls.enablePan=false;controls.enableDamping=true;controls.dampingFactor=.12;controls.minPolarAngle=.35;controls.maxPolarAngle=1.08;
   controls.touches.ONE=T.TOUCH.ROTATE;controls.touches.TWO=T.TOUCH.DOLLY_PAN;
   const initial=read(),initialTarget=initial.follow?figurePoint(initial.selected??initial.positions[initial.game.order[initial.game.turn]]).add(new T.Vector3(0,1,0)):new T.Vector3(0,1,0);
-  controls.target.copy(initialTarget);kit.camera.position.setFromSphericalCoords(initial.follow?19:45,.82,Math.PI+initial.angle).add(initialTarget);controls.update();
+  const initialDistance=(initial.follow?19:45)*Math.max(1,1/kit.camera.aspect)/initial.zoom;
+  controls.target.copy(initialTarget);kit.camera.position.setFromSphericalCoords(initialDistance,.82,Math.PI+initial.angle).add(initialTarget);controls.update();
   if(!tray){
     kit.cylinder(world,0x41bad0,0,.08,0,13,.35).castShadow=false;
     kit.cylinder(world,0xc7a571,0,.45,0,12.4,1.05);kit.cylinder(world,0xffe5a1,0,.95,0,12.4,.3);kit.cylinder(world,0x65ba61,0,1.11,0,10.7,.18);
@@ -98,13 +99,18 @@ export function createBoardWorld(host:HTMLElement,read:()=>BoardFrame,select:(id
   kit.renderer.domElement.addEventListener("pointerdown",onDown);kit.renderer.domElement.addEventListener("pointerup",onClick);
   kit.renderer.domElement.addEventListener("pointermove",onMove);kit.renderer.domElement.addEventListener("pointercancel",onCancel);
   let frame=0,last=performance.now(),lastZoom=-1,lastAngle=initial.angle,lastChoices="",lastFollow=initial.follow,lastView=initial.view,lastAspect=0,wantedDistance=19,baseDistance=19,zooming=false;
+  let clockNow=initial.now,clockAt=last;
   const startCamera=()=>{zooming=false;};controls.addEventListener("start",startCamera);
   const endZoom=()=>{if(!zooming)onZoom(T.MathUtils.clamp(Number((baseDistance/controls.getDistance()).toFixed(2)),1,2.5));};controls.addEventListener("end",endZoom);
   const animate=(time:number)=>{
     const dt=Math.min(.05,(time-last)/1000);last=time;if(document.body.dataset.partyPractice){frame=requestAnimationFrame(animate);return;}const state=read(),g=state.game;
+    if(state.now!==clockNow){clockNow=state.now;clockAt=time;}
+    const visualNow=g.pausedAt?state.now:state.now+Math.min(100,Math.max(0,time-clockAt));
+    const movement=g.movement,progress=movement?T.MathUtils.clamp((visualNow-movement.departAt)/(movement.arriveAt-movement.departAt),0,1):0;
+    controls.enabled=!state.blocked;
     const active=g.players.find(p=>p.id===g.order[g.turn])!;
     const focus=state.follow?figurePoint(state.selected??state.positions[active.id]??active.position).add(new T.Vector3(0,1,0)):new T.Vector3(0,1,0),oldTarget=controls.target.clone();
-    if(state.follow&&state.selected===undefined&&g.movement){const progress=T.MathUtils.clamp((state.now-g.movement.departAt)/(g.movement.arriveAt-g.movement.departAt),0,1);focus.lerp(figurePoint(g.movement.destination).add(new T.Vector3(0,1,0)),state.reduce?1:progress);}
+    if(state.follow&&state.selected===undefined&&movement)focus.lerp(figurePoint(movement.destination).add(new T.Vector3(0,1,0)),state.reduce?1:progress);
     controls.target.lerp(focus,state.reduce?1:1-Math.exp(-dt*5));kit.camera.position.add(controls.target.clone().sub(oldTarget));
     if(state.view!==lastView){kit.camera.position.setFromSphericalCoords(controls.getDistance(),.82,Math.PI+state.angle).add(controls.target);lastAngle=state.angle;lastView=state.view;}
     if(state.zoom!==lastZoom||state.follow!==lastFollow||kit.camera.aspect!==lastAspect){baseDistance=(state.follow?19:45)*Math.max(1,1/kit.camera.aspect);controls.minDistance=baseDistance/2.5;controls.maxDistance=baseDistance;wantedDistance=baseDistance/state.zoom;zooming=true;lastZoom=state.zoom;lastFollow=state.follow;lastAspect=kit.camera.aspect;}
@@ -114,31 +120,43 @@ export function createBoardWorld(host:HTMLElement,read:()=>BoardFrame,select:(id
     selection.visible=state.selected!==undefined;if(state.selected!==undefined){const at=boardPoint(state.selected);selection.position.set(at.x,at.y+.18,at.z);}
     const choiceIds=g.phase==="path"?partyPaths(g,active):[],choiceKey=choiceIds.join();
     if(choiceKey!==lastChoices){choices.traverse(object=>{const mesh=object as T.Mesh;mesh.geometry?.dispose();});choices.clear();for(const id of choiceIds){const p=boardPoint(id);const marker=kit.mesh(choices,new T.TorusGeometry(.77,.065,8,28),0xffd258,p.x,p.y+.18,p.z);marker.rotation.x=Math.PI/2;}lastChoices=choiceKey;}
-    for(const [index,player] of g.players.entries()){
-      let pawn=pawns.get(player.id);if(!pawn){pawn=character(kit,figures,index,undefined,player.characterId);pawn.group.scale.setScalar(PAWN_SCALE);pawns.set(player.id,pawn);pawn.group.position.copy(figurePoint(state.positions[player.id]??player.position));}
-      const point=figurePoint(state.positions[player.id]??player.position);
-      if(player.id===active.id&&g.movement){const progress=T.MathUtils.clamp((state.now-g.movement.departAt)/(g.movement.arriveAt-g.movement.departAt),0,1);point.lerp(figurePoint(g.movement.destination),state.reduce?1:progress);}
-      const others=g.players.filter(p=>(state.positions[p.id]??p.position)===(state.positions[player.id]??player.position)),slot=others.findIndex(p=>p.id===player.id);
+    const standingPoint=(playerId:string,fieldId:number)=>{
+      const point=figurePoint(fieldId);
+      const occupants=g.players.filter(player=>player.id===playerId||(state.positions[player.id]??player.position)===fieldId);
+      const slot=occupants.findIndex(player=>player.id===playerId);
       point.y+=.17;
-      if(others.length>1){
-        const columns=Math.min(3,others.length);
-        const offset=new T.Vector3((slot%columns-(columns-1)/2)*1.6,0,(Math.floor(slot/columns)-(Math.ceil(others.length/columns)-1)/2)*2.8);
+      if(occupants.length>1){
+        const columns=Math.min(3,occupants.length);
+        const offset=new T.Vector3((slot%columns-(columns-1)/2)*1.6,0,(Math.floor(slot/columns)-(Math.ceil(occupants.length/columns)-1)/2)*2.8);
         const radius=Math.hypot(point.x,point.z),inset=tray?1.4:.65;
         if(radius>10){point.x-=point.x/radius*inset;point.z-=point.z/radius*inset;}
-        // Keep shared-field occupants apart in screen space as the camera rotates.
         point.add(offset.applyAxisAngle(new T.Vector3(0,1,0),controls.getAzimuthalAngle()));
+      }
+      return point;
+    };
+    const motion:Record<string,{walking:boolean;position:number[];stride:number;heading:number}>={};
+    for(const [index,player] of g.players.entries()){
+      let pawn=pawns.get(player.id);if(!pawn){pawn=character(kit,figures,index,undefined,player.characterId);pawn.group.scale.setScalar(PAWN_SCALE);pawns.set(player.id,pawn);pawn.group.position.copy(figurePoint(state.positions[player.id]??player.position));}
+      const point=standingPoint(player.id,state.positions[player.id]??player.position);
+      let speed=0,heading=controls.getAzimuthalAngle();
+      const walking=player.id===active.id&&Boolean(movement)&&progress>0&&progress<1&&!g.pausedAt&&!state.reduce;
+      if(player.id===active.id&&movement){
+        const destination=standingPoint(player.id,movement.destination),direction=destination.clone().sub(point);
+        // Animation speed comes from the authoritative segment, never from camera or network-frame deltas.
+        heading=Math.atan2(direction.x,direction.z);
+        if(walking)speed=Math.min(4.8,direction.length()*1000/(movement.arriveAt-movement.departAt));
+        point.lerp(destination,state.reduce?1:progress);
       }
       pawn.group.userData.field=state.positions[player.id]??player.position;
       if(player.id===active.id)activeMarker.position.copy(point).add(new T.Vector3(0,.03,0));
-      const old=pawn.group.position.clone(),delta=point.clone().sub(old),heading=Math.atan2(delta.x,delta.z),speed=delta.length()/Math.max(.01,dt);
       pawn.group.position.copy(point);
-      const walking=player.id===active.id&&Boolean(g.movement);
-      pawn.pose(walking&&delta.length()>.03?heading:controls.getAzimuthalAngle(),walking?Math.min(4.8,speed):0,time,0,false,state.reduce);
+      pawn.pose(walking?heading:controls.getAzimuthalAngle(),speed,time,0,false,state.reduce);
+      motion[player.id]={walking,position:point.toArray().map(n=>Number(n.toFixed(3))),stride:Number((pawn.group.userData.stride??0).toFixed(3)),heading:Number(pawn.group.rotation.y.toFixed(3))};
     }
     if(!state.reduce)boat.rotation.z=Math.sin(time*.0007)*.035;
-    controls.enableDamping=!state.reduce;controls.update();
+    controls.enableDamping=!state.reduce&&!state.blocked;controls.update();
     for(const number of numbers)number.rotation.z=controls.getAzimuthalAngle();
-    kit.render();host.dataset.camera=JSON.stringify(kit.camera.position.toArray().map(n=>Number(n.toFixed(2))));frame=requestAnimationFrame(animate);
+    kit.render();host.dataset.motion=JSON.stringify(motion);host.dataset.camera=JSON.stringify(kit.camera.position.toArray().map(n=>Number(n.toFixed(2))));frame=requestAnimationFrame(animate);
   };
   frame=requestAnimationFrame(animate);
   return {dispose:()=>{cancelAnimationFrame(frame);controls.removeEventListener("start",startCamera);controls.removeEventListener("end",endZoom);controls.dispose();kit.renderer.domElement.removeEventListener("pointerdown",onDown);kit.renderer.domElement.removeEventListener("pointerup",onClick);kit.renderer.domElement.removeEventListener("pointermove",onMove);kit.renderer.domElement.removeEventListener("pointercancel",onCancel);kit.dispose();}};

@@ -6,6 +6,7 @@ import * as T from "three";
 import { CHARACTERS, characterId, isCharacterId } from "../shared/characters";
 import { getFigure,preloadFigures } from "../src/figures/catalog";
 import {buildOptimizedFigure} from "../src/figures/optimizedFigure";
+import {figureCharacter} from "../src/figures/character";
 import { buildFigure } from "../src/figures/CardFigure";
 import { createAnimationPlayer } from "../src/figures/AnimationPlayer";
 import { resolveFigure, validateFigure } from "../src/figures/resolve";
@@ -48,6 +49,16 @@ for(const entry of CHARACTERS){
   player.reset();opts.reducedMotion=true;player.update(performance.now()+5000);
   const still=built.root.position.clone();player.update(performance.now()+6000);assert.ok(still.equals(built.root.position));
   assert.equal(JSON.stringify(data),snapshot,"Animation darf Quelldaten nicht verändern");
+  const walker=figureCharacter(new T.Group(),entry.id),standing=figureCharacter(new T.Group(),entry.id);
+  const surfaces=(group:T.Group)=>{group.updateMatrixWorld(true);const matrices:number[][]=[];group.traverse(object=>{if(object instanceof T.Mesh)matrices.push([...object.matrixWorld.elements]);});return matrices;};
+  for(let time=1000;time<=1400;time+=16){walker.pose(0,4.8,time,0,false,false);standing.pose(0,0,time,0,false,false);}
+  const walkingSurfaces=surfaces(walker.group),stillSurfaces=surfaces(standing.group);
+  assert.ok(walkingSurfaces.some((matrix,index)=>matrix.some((value,axis)=>Math.abs(value-stillSurfaces[index][axis])>.001)),`${entry.id}: locomotion moves rendered surfaces`);
+  walker.pose(0,4.8,1500,0,false,true);const reducedSurfaces=surfaces(walker.group);
+  walker.pose(0,4.8,1700,0,false,true);
+  assert.deepEqual(surfaces(walker.group),reducedSurfaces,`${entry.id}: reduced motion freezes locomotion`);
+  assert.equal(walker.group.userData.stride,0);
+  for(const actor of [walker,standing])actor.group.traverse(object=>{if(object instanceof T.Mesh){object.geometry.dispose();object.material.dispose();}});
   optimized.root.traverse(o=>{if(o instanceof T.Mesh){o.geometry.dispose();o.material.dispose();}});
   built.root.traverse(o=>{if(o instanceof T.Mesh){o.geometry.dispose();o.material.dispose();}});
 }
