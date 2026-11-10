@@ -4,9 +4,9 @@ import * as T from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { BOARD, type PartyGame } from "../../shared/party";
 import { character, SceneKit, type Character } from "./sceneKit";
+import { FIELD_VISUALS } from "../lib/partyFieldVisuals";
 
 const BRANCH:Record<number,[number,number]>={28:[77,60],29:[67,63],30:[65,75],31:[33,69],32:[34,57],33:[24,49]};
-const COLORS={start:0xfff0ad,coin:0x77d7a1,bad:0xf38d79,event:0xb299e5,gift:0xffd258,shop:0x70d3e5,safe:0xf5e9bc};
 const BOARD_SPREAD=1.18, PAWN_SCALE=2.3;
 function islandPoint(id:number) {
   const field=BOARD[id],coords=BRANCH[id]??[field.x,field.y];
@@ -34,17 +34,23 @@ export function createBoardWorld(host:HTMLElement,read:()=>BoardFrame,select:(id
   }
   // Low, narrow paths explain connections without competing with the figures.
   for(const field of board)for(const next of field.next){const a=boardPoint(field.id),b=boardPoint(next);kit.beam(world,tray?0xa78260:0xc7b686,a,b,.26);}
-  const fields:T.Object3D[]=[],numbers:T.Mesh[]=[];
+  const fields:T.Object3D[]=[],symbols:T.Mesh[]=[];
+  const symbolGeometry=new T.PlaneGeometry(.88,.88),symbolMaterials=new Map<string,T.MeshBasicMaterial>();
   for(const field of board){const p=boardPoint(field.id);
     if(tray) trayStation(kit,world,field.id,p);
     if(!tray && p.y>1.6)kit.cylinder(world,0xc29c69,p.x,p.y/2,p.z,.28,p.y);
     const tile=kit.cylinder(world,tray?0x897452:0x8d9c73,p.x,p.y+.05,p.z,.68,.1);tile.userData.field=field.id;fields.push(tile);
-    const top=kit.cylinder(world,COLORS[field.type],p.x,p.y+.13,p.z,.62,.06);top.userData.field=field.id;fields.push(top);
-    const canvas=document.createElement("canvas");canvas.width=canvas.height=128;const ctx=canvas.getContext("2d")!;
-    ctx.fillStyle="#31524d";ctx.font="700 64px Trebuchet MS,sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(String(field.id),64,68);
-    const texture=new T.CanvasTexture(canvas);texture.colorSpace=T.SRGBColorSpace;
-    // Numbers lie on the field and use depth testing, so they cannot cover a pawn.
-    const icon=new T.Mesh(new T.PlaneGeometry(.88,.88),new T.MeshBasicMaterial({map:texture,transparent:true,depthWrite:false}));icon.rotation.x=-Math.PI/2;world.add(icon);icon.position.set(p.x,p.y+.165,p.z);icon.userData.field=field.id;fields.push(icon);numbers.push(icon);
+    const look=FIELD_VISUALS[field.type];
+    const top=kit.cylinder(world,Number.parseInt(look.color.slice(1),16),p.x,p.y+.13,p.z,.62,.06);top.userData.field=field.id;fields.push(top);
+    let material=symbolMaterials.get(field.type);
+    if(!material){
+      const canvas=document.createElement("canvas");canvas.width=canvas.height=128;const ctx=canvas.getContext("2d")!;
+      ctx.fillStyle=look.ink;ctx.font="900 86px Trebuchet MS,sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(look.symbol,64,67);
+      const texture=new T.CanvasTexture(canvas);texture.colorSpace=T.SRGBColorSpace;
+      material=new T.MeshBasicMaterial({map:texture,transparent:true,depthWrite:false});symbolMaterials.set(field.type,material);
+    }
+    // Symbols stay flat on the field and use depth testing, leaving the pawns clear.
+    const icon=new T.Mesh(symbolGeometry,material);icon.rotation.x=-Math.PI/2;world.add(icon);icon.position.set(p.x,p.y+.165,p.z);icon.userData.field=field.id;fields.push(icon);symbols.push(icon);
   }
   const boat=new T.Group(), trophy=new T.Group();
   if(!tray){
@@ -155,7 +161,7 @@ export function createBoardWorld(host:HTMLElement,read:()=>BoardFrame,select:(id
     }
     if(!state.reduce)boat.rotation.z=Math.sin(time*.0007)*.035;
     controls.enableDamping=!state.reduce&&!state.blocked;controls.update();
-    for(const number of numbers)number.rotation.z=controls.getAzimuthalAngle();
+    for(const symbol of symbols)symbol.rotation.z=controls.getAzimuthalAngle();
     kit.render();host.dataset.motion=JSON.stringify(motion);host.dataset.camera=JSON.stringify(kit.camera.position.toArray().map(n=>Number(n.toFixed(2))));frame=requestAnimationFrame(animate);
   };
   frame=requestAnimationFrame(animate);

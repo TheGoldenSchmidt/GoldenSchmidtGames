@@ -6,6 +6,7 @@ import { activePartyPlayer, FIELD_LABELS, type PartyGame } from "../../shared/pa
 import type { BoardFrame } from "../three/boardWorld";
 import { PartyMapFallback } from "./PartyMapFallback";
 import { PartyPanel } from "./PartyPanel";
+import { FIELD_VISUALS } from "../lib/partyFieldVisuals";
 
 export const FIGURES=["●","▲","■","◆","✚","★"];
 const HELP={start:"Beim Passieren bekommst du 3 Münzen.",coin:"Beim Landen bekommst du 3 Münzen.",bad:"Beim Landen verlierst du bis zu 3 Münzen. Ein Schild schützt dich.",event:"Eine Überraschung für dich oder die ganze Gruppe.",gift:"Hier wartet ein zufälliges Item auf dich.",shop:"Kaufe ein Item für deinen nächsten Zug.",safe:"Hier kannst du die Aussicht genießen."};
@@ -63,7 +64,7 @@ export function PartyBoard({game,now=Date.now(),rolling=false,onTravelChange,ros
     {fieldsOpen&&<PartyPanel title="Felder und Figuren" onClose={()=>setFieldsOpen(false)}>
       {caption}<p className="party-camera-hint">Ziehen zum Drehen · mit zwei Fingern zoomen. Oder die Kameratasten nutzen.</p>
       <div className="party-map-players" aria-label="Figur auf der Karte finden">{game.players.map(player=><button key={player.id} onClick={()=>inspect(positions[player.id])}>{player.name}<small>Feld {positions[player.id]}</small></button>)}</div>
-      <div className="party-field-legend" aria-label="Feldarten">{Object.entries(FIELD_LABELS).map(([type,label])=><span className={`party-legend-${type}`} key={type}><i aria-hidden="true"/>{tray&&type==="start"?"Start":label}</span>)}</div>
+      <div className="party-field-legend" aria-label="Feldarten">{Object.entries(FIELD_LABELS).map(([type,label])=>{const look=FIELD_VISUALS[type as keyof typeof FIELD_VISUALS];return <span key={type}><i aria-hidden="true" style={{backgroundColor:look.color,color:look.ink}}>{look.symbol}</i>{tray&&type==="start"?"Start":label}</span>;})}</div>
       <div className="party-field-list">{board.map(field=><button key={field.id} aria-pressed={selected===field.id} aria-label={`Feld ${field.id}: ${fieldName(game,field.id)}${!tray&&field.id===game.trophyField?", Trophäenstand":""}`} onClick={()=>inspect(field.id)}>{field.id} {fieldName(game,field.id)}</button>)}</div>
     </PartyPanel>}
     <div className="party-position-announcements" aria-label="Figurenpositionen">{game.players.map(player=><output key={player.id} className="party-player-position" data-player={player.id} data-field={positions[player.id]}>{player.name}: Feld {positions[player.id]}</output>)}</div>

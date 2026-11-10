@@ -1,7 +1,8 @@
 import { fieldName, JAYSPOT, partyBoard, partyPaths, stationAt } from "../../shared/partyBoard";
 import { mapObjective, objectiveHint, TrayMapArt } from "./RollItUp";
 import {characterId,characterPortrait} from "../../shared/characters";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
+import { FIELD_VISUALS } from "../lib/partyFieldVisuals";
 import { activePartyPlayer, BOARD, type PartyGame } from "../../shared/party";
 
 
@@ -45,8 +46,8 @@ export function PartyMapFallback({game,rolling=false,onTravelChange}:{game:Party
       </> }
       {map.flatMap(f=>f.next.map(next=>{const a=map[f.id],b=map[next],traversed=route.has(f.id)&&route.has(next);return <g key={`${f.id}-${next}`}><line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#bba365" strokeWidth="2.7" strokeLinecap="round"/><line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={traversed?"#ffcc4d":"#fff5d7"} strokeWidth="1.7" strokeLinecap="round"/></g>;}))}
       {!tray&&<><text x="49" y="27" className="party-region">Hafen</text><text x="53" y="53" className="party-region">Jahrmarkt</text><text x="72" y="73" className="party-region">Dschungel</text><text x="25" y="58" className="party-region">Vulkan</text></>}
-      {map.map(f=><g key={f.id} role="button" tabIndex={0} aria-label={`Feld ${f.id}: ${fieldName(game,f.id)}${!tray && f.id===game.trophyField?", Trophäenstand":""}`} onClick={()=>setSelected(f.id)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();setSelected(f.id);}}} className={`party-field party-field--${f.type} ${selected===f.id?"is-selected":""} ${choices.includes(f.id)?"is-choice":""}`}>
-        <circle cx={f.x} cy={f.y} r="3.1" filter="url(#party-field-shadow)"/><text x={f.x} y={f.y+.95}>{f.id}</text>
+      {map.map(f=><g key={f.id} role="button" tabIndex={0} aria-label={`Feld ${f.id}: ${fieldName(game,f.id)}${!tray && f.id===game.trophyField?", Trophäenstand":""}`} onClick={()=>setSelected(f.id)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();setSelected(f.id);}}} style={{"--field-color":FIELD_VISUALS[f.type].color,"--field-ink":FIELD_VISUALS[f.type].ink} as CSSProperties} className={`party-field party-field--${f.type} ${selected===f.id?"is-selected":""} ${choices.includes(f.id)?"is-choice":""}`}>
+        <circle cx={f.x} cy={f.y} r="3.1" filter="url(#party-field-shadow)"/><text className="party-field-symbol" x={f.x} y={f.y} dominantBaseline="central">{FIELD_VISUALS[f.type].symbol}</text>
         {tray && stationAt(f.id) && <g className="roll-map-label" transform={`translate(${50+(f.x-50)*.8} ${50+(f.y-50)*.8})`}><rect x="-6.2" y="-2.1" width="12.4" height="4.2" rx="1.4"/><text y=".8">{stationAt(f.id)!.name}</text></g>}
         {!tray && f.id===game.trophyField&&<g className="party-map-trophy" transform={`translate(${f.x} ${f.y-6})`}><path d="m0 5-3-5h6Z" fill="#ffcc4d"/><circle r="3.6" fill="#ffcc4d" stroke="#fff7d6" strokeWidth=".8"/><text y="1.2">★</text></g>}
       </g>)}

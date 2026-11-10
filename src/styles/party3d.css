@@ -70,9 +70,8 @@
 .party-map-view-switch button[aria-pressed=true]{background:#ffd258;border-color:#ffd258;color:#10485b}
 .party-map-view-switch button:focus-visible{outline:3px solid white;outline-offset:2px}
 .party-field-legend{display:flex;flex-wrap:wrap;gap:8px 14px;padding:10px 14px;background:#fff9e8;color:#10485b;font-size:.75rem}
-.party-field-legend span{display:flex;align-items:center;gap:5px}.party-field-legend i{display:inline-block;width:12px;height:12px;border:1px solid #10485b;border-radius:50%;background:var(--field-color,#fff0ad)}
-.party-legend-coin{--field-color:#77d7a1}.party-legend-bad{--field-color:#f38d79}.party-legend-event{--field-color:#b299e5}.party-legend-gift{--field-color:#ffd258}.party-legend-shop{--field-color:#70d3e5}.party-legend-safe{--field-color:#f5e9bc}
-.party-map-caption{border-top:3px solid #10485b}.party-map-caption strong{font-size:1.05rem}.party-field text{font-weight:900;font-size:2.3px}
+.party-field-legend span{display:flex;align-items:center;gap:5px}.party-field-legend i{display:inline-grid;place-items:center;width:18px;height:18px;font-style:normal;font-weight:900;font-size:.75rem;border:1px solid #10485b;border-radius:50%;background:var(--field-color,#fff0ad)}
+.party-map-caption{border-top:3px solid #10485b}.party-map-caption strong{font-size:1.05rem}.party-field > .party-field-symbol{font-weight:900;font-size:3.3px;fill:var(--field-ink,#10485b)}
 .party-header-actions{display:flex;align-items:center;gap:12px}.party-host-menu{position:relative;font-size:.85rem}.party-host-menu summary{padding:9px;cursor:pointer}.party-host-menu button{position:absolute;right:0;top:100%;min-width:190px;min-height:48px;border:1px solid #10485b;border-radius:8px;background:#fff9e8;color:#a32c29;padding:12px;z-index:20;font:inherit;font-weight:700}
 .party-arena-status{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#10485b;background:#fff0b9;padding:10px 14px;border-radius:10px;margin-bottom:10px;min-height:48px}
 .party-arena-status p{margin:0;font-weight:800;font-size:.9rem}.party-arena-status>span{flex:0 0 auto;font-size:.75rem}

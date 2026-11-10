@@ -49,7 +49,7 @@ in normaler Rotation, im Solo-Testraum und als kurze Übung verfügbar.
 ## Lesbares Brett und Ankunft
 
 Inselparty und Roll It Up! zeigen größere Figuren auf weiter auseinanderliegenden
-Feldern. Schmale Verbindungen und flach aufliegende Nummern lassen die Figuren
+Feldern. Schmale Verbindungen und flach aufliegende Symbole lassen die Figuren
 frei. Die Kamera startet bei der aktiven Figur; Tasten wechseln zur ganzen Karte
 oder finden einzelne Felder. Zusätzlich gibt es eine umschaltbare klare Übersicht
 und eine aufklappbare Legende mit Feld- und Figurensuche. Auf kleinen Displays bleibt der

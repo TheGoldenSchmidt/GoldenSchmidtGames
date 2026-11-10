@@ -3,15 +3,18 @@
 Die Insel bleibt eine räumliche Spielzeugwelt. In beiden Brettspielen führen
 größere Figuren die Ansicht. Die Landschaft ist horizontal um 18 Prozent
 gespreizt; Felder sind kleiner und flacher, Verbindungen schmal und gedämpft.
-Feldnummern liegen mit Tiefenprüfung auf dem Brett statt vor den Figuren.
+Statt Feldnummern liegen Bedeutungssymbole mit Tiefenprüfung auf dem Brett:
+Plus auf Blau, Minus auf Rot, Ausrufezeichen auf Grün und Shop auf Hellblau.
 Eine umschaltbare Übersicht hilft auf kleinen Bildschirmen. Unter der Karte steht das betrachtete
 Feld mit seiner tatsächlichen Wirkung. Keine hektische Entscheidungsfrist.
 
-Palette: Hafenblau #10485b, Wasser #219fca, Papier #fff9e8, Münzgrün #77d7a1,
-Pechkoralle #f38d79, Weggold #ffd258. Trebuchet MS bleibt für Spielnamen und
+Palette: Hafenblau #10485b, Wasser #219fca, Papier #fff9e8, Münzblau #326fc7,
+Verlustrot #c33d4c, Ereignisgrün #65c783, Shop-Hellblau #a6dff5 und Gold #ffd258.
+Die Zuordnung steht für beide Kartenarten und die Legende in `src/lib/partyFieldVisuals.ts`.
+Trebuchet MS bleibt für Spielnamen und
 Bedienung; Figuren und aktueller Zug führen, Hinweise bleiben zurückhaltend.
 
-Handy: [Zugreihenfolge] [nummerierter Weg / Übersicht] [Würfel und Entscheidung]
+Handy: [Karte mit Symbolen] [Spieler am Kartenfuß] [Würfel und Entscheidung]
 PC:    [großer Spielweg] [aktueller Zug / Entscheidung / Feldbeschreibung]
 Die Minispiele zeigen die eigene Figur, Punkte und verbleibende Stürze.
 Bewegung erklärt den tatsächlichen Schritt; der Server löst die Wirkung erst

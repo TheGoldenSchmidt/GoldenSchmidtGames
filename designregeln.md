@@ -107,7 +107,10 @@ Ersatzdarstellung und Menüaktionen nutzbar; fehlende Grafik blockiert keinen Zu
 
 Die 3D-Bretter von Inselparty und Roll It Up! stellen die Figuren in den
 Vordergrund: größere Modelle, mehr Abstand auf gemeinsam belegten Feldern,
-schmale Wege und flache Feldnummern mit Tiefenprüfung. Die Ansicht startet bei
+schmale Wege und flache Feldsymbole mit Tiefenprüfung. Auf den Karten stehen
+keine Feldnummern: Münzgewinn ist blau mit Plus, Münzverlust rot mit Minus,
+Ereignisse grün mit Ausrufezeichen und Shops hellblau mit Shopsymbol.
+3D, 2D, Legende und Wegvorschau nutzen dieselbe Zuordnung. Die Ansicht startet bei
 der aktiven Figur; ein gelber Bodenring kennzeichnet sie. Kameratasten stehen
 außerhalb der Szene, „Zur Figur“ und „Ganze Insel/Schale“ setzen die Ansicht
 zurück. Ein einzelner Button wechselt zwischen 3D und 2D. Die Spielerleiste steht
