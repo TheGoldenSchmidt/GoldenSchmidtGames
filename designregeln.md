@@ -105,6 +105,14 @@ Ersatzdarstellung und Menüaktionen nutzbar; fehlende Grafik blockiert keinen Zu
 
 ## Umsetzung und Prüfung
 
+Die 3D-Bretter von Inselparty und Roll It Up! stellen die Figuren in den
+Vordergrund: größere Modelle, mehr Abstand auf gemeinsam belegten Feldern,
+schmale Wege und flache Feldnummern mit Tiefenprüfung. Die Ansicht startet bei
+der aktiven Figur; ein gelber Bodenring kennzeichnet sie. Kameratasten stehen
+außerhalb der Szene, „Zur Figur“ und „Ganze Insel/Schale“ setzen die Ansicht
+zurück. Feldsuche, Figurenpositionen und Legende sind gemeinsam aufklappbar.
+Die bestehende Farbwelt der jeweiligen Spielansicht bleibt erhalten.
+
 Menüs über `.party-menu`, das Gastprofil über `.party-dialog` und QR-Dialoge über
 `.pair-dialog` gestalten. Neue Menüregeln in `partyMenus.css` einordnen und die
 vorhandenen Komponenten für Header, Buttons, Figurenwahl und Eingaben nutzen.

@@ -1,14 +1,15 @@
 # Inselparty: lesbare Wege und gemeinsamer Ablauf
 
-Die Insel bleibt eine räumliche Spielzeugwelt. Ihr Spielweg führt die Ansicht:
-größere, nummerierte Felder mit dunkler Einfassung, klare Symbole und sichtbare
-Verbindungen. Vulkan und Bäume treten hinter die Felder zurück. Eine umschaltbare
-Übersicht hilft auf kleinen Bildschirmen. Unter der Karte steht das betrachtete
+Die Insel bleibt eine räumliche Spielzeugwelt. In beiden Brettspielen führen
+größere Figuren die Ansicht. Die Landschaft ist horizontal um 18 Prozent
+gespreizt; Felder sind kleiner und flacher, Verbindungen schmal und gedämpft.
+Feldnummern liegen mit Tiefenprüfung auf dem Brett statt vor den Figuren.
+Eine umschaltbare Übersicht hilft auf kleinen Bildschirmen. Unter der Karte steht das betrachtete
 Feld mit seiner tatsächlichen Wirkung. Keine hektische Entscheidungsfrist.
 
 Palette: Hafenblau #10485b, Wasser #219fca, Papier #fff9e8, Münzgrün #77d7a1,
 Pechkoralle #f38d79, Weggold #ffd258. Trebuchet MS bleibt für Spielnamen und
-Bedienung; Feldnummern und aktueller Zug sind kräftig, Hinweise kleiner.
+Bedienung; Figuren und aktueller Zug führen, Hinweise bleiben zurückhaltend.
 
 Handy: [Zugreihenfolge] [nummerierter Weg / Übersicht] [Würfel und Entscheidung]
 PC:    [großer Spielweg] [aktueller Zug / Entscheidung / Feldbeschreibung]
@@ -17,9 +18,11 @@ Bewegung erklärt den tatsächlichen Schritt; der Server löst die Wirkung erst
 nach der Ankunft aus. Reduzierte Bewegung überspringt dekorative Bewegung,
 ändert aber nicht den Zeitpunkt der Wirkung.
 
-Vorabkritik: Größere Dekoration würde die Übersicht verschlechtern. Deshalb
-bekommen Felder und Verbindungen den stärksten Kontrast. Die Übersicht ist
-eine echte zweite Kartenansicht und kein weiterer Informationskasten.
+Die frühere Betonung der Felder und Verbindungen verdeckte die Figuren.
+Die Brettmodelle sind nun gut doppelt so groß, ohne die Originalmodelle oder
+Arenen zu ändern. Auf einem gemeinsamen Feld stehen bis zu sechs Figuren
+mit kamerabezogenen Abständen. Namen bleiben im HUD; ein gelber Bodenring
+zeigt die aktive Figur. Legende und Feldliste sind zunächst eingeklappt.
 
 Regeln: Auftakt-Minispiel bestimmt die danach feste Reihenfolge. Der Auftakt
 vergibt noch keine Münzen. Danach erhält Platz 1/2/3 genau 10/4/2 Münzen,
@@ -34,9 +37,9 @@ serverseitige Physik, die bestehenden Figuren und gleichwertige Sensor-/
 Sticksteuerung. Teamparcours ist zunächst kooperativ für alle; 2-gegen-2 ist
 entsprechend der Aufgabenbeschreibung eine spätere Erweiterung.
 
-Sichtprüfung: Gemischte Nummer-/Symbol-Badges waren auf Handybreite zu gedrängt.
-Die Felder tragen deshalb gut kontrastierte Kreisnummern; die Legende erklärt
-die Farben. Eine höhere Kamera und kleinere Dekoration lassen die Routen frei.
-Der Leuchtturm wurde aus der Sichtlinie zum Start versetzt. In der mobilen
-Ansicht bleibt die Hauptaktion am unteren Rand erreichbar. Die 2D-Übersicht
+Die Kamera startet näher und flacher bei der aktiven Figur. „Zur Figur“ und
+„Ganze Insel/Schale“ setzen Blickrichtung und Zoom zurück. Feldsuche zentriert
+das ausgewählte Feld; Drehen und Zwei-Finger-Zoom lösen keine Feldauswahl aus.
+Kameratasten liegen außerhalb der Szene und bleiben auf schmalen Handys über
+der festen Würfelaktion erreichbar. Die 2D-Übersicht
 zeigt dieselben 34 Felder und Verbindungen ohne räumliche Überdeckung.

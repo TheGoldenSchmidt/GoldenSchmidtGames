@@ -48,9 +48,11 @@ in normaler Rotation, im Solo-Testraum und als kurze Übung verfügbar.
 
 ## Lesbares Brett und Ankunft
 
-Farbig eingefasste, nummerierte Felder, kräftige Verbindungen und eine höhere
-Kameraperspektive rücken die Wege in den Vordergrund. Zusätzlich gibt es eine
-umschaltbare klare Übersicht und eine Legende. Auf kleinen Displays bleibt der
+Inselparty und Roll It Up! zeigen größere Figuren auf weiter auseinanderliegenden
+Feldern. Schmale Verbindungen und flach aufliegende Nummern lassen die Figuren
+frei. Die Kamera startet bei der aktiven Figur; Tasten wechseln zur ganzen Karte
+oder finden einzelne Felder. Zusätzlich gibt es eine umschaltbare klare Übersicht
+und eine aufklappbare Legende mit Feld- und Figurensuche. Auf kleinen Displays bleibt der
 Würfelknopf am unteren Rand erreichbar. Auf dem Brett gibt es keine kurze
 Entscheidungsfrist; die Tempo-Einstellung steuert die Bewegungsgeschwindigkeit.
 Die Minispiele behalten ihre jeweiligen Zeitlimits und den gemeinsamen Start.
