@@ -182,7 +182,7 @@ test("Handy-Host setzt seinen Tisch fort und entfernt geschlossene Partien",asyn
   await page.getByRole("button",{name:"Verlassen",exact:true}).click();
   await page.getByRole("button",{name:"Handy-Tisch fortsetzen",exact:true}).click();
   await expect(page.locator(".party-mini-intro")).toBeVisible();
-  await page.locator(".party-host-menu>summary").click();
+  await page.getByRole("button",{name:"Spielmenü öffnen",exact:true}).click();
   await page.getByRole("button",{name:"Partie für alle beenden",exact:true}).click();
   await page.getByRole("button",{name:"Zum Startmenü",exact:true}).click();
   await expect(page.getByRole("button",{name:"Handy-Tisch fortsetzen",exact:true})).toHaveCount(0);

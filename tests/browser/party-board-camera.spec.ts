@@ -23,6 +23,7 @@ for (const mode of ["party", "roll-it-up"] as const) {
         const browser = page.getByRole("dialog", { name: "Felder und Figuren", exact: true });
         await expect(world).toHaveAttribute("data-webgl", "ready");
         await expect.poll(() => world.getAttribute("data-frames").then(Number)).toBeGreaterThan(8);
+        await page.getByRole("button", {name:"Kamera öffnen",exact:true}).click();
         await expect(figure).toHaveAttribute("aria-pressed", "true");
         await expect(browser).toHaveCount(0);
         await expect(zoomOut).toBeDisabled();
@@ -39,14 +40,14 @@ for (const mode of ["party", "roll-it-up"] as const) {
             expect(bounds.height).toBeGreaterThanOrEqual(44);
             expect(bounds.x).toBeGreaterThanOrEqual(0);
             expect(bounds.x + bounds.width).toBeLessThanOrEqual(size.width);
-            const dock = await page.locator(".party-roll-dock").boundingBox();
-            if (size.width < 900) expect(bounds.y + bounds.height).toBeLessThanOrEqual(dock!.y);
+            expect(bounds.y + bounds.height).toBeLessThanOrEqual(size.height);
           }
           expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(size.width);
           await page.screenshot({ path: info.outputPath(`kamera-${size.width}.png`) });
         }
         await page.setViewportSize(info.project.name === "phone" ? { width: 390, height: 844 } : { width: 1280, height: 900 });
 
+        await page.getByRole("button", {name:"Kamera schließen",exact:true}).click();
         const bounds = (await world.boundingBox())!;
         const center = { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
         if (info.project.name === "phone") {
@@ -60,6 +61,7 @@ for (const mode of ["party", "roll-it-up"] as const) {
           await page.mouse.move(center.x, center.y);
           await page.mouse.wheel(0, -300);
         }
+        await page.getByRole("button", {name:"Kamera öffnen",exact:true}).click();
         await expect(zoomOut).toBeEnabled();
         // Camera gestures must not inspect a field on release.
         await expect(figure).toHaveAttribute("aria-pressed", "true");
@@ -80,6 +82,7 @@ for (const mode of ["party", "roll-it-up"] as const) {
         await expect(figure).toHaveAttribute("aria-pressed", "true");
         await expect(zoomOut).toBeDisabled();
 
+        await page.getByRole("button", {name:"Kamera schließen",exact:true}).click();
         await page.getByRole("button", { name: "Felder und Figuren", exact: true }).click();
         const field = mode === "party" ? "Feld 6: Shop, Trophäenstand" : "Feld 2: Grinder";
         const inspect = page.getByRole("button", { name: field, exact: true });
@@ -87,9 +90,8 @@ for (const mode of ["party", "roll-it-up"] as const) {
         await page.keyboard.press("Enter");
         await expect(inspect).toHaveAttribute("aria-pressed", "true");
         await expect(browser.locator(".party-map-caption")).toContainText(mode === "party" ? "Trophäenstand: 20 Münzen" : "Grinder beim Passieren für 8 Münzen");
-        await expect.poll(async () => distance(start, await camera(world))).toBeGreaterThan(3);
+        await expect.poll(async () => distance(start, await camera(world))).toBeLessThan(.15);
         await browser.getByRole("button", { name: "Felder und Figuren schließen", exact: true }).click();
-        await activate(figure);
         await expect.poll(async () => distance(start, await camera(world))).toBeLessThan(.15);
         const after = (await session.state()).partyGame!;
         expect(after.seq).toEqual(before.seq);
@@ -99,14 +101,18 @@ for (const mode of ["party", "roll-it-up"] as const) {
         await expect(page.locator(".party-world")).toHaveCount(0);
         await page.getByRole("button", { name: "Zur 3D-Ansicht wechseln", exact: true }).click();
         await expect(world).toHaveAttribute("data-webgl", "ready");
+        await page.getByRole("button", {name:"Kamera öffnen",exact:true}).click();
         await expect(figure).toHaveAttribute("aria-pressed", "true");
+        await page.getByRole("button", {name:"Kamera schließen",exact:true}).click();
         await page.getByRole("button", { name: "Felder und Figuren", exact: true }).click();
         await browser.getByRole("button", { name: field, exact: true }).click();
         await browser.getByRole("button", { name: "Felder und Figuren schließen", exact: true }).click();
-        await expect(figure).toHaveAttribute("aria-pressed", "false");
+        await page.getByRole("button", {name:"Kamera öffnen",exact:true}).click();
+        await expect(figure).toHaveAttribute("aria-pressed", "true");
+        await page.getByRole("button", {name:"Kamera schließen",exact:true}).click();
         await page.getByRole("button", { name: "Würfeln & losziehen", exact: true }).click();
         await expect.poll(async () => (await session.state()).partyGame!.dice.length).toBeGreaterThan(0);
-        await expect(figure).toHaveAttribute("aria-pressed", "true");
+        expect(await world.boundingBox()).toEqual(bounds);
         expect(errors).toEqual([]);
       } finally { session.close(); }
     });

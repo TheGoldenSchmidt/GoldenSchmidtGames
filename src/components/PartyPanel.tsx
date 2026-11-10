@@ -6,7 +6,7 @@ export function PartyPanel({title,onClose,children}:{title:string;onClose:()=>vo
   useEffect(()=>{
     const element=dialog.current!,opener=document.activeElement;
     element.showModal();
-    return()=>{element.close();if(opener instanceof HTMLElement&&opener.isConnected)opener.focus({preventScroll:true});};
+    return()=>{element.close();if((opener instanceof HTMLElement||opener instanceof SVGElement)&&opener.isConnected)opener.focus({preventScroll:true});};
   },[]);
   return <dialog ref={dialog} className="party-panel" aria-labelledby={label} onCancel={event=>{event.preventDefault();onClose();}} onClick={event=>{
     if(event.target!==event.currentTarget)return;

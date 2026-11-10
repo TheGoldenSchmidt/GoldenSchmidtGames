@@ -24,7 +24,7 @@ export function createBoardWorld(host:HTMLElement,read:()=>BoardFrame,select:(id
   if(tray) rollingTray(kit,world); else kit.water(world);
   const controls=new OrbitControls(kit.camera,kit.renderer.domElement);controls.enablePan=false;controls.enableDamping=true;controls.dampingFactor=.12;controls.minPolarAngle=.35;controls.maxPolarAngle=1.08;
   controls.touches.ONE=T.TOUCH.ROTATE;controls.touches.TWO=T.TOUCH.DOLLY_PAN;
-  const initial=read(),initialTarget=initial.follow?figurePoint(initial.selected??initial.positions[initial.game.order[initial.game.turn]]).add(new T.Vector3(0,1,0)):new T.Vector3(0,1,0);
+  const initial=read(),initialTarget=initial.follow?figurePoint(initial.positions[initial.game.order[initial.game.turn]]).add(new T.Vector3(0,1,0)):new T.Vector3(0,1,0);
   const initialDistance=(initial.follow?19:45)*Math.max(1,1/kit.camera.aspect)/initial.zoom;
   controls.target.copy(initialTarget);kit.camera.position.setFromSphericalCoords(initialDistance,.82,Math.PI+initial.angle).add(initialTarget);controls.update();
   if(!tray){
@@ -109,14 +109,15 @@ export function createBoardWorld(host:HTMLElement,read:()=>BoardFrame,select:(id
   const startCamera=()=>{zooming=false;};controls.addEventListener("start",startCamera);
   const endZoom=()=>{if(!zooming)onZoom(T.MathUtils.clamp(Number((baseDistance/controls.getDistance()).toFixed(2)),1,2.5));};controls.addEventListener("end",endZoom);
   const animate=(time:number)=>{
-    const dt=Math.min(.05,(time-last)/1000);last=time;if(document.body.dataset.partyPractice){frame=requestAnimationFrame(animate);return;}const state=read(),g=state.game;
+    // Camera easing uses elapsed time, including slow full-screen WebGL frames.
+    const dt=Math.min(.25,(time-last)/1000);last=time;if(document.body.dataset.partyPractice){frame=requestAnimationFrame(animate);return;}const state=read(),g=state.game;
     if(state.now!==clockNow){clockNow=state.now;clockAt=time;}
     const visualNow=g.pausedAt?state.now:state.now+Math.min(100,Math.max(0,time-clockAt));
     const movement=g.movement,progress=movement?T.MathUtils.clamp((visualNow-movement.departAt)/(movement.arriveAt-movement.departAt),0,1):0;
     controls.enabled=!state.blocked;
     const active=g.players.find(p=>p.id===g.order[g.turn])!;
-    const focus=state.follow?figurePoint(state.selected??state.positions[active.id]??active.position).add(new T.Vector3(0,1,0)):new T.Vector3(0,1,0),oldTarget=controls.target.clone();
-    if(state.follow&&state.selected===undefined&&movement)focus.lerp(figurePoint(movement.destination).add(new T.Vector3(0,1,0)),state.reduce?1:progress);
+    const focus=state.follow?figurePoint(state.positions[active.id]??active.position).add(new T.Vector3(0,1,0)):new T.Vector3(0,1,0),oldTarget=controls.target.clone();
+    if(state.follow&&movement)focus.lerp(figurePoint(movement.destination).add(new T.Vector3(0,1,0)),state.reduce?1:progress);
     controls.target.lerp(focus,state.reduce?1:1-Math.exp(-dt*5));kit.camera.position.add(controls.target.clone().sub(oldTarget));
     if(state.view!==lastView){kit.camera.position.setFromSphericalCoords(controls.getDistance(),.82,Math.PI+state.angle).add(controls.target);lastAngle=state.angle;lastView=state.view;}
     if(state.zoom!==lastZoom||state.follow!==lastFollow||kit.camera.aspect!==lastAspect){baseDistance=(state.follow?19:45)*Math.max(1,1/kit.camera.aspect);controls.minDistance=baseDistance/2.5;controls.maxDistance=baseDistance;wantedDistance=baseDistance/state.zoom;zooming=true;lastZoom=state.zoom;lastFollow=state.follow;lastAspect=kit.camera.aspect;}

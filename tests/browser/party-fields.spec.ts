@@ -15,7 +15,9 @@ for(const mode of ["party","roll-it-up"] as const)for(const motion of ["no-prefe
       const world=page.locator(".party-world");
       await expect(world).toHaveAttribute("data-webgl","ready");
       await expect.poll(()=>world.getAttribute("data-frames").then(Number)).toBeGreaterThan(8);
+      await page.getByRole("button",{name:"Kamera öffnen",exact:true}).click();
       await page.getByRole("button",{name:mode==="party"?"Ganze Insel":"Ganze Schale",exact:true}).click();
+      await page.getByRole("button",{name:"Kamera schließen",exact:true}).click();
       // Let the requested overview finish before the visual check.
       await expect.poll(()=>world.getAttribute("data-frames").then(Number)).toBeGreaterThan(32);
       await page.screenshot({path:info.outputPath("fields-3d.png")});
@@ -41,6 +43,8 @@ for(const mode of ["party","roll-it-up"] as const)for(const motion of ["no-prefe
       expect((await session.state()).partyGame!.seq).toEqual(before.seq);
       await page.screenshot({path:info.outputPath("fields-2d.png")});
       expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBe(page.viewportSize()!.width);
+      await page.getByRole("button",{name:"Feldinfo schließen",exact:true}).click();
+      await expect(event).toBeFocused();
       await page.getByRole("button",{name:"Würfeln & losziehen",exact:true}).click();
       await expect.poll(async()=>(await session.state()).partyGame!.dice.length).toBeGreaterThan(0);
     }finally{session.close();}
