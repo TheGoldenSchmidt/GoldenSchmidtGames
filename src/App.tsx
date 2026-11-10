@@ -1,4 +1,5 @@
-import { isPartyMode } from "../shared/games";
+import { GAMES, isPartyMode } from "../shared/games";
+import { isMinigameMode } from "../shared/minigameModes";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { GameId, GuestProfile, RoomState } from "../shared/types";
 import { ProfileDialog } from "./components/ProfileDialog";
@@ -197,7 +198,7 @@ export default function App() {
           onLocal={() => setView("local-setup")}
           onOnline={() => {useTableTransport(); setView("online-entry");}}
           onResumeHost={loadLastHost(profile.id)?resumeHost:undefined}
-          resumeGameName={readPartySave<PartySavedSession>(PARTY_ONLINE_SAVE)?.gameId==="roll-it-up"?"Roll It Up!":"Inselparty"}
+          resumeGameName={GAMES.find(game=>game.id===readPartySave<PartySavedSession>(PARTY_ONLINE_SAVE)?.gameId)?.name??"Inselparty"}
           onResumeOnline={canResumeParty?resumeParty:undefined}
           resumeError={resumeError}
         />
@@ -246,7 +247,7 @@ export default function App() {
         </GameIntro>
       )}
       {view === "game-online" && room && (
-        <GameIntro gameId={room.config.gameId} players={room.players.filter(player => player.connected)} enabled={playIntro}>
+        <GameIntro gameId={room.config.gameId} players={room.players.filter(player => player.connected)} enabled={playIntro&&!isMinigameMode(room.config.gameId)}>
           {room.config.gameId === "qwixx"
             ? <QwixxGameScreen profile={profile} initialRoom={room} onExit={leaveOnline} />
             : room.config.gameId === "durak" ? <DurakGameScreen profile={profile} initialRoom={room} onExit={leaveOnline} />

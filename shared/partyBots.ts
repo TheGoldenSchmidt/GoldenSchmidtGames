@@ -1,4 +1,5 @@
 import { hasFullSet, partyPaths } from "./partyBoard";
+import { availableBets } from "./minigameModes";
 import {COMMAND_ZONES,DUO_SWITCHES,GOLF_GATES,HEX_PLATFORMS,hexCue,photoSpot,saysCue,wallHoles,wallCellPoint} from "./arenaChallenges";
 import { activePartyPlayer, applyPartyAction, applyPartyControl, ITEMS, tickParty, type PartyAction, type PartyGame } from "./party";
 import { bridgeCenter, clamp, DASH_BLOCKS, HURDLES, TILT_HOLES, type ArenaActor, type ArenaInput, type ArenaState } from "./partyArena";
@@ -39,6 +40,7 @@ export function botArenaInput(s:ArenaState,a:ArenaActor):ArenaInput {
 }
 
 export function botBoardAction(g:PartyGame):PartyAction|undefined {
+  if(g.competition && g.phase === "mini-result") return;
   const p=activePartyPlayer(g);
   if(g.phase==="turn"){
     const index=p.items.findIndex(i=>i==="sprint"||i==="double"||i==="shield"&&!p.shield);
@@ -73,6 +75,15 @@ export class PartyBotDriver {
     if(g.phaseId!==this.phaseId){this.phaseId=g.phaseId;this.due=now+650;}
     if(!skipWait&&now<this.due)return g;
     this.due=now+650;
+    if(g.phase === "mini-bet" && g.competition) {
+      for(const p of g.players.filter(p => p.bot && !p.passive)) {
+        if(g.phase === "mini-bet" && !g.competition!.locked.includes(p.id)) {
+          const available = availableBets(g.competition!, p.id);
+          g = applyPartyAction(g, p.id, {type:"bet", value:available[(g.round + g.players.indexOf(p)) % available.length]}, now);
+        }
+      }
+      return g;
+    }
     if(g.phase==="mini-intro"){
       for(const p of g.players.filter(p=>p.bot&&!p.passive))if(g.phase==="mini-intro"&&!g.mini!.runs[p.id].ready)g=applyPartyAction(g,p.id,{type:"ready"},now);
       return g;

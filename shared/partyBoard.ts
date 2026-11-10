@@ -11,7 +11,7 @@ export const BOARD = Array.from({ length: 34 }, (_, id) => {
   return { id, type, next, x, y };
 });
 
-export interface PartyBoardState { mode?: "party" | "roll-it-up" }
+export interface PartyBoardState { mode?: import("./party").PartyGame["mode"] }
 export interface Collector { position: number; supplies?: number[] }
 
 export const STATIONS = [

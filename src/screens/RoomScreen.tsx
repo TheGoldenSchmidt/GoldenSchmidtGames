@@ -6,6 +6,8 @@ import { ScreenHeader } from "../components/ScreenHeader";
 import { HostInvite } from "../nearby/Pairing";
 import { socket } from "../lib/socket";
 import { PartySettings } from "../components/PartySettings";
+import { MinigameSettings } from "../components/MinigameSettings";
+import { isMinigameMode, type MinigameOptions } from "../../shared/minigameModes";
 import type { PartyOptions } from "../../shared/party";
 import { PartyCharacterPicker } from "../components/PartyCharacterPicker";
 import {CharacterAvatar} from "../components/CharacterAvatar";
@@ -50,8 +52,9 @@ export function RoomScreen({
 
   useEffect(()=>{void preloadFigures(room.players.map(p=>p.characterId)).catch(()=>{});},[room.players.map(p=>p.characterId).join()]);
 
-  function configure(gameId: GameId, playerCount: number, durakCheatMode = room.config.durakCheatMode ?? false, party:PartyOptions|undefined=room.config.party) {
-    socket.emit("room:configure", { gameId, playerCount, durakCheatMode, party }, (response: { ok: boolean; error?: string }) => {
+  function configure(gameId: GameId, playerCount: number, durakCheatMode = room.config.durakCheatMode ?? false, party:PartyOptions|undefined=room.config.party, minigames:MinigameOptions|undefined=room.config.minigames) {
+    setError("");
+    socket.emit("room:configure", { gameId, playerCount, durakCheatMode, party, minigames }, (response: { ok: boolean; error?: string }) => {
       if (!response.ok) setError(response.error ?? "Einstellung konnte nicht gespeichert werden.");
     });
   }
@@ -134,7 +137,9 @@ export function RoomScreen({
           </label>
         </div>
 
-        {isPartyMode(room.config.gameId) && <PartySettings rollItUp={room.config.gameId==="roll-it-up"} characterId={room.players.find(p=>p.id===profile.id)?.characterId} value={room.config.party} disabled={!isHost} onChange={value=>configure(room.config.gameId,room.config.playerCount,false,value)}/>}
+        {isMinigameMode(room.config.gameId)
+          ? <MinigameSettings mode={room.config.gameId} value={room.config.minigames} disabled={!isHost} onChange={value=>configure(room.config.gameId,room.config.playerCount,false,room.config.party,value)}/>
+          : isPartyMode(room.config.gameId) && <PartySettings rollItUp={room.config.gameId==="roll-it-up"} characterId={room.players.find(p=>p.id===profile.id)?.characterId} value={room.config.party} disabled={!isHost} onChange={value=>configure(room.config.gameId,room.config.playerCount,false,value)}/>}
         {room.config.gameId === "durak" && (
           <label className="option-toggle">
             <span><strong>Schummelmodus</strong><small>Regelwidrig decken oder nachlegen – auf eigenes Risiko.</small></span>

@@ -11,6 +11,7 @@ Eine installierbare Smartphone-PWA für lokale und Online-Spiele. Das aktuelle G
 - Offline-Cache als installierbare PWA
 - 13 freigegebene alpha_-Charaktere mit Pflichtauswahl vor Raumzugang und zufälliger Bot-Zuordnung; dieselbe Figur in allen Spielen
 - Inselparty für 2–6 Personen ausschließlich online: eine echte 3D-Insel, eigene steuerbare Figuren, 34 Felder, fünf Items und 14 gemeinsame 3D-Minispiele mit Touch-, Tastatur- und Neigungssteuerung
+- Freies Minispiel und Schlag den GoldenSchmidt für 2–6 Personen auf getrennten Geräten, mit denselben 14 Arenen und beiden Hostingarten
 
 Das Qwixx-Modul enthält den gemeinsamen weißen Wurf, die zusätzliche Farbaktion der aktiven Person, vier getrennte Wertungsblätter, Fehlwürfe, Reihenschlüsse, automatische Wertung und die Spielergebnisanzeige.
 
@@ -24,7 +25,7 @@ Qwixx bleibt nach dem Intro in einer runden 3D-Tischarena: Die aktive Figur rüc
 
 Durak verwendet 36 Karten für zwei bis sechs Spieler. Enthalten sind Trumpf, Angriff und Verteidigung, Aufnehmen, Nachlegen, Weiterschieben sowie verdeckte Online-Handkarten. Im lokalen Modus schützt eine Übergabeansicht die Hand der jeweils aktiven Person.
 
-Neue Partien beginnen mit einem etwa vier Sekunden langen 3D-Intro: Bei Durak sitzen die Spieler am runden Filztisch, bei Qwixx und Kribbeln liegen die jeweiligen Würfel und Blätter bereit. Die Kamera fährt näher und richtet sich senkrecht auf den Tisch aus. Inselparty beginnt mit einem Anflug auf eine kleine Insel. Die Sequenzen sind per Button oder Escape überspringbar, entfallen bei reduzierter Bewegung und werden beim Wiederbeitritt nicht erneut abgespielt. Ohne WebGL steht eine Ersatzszene bereit. Mehr dazu in [Spiel-Intros](docs/game-intros.md).
+Qwixx, Durak, Kribbeln und Inselparty beginnen mit einem etwa vier Sekunden langen 3D-Intro: Bei Durak sitzen die Spieler am runden Filztisch, bei Qwixx und Kribbeln liegen die jeweiligen Würfel und Blätter bereit. Die Kamera fährt näher und richtet sich senkrecht auf den Tisch aus. Inselparty beginnt mit einem Anflug auf eine kleine Insel. Die Sequenzen sind per Button oder Escape überspringbar, entfallen bei reduzierter Bewegung und werden beim Wiederbeitritt nicht erneut abgespielt. Ohne WebGL steht eine Ersatzszene bereit. Mehr dazu in [Spiel-Intros](docs/game-intros.md).
 
 Kribbeln ist für zwei bis fünf Personen lokal und online spielbar: sechs Farbwürfel, bis zu drei Würfe mit frei wählbarem Behalten, sechs Farbaufgaben und vier streng ansteigende Kribbelfelder. Bei einer nicht erfüllten Aufgabe kann auf ein freies Kribbelfeld derselben Gruppe ausgewichen werden; danach gibt es drei neue Versuche. Jede abgeschlossene Zeile wird nach Platzierung gewertet, Gleichstände erhalten den niedrigeren Platz. Bei gleichen Endpunkten entscheidet das vierte Kribbelfeld.
 
@@ -34,7 +35,7 @@ Die aktuelle Kribbeln-Aufgabe wird als Mengenbild mit Würfeln, Farbgruppen oder
 
 ## Zwei Hostingarten
 
-Beim Erstellen eines Raums wählt der Host **Node-Server** (Standard) oder **Dieses Handy**. Alle vier Spiele verwenden dieselbe Raum- und Regellogik. Die Auswahl gilt für diesen Raum; laufende Partien wechseln ihre Hostingart nicht.
+Beim Erstellen eines Raums wählt der Host **Node-Server** (Standard) oder **Dieses Handy**. Alle verfügbaren Spiele verwenden dieselbe Raum- und Regellogik. Die Auswahl gilt für diesen Raum; laufende Partien wechseln ihre Hostingart nicht.
 
 Im Node-Modus verbindet sich jedes Gerät über das Internet mit dem bisherigen Server und tritt per Raumcode bei. Im Handy-Modus spielt der Host selbst mit und führt die gemeinsame Simulation in einem Worker aus. Gäste verbinden sich im selben WLAN oder Hotspot einzeln per Einladung und Antwort als QR-Code. Der Spielverkehr läuft direkt zwischen den Geräten, ohne Signalisierungsdienst, STUN/TURN oder Cloud-Datenbank. Verschiedene Gruppen haben unabhängige Hosts.
 
@@ -42,11 +43,19 @@ Für den Einsatz ohne Internet die aktuelle PWA vorher auf **jedem** Gerät voll
 
 ## Automatische Prüfungen
 
-Online-Plätze sind ab der Lobby an einen privaten Schlüssel auf dem jeweiligen Gerät gebunden. Nach einem Verbindungsabbruch meldet sich das Gerät im selben Raum wieder an. Auch nach dem Neuladen öffnet das Gerät seine zuletzt aktive Online-Partie. Wer nur den Raumcode oder eine fremde Spieler-ID kennt, erhält keinen Zugriff auf einen bereits belegten Platz. Der Server speichert bestätigte Züge, verdeckte Karten und Sitzungsschlüssel. Solange der Speicher erhalten bleibt, setzen alle vier Spiele nach einem Neustart im selben Raum fort. Auf Render starten beide Hostingarten auch ohne Turso; der lokale Node-Speicher ist dort flüchtig. Optionen für dauerhafte Node-Spielstände stehen in [DEPLOYMENT.md](DEPLOYMENT.md).
+Online-Plätze sind ab der Lobby an einen privaten Schlüssel auf dem jeweiligen Gerät gebunden. Nach einem Verbindungsabbruch meldet sich das Gerät im selben Raum wieder an. Auch nach dem Neuladen öffnet das Gerät seine zuletzt aktive Online-Partie. Wer nur den Raumcode oder eine fremde Spieler-ID kennt, erhält keinen Zugriff auf einen bereits belegten Platz. Der Server speichert bestätigte Züge, verdeckte Karten, Minispieleinsätze und Sitzungsschlüssel. Solange der Speicher erhalten bleibt, setzen laufende Spiele nach einem Neustart im selben Raum fort. Auf Render starten beide Hostingarten auch ohne Turso; der lokale Node-Speicher ist dort flüchtig. Optionen für dauerhafte Node-Spielstände stehen in [DEPLOYMENT.md](DEPLOYMENT.md).
 
 Auf dem Startbildschirm prüft „Nach Updates suchen“ den Service Worker ohne Browsercache. Eine heruntergeladene Version wird mit „Neue Version laden“ ausdrücklich aktiviert; erst nach Übernahme wird diese App-Ansicht neu geladen. Laufende Spiele besitzen keinen Update-Button und werden vom Update-Code nicht automatisch neu geladen. Die Tests dafür laufen mit `npm run test:pwa` auch in CI.
 
-`.github/workflows/ci.yml` führt unter Node 22 bei Pushes und Pull Requests Installation, TypeScript-/PWA-Build, Regeltests aller vier Spiele, Socket-Integration, Produktionsprüfung und echte Chromium-Browsertests aus. Manuelle Starts sind ebenfalls möglich. Die Regeltests umfassen Feldgrenzen, Schlösser und Fehlwürfe bei Qwixx, Kartenvergleiche, Weiterschieben und Schummelmodus bei Durak sowie alle 46.656 Farbkombinationen und Runden-/Wertungslogik bei Kribbeln. Die Socket-Tests verwenden echte UUIDs und prüfen alle vier Spielstarts. Dies ist keine Garantie, dass jeder denkbare Browser- oder Netzwerkfehler abgedeckt ist.
+`.github/workflows/ci.yml` führt unter Node 22 bei Pushes und Pull Requests Installation, TypeScript-/PWA-Build, Regeltests der spielbaren Module, Socket-Integration, Produktionsprüfung und echte Chromium-Browsertests aus. Manuelle Starts sind ebenfalls möglich. Die Regeltests umfassen Feldgrenzen, Schlösser und Fehlwürfe bei Qwixx, Kartenvergleiche, Weiterschieben und Schummelmodus bei Durak sowie alle 46.656 Farbkombinationen und Runden-/Wertungslogik bei Kribbeln. Die Socket-Tests verwenden echte UUIDs und prüfen unter anderem beide eigenständigen Minispielmodi und ihre verdeckten Einsätze. Dies ist keine Garantie, dass jeder denkbare Browser- oder Netzwerkfehler abgedeckt ist.
+
+## Freies Minispiel und Schlag den GoldenSchmidt
+
+Unter **Online spielen → Neuen Raum erstellen → Ausgewähltes Spiel** sind beide Modi für 2–6 Personen verfügbar. Jede Person spielt am eigenen Gerät. Im Modus **Freies Minispiel** wählt der Host eines der 14 Minispiele aus. Nach Anleitung, optionaler Übung und gemeinsamem Countdown wird genau dieses Spiel gewertet und das Ergebnis angezeigt.
+
+Bei **Schlag den GoldenSchmidt** wählt der Host 1–14 Minispiele (Standard: 5). Die Raumautorität zieht die Spiele zufällig ohne Wiederholung. Vor jedem Spiel kennt ihr die Aufgabe und setzt verdeckt einen eigenen, noch freien Wert von 1 bis zur gewählten Spielanzahl. Sobald alle gesetzt haben, werden die Einsätze aufgedeckt. Ein gesetzter Wert ist auch bei einer Niederlage verbraucht und kann nicht geändert werden. Die erstplatzierte Person erhält ihren eigenen Einsatz als Punkte; alle anderen erhalten 0 Punkte. Die höchste Gesamtpunktzahl gewinnt. Bei gleichem Gesamtstand wird der Sieg geteilt. Der Host startet jeweils das nächste Minispiel.
+
+Beide Modi verwenden die bestehenden Arena- und Gleichstandsregeln und vergeben keine Brettspielmünzen. Gespeicherte Einsätze bleiben bei Wiederbeitritt und Neustart erhalten. Die Bot-Testauswahl bietet beide Modi ebenfalls an; dabei gibt es keine Werkzeuge zum Überspringen gewerteter Runden. Die Regeltests, Socket-Tests und `tests/browser/minigame-modes.spec.ts` prüfen den Ablauf, verdeckte und einmalige Einsätze sowie Wiederbeitritt. Weitere Details stehen in [Inselparty-Regeln](docs/island-party-rules.md#eigenständige-minispielmodi).
 
 ## Roll It Up!
 

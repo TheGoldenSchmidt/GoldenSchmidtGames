@@ -77,6 +77,38 @@ Geschlossene Räume melden dies auch an angemeldete Status-Beobachter; der Knopf
 und der lokale Sitzungsverweis verschwinden dann sofort. Ohne Serververbindung
 wird kein ungeprüfter Wiederbeitritt angeboten.
 
+## Eigenständige Minispielmodi
+
+**Freies Minispiel** und **Schlag den GoldenSchmidt** verwenden dieselben 14
+Arenen, Eingaben, Teilnahme- und Gleichstandsregeln wie die Inselparty. Beide
+Modi laufen für 2–6 Personen auf getrennten Geräten mit Node-Server oder
+Handy-Host. Brett, Auftakt zur Zugreihenfolge und Münzausschüttung entfallen.
+Für gleiche Minispielpunkte entscheiden weiterhin weniger Stürze und danach
+die einmal zu Beginn ausgeloste Reihenfolge.
+
+Im freien Modus bestimmt der Host das Minispiel in der Lobby. Nach einer
+gewerteten Runde endet die Partie mit dem Minispielergebnis. Ohne Teilnahme
+gibt es keinen Minispielsieger. Üben ist vor dem gemeinsamen Start möglich.
+
+Im Wettbewerb spielen alle gegeneinander. Der Host wählt X zwischen 1 und 14
+(Standard: 5). Die Raumautorität zieht X unterschiedliche Minispiele; künftige
+Spiele bleiben verborgen. Vor jeder Runde wird die Aufgabe angezeigt. Jede
+Person legt dann verdeckt einen eigenen Einsatz von 1 bis X fest. Jede Zahl
+darf pro Person genau einmal verwendet werden, unabhängig vom Rundenergebnis.
+Ein bestätigter Einsatz ist unveränderlich. Es gibt keine automatische Auswahl
+nach Zeitablauf. Erst wenn alle aktiven Personen gesetzt haben, erscheinen die
+Einsätze und die gemeinsame Bereitschaftsanzeige.
+
+Die erstplatzierte teilnehmende Person erhält ihren eigenen Einsatz als
+Wettbewerbspunkte, alle anderen erhalten 0 Punkte. Nichtteilnahme bleibt ohne
+Punkte. Nach X Runden gewinnt die höchste Gesamtpunktzahl; bei gleichem
+Gesamtstand wird der Sieg geteilt. Nach einer Zwischenwertung startet nur der
+Host die nächste Runde. Die Abschlussansicht enthält Gesamtstand und sämtliche
+Rundeneinsätze. Bestätigte Einsätze, verbrauchte Werte und Gesamtpunkte werden
+im vollständigen Raumzustand gespeichert; andere Geräte erhalten vor der
+Aufdeckung nur die Information, wer bereits gesetzt hat. Die bestehenden
+Pausen-, Wiederbeitritts- und Raumschließungsregeln gelten auch hier.
+
 ## Tests
 
 `test:rules` prüft zusätzlich alle neuen Mechaniken, Körperkontakte, Stürze,
@@ -90,3 +122,12 @@ Auftakt und Wiederbeitritt ab. Die gesamte bestehende CI führt diese Befehle au
 Die Browser-CI verteilt Handy und PC auf jeweils drei Teilläufe. Die voneinander
 unabhängigen Arena-Fälle lassen sich einzeln verteilen, damit die erweiterte
 Palette die Prüflaufzeit nicht auf einen einzelnen Job konzentriert.
+
+Die eigenständigen Modi haben zusätzliche Regel- und Socketfälle in
+`scripts/minigame-modes-test.ts` und `scripts/minigame-modes-online-test.ts`.
+Sie sind in `test:rules` beziehungsweise `test:online` eingebunden. Der
+Neustarttest prüft einen gespeicherten, weiterhin verdeckten Einsatz.
+`tests/browser/minigame-modes.spec.ts` prüft Lobby, Eingabe, Wiederbeitritt und
+Abschluss in beiden Bewegungseinstellungen; `nearby.spec.ts` enthält beide
+Modi mit direktem Datenkanal und erneuter Paarung. Dies ersetzt keine Prüfung
+auf echten Handys.

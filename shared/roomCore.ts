@@ -1,4 +1,5 @@
 import { getGame, isPartyMode } from "./games";
+import { isMinigameMode, minigameOptions, type MinigameOptions } from "./minigameModes";
 import { applyPartyAction, applyPartyControl, createPartyGame, partyOptions, publicParty, selectPartyTestMini, shiftPartyClock, tickParty, type PartyAction, type PartyOptions } from "./party";
 import { CHARACTERS, characterId, isCharacterId } from "./characters";
 import { PartyBotDriver } from "./partyBots";
@@ -211,7 +212,7 @@ function startRoom(room: RoomState) {
   else if (room.config.gameId === "kribbeln") room.kribbelnGame = createKribbelnGame(players);
   else if (isPartyMode(room.config.gameId)) {
     players.forEach((p,i)=>p.characterId=characterId(p.characterId,i));
-    room.partyGame = createPartyGame(players, room.config.party, true, room.partyTest?.seed??randomInt(0x100000000), Date.now(), room.config.gameId);
+    room.partyGame = createPartyGame(players, room.config.party, true, room.partyTest?.seed??randomInt(0x100000000), Date.now(), room.config.gameId, room.config.minigames);
     if(room.partyTest)botDrivers.set(room.code,new PartyBotDriver());
   }
   else throw new Error("Dieses Spiel ist noch nicht verfügbar.");
@@ -329,9 +330,9 @@ hub.onPeer((socket) => {
     if(seq<=(room.partyTest.commandSeq??0))return callback({ok:true,data:publicRoom(room,member.playerId)});
     if(g.pausedAt)return callback({ok:false,error:"Die Testpartie ist pausiert."});
     if(payload.command==="restart"){
-      room.partyGame=createPartyGame(room.players,room.config.party,true,room.partyTest.seed,Date.now(),g.mode);
+      room.partyGame=createPartyGame(room.players,room.config.party,true,room.partyTest.seed,Date.now(),g.mode,room.config.minigames);
       room.partyGame.phaseId=g.phaseId+1;room.partyGame.seq={...g.seq};botDrivers.set(room.code,new PartyBotDriver());
-    }else if(payload.command==="mini"&&isArenaId(payload.miniId??""))room.partyGame=selectPartyTestMini(g,payload.miniId as import("../shared/partyArena").ArenaId);
+    }else if(payload.command==="mini"&&!g.competition&&isArenaId(payload.miniId??""))room.partyGame=selectPartyTestMini(g,payload.miniId as import("../shared/partyArena").ArenaId);
     else if(payload.command==="skip-bots")room.partyGame=botDrivers.get(room.code)!.skipTurns(g,Date.now());
     else return callback({ok:false,error:"Unbekanntes Testwerkzeug."});
     room.partyTest.commandSeq=seq;
@@ -353,6 +354,7 @@ hub.onPeer((socket) => {
     if(payload.seq! <= (g.seq[member.playerId]??0))return callback({ok:true,data:publicRoom(room,member.playerId)});
     if(payload.phaseId!==g.phaseId)return callback({ok:false,error:"Der Spielzug hat sich geändert. Bitte erneut wählen."});
     if((payload.action.type==="resume"||payload.action.type==="abort")&&room.hostId!==member.playerId)return callback({ok:false,error:"Nur der Host kann fortsetzen oder abbrechen."});
+    if(g.competition&&payload.action.type==="next"&&room.hostId!==member.playerId)return callback({ok:false,error:"Nur der Host startet das nächste Minispiel."});
     try {room.partyGame=applyPartyAction(g,member.playerId,payload.action);room.partyGame.seq[member.playerId]=payload.seq!;broadcast(room);callback({ok:true,data:publicRoom(room,member.playerId)});closePartyRoom(room);}
     catch(error){callback({ok:false,error:error instanceof Error?error.message:"Aktion nicht möglich."});}
   });
@@ -485,7 +487,7 @@ hub.onPeer((socket) => {
   withPayload(
     "room:configure",
     (
-      payload: { gameId?: GameId; playerCount?: number; durakCheatMode?: boolean; party?: Partial<PartyOptions> },
+      payload: { gameId?: GameId; playerCount?: number; durakCheatMode?: boolean; party?: Partial<PartyOptions>; minigames?: Partial<MinigameOptions> },
       callback: (ack: Ack<RoomState>) => void
     ) => {
       const membership = socketMembership.get(socket.id);
@@ -501,13 +503,17 @@ hub.onPeer((socket) => {
       let game;
       try { game=getGame(payload?.gameId??room.config.gameId); } catch {return callback({ok:false,error:"Unbekanntes Spiel."});}
       if(game.status!=="ready")return callback({ok:false,error:"Dieses Spiel ist noch nicht verfügbar."});
+      let minis: MinigameOptions | undefined;
+      try { minis = isMinigameMode(game.id) ? minigameOptions(payload.minigames ?? room.config.minigames) : room.config.minigames; }
+      catch(error) { return callback({ok:false,error:error instanceof Error ? error.message : "Ungültige Minispiel-Einstellungen."}); }
       const requestedCount = payload.playerCount ?? room.config.playerCount;
       if(!Number.isInteger(requestedCount))return callback({ok:false,error:"Ungültige Spielerzahl."});
       room.config = {
         gameId: game.id,
         playerCount: Math.max(game.minPlayers, Math.min(game.maxPlayers, requestedCount)),
         durakCheatMode: game.id === "durak" ? Boolean(payload.durakCheatMode ?? room.config.durakCheatMode) : false,
-        party: options
+        party: options,
+        minigames: minis
       };
       room.players.forEach((player) => {
         player.ready = Boolean(player.bot);

@@ -146,7 +146,7 @@ export function OnlineEntryScreen({
           {joinOpen && <GuestPair onReset={()=>setPairing(false)} onOffer={(code,table)=>{setPairing(true);invitationCode.current=code;useTableTransport({table,role:"guest"});}}/>}
         </details>}
         <details className="party-test-entry"><summary><span>Inselparty alleine testen</span> · Roll It Up!</summary><p>Eine vollständige Online-Partie mit Bots. Wähle deine Figur, spiele alle Runden oder starte ein bestimmtes Minispiel.</p>
-          <label>Testspiel<select value={testMode} onChange={e=>setTestMode(e.target.value)}><option value="party">Inselparty</option><option value="roll-it-up">Roll It Up!</option></select></label>
+          <label>Testspiel<select value={testMode} onChange={e=>setTestMode(e.target.value)}><option value="party">Inselparty</option><option value="roll-it-up">Roll It Up!</option><option value="free-minigame">Freies Minispiel</option><option value="goldenschmidt">Schlag den GoldenSchmidt</option></select></label>
           <label>Bot-Mitspieler<select value={bots} disabled={loading||!selected} onChange={e=>setBots(Number(e.target.value))}>{[1,2,3,4,5].map(n=><option key={n} value={n}>{n} {n===1?"Bot":"Bots"}</option>)}</select></label>
           <label>Startwert für wiederholbare Partien<input type="number" min="0" max="4294967295" step="1" value={seed} onChange={e=>setSeed(e.target.value)}/></label>
           <button className="button button--primary button--wide" disabled={loading||!selected||seed===""||!Number.isInteger(Number(seed))||Number(seed)<0||Number(seed)>0xffffffff} onClick={createTest}>{loading?"Testpartie wird vorbereitet …":"Testpartie mit Bots erstellen"}</button>
