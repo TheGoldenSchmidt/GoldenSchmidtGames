@@ -9,6 +9,8 @@ Private, installierbare Spielesammlung für eine Freundesrunde. Im Online-Spiel 
 
 ## Spieloberfläche
 
+Bei **jeder UI-Erweiterung und UI-Bearbeitung** zuerst die [Designregeln](designregeln.md) lesen und anwenden. Sie legen Stil, Farben, Komponenten, Bewegung und responsive Gestaltung fest; den dort beschriebenen Geltungsbereich für Menüs und Spielansichten beachten.
+
 Bei **jeder UI-Designaufgabe** den Skill `frontend-design:frontend-design` lesen und anwenden. Für HUDs, Menüs und Overlays zusätzlich [game-ui-frontend](.agents/skills/game-ui-frontend/SKILL.md) nutzen. Gestalte zuerst für Touch auf getrennten Handys und prüfe die Bedienung auch mit Maus und Tastatur am PC. Animationen erklären Spieleraktionen und respektieren `prefers-reduced-motion`. Beide Bewegungseinstellungen müssen zum selben Spielergebnis führen.
 
 ## Passende Prüfungen
@@ -27,3 +29,27 @@ Playwright startet den Server mit dem Inhalt von `dist/`. Nach Clientänderungen
 [README](README.md) für den Einstieg, [Deployment](DEPLOYMENT.md) für Hosting und Speichergrenzen, [Inselparty-Regeln](docs/island-party-rules.md) und [Figurenfreigabe](docs/approved-character-design.md) für verbindliche Spielentscheidungen. Änderungen an solchen Entscheidungen im zuständigen Dokument festhalten.
 
 Bei parallelen Codex-Chats pro unabhängiger Änderung einen eigenen Worktree nutzen. Zur Übergabe Ziel, Branch und Commit, offene lokale Änderungen sowie geprüfte und noch offene Punkte nennen.
+Fange für jede neue Aufgabe einen neuen Branch an.
+
+
+## Kontinuierliche Verbesserung und Dokumentationspflege
+
+- Prüfe bei relevanten Änderungen, ob bestehende
+  Projektdokumentation aktualisiert werden muss.
+- Aktualisiere betroffene Dokumentation im selben
+  Auftrag, sofern die Änderung tatsächlich
+  implementiert und überprüft wurde.
+- Entferne nachweislich veraltete Informationen
+  und vermeide redundante Dokumentation.
+- Unterscheide implementierte, getestete und
+  lediglich geplante Funktionalität.
+- Identifiziere wiederkehrende Fehler,
+  unklare Anweisungen und ineffiziente Workflows.
+- Schlage daraus konkrete Verbesserungen an
+  AGENTS.md, Guidelines oder Skills vor.
+- Ändere grundlegende Agentenregeln und
+  Qualitätsanforderungen nur nach Freigabe.
+- Schwäche niemals Tests oder Sicherheitsregeln
+  ab, nur um eine Aufgabe abzuschließen.
+- Halte Dokumentationsänderungen klein,
+  nachvollziehbar und im Git-Diff überprüfbar.

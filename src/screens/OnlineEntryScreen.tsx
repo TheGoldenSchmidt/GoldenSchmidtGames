@@ -102,7 +102,7 @@ export function OnlineEntryScreen({
   }
 
   return (
-    <main className="page screen-enter">
+    <main className="page party-menu screen-enter">
       <ScreenHeader title="Online spielen" onBack={onBack} />
       <section className="page__content online-entry">
 

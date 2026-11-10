@@ -179,7 +179,7 @@ export default function App() {
     socket.connect();socket.timeout(8000).emit("room:join",{code:saved.code,playerId:profile.id,name:profile.username,partyToken:saved.partyToken},(err:Error|null,response:{ok:boolean;data?:RoomState;error?:string})=>{if(err||!response.ok||!response.data){setCanResumeParty(false);if(!err)localStorage.removeItem(PARTY_ONLINE_SAVE);setResumeError(response?.error??"Der Raum ist nicht erreichbar. Versuche es erneut.");return;}keepSession(response.data);openOnlineGame(response.data, false);});
   }
 
-  if (session && reconnecting) return <main className="page"><section className="page__content party-connection">
+  if (session && reconnecting) return <main className="page party-menu"><section className="page__content party-connection">
     <h2 role="status">Verbindung wird wiederhergestellt …</h2>
     {session.nearby?.role === "guest" && (needsPairing
       ? <GuestPair expectedTable={session.nearby.table} onOffer={()=>{}}/>

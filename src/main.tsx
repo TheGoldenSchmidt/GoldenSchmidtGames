@@ -10,6 +10,7 @@ import "./styles/partyCharacters.css";
 import "./styles/gameIntro.css";
 import "./styles/kribbelnCup.css";
 import "./styles/qwixxCup.css";
+import "./styles/partyMenus.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

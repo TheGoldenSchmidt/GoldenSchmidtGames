@@ -31,7 +31,7 @@ export function LocalSetupScreen({
   }
 
   return (
-    <main className="page screen-enter">
+    <main className="page party-menu local-setup screen-enter">
       <ScreenHeader title="Lokal spielen" onBack={onBack} />
       <section className="page__content">
         <div className="section-heading">

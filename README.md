@@ -16,6 +16,10 @@ Das Qwixx-Modul enthält den gemeinsamen weißen Wurf, die zusätzliche Farbakti
 
 Der Startbildschirm zeigt den gestapelten GoldenSchmidtGames-Schriftzug auf einer violetten Partybühne mit gelben und pinken Spielbuttons. Rick, Morty, Cartman und Korvo begrüßen die Runde in einer gemeinsamen 3D-Szene mit kurzem Würfelwurf. Nach wenigen Sekunden stoppt die dekorative Animation; bei reduzierter Bewegung steht die Szene sofort still, ohne WebGL erscheinen die vorhandenen Figurenportraits. Beide Spielmodi, Gastprofil, Installation, Updates und Wiederbeitritt bleiben direkt über die bisherigen Aktionen erreichbar.
 
+Lokales Setup, Online-Menü, Lobby, Gastprofil und QR-Dialog übernehmen diesen Party-Stil mit violetten Kopfbereichen, gelber Auswahl und kräftigen Konturen. Auf dem PC stehen im lokalen Setup Spielauswahl und Spieler nebeneinander; auf dem Handy bleibt die Startaktion am unteren Rand erreichbar. Die Gestaltung ist auf diese Menüs begrenzt; Spielflächen und Spielregeln behalten ihre bisherige Darstellung und Funktion.
+
+Für UI-Erweiterungen und Überarbeitungen gelten die [Designregeln](designregeln.md).
+
 Qwixx bleibt nach dem Intro in einer runden 3D-Tischarena: Die aktive Figur rückt zum Becher vor, zwei weiße und vier einfarbige Würfel fliegen mit festen Identitäten auf wechselnde freie Landepunkte und können danach als gültige Kombination angehoben werden. Die Punktekarte liegt dauerhaft darunter. Der Becher lässt sich mit Finger oder Maus, optionaler Handybewegung oder dem Würfeln-Knopf bedienen; geschlossene Farbreihen nehmen ihren Würfel aus dem nächsten Wurf und reduzierte Bewegung zeigt Ergebnisse sofort. Mehr dazu in [Qwixx mit Würfelbecher](docs/qwixx-cup.md).
 
 Durak verwendet 36 Karten für zwei bis sechs Spieler. Enthalten sind Trumpf, Angriff und Verteidigung, Aufnehmen, Nachlegen, Weiterschieben sowie verdeckte Online-Handkarten. Im lokalen Modus schützt eine Übergabeansicht die Hand der jeweils aktiven Person.

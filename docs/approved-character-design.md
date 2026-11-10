@@ -9,8 +9,10 @@ zeigt die Wahl, darunter stehen 13 Bildschaltflächen. Ohne Wahl bleiben
 Raumaktionen gesperrt. In der Lobby kann die Figur vor dem Start gewechselt
 werden. Lokale Spieler bekommen dieselbe Auswahl im Setup.
 
-Farben: Hafenblau #10485b, Wasser #94def1, Sand #ffe5a1, Sonne #ffd258,
-Koralle #e87565 und Papier #fffdf8. Trebuchet MS bleibt die Spielschrift.
+Menüs, Figurenwahl und Lobby folgen dem Party-Stil aus den
+[Designregeln](../designregeln.md). Die Spielansichten behalten Hafenblau
+#10485b, Wasser #94def1, Sand #ffe5a1, Sonne #ffd258, Koralle #e87565
+und Papier #fffdf8. Trebuchet MS bleibt die Spielschrift.
 Figurenname und bestätigte Auswahl führen; Hinweise sind kurz und linksbündig.
 
 PC: [ große 3D-Bühne ] [ Figurennamen und Bildauswahl ]

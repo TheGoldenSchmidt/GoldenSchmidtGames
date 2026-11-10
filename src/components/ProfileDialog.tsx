@@ -21,7 +21,7 @@ export function ProfileDialog({
   return (
     <div className="dialog-backdrop" role="presentation" onMouseDown={onClose}>
       <section
-        className="dialog"
+        className="dialog party-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby="profile-title"

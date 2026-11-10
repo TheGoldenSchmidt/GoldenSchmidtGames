@@ -71,7 +71,7 @@ export function RoomScreen({
   }
 
   return (
-    <main className="page screen-enter">
+    <main className="page party-menu screen-enter">
       <ScreenHeader title="Lobby" onBack={onBack} />
       <section className="page__content room">
         {socket.tableRoute?.role==="host" && !room.partyTest && <HostInvite code={room.code}/>}
