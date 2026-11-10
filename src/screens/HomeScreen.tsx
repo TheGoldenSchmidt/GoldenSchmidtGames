@@ -1,5 +1,5 @@
 import type { GuestProfile } from "../../shared/types";
-import { Brand } from "../components/Brand";
+import { HomeParty } from "../components/HomeParty";
 import { InstallPrompt } from "../components/InstallPrompt";
 import { AppUpdate } from "../components/AppUpdate";
 import { displayName } from "../lib/profile";
@@ -12,7 +12,7 @@ export function HomeScreen({
   onOnline,
   onResumeHost,
   onResumeOnline,
-  resumeGameName="Inselparty",
+  resumeGameName = "Inselparty",
   resumeError
 }: {
   profile: GuestProfile;
@@ -26,10 +26,10 @@ export function HomeScreen({
   resumeError?: string;
 }) {
   return (
-    <main className="home screen-enter">
+    <main className="home">
       <div className="home__topbar">
-        <Brand />
-        <button className="profile-chip" onClick={onProfile}>
+        <span className="home__greeting"><span aria-hidden="true">✳</span> Die Runde gehört euch.</span>
+        <button className="profile-chip" onClick={onProfile} aria-label={`Gastprofil: ${displayName(profile)}`}>
           <span className="profile-chip__avatar" aria-hidden="true">
             {displayName(profile).slice(0, 1).toUpperCase()}
           </span>
@@ -37,38 +37,56 @@ export function HomeScreen({
         </button>
       </div>
 
-      <section className="home__intro">
-        <p>Was spielen wir?</p>
-        <h1>Ein Tisch.<br />Viele Spiele.</h1>
-      </section>
+      <div className="home__main">
+        <section className="home__hero" aria-label="Willkommen bei GoldenSchmidtGames">
+          <div className="home__wordmark-wrap">
+            <span className="home__spark home__spark--left" aria-hidden="true">✦</span>
+            <h1 className="home__wordmark" aria-label="GoldenSchmidtGames">
+              <span className="home__word home__word--golden" aria-hidden="true">Golden</span>
+              <span className="home__word home__word--schmidt" aria-hidden="true">Schmidt</span>
+              <span className="home__word home__word--games" aria-hidden="true">Games<span className="home__word-dot">!</span></span>
+            </h1>
+            <span className="home__spark home__spark--right" aria-hidden="true">✳</span>
+          </div>
+          <HomeParty />
+        </section>
 
-      <section className="mode-stack" aria-label="Spielmodus wählen">
-        <button className="mode-card mode-card--local" onClick={onLocal}>
-          <span className="mode-card__icon" aria-hidden="true">
-            <span>●</span><span>●</span><span>●</span>
-          </span>
-          <span className="mode-card__copy">
-            <strong>Lokal spielen</strong>
-            <small>Gemeinsam an einem Gerät</small>
-          </span>
-          <span className="mode-card__chevron" aria-hidden="true">›</span>
-        </button>
+        <section className="home__play" aria-labelledby="home-play-title">
+          <div className="home__invitation">
+            <p>Alle da?</p>
+            <h2 id="home-play-title">Dann los!</h2>
+          </div>
+          <div className="mode-stack" aria-label="Spielmodus wählen">
+            <button className="mode-card mode-card--local" onClick={onLocal}>
+              <span className="mode-card__icon" aria-hidden="true">
+                <span>●</span><span>●</span><span>●</span>
+              </span>
+              <span className="mode-card__copy">
+                <strong>Lokal spielen</strong>
+                <small>Gemeinsam an einem Gerät</small>
+              </span>
+              <span className="mode-card__chevron" aria-hidden="true">›</span>
+            </button>
 
-        <button className="mode-card mode-card--online" onClick={onOnline}>
-          <span className="mode-card__signal" aria-hidden="true"><i /><i /><i /></span>
-          <span className="mode-card__copy">
-            <strong>Online spielen</strong>
-            <small>Node-Server oder Handy-Hosting</small>
-          </span>
-          <span className="mode-card__chevron" aria-hidden="true">›</span>
-        </button>
-      </section>
+            <button className="mode-card mode-card--online" onClick={onOnline}>
+              <span className="mode-card__signal" aria-hidden="true"><i /><i /><i /></span>
+              <span className="mode-card__copy">
+                <strong>Online spielen</strong>
+                <small>Alle am eigenen Gerät</small>
+              </span>
+              <span className="mode-card__chevron" aria-hidden="true">›</span>
+            </button>
+          </div>
+          {onResumeHost && <button className="button button--secondary button--wide home__resume" onClick={onResumeHost}>Handy-Tisch fortsetzen</button>}
+          {onResumeOnline && <section className="party-resume" aria-label={resumeGameName + " fortsetzen"}><button className="button button--secondary button--wide home__resume" onClick={onResumeOnline} disabled={!online}>{resumeGameName === "Inselparty" ? "Online-Inselparty" : resumeGameName} wieder beitreten</button></section>}
+          {resumeError && <p className="home__error" role="alert">{resumeError}</p>}
+        </section>
+      </div>
 
-      <InstallPrompt />
-      {onResumeHost && <button className="button button--secondary button--wide" onClick={onResumeHost}>Handy-Tisch fortsetzen</button>}
-      {onResumeOnline&&<section className="party-resume" aria-label={resumeGameName+" fortsetzen"}><button className="button button--secondary button--wide" onClick={onResumeOnline} disabled={!online}>{resumeGameName==="Inselparty"?"Online-Inselparty":resumeGameName} wieder beitreten</button></section>}
-      {resumeError && <p role="alert">{resumeError}</p>}
-      <AppUpdate />
+      <div className="home__utilities">
+        <InstallPrompt />
+        <AppUpdate />
+      </div>
 
       <footer className="home__footer">
         <span className={`connection-dot ${online ? "is-online" : ""}`} />

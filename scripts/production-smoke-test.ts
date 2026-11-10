@@ -43,6 +43,7 @@ try {
   const worldModules=[...new Set(workerSource.match(/assets\/(?:sceneKit|boardWorld|arenaWorld)-[A-Za-z0-9_-]+\.js/g)??[])];
   assert.equal(worldModules.length,3,"Alle nachgeladenen 3D-Module müssen im PWA-Cache liegen");
   assert.match(workerSource,/assets\/characterPreview-[A-Za-z0-9_-]+\.js/,"Auch die Figuren-Vorschau muss im PWA-Cache liegen");
+  assert.match(workerSource,/assets\/homeParty-[A-Za-z0-9_-]+\.js/,"Auch die Figuren-Bühne des Startbildschirms muss im PWA-Cache liegen");
   for(const response of await Promise.all(worldModules.map(module=>fetch(`${origin}/${module}`)))){
     assert.equal(response.status,200);assert.match(response.headers.get("content-type")??"",/javascript/);assert.ok((await response.text()).length>1000);
   }
