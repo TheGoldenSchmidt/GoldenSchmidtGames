@@ -5,6 +5,8 @@ import type { QuickDrawGame } from "../../shared/matches/quickDraw";
 import type { TrailsGame } from "../../shared/matches/lightTrails";
 import type { PongGame } from "../../shared/matches/neonPong";
 import type { TankGame } from "../../shared/matches/tankTrouble";
+import type { BombGame } from "../../shared/matches/bombArena";
+import type { LavaGame } from "../../shared/matches/floorIsLava";
 import { CHARACTERS } from "../../shared/characters";
 import { miniPool } from "../../shared/minigameCatalog";
 
@@ -161,6 +163,53 @@ test("Tank Trouble: Stick fährt, Ziehen und Loslassen schießt", async ({ page 
     await page.mouse.move(area.x + area.width / 2 - 50, area.y + area.height / 2 + 20, { steps: 3 }); await page.mouse.up();
     await expect.poll(async () => (await tank()).lastShot, { timeout: 4000 }).toBeGreaterThan(0);
     await page.screenshot({ path: testInfo.outputPath("tanks.png") });
+    await session.action({ type: "finish" }, session.ids[1]);
+    await expect(page.getByRole("heading", { name: "Euer Ergebnis", exact: true })).toBeVisible();
+  } finally { session.close(); }
+});
+
+test("Bomb Arena: Stick läuft über das Raster, Knopf legt eine Bombe", async ({ page }, testInfo) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "bombs" });
+  try {
+    await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
+    await session.action({ type: "ready" }, session.ids[1]);
+    await matchStarted(page);
+    const game = async () => ((await session.state()).partyGame!.mini!.match as MatchState<BombGame>).game;
+    await page.getByRole("button", { name: "Bombe", exact: true }).tap();
+    await expect.poll(async () => (await game()).bombs.filter(b => b.owner === session.ids[0]).length).toBe(1);
+    const start = (await game()).bombers[session.ids[0]];
+    const stick = page.getByRole("group", { name: "Bewegungsstick" }), box = (await stick.boundingBox())!;
+    const cx = box.x + box.width / 2, cy = box.y + box.height / 2;
+    // Vom Start (1,1) führt der freie Weg nach rechts oder unten.
+    await page.mouse.move(cx, cy); await page.mouse.down(); await page.mouse.move(cx + 45, cy, { steps: 3 });
+    await expect.poll(async () => (await game()).bombers[session.ids[0]].cx !== start.cx, { timeout: 4000 }).toBe(true);
+    await page.mouse.up();
+    await page.screenshot({ path: testInfo.outputPath("bombs.png") });
+    await session.action({ type: "finish" }, session.ids[1]);
+    await expect(page.getByRole("heading", { name: "Euer Ergebnis", exact: true })).toBeVisible();
+  } finally { session.close(); }
+});
+
+test("Floor is Lava: Platten zerbröseln unter der eigenen Figur, Sprungknopf mit Abklingzeit", async ({ page }, testInfo) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "lava" });
+  try {
+    await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
+    await session.action({ type: "ready" }, session.ids[1]);
+    await matchStarted(page);
+    const game = async () => ((await session.state()).partyGame!.mini!.match as MatchState<LavaGame>).game;
+    const me = async () => (await game()).runners[session.ids[0]];
+    await expect.poll(async () => (await game()).tiles.includes("2")).toBe(true);
+    const start = await me();
+    const stick = page.getByRole("group", { name: "Bewegungsstick" }), box = (await stick.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2 - 40, { steps: 3 });
+    await expect.poll(async () => Math.hypot((await me()).x - start.x, (await me()).y - start.y), { timeout: 4000 }).toBeGreaterThan(.4);
+    await page.getByRole("button", { name: "Springen", exact: true }).tap();
+    await expect.poll(async () => (await me()).airUntil, { timeout: 3000 }).toBeGreaterThan(0);
+    await page.mouse.up();
+    await page.screenshot({ path: testInfo.outputPath("lava.png") });
     await session.action({ type: "finish" }, session.ids[1]);
     await expect(page.getByRole("heading", { name: "Euer Ergebnis", exact: true })).toBeVisible();
   } finally { session.close(); }

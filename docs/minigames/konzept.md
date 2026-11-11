@@ -125,6 +125,15 @@ im Modul ausgespielt; bleibt danach ein Gleichstand, wird der Platz geteilt.
 | Neon Pong | Ball startet mit 6,5, je Treffer +0,45, höchstens 15 Feldeinheiten/s; Power-up alle 10–15 s, aktiviert durch das Team des letzten Treffers | Konkrete Werte der Spezifikation |
 | Neon Pong | Wirkungen: breiter Schläger 5 s, Mehrball bis alle Zusatzbälle weg sind, Kurvenbälle 6 s, Zeitlupe 4 s nur für Bälle Richtung des sammelnden Teams | „Kurzzeitiger Slowdown“ soll dem sammelnden Team helfen |
 | Alle | „Aufgeben“ ersetzt in Match-Spielen „Versuch beenden“ | Gemeinsame Spiele lassen sich nicht einzeln beenden |
+| Tank Trouble | Labyrinth 7 × 11 Zellen; Ziegelmauern halten 2 Treffer und verschlucken die Kugel; Stechen höchstens 30 s, danach geteilter Platz | Neue Schusswege entstehen sichtbar, Spiel bleibt begrenzt |
+| Tank Trouble | Zielen per Ziehen auf der rechten Hälfte, Schuss beim Loslassen; kurzes Tippen schießt in die letzte Richtung | Präzises Zielen und schneller Schuss mit einem Daumen |
+| Bomb Arena | „Gegnerischer Knockout“ = letztes Leben durch eine fremde Bombe (+2 für deren Besitzer) | Mit 2 Leben ist der K.o. das Ausscheiden |
+| Bomb Arena | Kettenreaktionen bilden eine Explosion: höchstens ein Schaden je Spieler | „Dieselbe Explosion“ einheitlich auslegen |
+| Bomb Arena | Arena schließt sich ab 25 s spiralförmig (ein Feld je 0,35 s); geteilter Rundenbonus anteilig (z. B. 1,5) | Konkrete Werte; Teilen laut Spezifikation |
+| Bomb Arena | Sudden Death nur für die Punktgleichen: 1 Leben, Arena schließt ab 8 s, höchstens 30 s | Kurzer, eindeutiger Entscheid |
+| Floor is Lava | Quadratische Platten 9 × 13; Rand bricht bei 10 s und 15 s ein; Sprung 0,55 s mit 1,4-facher Geschwindigkeit (überwindet ein Feld) | Konkrete Werte für Handys |
+| Floor is Lava | Nach Lava sicherer Neustart auf der Platte mit größtem Abstand, 1,2 s Schutz; Überlebende bei Zeitablauf teilen +3 | Fairness; „teilen die beste Platzierung“ |
+| Floor is Lava | Stechrunde bei Gesamtgleichstand: nur die Punktgleichen, 1 Leben | Spezifikation verlangt Stechrunde |
 
 Weitere Abweichungen werden beim jeweiligen Spiel ergänzt.
 

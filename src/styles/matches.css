@@ -60,8 +60,8 @@ body:has(.party-screen--playing .match-game) { padding-block:0; }
 .party-screen--playing:has(.match-game) { height:100dvh; min-height:0; overflow:hidden; display:flex; flex-direction:column; }
 @media (min-width:700px) { .party-screen--playing:has(.match-game) { height:calc(100dvh - 40px); } }
 .party-screen--playing:has(.match-game) .party-header,.party-screen--playing:has(.match-game) .party-mini-player { display:none; }
-.party-screen--playing:has(.match-game) .party-layout { flex:1; min-height:0; display:flex; padding:0; }
-.party-screen--playing:has(.match-game) .party-decision { display:flex; flex-direction:column; flex:1; width:100%; max-width:560px; margin:0 auto; padding:max(8px, env(safe-area-inset-top)) 10px max(8px, env(safe-area-inset-bottom)); }
+.party-screen--playing:has(.match-game) .party-layout { flex:1; min-height:0; display:flex; flex-direction:column; align-items:stretch; padding:0; }
+.party-screen--playing:has(.match-game) .party-decision { display:flex; flex-direction:column; flex:1; min-height:0; width:100%; max-width:560px; margin:0 auto; padding:max(8px, env(safe-area-inset-top)) 10px max(8px, env(safe-area-inset-bottom)); }
 .party-screen--playing .match-game { flex:1; min-height:0; }
 .party-screen--playing:has(.match-game) .party-end-attempt { flex-shrink:0; margin-top:6px; }
 .party-screen--playing:has(.match-game) .party-connection { position:fixed; inset:auto 12px 12px; z-index:20; }
@@ -88,3 +88,5 @@ body:has(.party-screen--playing .match-game) { padding-block:0; }
 .tank-aim-half .match-aim-pad { border-left:2px dashed #fff9ed22; }
 .tank-aim-hint { position:absolute; right:12px; bottom:18px; padding:4px 10px; border-radius:999px; background:#24133fcc; color:#ffe44e; font-size:.72rem; font-weight:800; pointer-events:none; }
 .match-preview--tanks { background:repeating-linear-gradient(45deg, #c9b98a 0 12px, #d3c597 12px 24px); color:#3b3550; }
+.match-preview--bombs { background:radial-gradient(circle at 50% 45%, #ff7a28, #4b4766 70%); color:#16121f; }
+.match-preview--lava { background:radial-gradient(circle at 50% 50%, #ffb03c, #8a1d12 75%); color:#2a1a10; }
