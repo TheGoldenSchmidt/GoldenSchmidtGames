@@ -94,10 +94,10 @@ for(const mode of ["free-minigame","goldenschmidt"] as const) {
   assert.doesNotMatch(start,/Trophäen|Münzen aus dem Minispiel|10 · Platz/);
   if(mode==="goldenschmidt") for(const p of players)room.partyGame=applyPartyAction(room.partyGame,p.id,{type:"bet",value:1},100000);
   for(const p of players)room.partyGame=applyPartyAction(room.partyGame,p.id,{type:"ready"},100000);
-  for(const p of players)room.partyGame=applyPartyAction(room.partyGame,p.id,{type:"finish"},104000);
+  for(const p of players)if(room.partyGame.phase==="mini-play")room.partyGame=applyPartyAction(room.partyGame,p.id,{type:"finish"},104000); // Match-Spiele enden, sobald nur eine Person übrig ist
   const result=renderToString(<PartyGameScreen profile={profile} initialRoom={room} onExit={exit}/>);
   assert.match(result,/Zurück zu GSG/);assert.doesNotMatch(result,/Die Insel feiert|Trophäen/);
-  assert.match(renderToString(<MinigameSettings mode={mode} disabled={false} onChange={exit}/>),mode==="goldenschmidt"?/Anzahl Minispiele/:/Direkt ins Minispiel/);
+  assert.match(renderToString(<MinigameSettings mode={mode} players={2} disabled={false} onChange={exit}/>),mode==="goldenschmidt"?/Anzahl Minispiele/:/Direkt ins Minispiel/);
 }
 // Ohne beforeinstallprompt muss die Installationshilfe trotzdem erreichbar bleiben.
 const originalNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");

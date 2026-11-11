@@ -10,15 +10,16 @@ import { bumperMayhem } from "./bumperMayhem";
 import { chaosRun } from "./chaosRun";
 import { arrowMasters } from "./arrowMasters";
 import { towerTumble } from "./towerTumble";
+import { hookWars } from "./hookWars";
 import { lightTrails } from "./lightTrails";
 
 /**
  * Registry of the new touch minigames ("Match-Minispiele"). Only complete
  * games are listed here; the lobby, pools and bots read this list.
  */
-export const MATCH_IDS = ["quickdraw", "trails", "pong", "tanks", "bombs", "lava", "sumo", "bumpercars", "chaosrun", "arrows", "tower"] as const;
+export const MATCH_IDS = ["quickdraw", "trails", "pong", "tanks", "bombs", "lava", "sumo", "bumpercars", "chaosrun", "arrows", "tower", "hooks"] as const;
 export type MatchId = typeof MATCH_IDS[number];
-export const MATCH_MODULES: Record<MatchId, MatchModule<any>> = { quickdraw: quickDraw, trails: lightTrails, pong: neonPong, tanks: tankTrouble, bombs: bombArena, lava: floorIsLava, sumo: sumoSmash, bumpercars: bumperMayhem, chaosrun: chaosRun, arrows: arrowMasters, tower: towerTumble };
+export const MATCH_MODULES: Record<MatchId, MatchModule<any>> = { quickdraw: quickDraw, trails: lightTrails, pong: neonPong, tanks: tankTrouble, bombs: bombArena, lava: floorIsLava, sumo: sumoSmash, bumpercars: bumperMayhem, chaosrun: chaosRun, arrows: arrowMasters, tower: towerTumble, hooks: hookWars };
 export const isMatchId = (id: unknown): id is MatchId => typeof id === "string" && (MATCH_IDS as readonly string[]).includes(id);
 export const matchModule = (id: string) => { if (!isMatchId(id)) throw new Error("Unbekanntes Minispiel."); return MATCH_MODULES[id]; };
 export const MATCH_STEP = 50;
@@ -134,8 +135,11 @@ export function publicMatch(s: MatchState, viewer: string): MatchState {
 export function botMatchInput(s: MatchState, id: string): MatchInput {
   const p = s.players.find(player => player.id === id)!;
   const intent = MATCH_MODULES[s.id as MatchId].bot(publicMatch(s, id), id);
+  // Bots may describe directions with any length; devices never send more than 1.
+  const unit = (x = 0, y = 0) => { const n = Math.max(1, Math.hypot(x, y)); return [x / n, y / n] as const; };
+  const [x, y] = unit(intent.x, intent.y), [ax, ay] = unit(intent.ax, intent.ay);
   return {
-    x: intent.x ?? 0, y: intent.y ?? 0, ax: intent.ax ?? 0, ay: intent.ay ?? 0, ha: intent.ha ?? false, hb: intent.hb ?? false,
+    x, y, ax, ay, ha: intent.ha ?? false, hb: intent.hb ?? false,
     ca: p.usedA + (intent.pressA ? 1 : 0), cb: p.usedB + (intent.pressB ? 1 : 0),
     cn: p.usedN + (intent.command !== undefined ? 1 : 0), n: intent.command ?? 0
   };

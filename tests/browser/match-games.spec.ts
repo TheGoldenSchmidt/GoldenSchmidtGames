@@ -11,6 +11,7 @@ import type { RingGame } from "../../shared/matches/ringCore";
 import type { RunGame } from "../../shared/matches/chaosRun";
 import type { ArrowGame } from "../../shared/matches/arrowMasters";
 import type { TowerGame } from "../../shared/matches/towerTumble";
+import type { HookGame } from "../../shared/matches/hookWars";
 import { CHARACTERS } from "../../shared/characters";
 import { miniPool } from "../../shared/minigameCatalog";
 
@@ -304,6 +305,33 @@ test("Tower Tumble: eigener Zug mit Ziehen und Loslassen, die anderen schauen zu
     await expect.poll(async () => (await game()).blocks.length + ((await game()).last ? 1 : 0), { timeout: 5000 }).toBeGreaterThan(0);
     await expect.poll(async () => (await game()).current?.owner, { timeout: 6000 }).toBe(session.ids[1]);
     await expect(page.getByText("Die anderen bauen gerade …")).toBeVisible();
+    await session.action({ type: "finish" }, session.ids[1]);
+    await expect(page.getByRole("heading", { name: "Euer Ergebnis", exact: true })).toBeVisible();
+  } finally { session.close(); }
+});
+
+test("Hook Wars: Stick läuft, rechts ziehen schießt den Haken, loslassen löst ihn", async ({ page }, testInfo) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "hooks" });
+  try {
+    await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
+    await session.action({ type: "ready" }, session.ids[1]);
+    await matchStarted(page);
+    const me = async () => ((await session.state()).partyGame!.mini!.match as MatchState<HookGame>).game.bots[session.ids[0]];
+    const start = await me();
+    const stick = page.getByRole("group", { name: "Bewegungsstick" }), box = (await stick.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 + 40, box.y + box.height / 2, { steps: 3 });
+    await expect.poll(async () => (await me()).x - start.x, { timeout: 4000 }).toBeGreaterThan(.3);
+    await page.mouse.up();
+    // Haken nach rechts oben: Richtung des Ankers über der Startplattform.
+    const pad = page.getByRole("group", { name: "Greifhaken zielen und halten" }), area = (await pad.boundingBox())!;
+    await page.mouse.move(area.x + area.width / 2, area.y + area.height / 2); await page.mouse.down();
+    await page.mouse.move(area.x + area.width / 2 + 30, area.y + area.height / 2 - 60, { steps: 3 });
+    await expect.poll(async () => (await me()).lastShot?.at ?? -1, { timeout: 4000 }).toBeGreaterThan(0);
+    await page.screenshot({ path: testInfo.outputPath("hooks.png") });
+    await page.mouse.up();
+    await expect.poll(async () => (await me()).hook, { timeout: 3000 }).toBeUndefined();
     await session.action({ type: "finish" }, session.ids[1]);
     await expect(page.getByRole("heading", { name: "Euer Ergebnis", exact: true })).toBeVisible();
   } finally { session.close(); }

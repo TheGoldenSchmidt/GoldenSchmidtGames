@@ -105,3 +105,9 @@ body:has(.party-screen--playing .match-game) { padding-block:0; }
 .tower-hint,.tower-wait { position:absolute; left:50%; bottom:16px; transform:translateX(-50%); margin:0; padding:4px 12px; border-radius:999px; background:#24133fcc; color:#ffe44e; font-size:.72rem; font-weight:800; white-space:nowrap; pointer-events:none; }
 .tower-wait:empty { display:none; }
 .match-preview--tower { background:linear-gradient(#ffd166, #ff86c8); color:#24133f; }
+/* Hook Wars: stick bottom left, the right half fires and holds the hook. */
+.match-game--hooks .match-controls { justify-content:flex-start; }
+.hook-aim-half { position:absolute; top:0; right:0; bottom:0; width:50%; pointer-events:auto; }
+.hook-aim-half .match-aim-pad { border-left:2px dashed #fff9ed22; }
+.hook-hint { position:absolute; right:12px; bottom:18px; padding:4px 10px; border-radius:999px; background:#24133fcc; color:#57e4cb; font-size:.72rem; font-weight:800; pointer-events:none; }
+.match-preview--hooks { background:radial-gradient(circle at 50% 40%, #4b2a5c, #1b1f3b 70%); color:#57e4cb; }
