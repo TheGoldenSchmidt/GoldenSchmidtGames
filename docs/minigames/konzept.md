@@ -150,8 +150,39 @@ im Modul ausgespielt; bleibt danach ein Gleichstand, wird der Platz geteilt.
 | Tower Tumble | Sieben Formen (Quadrat, Brett, Säule, Breitstein, Klein, L, T) ohne Drehen; „wesentlicher Einsturz“ = mindestens ein bereits gesetzter Stein fällt; „deutliche Rekordhöhe“ = mindestens 0,5 m über dem bisherigen Rekord | Konkrete Schwellen |
 | Tower Tumble | Stechrunde: die Punktgleichen mit gleichem besten Höhenbeitrag setzen je einen Stein; der größte stabile Höhenbeitrag gewinnt | Spezifikation verlangt Stechrunde |
 | Tower Tumble | Mit 6 Personen dauert eine Partie etwa 2½ Minuten | 18 Züge à höchstens 5 s Zielzeit plus Fall und Auswertung |
+| Hook Wars | Haken als Strahl ohne Flugzeit (Reichweite 7,5); trifft den nächsten Anker in 0,7 Abstand zur Linie oder einen Gegner davor | Robust bei Netzlatenz, eindeutig entscheidbar |
+| Hook Wars | Gehaltener Haken zieht mit 5 Einheiten/s heran, die Seillänge begrenzt den Abstand (Schwingen); Loslassen behält den Schwung | „Schwingen oder heranziehen“ in einer Geste |
+| Hook Wars | Stick nach oben = Sprung von einer Plattform; Plattformen sind von unten durchlässig | Ohne Sprung wären untere Ebenen Sackgassen |
+| Hook Wars | 4 s Abklingzeit nur nach Treffern auf Gegner; ein Fehlschuss sperrt 0,35 s | Spezifikation nennt die Abklingzeit für erfolgreiche Treffer |
+| Hook Wars | Zonen und Anker spiegelbildlich (links/rechts); Paare auf gleicher Höhe; Kerne erscheinen alle 6 s an 5 mittigen Punkten, höchstens 3 | „Vergleichbar fair erreichbar“; Paare sind gleich, Höhenunterschiede zwischen Paaren bleiben |
+| Hook Wars | Gleichstand nach 90 s: höchstens 30 s Verlängerung, die nächste Abgabe einer gleichauf liegenden Person gewinnt, sonst geteilter Platz | Begrenzte Dauer |
+| Alle | Öffentliche Sicht enthält fremde Spieler nur mit Kennung, Farbe, Team und Anwesenheit, Ereignisse der letzten 1,5 s und auf 1/1000 gerundete Kommazahlen | Etwa 40 % weniger Daten je Sicht |
 
 Weitere Abweichungen werden beim jeweiligen Spiel ergänzt.
+
+## Leistung (gemessen, Node, Bots)
+
+Gemessen mit `publicMatch` je Gerät nach bis zu 30 s Bot-Spiel, sechs Spieler
+(Neon Pong vier). Simulationskosten ohne Bot-Logik.
+
+| Spiel | Hz | Ø KB je Sicht | Ø KB/s alle Geräte | ms Rechenzeit je Spielsekunde |
+| --- | --- | --- | --- | --- |
+| Quick Draw | 20 | 2,2 | 262 | 0,1 |
+| Light Trails | 20 | 1,5 | 183 | 0,2 |
+| Neon Pong | 20 | 1,0 | 79 | 0,3 |
+| Tank Trouble | 10 | 2,4 | 146 | 3,1 |
+| Bomb Arena | 20 | 2,5 | 303 | 0,3 |
+| Floor is Lava | 20 | 2,4 | 285 | 0,3 |
+| Sumo Smash | 20 | 2,2 | 260 | 0,2 |
+| Bumper Mayhem | 20 | 2,2 | 266 | 0,3 |
+| Chaos Run | 20 | 2,4 | 293 | 0,6 |
+| Arrow Masters | 10 | 1,6 | 96 | 0,2 |
+| Tower Tumble | 20 | 1,6 | 187 | 0,1 |
+| Hook Wars | 20 | 2,3 | 274 | 0,2 |
+
+Echte Spieler-IDs (UUIDs) vergrößern jede Sicht um etwa 0,5–1 KB. Der Handy-Host
+serialisiert bei sechs Geräten sechs Sichten alle 50 ms. Das ist in Node
+unkritisch, auf echten Handys aber **nicht gemessen**.
 
 ## Risiken und Abhängigkeiten
 

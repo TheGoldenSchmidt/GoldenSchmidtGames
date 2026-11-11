@@ -63,7 +63,8 @@ for (const reducedMotion of ["reduce", "no-preference"] as const) {
         // Die Ziehung ist zufällig: 3D-Arena oder neues Match-Spiel, beides über die echte Bedienung.
         const kind = await participate(page, session, round);
         await endOwnAttempt(page, kind);
-        if ((await session.state()).partyGame!.phase === "mini-play") await session.action({ type: "finish" }, session.ids[1]);
+        // Giving up ends a two-player match game at once; a 3D arena waits for the other attempt.
+        if (kind === "arena") await session.action({ type: "finish" }, session.ids[1]);
         await expect(page.getByRole("list", { name: "Minispielergebnis", exact: true })).toBeVisible();
         if (round === 1) {
           await expect(session.action({ type: "next" }, session.ids[1])).rejects.toThrow(/Nur der Host/);

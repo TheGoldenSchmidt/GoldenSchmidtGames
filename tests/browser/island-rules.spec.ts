@@ -1,14 +1,22 @@
 import {test,expect} from "@playwright/test";
 import {onlineSession} from "./party-session";
+import {NEUTRAL_MATCH_INPUT} from "../../shared/matches/types";
 
 test("Auftakt legt Reihenfolge fest und startet ohne hektische Brettfrist",async({page},info)=>{
  await page.emulateMedia({reducedMotion:"reduce"});const session=await onlineSession(page,false,undefined,false);
  try{
   await expect(page.getByText("Auftakt: Bestimmt eure Zugreihenfolge",{exact:true})).toBeVisible();
   for(const id of session.ids)await session.action({type:"ready"},id);
-  await expect(page.locator(".party-action-world")).toHaveAttribute("data-webgl","ready",{timeout:15000});
-  await expect(page.locator(".party-action-countdown")).toHaveCount(0,{timeout:12000});
-  for(let i=0;i<session.ids.length;i++)await session.control(session.ids[i],{x:i?1:-1,z:0,jump:false,punch:false},1000);
+  // The opening is drawn at random: a 3D arena or one of the match games.
+  if((await session.state()).partyGame!.mini!.match){
+    await expect(page.locator(".match-stage")).toBeVisible();
+    await expect(page.locator(".match-countdown")).toHaveCount(0,{timeout:12000});
+    for(let i=0;i<session.ids.length;i++)await session.control(session.ids[i],{...NEUTRAL_MATCH_INPUT,x:i?1:-1},1000);
+  }else{
+    await expect(page.locator(".party-action-world")).toHaveAttribute("data-webgl","ready",{timeout:15000});
+    await expect(page.locator(".party-action-countdown")).toHaveCount(0,{timeout:12000});
+    for(let i=0;i<session.ids.length;i++)await session.control(session.ids[i],{x:i?1:-1,z:0,jump:false,punch:false},1000);
+  }
   for(const id of session.ids){const r=await session.state();if(r.partyGame!.phase==="mini-play")await session.action({type:"finish"},id);}
   await expect(page.getByRole("heading",{name:"Eure Reihenfolge steht!",exact:true})).toBeVisible();
   const result=await session.state(),order=[...result.partyGame!.order];expect(result.partyGame!.players.every(p=>p.coins===10)).toBe(true);

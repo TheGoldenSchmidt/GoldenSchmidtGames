@@ -1,6 +1,6 @@
 import {test,expect} from '@playwright/test';
 import {partyMiniResults} from '../../shared/party';
-import {onlineSession,toMini,practiceSession} from './party-session';
+import {onlineSession,toArenaMini,practiceSession} from './party-session';
 
 for(const motion of ['no-preference','reduce'] as const)test(`Trophäenziel und Münzbelohnung (${motion})`,async({page},info)=>{
   await page.emulateMedia({reducedMotion:motion});
@@ -13,7 +13,7 @@ for(const motion of ['no-preference','reduce'] as const)test(`Trophäenziel und 
     await expect(goal).toContainText('Feld 6');
     await expect(goal.getByRole('meter')).toHaveAttribute('value','10');
     await page.keyboard.press('Escape');
-    await toMini(session);
+    await toArenaMini(session);
     for(const id of session.ids)await session.action({type:'ready'},id);
     await expect(page.locator('.party-action-world')).toBeVisible();
     await expect(page.locator('.party-action-countdown')).toHaveCount(0,{timeout:10000});

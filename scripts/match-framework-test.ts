@@ -81,9 +81,15 @@ assert.ok(s.players[0].rtt >= 290 && s.players[0].rtt <= 300, "Laufzeit höchste
 s = make();
 setMatchControl(s, "b", packet({ x: .7 }), 1, 0, 50);
 const view = publicMatch(s, "a");
-assert.equal(view.rng, 0); assert.equal(view.game.secret, 0); assert.equal(view.players[1].input.x, 0);
+assert.equal(view.rng, 0); assert.equal(view.game.secret, 0);
+assert.equal(view.players[1].input, undefined, "Fremde Eingaben werden nicht übertragen");
+assert.deepEqual(Object.keys(view.players[1]).sort(), ["gone", "id", "style", "team"]);
 assert.equal(publicMatch(s, "b").players[1].input.x, .7);
 assert.equal(s.game.secret, 42, "Die Autorität behält ihren Zustand");
+// Öffentliche Zahlen sind gerundet, Ereignisse auf die letzten 1,5 s begrenzt.
+s.game.dots.a = 1 / 3; s.time = 5000; s.events = [{ seq: 1, at: 1000, kind: "x", text: "", ids: [] }, { seq: 2, at: 4800, kind: "y", text: "", ids: [] }];
+const lean = publicMatch(s, "a");
+assert.equal(lean.game.dots.a, .333); assert.deepEqual(lean.events.map(e => e.seq), [2]);
 
 // Aufgeben und Rangliste: später Ausgeschiedene stehen vor früher Ausgeschiedenen.
 s = make();

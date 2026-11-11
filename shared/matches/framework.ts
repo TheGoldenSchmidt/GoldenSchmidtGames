@@ -122,13 +122,28 @@ export function neutralizeMatch(s: MatchState) {
 
 export function matchStandings(s: MatchState): MatchStanding[] { return MATCH_MODULES[s.id as MatchId].standings(s); }
 
-/** Per-device projection: no RNG state, no foreign raw inputs, module secrets hidden. */
+/** Decimals beyond 1/1000 carry no visible information but triple the snapshot size. */
+function compact(value: unknown): unknown {
+  if (typeof value === "number") return Number.isInteger(value) || !Number.isFinite(value) ? value : Math.round(value * 1000) / 1000;
+  if (Array.isArray(value)) return value.map(compact);
+  if (value && typeof value === "object") { const out: Record<string, unknown> = {}; for (const [k, v] of Object.entries(value)) out[k] = compact(v); return out; }
+  return value;
+}
+/** Events older than this have reached every connected device already (snapshots run at 10–20 Hz). */
+const EVENT_WINDOW = 1500;
+
+/**
+ * Per-device projection: no RNG state, no foreign inputs or counters, module
+ * secrets hidden, recent events only and rounded decimals. Bots see the same.
+ */
 export function publicMatch(s: MatchState, viewer: string): MatchState {
   const view = structuredClone(s);
   view.rng = 0;
-  for (const p of view.players) if (p.id !== viewer) { p.input = { ...NEUTRAL_MATCH_INPUT }; p.rtt = 0; }
+  view.events = view.events.filter(e => e.at >= s.time - EVENT_WINDOW).slice(-6);
+  // Other devices only need identity, colour, team and presence of a player.
+  view.players = view.players.map(p => p.id === viewer ? p : { id: p.id, style: p.style, team: p.team, gone: p.gone, ...(p.left !== undefined ? { left: p.left } : {}) } as MatchPlayer);
   MATCH_MODULES[s.id as MatchId].view?.(view, viewer);
-  return view;
+  return compact(view) as MatchState;
 }
 
 /** Bots act like a device: they see only their public view and send normal inputs. */

@@ -83,19 +83,21 @@ wird kein ungeprüfter Wiederbeitritt angeboten.
 
 ## Eigenständige Minispielmodi
 
-**Freies Minispiel** und **Schlag den GoldenSchmidt** verwenden dieselben 14
-Arenen, Eingaben, Teilnahme- und Gleichstandsregeln wie die Inselparty. Beide
+**Freies Minispiel** und **Schlag den GoldenSchmidt** verwenden dieselben
+Minispiele (14 klassische Arenen und 12 Match-Spiele), Teilnahme- und
+Gleichstandsregeln wie die Inselparty. Beide
 Modi laufen für 2–6 Personen auf getrennten Geräten mit Node-Server oder
 Handy-Host. Brett, Auftakt zur Zugreihenfolge und Münzausschüttung entfallen.
-Für gleiche Minispielpunkte entscheiden weiterhin weniger Stürze und danach
-die einmal zu Beginn ausgeloste Reihenfolge.
+In klassischen Arenen entscheiden bei gleichen Minispielpunkten weniger Stürze
+und danach die einmal zu Beginn ausgeloste Reihenfolge; Match-Spiele teilen
+Plätze nach ihren eigenen Stechregeln (siehe unten).
 
 Im freien Modus bestimmt der Host das Minispiel in der Lobby. Nach einer
 gewerteten Runde endet die Partie mit dem Minispielergebnis. Ohne Teilnahme
 gibt es keinen Minispielsieger. Üben ist vor dem gemeinsamen Start möglich.
 
-Im Wettbewerb spielen alle gegeneinander. Der Host wählt X zwischen 1 und 14
-(Standard: 5). Die Raumautorität zieht X unterschiedliche Minispiele; künftige
+Im Wettbewerb spielen alle gegeneinander. Der Host wählt X zwischen 1 und der
+Zahl der zur Spielerzahl passenden Minispiele (Standard: 5). Die Raumautorität zieht X unterschiedliche Minispiele; künftige
 Spiele bleiben verborgen. Vor jeder Runde wird die Aufgabe angezeigt. Jede
 Person legt dann verdeckt einen eigenen Einsatz von 1 bis X fest. Jede Zahl
 darf pro Person genau einmal verwendet werden, unabhängig vom Rundenergebnis.
@@ -133,7 +135,8 @@ das Match. Details: [Konzept](minigames/konzept.md).
 
 `test:rules` prüft zusätzlich alle neuen Mechaniken, Körperkontakte, Stürze,
 eindeutige Auszahlungen, den Auftakt, feste Reihenfolge und Wirkungen nach
-Ankunft. Deterministische Replays und echte Botsteuerung laufen für 14 Arenen.
+Ankunft. Deterministische Replays und echte Botsteuerung laufen für 14 Arenen
+und alle 12 Match-Spiele (je ein eigener Regeltest in `scripts/`).
 `test:online` spielt eine vollständige Partie und prüft geschlossene Räume,
 Host-Rechte, Status-Beobachter und ungültige Tokens. Browserfälle decken alle
 14 Arenen, Neigung, Touch-/Tastatursteuerung, sechs Modelle, Kartenansichten,

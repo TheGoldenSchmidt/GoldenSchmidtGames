@@ -1,6 +1,6 @@
 import { test,expect } from "@playwright/test";
 import { ACTION_MINI_IDS, ARENA_META, NEUTRAL_INPUT } from "../../shared/partyArena";
-import { onlineSession, toMini, practiceSession } from "./party-session";
+import { onlineSession, toArenaMini, practiceSession } from "./party-session";
 
 // Independent rooms allow the expanded arena palette to be evenly sharded in CI.
 test.describe.configure({mode:"parallel"});
@@ -111,7 +111,7 @@ test("Verweigerte Sensorfreigabe und ausbleibende Daten erhalten Ersatzsteuerung
 test("Online: beide Figuren bewegen sich in derselben Arena",async({page})=>{
   const session=await onlineSession(page);
   try{
-    await toMini(session);await session.action({type:"ready"},session.ids[1]);
+    await toArenaMini(session);await session.action({type:"ready"},session.ids[1]);
     await page.getByRole("button",{name:"Ich bin bereit",exact:true}).click();
     await expect(page.locator('.party-action-world[data-webgl="ready"] canvas')).toBeVisible();
     await expect(page.locator(".party-action-countdown")).toHaveCount(0,{timeout:10000});

@@ -1,6 +1,6 @@
 import {test,expect} from "@playwright/test";
 import {CHARACTERS,type CharacterId} from "../../shared/characters";
-import {onlineSession,toMini,request} from "./party-session";
+import {onlineSession,toArenaMini,request} from "./party-session";
 
 test("Sechs freigegebene Figuren bleiben in gemeinsamer Insel und Arena erhalten",async({page},info)=>{
   test.skip(info.project.name==="desktop","Inselparty ist nur für Smartphones vorgesehen.");
@@ -14,7 +14,7 @@ test("Sechs freigegebene Figuren bleiben in gemeinsamer Insel und Arena erhalten
     for(const id of characters)await expect(page.locator(`.party-standings [data-character="${id}"] img`)).toBeVisible();
     await expect.poll(()=>world.getAttribute("data-draw-calls").then(Number)).toBeGreaterThan(0);
     await page.screenshot({path:info.outputPath("sechs-figuren-insel.png")});
-    const room=await toMini(session),phaseId=room.partyGame!.phaseId;
+    const room=await toArenaMini(session),phaseId=room.partyGame!.phaseId;
     for(let i=0;i<session.sockets.length;i++)await request(session.sockets[i],"party:action",{token:session.tokens[session.ids[i]],seq:(room.partyGame!.seq[session.ids[i]]??0)+1,phaseId,action:{type:"ready"}});
     const arena=page.locator(".party-action-world");await expect(arena).toHaveAttribute("data-webgl","ready",{timeout:15000});
     const actors=()=>arena.getAttribute("data-actors").then(value=>JSON.parse(value??"[]"));

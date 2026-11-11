@@ -106,8 +106,9 @@ export function ringModule(rules: RingRules): MatchModule<RingGame> {
       for (let i = 0; i < active.length; i++) for (let j = i + 1; j < active.length; j++) {
         const a = active[i], b = active[j];
         if (dist(a.x, a.y, b.x, b.y) >= rules.body * 2) continue;
+        // Only hard strikes become events; ordinary contact happens every step.
         const victim = rules.collide(a, b, s.time);
-        emit(s, victim ? "strike" : "bump", "", victim ? [victim.id, victim === a ? b.id : a.id] : [a.id, b.id]);
+        if (victim) emit(s, "strike", "", [victim.id, victim === a ? b.id : a.id]);
       }
       for (const f of active) for (const o of g.obstacles) {
         const d = dist(f.x, f.y, o.x, o.y), min = rules.body + o.r;

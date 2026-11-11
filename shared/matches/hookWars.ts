@@ -22,7 +22,7 @@ export const ANCHORS = [[5, 13], [10, 13.3], [15, 13], [10, 6.4], [3, 8.6], [17,
 /** Zones mirror each other left/right; each zone has its spawn right next to it. */
 export const ZONES = [[1.6, 1.5], [18.4, 1.5], [1.9, 6], [18.1, 6], [2.9, 11], [17.1, 11]] as const;
 const CORE_SPAWNS = [[10, 4.1], [10, 9.6], [10, 12.4], [7, 7.6], [13, 7.6]] as const;
-export interface Bot { id: string; x: number; y: number; vx: number; vy: number; grounded: boolean; core: boolean; hook?: { kind: "anchor"; index: number; length: number } ; aimHeld: boolean; nextHook: number; nextYank: number; out: boolean; respawnAt: number; delivered: number; lastShot?: { x: number; y: number; at: number; hit: boolean } }
+export interface Bot { id: string; x: number; y: number; vx: number; vy: number; grounded: boolean; core: boolean; hook?: { kind: "anchor"; index: number; length: number } ; nextHook: number; nextYank: number; out: boolean; respawnAt: number; delivered: number; lastShot?: { x: number; y: number; at: number; hit: boolean } }
 export interface HookGame { bots: Record<string, Bot>; cores: { id: number; x: number; y: number; vy: number }[]; nextCore: number; nextId: number; overtime?: string[]; winner?: string }
 
 const zoneOf = (s: MatchState<HookGame>, id: string) => ZONES[s.players.findIndex(p => p.id === id) % ZONES.length];
@@ -116,7 +116,7 @@ export const hookWars: MatchModule<HookGame> = {
   },
   create(s) {
     s.game = { bots: {}, cores: [], nextCore: 1500, nextId: 1 };
-    for (const p of s.players) { const b: Bot = { id: p.id, x: 0, y: 0, vx: 0, vy: 0, grounded: true, core: false, aimHeld: false, nextHook: 0, nextYank: 0, out: false, respawnAt: 0, delivered: 0 }; s.game.bots[p.id] = b; spawn(s, b); }
+    for (const p of s.players) { const b: Bot = { id: p.id, x: 0, y: 0, vx: 0, vy: 0, grounded: true, core: false, nextHook: 0, nextYank: 0, out: false, respawnAt: 0, delivered: 0 }; s.game.bots[p.id] = b; spawn(s, b); }
     return s.game;
   },
   step(s, dt) {

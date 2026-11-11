@@ -6,7 +6,7 @@ import { activePartyPlayer, BOARD, type PartyAction } from "../../shared/party";
 import type { RoomState } from "../../shared/types";
 import { getGame } from "../../shared/games";
 import type { MinigameOptions } from "../../shared/minigameModes";
-import type { ArenaId } from "../../shared/partyArena";
+import { isArenaId, type ArenaId } from "../../shared/partyArena";
 
 export const request=<T=RoomState>(socket:Socket,event:string,payload?:unknown)=>new Promise<T>((resolve,reject)=>{
   const done=(err:Error|null,response:{ok:boolean;data?:T;error?:string})=>err?reject(err):!response.ok?reject(new Error(response.error)):resolve(response.data!);
@@ -23,7 +23,8 @@ export async function onlineSession(page:Page,followTurn=false,characters:Charac
   if(finishOpening){
     const send=async(i:number,action:PartyAction)=>{room=await request(sockets[i],"qwixx:state");room=await request(sockets[i],"party:action",{token:tokens[ids[i]],seq:(room.partyGame!.seq[ids[i]]??0)+1,phaseId:room.partyGame!.phaseId,action});};
     for(let i=0;i<sockets.length;i++)await send(i,{type:"ready"});
-    for(let i=0;i<sockets.length;i++)await send(i,{type:"finish"});
+    // Match games end as soon as only one player is left in them.
+    for(let i=0;i<sockets.length;i++)if(room.partyGame!.phase==="mini-play")await send(i,{type:"finish"});
     await send(ids.indexOf(activePartyPlayer(room.partyGame!).id),{type:"next"});
   }
   const viewer=followTurn?activePartyPlayer(room.partyGame!).id:ids[0];
@@ -62,7 +63,10 @@ export async function participate(page:Page,session:Session,otherSeq:number) {
   const g=(await session.state()).partyGame!;
   if(g.mini?.match){
     await matchStarted(page);
-    await page.locator(".match-controls button, .match-controls [role=group], .match-controls [role=slider]").first().tap();
+    // A short drag works for every control type (tap zone, stick, slider, swipe and aim pads).
+    const box=(await page.locator(".match-controls button, .match-controls [role=group], .match-controls [role=slider]").first().boundingBox())!;
+    await page.mouse.move(box.x+box.width*.4,box.y+box.height*.5);await page.mouse.down();
+    await page.mouse.move(box.x+box.width*.4+45,box.y+box.height*.5,{steps:3});await page.mouse.up();
     await expect.poll(async()=>(await session.state()).partyGame!.mini!.runs[session.ids[0]].lastInput).toBeGreaterThan(0);
     await session.control(session.ids[1],{x:.2,y:0,ax:0,ay:0,ha:false,hb:false,ca:otherSeq,cb:0,cn:0,n:0},otherSeq);
     return "match" as const;
@@ -86,4 +90,20 @@ export async function endOwnAttempt(page:Page,kind:"match"|"arena") {
 export async function matchStarted(page:Page) {
   await expect(page.locator(".match-stage")).toBeVisible();
   await expect(page.locator(".match-countdown")).toHaveCount(0,{timeout:10000});
+}
+
+/**
+ * Like `toMini`, but plays drawn match games out regularly until a classic 3D
+ * arena is up (for tests about figures and 3D scenes).
+ */
+export async function toArenaMini(session:Session) {
+  for(let round=0;round<12;round++){
+    let room=await toMini(session);
+    if(isArenaId(room.partyGame!.mini!.id))return room;
+    for(const id of session.ids)if((await session.state()).partyGame!.phase==="mini-intro")await session.action({type:"ready"},id);
+    for(const id of session.ids)if((await session.state()).partyGame!.phase==="mini-play")await session.action({type:"finish"},id);
+    room=await session.state();
+    if(room.partyGame!.phase==="mini-result")await session.action({type:"next"});
+  }
+  throw new Error("Keine 3D-Arena gezogen.");
 }

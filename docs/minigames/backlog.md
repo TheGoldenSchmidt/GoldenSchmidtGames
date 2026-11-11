@@ -16,8 +16,8 @@ Ergebnis, automatisch getestet) · **blockiert**.
 | 2 | Quick Draw, Light Trails, Neon Pong | fertig (Gerätetest offen) |
 | 3 | Tank Trouble, Bomb Arena, Floor is Lava | fertig (Gerätetest offen) |
 | 4 | Sumo Smash, Bumper Mayhem, Chaos Run | fertig (Gerätetest offen) |
-| 5 | Arrow Masters, Tower Tumble, Hook Wars | in Arbeit (Arrow Masters, Tower Tumble fertig) |
-| 6 | Qualitätssicherung, Leistung, Feinschliff, Dokumentation | offen |
+| 5 | Arrow Masters, Tower Tumble, Hook Wars | fertig (Gerätetest offen) |
+| 6 | Qualitätssicherung, Leistung, Feinschliff, Dokumentation | weitgehend fertig; Gerätetests offen (siehe unten) |
 
 ## Spiele
 
@@ -34,7 +34,7 @@ Ergebnis, automatisch getestet) · **blockiert**.
 | 9 | Chaos Run | `chaosrun` | 2–6 | P3 | fertig | Regeln (`chaos-run-test`), Browser `phone` |
 | 10 | Arrow Masters | `arrows` | 2–6 | P4 | fertig | Regeln (`arrow-masters-test`), Browser `phone` |
 | 11 | Tower Tumble | `tower` | 2–6 | P4 | fertig | Regeln (`tower-tumble-test`), Browser `phone` |
-| 12 | Hook Wars | – | 2–6 | P4 | offen | – |
+| 12 | Hook Wars | `hooks` | 2–6 | P4 | fertig | Regeln (`hook-wars-test`), Browser `phone` |
 
 „Fertig“ heißt: in Lobby, Zufallspool, Übung (gegen Bots), Bot-Testraum,
 Wettbewerb und Inselparty spielbar; Ergebnis fließt in die bestehende Wertung.
@@ -59,27 +59,31 @@ Leistung und Bedienung auf echten Handys sind für kein Spiel geprüft.
 - Nur Smartphone: Playwright-Projekt `desktop` ignoriert Party- und
   Minispiel-Specs; gemischte Specs überspringen Party-Fälle auf dem Desktop.
 
-## Wiederverwendbare Bausteine aus Phase 2/3
+## Gemeinsame Bausteine
 
 - `geometry.ts`: Kreis-Rechteck-Abstoßung, Kreis-Kreis-Trennung, Strahl-Rechteck-Test.
+- `ringCore.ts`: Ring-Out-Kern für Sumo Smash und Bumper Mayhem.
 - Muster „Durchgänge mit Pause, Punkte je überlebtem Gegner, Stechen“:
   Light Trails, Bomb Arena, Floor is Lava.
-- Steuerelemente: `Stick`, `ActionButton` mit Abklingring, `AimPad`,
-  `SwipeZone`, `SliderPad`, `TapZone`.
-- Abhängigkeiten der offenen Spiele: Sumo Smash und Bumper Mayhem teilen
-  Ring-Out und Impulse; Tower Tumble braucht einen deterministischen
-  Starrkörperlöser; Hook Wars Plattform- und Seilphysik.
+- Steuerelemente in `src/matches/controls.tsx`: `Stick`, `ActionButton` mit
+  Abklingring, `AimPad`, `SwipeZone`, `SliderPad` (mit Loslassen), `TapZone`.
+- Neue Spiele: Kennungen dürfen nicht mit klassischen Arena-Kennungen
+  kollidieren (`bumper` ist „Kugelrempler“, daher `bumpercars`).
 
 ## Architekturentscheidungen (Kurzfassung)
 
-Siehe [konzept.md](konzept.md#architekturentscheidungen). Ergänzungen aus der
-Umsetzung:
+Siehe [konzept.md](konzept.md#architekturentscheidungen) und die Tabelle
+„Dokumentierte Abweichungen“. Ergänzungen aus der Umsetzung:
 
 - **Aufgeben statt Versuch beenden:** Die bestehende Aktion `finish` lässt in
   Match-Spielen die Person ausscheiden. Später Aufgebende stehen vor früher
   Aufgebenden; bleibt höchstens eine Person, endet das Match.
 - **Teilnahme:** Wer im Match keine Eingabe gesendet hat, gilt wie bisher als
   nicht teilnehmend und erhält keine Münzen oder Einsatzpunkte.
+- **Schlanke öffentliche Sicht:** fremde Spieler nur mit Kennung, Farbe, Team
+  und Anwesenheit; Ereignisse der letzten 1,5 s; Zahlen auf 1/1000 gerundet.
+- **Tower Tumble** nutzt statisches Gleichgewicht statt kontinuierlicher
+  Starrkörperphysik (Begründung im Konzept).
 - **Klassische Tastaturbedienung** der 3D-Arenen bleibt vorerst im Code
   (bestehende `phone`-Tests nutzen sie), wird aber nicht weiterentwickelt.
 
@@ -87,46 +91,47 @@ Umsetzung:
 
 | Prüfung | Stand |
 | --- | --- |
-| `npm run test:rules` inkl. Framework und allen neun fertigen Spielen | grün |
-| `npm run test:online` inkl. `match-online-test` | grün |
+| `npm run test:rules` inkl. Framework und allen zwölf Spielen | grün |
+| `npm run test:online` inkl. `match-online-test` und Neustart mit laufendem Match | grün |
 | `npm run test:screens` | grün |
-| `npm run build` | grün |
-| `npm run test:pwa`, `npm run test:production` | grün |
-| Playwright `phone`, `match-games.spec.ts` (13 Fälle, alle neun Spiele) und `minigame-modes.spec.ts` | grün |
-| Playwright `phone`, gesamte Suite (vor Tank Trouble) | 94 grün; rot nur Handy-Einladung/`nearby` (Umgebung) und die inzwischen behobenen Testwettläufe |
-| Playwright `desktop` | entfällt für Party und Minispiele (Auftrag) |
+| `npm run build`, `npm run test:pwa`, `npm run test:production` | grün |
+| Playwright `phone`, `match-games.spec.ts` (16 Fälle, alle zwölf Spiele) | grün |
+| Playwright `phone`, gesamte Suite ohne Handy-Hosting-Fälle | 103 von 106 grün; die 3 roten (Testhelfer) korrigiert und danach 51 von 51 in dreifacher Wiederholung grün |
+| Playwright `desktop`, gesamte Suite ohne Handy-Hosting-Fälle (Party und Minispiele ausgenommen) | 35 grün, 2 übersprungen |
+| Handy-Hosting-Browserfälle (`nearby.spec.ts`, „Handy-Einladung“) | in dieser Cloud-Umgebung nicht lauffähig (WebRTC), auch nicht auf dem Ausgangsstand |
 | Echte Handys (Leistung, Touch, Latenz, Handy-Host mit 6 Spielern) | nicht durchgeführt |
+
+Abgedeckt sind je Spiel: Start bis Ergebnis über die Party, Siegbedingungen,
+Gleichstände und Stechen, Zeitablauf, Aufgeben, gleichzeitige Ereignisse,
+deterministische Wiederholung, JSON-Neustart mitten im Spiel sowie 2, 4 und 6
+Spieler (Neon Pong 1v1 und 2v2). Netzverzögerung ist für Quick Draw
+(Laufzeitprüfung) und allgemein für doppelte, alte und verlorene Pakete
+geprüft; echte Funknetze nicht.
 
 ## Offene Probleme
 
-- **Leistung und Bedienung auf echten Handys** sind nicht geprüft (60 FPS,
-  Wischgefühl, Latenz bei Quick Draw im WLAN, Handy-Host mit sechs Geräten).
-- **`nearby.spec.ts` in der Cloud-Sitzung:** Die WebRTC-Einladung bleibt bei
-  „Einladung wird vorbereitet …“ stehen; alle Handy-Hosting-Browserfälle
-  scheitern dort vor Spielbeginn, auch für Qwixx. Der Raumkern ist für Node
-  getestet; der Handy-Worker nutzt denselben Kern, ist mit Match-Spielen aber
-  im Browser nicht geprüft.
-- **Behoben: `minigame-modes.spec.ts`, „Wettbewerb …“** scheiterte zeitweise,
-  auch vor den Match-Spielen. Ursache war ein Testwettlauf: Der Test prüfte
-  „kein Countdown“, bevor die Arena erschien, und drückte die Taste noch im
-  Countdown. Das Banner „Wir warten auf die Verbindung“ im Fehlerbild entsteht
-  erst, wenn der Test seine Sockets schließt. Gemeinsamer Helfer
-  `matchStarted`/`participate` in `tests/browser/party-session.ts`.
-- **Zufallsziehung in bestehenden Tests:** Tests, die ein 3D-Minispiel
-  erwarten, dürfen sich nicht auf die Zufallsziehung verlassen. Betroffene
-  Socket- und Regeltests spielen gezogene Match-Spiele jetzt regulär durch.
+- **Echte Geräte:** 60 FPS, Touchgefühl, Lesbarkeit kleiner Figuren (Arrow
+  Masters, Sumo), Quick-Draw-Fairness im WLAN und Handy-Host mit sechs Geräten
+  sind nicht geprüft.
+- **Handy-Hosting im Browser:** `nearby.spec.ts` braucht eine Umgebung mit
+  WebRTC (z. B. CI). Der Handy-Worker nutzt denselben Raumkern; mit
+  Match-Spielen ist er im Browser noch nicht geprüft.
+- **Bots** sind für Übung und Testräume gedacht, nicht als starke Gegner;
+  besonders Hook Wars und Chaos Run spielen einfach.
+- **Neon Pong** steht nur bei 2 oder 4 aktiven Spielern im Pool.
+- **Tower Tumble** dauert mit sechs Personen etwa 2½ Minuten (Vorgaben: 3
+  Steine je Person, 5 s Zielzeit).
+- **Zufallsziehung in Tests:** Tests, die ein bestimmtes Minispiel erwarten,
+  müssen es wählen oder gezogene Match-Spiele durchspielen
+  (`toArenaMini`, `participate` in `tests/browser/party-session.ts`).
 - **Browsertests nach Änderungen in `shared/`:** Der Testserver nutzt den
-  Quellcode, der Client `dist/`. Ohne neuen Build kennt der Client neue Spiele
-  nicht.
-- Handy-Hosting-Browserfälle (`nearby.spec.ts`, „Handy-Einladung“ in
-  `party-menus.spec.ts`) scheitern in dieser Cloud-Umgebung auch auf dem Stand
-  vor den Änderungen.
-- Neon Pong steht nur bei 2 oder 4 aktiven Spielern im Pool.
+  Quellcode, der Client `dist/`; vorher `npm run build`.
 
 ## Nächste Schritte
 
-1. Phase 5: Arrow Masters, Tower Tumble, Hook Wars. Kennungen frei wählen,
-   aber nicht mit klassischen Arena-Kennungen kollidieren lassen (z. B. ist
-   `bumper` bereits „Kugelrempler“).
-2. Gerätetest der Phase-2-Spiele auf mindestens zwei echten Handys
-   (Android/iOS) im Node- und Handy-Modus, Ergebnisse hier eintragen.
+1. Gerätetest aller zwölf Spiele auf mindestens zwei echten Handys
+   (Android/iOS) im Node- und Handy-Modus; Ergebnisse hier eintragen.
+2. `nearby.spec.ts` in CI beobachten; bei Fehlern mit Match-Spielen den
+   Handy-Worker prüfen.
+3. Nach Rückmeldung aus echten Runden Werte feinjustieren (Tempo von Light
+   Trails, Wind bei Arrow Masters, Stärke der Bots).
