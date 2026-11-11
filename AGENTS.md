@@ -12,7 +12,7 @@ Private, installierbare Spielesammlung für eine Freundesrunde. Im Online-Spiel 
 
 Bei **jeder UI-Erweiterung und UI-Bearbeitung** zuerst die [Designregeln](designregeln.md) lesen und anwenden. Sie legen Stil, Farben, Komponenten, Bewegung und responsive Gestaltung fest; den dort beschriebenen Geltungsbereich für Menüs und Spielansichten beachten.
 
-Bei **jeder UI-Designaufgabe** den Skill `frontend-design:frontend-design` lesen und anwenden. Für HUDs, Menüs und Overlays zusätzlich [game-ui-frontend](.agents/skills/game-ui-frontend/SKILL.md) nutzen. Gestalte zuerst für Touch auf getrennten Handys. Inselparty, Roll It Up! und alle Minispiele sind nur für Smartphones vorgesehen: keine PC-Layouts, keine Tastaturbedienung und keine Desktop-Tests dafür. Die übrigen Ansichten zusätzlich mit Maus und Tastatur am PC prüfen. Animationen erklären Spieleraktionen und respektieren `prefers-reduced-motion`. Beide Bewegungseinstellungen müssen zum selben Spielergebnis führen.
+Bei **jeder UI-Designaufgabe** den Skill `frontend-design:frontend-design` lesen und anwenden; fehlt er in der Sitzung (z. B. in Cloud-Sitzungen), das in der Übergabe nennen. Für HUDs, Menüs und Overlays zusätzlich [game-ui-frontend](.agents/skills/game-ui-frontend/SKILL.md) nutzen. Gestalte zuerst für Touch auf getrennten Handys. Inselparty, Roll It Up! und alle Minispiele sind nur für Smartphones vorgesehen: keine PC-Layouts, keine Tastaturbedienung und keine Desktop-Tests dafür. Die übrigen Ansichten zusätzlich mit Maus und Tastatur am PC prüfen. Animationen erklären Spieleraktionen und respektieren `prefers-reduced-motion`. Beide Bewegungseinstellungen müssen zum selben Spielergebnis führen.
 
 ## Passende Prüfungen
 
@@ -23,7 +23,7 @@ Bei **jeder UI-Designaufgabe** den Skill `frontend-design:frontend-design` lesen
 | Spielansicht oder Bedienung | `npm run test:screens`, danach den betroffenen Playwright-Fall in den Projekten `phone` und `desktop` ausführen; Inselparty, Roll It Up! und Minispiele nur in `phone`. |
 | PWA-Update oder Auslieferung | `npm run test:pwa` für den Updateablauf, `npm run build` und `npm run test:production` für die gebaute App. |
 
-Playwright startet den Server mit dem Inhalt von `dist/`. Passt der vorinstallierte Browser nicht zur Playwright-Version, `PLAYWRIGHT_CHROMIUM_PATH` auf die Chromium-Datei setzen. Nach Clientänderungen zuerst `npm run build`, dann z. B. `npm run test:browser -- tests/browser/qwixx-cup.spec.ts` ausführen. Das Projekt `phone` emuliert Touch in Chromium. Für Aussagen zur 3D-Leistung oder zu Bewegungssensoren auf einem echten Handy prüfen.
+Playwright startet den Server mit dem Inhalt von `dist/`. Passt der vorinstallierte Browser nicht zur Playwright-Version, `PLAYWRIGHT_CHROMIUM_PATH` auf die Chromium-Datei setzen. Nach Client- und nach `shared/`-Änderungen zuerst `npm run build` (der Testserver nutzt den Quellcode, der Client `dist/`), dann z. B. `npm run test:browser -- tests/browser/qwixx-cup.spec.ts` ausführen. Tests dürfen nicht voraussetzen, dass ein bestimmtes Minispiel zufällig gezogen wird; dafür `toArenaMini` bzw. `participate` aus `tests/browser/party-session.ts` nutzen. Das Projekt `phone` emuliert Touch in Chromium. Für Aussagen zur 3D-Leistung oder zu Bewegungssensoren auf einem echten Handy prüfen.
 
 ## Projektwissen und Übergabe
 
