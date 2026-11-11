@@ -138,7 +138,7 @@ export function RoomScreen({
         </div>
 
         {isMinigameMode(room.config.gameId)
-          ? <MinigameSettings mode={room.config.gameId} value={room.config.minigames} disabled={!isHost} onChange={value=>configure(room.config.gameId,room.config.playerCount,false,room.config.party,value)}/>
+          ? <MinigameSettings mode={room.config.gameId} value={room.config.minigames} players={room.config.playerCount} disabled={!isHost} onChange={value=>configure(room.config.gameId,room.config.playerCount,false,room.config.party,value)}/>
           : isPartyMode(room.config.gameId) && <PartySettings rollItUp={room.config.gameId==="roll-it-up"} characterId={room.players.find(p=>p.id===profile.id)?.characterId} value={room.config.party} disabled={!isHost} onChange={value=>configure(room.config.gameId,room.config.playerCount,false,value)}/>}
         {room.config.gameId === "durak" && (
           <label className="option-toggle">

@@ -17,6 +17,7 @@ import { PartyGameScreen } from "../src/screens/PartyGameScreen";
 import { createPartyGame, createPartyPractice, publicParty } from "../shared/party";
 import { PartyMini } from "../src/components/PartyMini";
 import { ACTION_MINI_IDS } from "../shared/partyArena";
+import { MATCH_IDS, MATCH_MODULES } from "../shared/matches/framework";
 import { LocalSetupScreen } from "../src/screens/LocalSetupScreen";
 import { MinigameSettings } from "../src/components/MinigameSettings";
 import { applyPartyAction } from "../shared/party";
@@ -83,6 +84,8 @@ assert.doesNotMatch(purchase,/Trophäe/);
 room.partyGame.phase="finished";room.partyGame.winners=[profile.id];
 assert.match(renderToString(<PartyGameScreen profile={profile} initialRoom={room} onExit={exit}/>).replace(/<!--.*?-->/g,""),/Anna gewinnt Roll It Up!/);
 for(const id of ["targets","colors","memory","timing","trail","risk",...ACTION_MINI_IDS] as const){const practice=createPartyPractice(id);assert.ok(renderToString(<PartyMini game={publicParty(practice,"practice")} id="practice" now={Date.now()} send={()=>{}}/>).length>100);}
+// Neue Match-Spiele: Bühne mit HUD, Zwischenstand, Spielfeld und Touch-Steuerung (Übung gegen Bots).
+for(const id of MATCH_IDS){const practice=createPartyPractice(id),html=renderToString(<PartyMini game={publicParty(practice,"practice")} id="practice" now={practice.mini!.startAt-1000} send={()=>{}}/>);assert.match(html,/match-stage/);assert.match(html,/Zwischenstand/);assert.match(html,new RegExp(MATCH_MODULES[id].meta.name));}
 const localSetup=renderToString(<LocalSetupScreen onBack={exit} onStart={exit}/>);assert.doesNotMatch(localSetup,/Inselparty|Roll It Up!/);assert.match(localSetup,/Qwixx/);
 for(const mode of ["free-minigame","goldenschmidt"] as const) {
   room.config.gameId=mode;room.partyGame=createPartyGame(players,undefined,true,123,100000,mode,{rounds:1,miniId:"dash"});

@@ -3,6 +3,7 @@ import {CHARACTERS,type CharacterId} from "../../shared/characters";
 import {onlineSession,toMini,request} from "./party-session";
 
 test("Sechs freigegebene Figuren bleiben in gemeinsamer Insel und Arena erhalten",async({page},info)=>{
+  test.skip(info.project.name==="desktop","Inselparty ist nur für Smartphones vorgesehen.");
   test.setTimeout(90000);
   const errors:string[]=[];page.on("pageerror",e=>errors.push(e.message));await page.emulateMedia({reducedMotion:"reduce"});
   const characters:CharacterId[]=["alpha_rick_prime","alpha_summer_smith","alpha_scary_terry","alpha_mr_nimbus","alpha_doctor_timothy","alpha_pupa"];

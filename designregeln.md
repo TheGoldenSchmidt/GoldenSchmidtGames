@@ -121,13 +121,23 @@ längere Auswahlen dürfen innerhalb eines Panels scrollen. Beim Schließen kehr
 der Fokus zum Auslöser zurück. Minispiel-Auswahl und Regeltext stehen nicht mehr
 unter dem laufenden Brett. Die bestehende Farbwelt der Spielansicht bleibt erhalten.
 
+Match-Minispiele (`src/matches/`) teilen eine Bühne: oben ein dunkles HUD mit
+gelbem Spieltitel, eigener Punktzahl und Tontaste, darunter ein Zwischenstand
+in Spielerfarben, darunter die Canvas-Spielfläche bis zum unteren Rand. Jedes
+Spiel hat eine eigene Themenwelt innerhalb der Fläche; Countdown, Rückmeldung,
+Ergebnis und Steuerelemente sind gemeinsam. Die Bedienung ist ausschließlich
+Touch: große Tippflächen, Stick links, Aktionstasten rechts, mindestens 44 px.
+Reduzierte Bewegung entfernt Blitze, Pulsieren und Glättung, nicht die
+Spielinformation. Gestaltung und Regeln stehen in [docs/minigames](docs/minigames/konzept.md).
+
 Menüs über `.party-menu`, das Gastprofil über `.party-dialog` und QR-Dialoge über
 `.pair-dialog` gestalten. Neue Menüregeln in `partyMenus.css` einordnen und die
 vorhandenen Komponenten für Header, Buttons, Figurenwahl und Eingaben nutzen.
 Globale Selektoren und `!important` nicht als Ersatz für klare Zuständigkeiten
 einsetzen. Spielregeln, Sitzungen und Transport bleiben außerhalb der Gestaltung.
 
-Vor dem Abschluss geänderte Ansichten auf Handy- und Desktopbreite visuell prüfen,
+Vor dem Abschluss geänderte Ansichten auf Handy- und Desktopbreite visuell prüfen
+(Inselparty, Roll It Up! und Minispiele nur auf Handybreite),
 mit Touch beziehungsweise Maus und Tastatur bedienen sowie reduzierte Bewegung,
 lange Namen, Auswahl- und Fehlerzustände berücksichtigen. Die passenden Prüfungen
 gemäß [AGENTS.md](AGENTS.md#passende-prüfungen) ausführen. Für Startseite und Menüs

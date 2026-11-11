@@ -1,22 +1,35 @@
-import { ACTION_MINI_IDS, isArenaId, type ArenaId } from "./partyArena";
+import { isPlayableMini, miniEligible, miniName, miniPlayerHint, miniPool, PLAYABLE_MINI_IDS, type PlayableMiniId } from "./minigameCatalog";
 
 export type MinigameMode = "free-minigame" | "goldenschmidt";
 export const isMinigameMode = (id: unknown): id is MinigameMode => id === "free-minigame" || id === "goldenschmidt";
 
-export interface MinigameOptions { rounds: number; miniId: ArenaId }
-export const MINIGAME_DEFAULTS: MinigameOptions = { rounds: 5, miniId: "dash" };
+/** `classic` keeps the 14 original 3D arenas in the random draw. */
+export interface MinigameOptions { rounds: number; miniId: PlayableMiniId; classic: boolean }
+export const MINIGAME_DEFAULTS: MinigameOptions = { rounds: 5, miniId: "dash", classic: true };
 
 export function minigameOptions(value?: Partial<MinigameOptions>): MinigameOptions {
   const rounds = value?.rounds ?? MINIGAME_DEFAULTS.rounds;
   const miniId = value?.miniId ?? MINIGAME_DEFAULTS.miniId;
-  if (!Number.isInteger(rounds) || rounds < 1 || rounds > ACTION_MINI_IDS.length || typeof miniId !== "string" || !isArenaId(miniId)) {
-    throw new Error(`Wähle 1–${ACTION_MINI_IDS.length} Minispiele und ein verfügbares Minispiel.`);
+  const classic = value?.classic ?? MINIGAME_DEFAULTS.classic;
+  if (!Number.isInteger(rounds) || rounds < 1 || rounds > PLAYABLE_MINI_IDS.length || typeof miniId !== "string" || !isPlayableMini(miniId) || typeof classic !== "boolean") {
+    throw new Error(`Wähle 1–${PLAYABLE_MINI_IDS.length} Minispiele und ein verfügbares Minispiel.`);
   }
-  return { rounds, miniId };
+  return { rounds, miniId, classic };
+}
+
+/** Checks settings against the actual number of players before a room can start. */
+export function checkMinigameSetup(mode: MinigameMode, options: MinigameOptions, players: number) {
+  if (mode === "free-minigame") {
+    if (!miniEligible(options.miniId, players)) throw new Error(`${miniName(options.miniId)} braucht ${miniPlayerHint(options.miniId)}.`);
+    return;
+  }
+  const pool = miniPool(players, options.classic);
+  if (!pool.length) throw new Error("Für diese Spielerzahl gibt es ohne klassische Minispiele noch kein passendes Spiel.");
+  if (options.rounds > pool.length) throw new Error(`Für ${players} Spieler stehen ${pool.length} Minispiele zur Auswahl. Wähle höchstens ${pool.length}.`);
 }
 
 export interface MinigameRoundResult {
-  miniId: ArenaId;
+  miniId: PlayableMiniId;
   winnerIds: string[];
   bets: Record<string, number>;
   points: Record<string, number>;

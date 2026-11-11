@@ -10,8 +10,9 @@ Eine installierbare Smartphone-PWA für lokale und Online-Spiele. Das aktuelle G
 - Qwixx-, Durak- und Kribbeln-Spielmodule für lokale und Online-Partien
 - Offline-Cache als installierbare PWA
 - 13 freigegebene alpha_-Charaktere mit Pflichtauswahl vor Raumzugang und zufälliger Bot-Zuordnung; dieselbe Figur in allen Spielen
-- Inselparty für 2–6 Personen ausschließlich online: eine echte 3D-Insel, eigene steuerbare Figuren, 34 Felder, fünf Items und 14 gemeinsame 3D-Minispiele mit Touch-, Tastatur- und Neigungssteuerung
-- Freies Minispiel und Schlag den GoldenSchmidt für 2–6 Personen auf getrennten Geräten, mit denselben 14 Arenen und beiden Hostingarten
+- Inselparty für 2–6 Personen ausschließlich online: eine echte 3D-Insel, eigene steuerbare Figuren, 34 Felder, fünf Items, 14 klassische 3D-Minispiele und neue Match-Minispiele
+- Freies Minispiel und Schlag den GoldenSchmidt für 2–6 Personen auf getrennten Geräten, mit denselben Minispielen und beiden Hostingarten
+- Inselparty, Roll It Up! und alle Minispiele sind nur für Smartphones vorgesehen (Touch-Steuerung, keine PC-Tests)
 
 Das Qwixx-Modul enthält den gemeinsamen weißen Wurf, die zusätzliche Farbaktion der aktiven Person, vier getrennte Wertungsblätter, Fehlwürfe, Reihenschlüsse, automatische Wertung und die Spielergebnisanzeige.
 
@@ -57,6 +58,17 @@ Bei **Schlag den GoldenSchmidt** wählt der Host 1–14 Minispiele (Standard: 5)
 
 Beide Modi verwenden die bestehenden Arena- und Gleichstandsregeln und vergeben keine Brettspielmünzen. Gespeicherte Einsätze bleiben bei Wiederbeitritt und Neustart erhalten. Die Bot-Testauswahl bietet beide Modi ebenfalls an; dabei gibt es keine Werkzeuge zum Überspringen gewerteter Runden. Die Regeltests, Socket-Tests und `tests/browser/minigame-modes.spec.ts` prüfen den Ablauf, verdeckte und einmalige Einsätze sowie Wiederbeitritt. Weitere Details stehen in [Inselparty-Regeln](docs/island-party-rules.md#eigenständige-minispielmodi).
 
+## Neue Match-Minispiele
+
+Zusätzlich zu den 14 klassischen 3D-Minispielen entstehen zwölf neue 2D-Arcade-Minispiele für Smartphones. Fertig sind bisher:
+
+- **Quick Draw** (2–6): Duell bis 3 Siege oder 5 Gruppen-Durchgänge mit 3/2/1 Punkten, Täuschungen, Fehlstarts und Stechen. Der Server allein kennt den Signalzeitpunkt und prüft gemeldete Reaktionszeiten gegen seine eigene Uhr und die gemessene Laufzeit.
+- **Light Trails** (2–6): Gleiter mit Lichtspuren auf einem Raster, Wischen oder ⟲/⟳, schrumpfende Arena, drei Durchgänge.
+- **Neon Pong** (1v1 oder 2v2): eigenes Tor unten, Schläger per Finger, Power-ups, 7 Tore oder 90 Sekunden mit Golden Goal.
+- **Tank Trouble** (2–6): Labyrinth mit abprallenden Kugeln, zerstörbaren Mauern, Power-ups und Respawn; 7 Abschüsse oder 90 Sekunden mit Stechen.
+
+In Inselparty, Roll It Up! und Schlag den GoldenSchmidt blendet die Checkbox **Klassische Minispiele** die bisherigen 14 Spiele aus der Zufallsauswahl aus; standardmäßig sind sie dabei. Im freien Modus stehen beide Gruppen getrennt zur Wahl. Spiele, die nicht zur Spielerzahl passen, werden nicht gezogen. Übung gegen Bots, Aufgeben und die bisherigen Pausen-, Wiederbeitritts- und Wertungsabläufe gelten auch hier. Stand, Regeln und Architektur: [Backlog](docs/minigames/backlog.md), [Spezifikation](docs/minigames/spezifikation.md), [Konzept](docs/minigames/konzept.md).
+
 ## Roll It Up!
 
 Wählt im Online-Raum **Roll It Up!** für 2–6 Personen. Der Modus läuft auf dem Node-Server und beim Handy-Hosting. Für eine Solopartie lässt sich im Online-Menü ein Testspiel mit Bots erstellen.
@@ -67,7 +79,7 @@ Mit vollständigem Set könnt ihr auf einem der beiden Hügelwege von Feld 31 od
 
 ## Inselparty
 
-Die Partyinsel wird ausschließlich online gespielt. Jede Person öffnet den Link auf dem eigenen Handy oder PC und tritt dem Raum bei. Die anderen Spielmodule behalten ihren lokalen Modus. Die Lobby bietet 5–15 Runden und drei Tempostufen. Standard sind acht Runden; die tatsächliche Dauer hängt von der Spielerzahl und den Entscheidungen ab. Startkapital: 10 Münzen. Eine Trophäe kostet 20 Münzen. Trophäen, danach Münzen, danach Minispielsiege entscheiden über den Sieg. Auf dem Brett wirken normale Felder beim Landen. Am Hafen gibt es beim Überqueren 3 Münzen. Die Trophäe wechselt nach dem Kauf zwischen den Shops 6, 15 und 24. Inventarlimit: drei Items, ein Einsatz vor dem Würfeln.
+Die Partyinsel wird ausschließlich online gespielt. Jede Person öffnet den Link auf dem eigenen Handy und tritt dem Raum bei. Die anderen Spielmodule behalten ihren lokalen Modus. Die Lobby bietet 5–15 Runden und drei Tempostufen. Standard sind acht Runden; die tatsächliche Dauer hängt von der Spielerzahl und den Entscheidungen ab. Startkapital: 10 Münzen. Eine Trophäe kostet 20 Münzen. Trophäen, danach Münzen, danach Minispielsiege entscheiden über den Sieg. Auf dem Brett wirken normale Felder beim Landen. Am Hafen gibt es beim Überqueren 3 Münzen. Die Trophäe wechselt nach dem Kauf zwischen den Shops 6, 15 und 24. Inventarlimit: drei Items, ein Einsatz vor dem Würfeln.
 
 Nach jeder Brett-Runde folgt eines von 14 3D-Minispielen. Alle spielen nach einem gemeinsamen Countdown gleichzeitig in derselben Arena und steuern die eigene Figur. Wer nicht teilnimmt, bekommt keine Münzen. Platzierungen erhalten 10/4/2/0 Münzen; Gleichstände werden eindeutig aufgelöst. Der erste Sturz halbiert die aktuellen Punkte, der zweite beendet den Versuch mit dem bestehenden Stand. Ein zufälliger Auftakt bestimmt die feste Zugreihenfolge. Minispiel-Anleitungen erhalten bis zu 90 Sekunden, damit ein Übungsversuch möglich ist. Die Lobby bietet eine Übungsübersicht; vor jedem Minispiel lässt sich die anstehende Aufgabe ohne Wertung üben. Im laufenden Brettspiel entfällt die zusätzliche Übungsauswahl.
 
@@ -80,7 +92,7 @@ Nach jeder Brett-Runde folgt eines von 14 3D-Minispielen. Alle spielen nach eine
 | Wackelsteg | Die Figur über eine schmale, gewundene Brücke balancieren | Neigung oder Stick |
 | Kugelkapitäne | Auf einer Kugel Kristalle sammeln und Löcher umfahren | Neigung oder Stick |
 
-Am Handy gibt es einen analogen Touch-Stick und passende Aktionsknöpfe. Am PC funktionieren WASD/Pfeile, Leertaste zum Springen und E/J zum Schlagen. Neigung wird über „Neigung aktivieren“ bewusst freigegeben, beim ersten gültigen Signal kalibriert und kann jederzeit neu kalibriert oder ausgeschaltet werden. Bei verweigerter Freigabe, fehlenden Sensoren oder ausbleibenden Daten bleiben Stick und Tastatur nutzbar. Analoge Aufgaben mit Papier oder anderem Material sind nicht mehr Teil der Partyinsel.
+Am Handy gibt es einen analogen Touch-Stick und passende Aktionsknöpfe. Die älteren Tastaturkürzel (WASD/Pfeile, Leertaste, E/J) bestehen noch, werden aber nicht mehr weiterentwickelt oder auf dem PC getestet. Neigung wird über „Neigung aktivieren“ bewusst freigegeben, beim ersten gültigen Signal kalibriert und kann jederzeit neu kalibriert oder ausgeschaltet werden. Bei verweigerter Freigabe, fehlenden Sensoren oder ausbleibenden Daten bleiben Stick und Tastatur nutzbar. Analoge Aufgaben mit Papier oder anderem Material sind nicht mehr Teil der Partyinsel.
 
 Das Gerät speichert Raum und Sitzungsschlüssel, sodass „Online-Inselparty wieder beitreten“ nach einem Verbindungsabbruch funktioniert. Die Gruppe pausiert bis zu 60 Sekunden; anschließend kann der Host ohne getrennte Spieler fortsetzen oder abbrechen. Bei einem Serverneustart pausiert die Arena. Nach dem Wiederbeitritt läuft sie ab dem gespeicherten Stand weiter. Sitzungsschlüssel dürfen nicht mit fremden Personen geteilt werden. Der Server berechnet Bewegung, Kollisionen, Sprünge, Treffer und Punkte in festen 50-ms-Schritten. Clients senden nur geprüfte Steuerwerte; sie können keine Position oder Punktzahl vorgeben. Zustände werden zehnmal pro Sekunde verteilt, die eigene Bewegung wird kurz vorausberechnet und visuell geglättet.
 

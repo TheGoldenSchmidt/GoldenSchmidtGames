@@ -61,7 +61,9 @@ let match=make();
 for(let turns=0;match.phase!=="finished" && turns<1500;turns++) {
   if(match.phase==="mini-intro" || match.phase==="mini-play") {
     const action:PartyAction = match.phase==="mini-intro" ? {type:"ready"} : {type:"finish"};
-    for(const p of match.players) match=applyPartyAction(match,p.id,action,100000);
+    // In match games giving up can end the game for everyone before the last player acts.
+    const phase=match.phase;
+    for(const p of match.players) if(match.phase===phase) match=applyPartyAction(match,p.id,action,100000);
     continue;
   }
   const action=botBoardAction(match);

@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import type { MiniId } from "../../shared/party";
+import { MATCH_IDS, MATCH_MODULES, isMatchId } from "../../shared/matches/framework";
 
 export const MINI_LOOK: Record<MiniId, { icon: string; action: string; hint: string; goal: string }> = {
   walls:{icon:"▥",action:"Finde die Lücke",hint:"Bewege dich unter eine Öffnung",goal:"Wände sicher überstehen"},
@@ -25,6 +26,7 @@ export const MINI_LOOK: Record<MiniId, { icon: string; action: string; hint: str
   risk: { icon: "▰", action: "Noch eine Kiste?", hint: "Sichern behält deine Beute. Eine Falle nimmt die ungesicherte Beute.", goal: "5 Versuche · 30 Sekunden" },
   words: { icon: "✎", action: "Stifte bereit!", hint: "Sammelt Tiernamen auf Papier.", goal: "Papier & Stifte · 30 Sekunden" },
   bridge: { icon: "⌒", action: "Baut die längste Brücke", hint: "Ein A4-Blatt, keine Hilfsmittel. Danach messt ihr die freie Spannweite.", goal: "A4-Papier & Lineal · 45 Sekunden" },
+  ...Object.fromEntries(MATCH_IDS.map(id => [id, MATCH_MODULES[id].meta.look])) as Record<typeof MATCH_IDS[number], { icon: string; action: string; hint: string; goal: string }>,
 };
 
 export function Shell() {
@@ -45,7 +47,7 @@ export function Treasure({open=false,trap=false}:{open?:boolean;trap?:boolean}) 
 
 export function MiniPreview({id}:{id:MiniId}) {
   return <div className={`party-mini-preview party-scene--${id}`} aria-hidden="true">
-    {id==="risk"?<Treasure/>:id==="memory"?<div className="party-preview-shells"><Shell/><span>★</span><Shell/></div>:id==="timing"?<div className="party-preview-bridge"><i/><i/><i/><i/><i/><b>◆</b></div>:id==="colors"?<div className="party-preview-word">Blau</div>:id==="trail"?<div className="party-preview-trail"><span>☀</span><span>♣</span><span>♥</span></div>:id==="targets"?<div className="party-preview-target"><i>◆</i><i/><i/><i/></div>:<span className="party-preview-analog">{MINI_LOOK[id].icon}</span>}
+    {isMatchId(id)?<span className={`match-preview match-preview--${id}`}><b>{MINI_LOOK[id].icon}</b><small>Neu</small></span>:id==="risk"?<Treasure/>:id==="memory"?<div className="party-preview-shells"><Shell/><span>★</span><Shell/></div>:id==="timing"?<div className="party-preview-bridge"><i/><i/><i/><i/><i/><b>◆</b></div>:id==="colors"?<div className="party-preview-word">Blau</div>:id==="trail"?<div className="party-preview-trail"><span>☀</span><span>♣</span><span>♥</span></div>:id==="targets"?<div className="party-preview-target"><i>◆</i><i/><i/><i/></div>:<span className="party-preview-analog">{MINI_LOOK[id].icon}</span>}
   </div>;
 }
 

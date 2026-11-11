@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
-import { onlineSession } from "./party-session";
+import { endOwnAttempt, onlineSession, participate } from "./party-session";
 import { CHARACTERS } from "../../shared/characters";
+import { PLAYABLE_MINI_IDS } from "../../shared/minigameCatalog";
 
 test("14 Einsätze und sechs lange Namen bleiben auf 320 Pixeln bedienbar", async ({ page }, testInfo) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -26,7 +27,8 @@ test("Beide Minispielmodi sind in der Lobby konfigurierbar", async ({ page }, te
   await page.getByLabel("Ausgewähltes Spiel").selectOption("free-minigame");
   const minigame = page.getByRole("combobox", { name: "Minispiel", exact: true });
   await expect(minigame).toBeVisible();
-  await expect(minigame.locator("option")).toHaveCount(14);
+  await expect(minigame.locator("option")).toHaveCount(PLAYABLE_MINI_IDS.length);
+  await expect(minigame.locator("optgroup")).toHaveCount(2);
   await minigame.selectOption("golf");
   await expect(minigame).toHaveValue("golf");
   await page.getByLabel("Ausgewähltes Spiel").selectOption("goldenschmidt");
@@ -58,15 +60,10 @@ for (const reducedMotion of ["reduce", "no-preference"] as const) {
         await expect(page.locator(".party-mini-intro")).toBeVisible();
         await page.getByRole("button", { name: "Ich bin bereit", exact: true }).click();
         await session.action({ type: "ready" }, session.ids[1]);
-        await expect(page.locator(".party-action-countdown")).toHaveCount(0, { timeout: 10000 });
-        await expect(page.locator(".party-action-world")).toBeVisible();
-        await page.keyboard.down("ArrowRight");
-        await expect.poll(async () => (await session.state()).partyGame!.mini!.runs[session.ids[0]].lastInput).toBeGreaterThan(0);
-        await page.keyboard.up("ArrowRight");
-        await session.control(session.ids[1], { x: .1, z: 0, jump: false, punch: false }, round);
-        await page.getByText("Versuch vorzeitig beenden", { exact: true }).click();
-        await page.getByRole("button", { name: "Versuch beenden", exact: true }).click();
-        await session.action({ type: "finish" }, session.ids[1]);
+        // Die Ziehung ist zufällig: 3D-Arena oder neues Match-Spiel, beides über die echte Bedienung.
+        const kind = await participate(page, session, round);
+        await endOwnAttempt(page, kind);
+        if ((await session.state()).partyGame!.phase === "mini-play") await session.action({ type: "finish" }, session.ids[1]);
         await expect(page.getByRole("list", { name: "Minispielergebnis", exact: true })).toBeVisible();
         if (round === 1) {
           await expect(session.action({ type: "next" }, session.ids[1])).rejects.toThrow(/Nur der Host/);

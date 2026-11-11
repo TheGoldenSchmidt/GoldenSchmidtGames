@@ -51,7 +51,8 @@ test("Handy-Host startet ohne Internet aus der installierten PWA",async({page,br
   }finally{await guest.close();}
 });
 
-test("Fünf Geräte steuern gemeinsam, ein zweiter Tisch bleibt unabhängig",async({page,browser})=>{
+test("Fünf Geräte steuern gemeinsam, ein zweiter Tisch bleibt unabhängig",async({page,browser},info)=>{
+  test.skip(info.project.name==="desktop","Inselparty ist nur für Smartphones vorgesehen.");
   test.setTimeout(120000);
   const guests=await Promise.all(Array.from({length:4},()=>browser.newPage({viewport:page.viewportSize()!})));
   const other=await browser.newPage({viewport:page.viewportSize()!});
@@ -190,7 +191,8 @@ test("Handy-Host setzt seinen Tisch fort und entfernt geschlossene Partien",asyn
 });
 
 for(const [game,marker] of [["qwixx",".qwixx-turn"],["kribbeln",".kribbel-score-strip"],["durak",".durak-players"],["party",".party-mini-intro"],["roll-it-up",".roll-it-up .party-mini-intro"],["free-minigame",".party-mini-intro"],["goldenschmidt",".minigame-betting"]]) {
-  test(`Handy-Tisch spielt ${game} per direktem Datenkanal`,async({page,browser})=>{
+  test(`Handy-Tisch spielt ${game} per direktem Datenkanal`,async({page,browser},info)=>{
+    test.skip(!["qwixx","kribbeln","durak"].includes(game)&&info.project.name==="desktop","Party und Minispiele sind nur für Smartphones vorgesehen.");
     test.setTimeout(120000);
     const guest=await browser.newPage({viewport:page.viewportSize()!});
     try{

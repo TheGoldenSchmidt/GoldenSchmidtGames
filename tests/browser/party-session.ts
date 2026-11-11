@@ -1,7 +1,7 @@
 import type {CharacterId} from "../../shared/characters";
 import { randomUUID } from "node:crypto";
 import { io, type Socket } from "socket.io-client";
-import type { Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 import { activePartyPlayer, BOARD, type PartyAction } from "../../shared/party";
 import type { RoomState } from "../../shared/types";
 import { getGame } from "../../shared/games";
@@ -51,4 +51,39 @@ export async function toMini(session:Awaited<ReturnType<typeof onlineSession>>) 
     const action=actions[g.phase];if(!action)throw new Error(g.phase);await session.action(action);
   }
   throw new Error("Minispiel wurde nicht erreicht.");
+}
+
+type Session = Awaited<ReturnType<typeof onlineSession>>;
+/**
+ * Lets the page's own player take part in whatever minigame was drawn: 3D
+ * arenas via the existing keys, match games via their real touch controls.
+ */
+export async function participate(page:Page,session:Session,otherSeq:number) {
+  const g=(await session.state()).partyGame!;
+  if(g.mini?.match){
+    await matchStarted(page);
+    await page.locator(".match-controls button, .match-controls [role=group], .match-controls [role=slider]").first().tap();
+    await expect.poll(async()=>(await session.state()).partyGame!.mini!.runs[session.ids[0]].lastInput).toBeGreaterThan(0);
+    await session.control(session.ids[1],{x:.2,y:0,ax:0,ay:0,ha:false,hb:false,ca:otherSeq,cb:0,cn:0,n:0},otherSeq);
+    return "match" as const;
+  }
+  // First the arena must exist, otherwise "no countdown" is trivially true during the intro.
+  await expect(page.locator(".party-action-world")).toBeVisible();
+  await expect(page.locator(".party-action-countdown")).toHaveCount(0,{timeout:10000});
+  await page.keyboard.down("ArrowRight");
+  await expect.poll(async()=>(await session.state()).partyGame!.mini!.runs[session.ids[0]].lastInput).toBeGreaterThan(0);
+  await page.keyboard.up("ArrowRight");
+  await session.control(session.ids[1],{x:.1,z:0,jump:false,punch:false},otherSeq);
+  return "arena" as const;
+}
+/** Ends the page's own attempt through the visible UI (give up in match games). */
+export async function endOwnAttempt(page:Page,kind:"match"|"arena") {
+  await page.getByText(kind==="match"?"Aufgeben":"Versuch vorzeitig beenden",{exact:true}).click();
+  await page.getByRole("button",{name:kind==="match"?"Jetzt aufgeben":"Versuch beenden",exact:true}).click();
+}
+
+/** Waits until the match stage is shown and its shared countdown has ended. */
+export async function matchStarted(page:Page) {
+  await expect(page.locator(".match-stage")).toBeVisible();
+  await expect(page.locator(".match-countdown")).toHaveCount(0,{timeout:10000});
 }

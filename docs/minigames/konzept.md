@@ -119,6 +119,12 @@ im Modul ausgespielt; bleibt danach ein Gleichstand, wird der Platz geteilt.
 | Quick Draw | Gruppen-Stechen bis zu 3 Durchgänge, danach geteilter Platz | Wie oben |
 | Quick Draw | Reaktion unter 80 ms gilt als Fehlstart | Menschlich nicht erreichbar, verhindert Vorwegnahme |
 | Light Trails | Durchgang endet spätestens nach 40 s; Überlebende teilen den Platz ohne Bonus | Begrenzte Spieldauer |
+| Light Trails | Raster 21 × 33 im Hochformat, ein Feld je 150 ms, Arena schrumpft ab 12 s alle 1,5 s um einen Ring bis 5 Felder Breite | Lesbar auf Handys, Reaktionszeit trotz Funklatenz |
+| Light Trails | Startplätze gleichmäßig auf einem inneren Ring, alle im Uhrzeigersinn; Zuordnung rotiert je Durchgang | Faire, symmetrische Ausgangslage |
+| Light Trails | Bis zu zwei Kurven werden vorgemerkt; ⟲/⟳ wirken relativ zur letzten vorgemerkten Richtung | Schnelle Doppelkurven ohne verlorene Eingaben |
+| Neon Pong | Ball startet mit 6,5, je Treffer +0,45, höchstens 15 Feldeinheiten/s; Power-up alle 10–15 s, aktiviert durch das Team des letzten Treffers | Konkrete Werte der Spezifikation |
+| Neon Pong | Wirkungen: breiter Schläger 5 s, Mehrball bis alle Zusatzbälle weg sind, Kurvenbälle 6 s, Zeitlupe 4 s nur für Bälle Richtung des sammelnden Teams | „Kurzzeitiger Slowdown“ soll dem sammelnden Team helfen |
+| Alle | „Aufgeben“ ersetzt in Match-Spielen „Versuch beenden“ | Gemeinsame Spiele lassen sich nicht einzeln beenden |
 
 Weitere Abweichungen werden beim jeweiligen Spiel ergänzt.
 

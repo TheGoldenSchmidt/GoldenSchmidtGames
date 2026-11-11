@@ -114,6 +114,7 @@ test("Ohne WebGL führt die Ersatzszene automatisch ins Spiel", async ({ page })
 });
 
 for (const gameId of ["durak", "qwixx", "kribbeln", "party"] as const) test(`Online ${gameId}: Intro bei neuem Start, laufender Zustand bleibt verbunden`, async ({ page }, info) => {
+  test.skip(gameId === "party" && info.project.name === "desktop", "Inselparty ist nur für Smartphones vorgesehen.");
   const socket = io("http://127.0.0.1:4177", { transports: ["websocket"], forceNew: true, reconnection: false });
   await new Promise<void>((resolve, reject) => { socket.once("connect", resolve); socket.once("connect_error", reject); });
   try {

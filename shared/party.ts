@@ -1,10 +1,14 @@
-import { ACTION_MINI_IDS, advanceArena, ARENA_META, createArena, isArenaId, publicArena, setArenaControl, type ArenaId, type ArenaInput, type ArenaState } from "./partyArena";
+import { ACTION_MINI_IDS, advanceArena, ARENA_META, createArena, isArenaId, NEUTRAL_INPUT, publicArena, setArenaControl, type ArenaId, type ArenaInput, type ArenaState } from "./partyArena";
+import { advanceMatch, createMatch, finishMatch, isMatchId, MATCH_IDS, MATCH_MODULES, matchStandings, neutralizeMatch, publicMatch, removeMatchPlayer, setMatchControl, type MatchId } from "./matches/framework";
+import type { MatchState } from "./matches/types";
+import { miniEligible, miniPool, type PlayableMiniId } from "./minigameCatalog";
 import { partyBoard, partyPaths, FIELD_LABELS, hasFullSet, stationAt, JAYSPOT } from "./partyBoard";
 import { characterId, type CharacterId } from "./characters";
-import { isMinigameMode, minigameOptions, placeMinigameBet, type MinigameCompetition, type MinigameMode, type MinigameOptions } from "./minigameModes";
+import { checkMinigameSetup, isMinigameMode, minigameOptions, placeMinigameBet, type MinigameCompetition, type MinigameMode, type MinigameOptions } from "./minigameModes";
 export type PartyTempo = "slow" | "normal" | "fast";
-export interface PartyOptions { rounds: number; tempo: PartyTempo; analog: boolean }
-export const PARTY_DEFAULTS: PartyOptions = { rounds: 8, tempo: "normal", analog: false };
+/** `classic` keeps the 14 original 3D arenas in the minigame draw. */
+export interface PartyOptions { rounds: number; tempo: PartyTempo; analog: boolean; classic?: boolean }
+export const PARTY_DEFAULTS: PartyOptions = { rounds: 8, tempo: "normal", analog: false, classic: true };
 export type Item = "sprint" | "double" | "shield" | "magnet" | "compass";
 export const ITEMS: Record<Item, { name: string; price: number; icon: string; description: string }> = {
   sprint: { name: "Sprintschuhe", price: 5, icon: "➜", description: "+3 Schritte beim nächsten Wurf" },
@@ -16,9 +20,10 @@ export const ITEMS: Record<Item, { name: string; price: number; icon: string; de
 export const ITEM_IDS = Object.keys(ITEMS) as Item[];
 export { BOARD, FIELD_ICONS, FIELD_LABELS, type Field } from "./partyBoard";
 export const MINI_IDS = ["targets", "colors", "memory", "timing", "trail", "risk"] as const;
-export type MiniId = typeof MINI_IDS[number] | ArenaId | "words" | "bridge";
+export type MiniId = typeof MINI_IDS[number] | ArenaId | MatchId | "words" | "bridge";
 export const MINIS: Record<MiniId, { name: string; seconds: number; instruction: string }> = {
   ...ARENA_META,
+  ...Object.fromEntries(MATCH_IDS.map(id => [id, { name: MATCH_MODULES[id].meta.name, seconds: MATCH_MODULES[id].meta.seconds, instruction: MATCH_MODULES[id].meta.instruction }])) as Record<MatchId, { name: string; seconds: number; instruction: string }>,
   targets: { name: "Schatzfänger", seconds: 24, instruction: "Tippe das leuchtende Schatzfeld an. Zwölf Ziele, jeweils zwei Sekunden. Jeder Treffer zählt!" },
   colors: { name: "Farbfalle", seconds: 24, instruction: "Wähle die Schriftfarbe, nicht das geschriebene Wort. Zwölf Aufgaben, je ein Punkt." },
   memory: { name: "Muschelmemory", seconds: 30, instruction: "Finde sechs Paare. Mehr Paare gewinnen; bei Gleichstand zählen weniger Versuche." },
@@ -32,7 +37,7 @@ export const SYMBOLS = ["☀", "☂", "♣", "★", "♥", "⚓"];
 export const COLORS = ["Rot", "Blau", "Grün", "Gelb"];
 export interface PartyPlayer { id: string; name: string; characterId?: CharacterId; bot?: boolean; position: number; supplies?: number[]; coins: number; trophies: number; wins: number; items: Item[]; shield: boolean; passive: boolean }
 export interface MiniRun { ready: boolean; done: boolean; score: number; attempts: number; cursor: number; opened: number[]; matched: number[]; blockedUntil: number; bank: number; loot: number; feedback: string; lastInput: number }
-export interface PartyMini { id: MiniId; startAt: number; runs: Record<string, MiniRun>; cards: number[]; prompts: number[]; words: number[]; targets: number[]; trail: number[]; risk: number[]; reports: Record<string, number>; confirms: Record<string, boolean>; material: Record<string, boolean>; arenaSeed?:number; arena?:ArenaState }
+export interface PartyMini { id: MiniId; startAt: number; runs: Record<string, MiniRun>; cards: number[]; prompts: number[]; words: number[]; targets: number[]; trail: number[]; risk: number[]; reports: Record<string, number>; confirms: Record<string, boolean>; material: Record<string, boolean>; arenaSeed?:number; arena?:ArenaState; match?: MatchState }
 export type PartyPhase = "turn" | "moving" | "path" | "trophy" | "supply" | "shop" | "gift" | "summary" | "mini-bet" | "mini-intro" | "mini-play" | "analog-confirm" | "mini-result" | "finished" | "aborted";
 export interface PartyGame {
   mode?: "party" | "roll-it-up" | MinigameMode;
@@ -55,9 +60,9 @@ export type PartyAction =
   | { type: "confirm"; accept: boolean } | { type: "resume" } | { type: "abort" };
 
 export function partyOptions(value?: Partial<PartyOptions>): PartyOptions {
-  const rounds = value?.rounds ?? 8, tempo = value?.tempo ?? "normal";
-  if (!Number.isInteger(rounds) || rounds < 5 || rounds > 15 || !["slow","normal","fast"].includes(tempo) || (value?.analog !== undefined && typeof value.analog !== "boolean")) throw new Error("Ungültige Inselparty-Einstellungen.");
-  return { rounds, tempo, analog: false };
+  const rounds = value?.rounds ?? 8, tempo = value?.tempo ?? "normal", classic = value?.classic ?? true;
+  if (!Number.isInteger(rounds) || rounds < 5 || rounds > 15 || !["slow","normal","fast"].includes(tempo) || (value?.analog !== undefined && typeof value.analog !== "boolean") || typeof classic !== "boolean") throw new Error("Ungültige Inselparty-Einstellungen.");
+  return { rounds, tempo, analog: false, classic };
 }
 function random(g: PartyGame) { g.rng = (Math.imul(g.rng, 1664525) + 1013904223) >>> 0; return g.rng / 4294967296; }
 function shuffle<T>(g: PartyGame, source: readonly T[]): T[] { const result = [...source]; for (let i=result.length-1;i>0;i--) { const j=Math.floor(random(g)*(i+1)); [result[i],result[j]]=[result[j],result[i]]; } return result; }
@@ -79,6 +84,8 @@ export function createPartyGame(players: {id:string;name:string;characterId?:Cha
   g.order=shuffle(g,g.order);
   if (isMinigameMode(mode)) {
     const settings = minigameOptions(minis);
+    checkMinigameSetup(mode, settings, players.length);
+    g.options.classic = settings.classic;
     g.opening = false;
     g.players.forEach(p => p.coins = 0);
     g.competition = { rounds: mode === "free-minigame" ? 1 : settings.rounds, scores: Object.fromEntries(players.map(p => [p.id, 0])), used: Object.fromEntries(players.map(p => [p.id, []])), bets: {}, locked: [], history: [] };
@@ -144,7 +151,11 @@ function arrive(g:PartyGame,now:number){
 function step(g:PartyGame,destination:number) {const p=activePartyPlayer(g);p.position=destination;g.path.push(destination);g.steps--;if(destination===0){p.coins+=3;log(g,`${p.name} passiert ${g.mode==="roll-it-up"?"das Startfeld":"den Hafen"}: +3 Münzen.`);}}
 function startTurn(g:PartyGame,now:number) {g.itemUsed=false;g.double=false;g.boost=0;g.trophyBought=false;g.dice=[];g.path=[];g.offered=undefined;phase(g,"turn",now);log(g,`${activePartyPlayer(g).name} ist am Zug.`);}
 function selectMini(g:PartyGame,now:number,forceDigital=false) {
-  if(!g.miniBag.length) {g.miniBag=shuffle(g,ACTION_MINI_IDS);if(g.miniBag.at(-1)===g.lastMini) [g.miniBag[0],g.miniBag[g.miniBag.length-1]]=[g.miniBag[g.miniBag.length-1],g.miniBag[0]];}
+  const active=g.players.filter(p=>!p.passive).length;
+  const refill=()=>{g.miniBag=shuffle(g,miniPool(active,g.options.classic??true));if(g.miniBag.at(-1)===g.lastMini) [g.miniBag[0],g.miniBag[g.miniBag.length-1]]=[g.miniBag[g.miniBag.length-1],g.miniBag[0]];};
+  if(!g.miniBag.length)refill();
+  // Players may have become passive since the bag was filled; skip games that no longer fit.
+  while(g.miniBag.length&&!miniEligible(g.miniBag.at(-1) as PlayableMiniId,active)){g.miniBag.pop();if(!g.miniBag.length)refill();}
   let id=g.miniBag.pop()!;if(forceDigital) id=ACTION_MINI_IDS[Math.floor(random(g)*ACTION_MINI_IDS.length)];g.lastMini=id;
   g.mini={id,startAt:0,runs:Object.fromEntries(g.players.map(p=>[p.id,{ready:false,done:p.passive,score:0,attempts:0,cursor:0,opened:[],matched:[],blockedUntil:0,bank:0,loot:0,feedback:"",lastInput:0}])),cards:shuffle(g,[0,0,1,1,2,2,3,3,4,4,5,5]),prompts:Array.from({length:12},()=>Math.floor(random(g)*4)),words:Array.from({length:12},()=>Math.floor(random(g)*4)),targets:Array.from({length:12},()=>Math.floor(random(g)*9)),trail:Array.from({length:6},()=>Math.floor(random(g)*6)),risk:Array.from({length:256},()=>random(g)),reports:{},confirms:{},material:{}};
   g.mini.arenaSeed=g.rng;
@@ -157,18 +168,40 @@ function selectMini(g:PartyGame,now:number,forceDigital=false) {
 function startMini(g:PartyGame,now:number) {
   const m=g.mini!;m.startAt=now+3000;
   if(isArenaId(m.id))m.arena=createArena(m.id,g.players.filter((p,i)=>!p.passive&&(g.online||i===g.localMiniIndex)).map(p=>({id:p.id,style:g.players.indexOf(p),characterId:p.characterId})),m.arenaSeed??1);
+  if(isMatchId(m.id))m.match=createMatch(m.id,g.players.filter(p=>!p.passive).map(p=>({id:p.id,style:g.players.indexOf(p),characterId:p.characterId})),m.arenaSeed??1);
   phase(g,"mini-play",now);g.deadline=m.startAt+MINIS[m.id].seconds*1000;
 }
 
-export function applyPartyControl(current:PartyGame,id:string,input:ArenaInput,seq:number,now=Date.now()):PartyGame {
-  if(current.pausedAt||current.phase!=="mini-play"||!current.mini?.arena||now<current.mini.startAt||now>=current.deadline)throw new Error("Die Steuerung ist gerade pausiert.");
+export function applyPartyControl(current:PartyGame,id:string,input:ArenaInput|unknown,seq:number,now=Date.now()):PartyGame {
+  if(current.pausedAt||current.phase!=="mini-play"||!(current.mini?.arena||current.mini?.match)||now<current.mini.startAt||now>=current.deadline)throw new Error("Die Steuerung ist gerade pausiert.");
   const player=current.players.find(p=>p.id===id);
   if(!player||player.passive||current.mini.runs[id]?.done)throw new Error("Dein Versuch ist nicht aktiv.");
   const g=structuredClone(current),m=g.mini!;
+  if(m.match){
+    advanceMatch(m.match,now-m.startAt);
+    setMatchControl(m.match,id,input,seq,now-m.startAt,now);
+    syncMatchRuns(g,now);
+    return g;
+  }
   advanceArena(m.arena!,now-m.startAt);
   setArenaControl(m.arena!,id,input,seq);
   syncArenaRuns(g,now);
   return g;
+}
+function syncMatchRuns(g:PartyGame,now:number) {
+  const m=g.mini!,standings=matchStandings(m.match!),events=m.match!.events;
+  for(const player of m.match!.players){const run=m.runs[player.id];if(!run)continue;run.score=standings.find(s=>s.id===player.id)?.score??0;run.feedback=[...events].reverse().find(e=>e.ids.includes(player.id))?.text??run.feedback;if(player.played&&run.lastInput===0)run.lastInput=now;}
+}
+/** A finished match ends the minigame for everyone at once. */
+function endMatch(g:PartyGame,now:number){
+  const m=g.mini!;finishMatch(m.match!);syncMatchRuns(g,now);
+  for(const p of g.players)if(m.runs[p.id])m.runs[p.id].done=true;
+  rewardMini(g,now);
+}
+/** Inputs must not keep steering while a device is gone or the host pauses. */
+export function neutralizePartyInputs(game:PartyGame){
+  for(const actor of game.mini?.arena?.actors??[]){actor.input={...NEUTRAL_INPUT};actor.inputUntil=0;}
+  if(game.mini?.match)neutralizeMatch(game.mini.match);
 }
 function syncArenaRuns(g:PartyGame,now:number) {
   for(const actor of g.mini!.arena!.actors){const run=g.mini!.runs[actor.id];run.score=actor.score;run.feedback=actor.feedback;if(actor.played&&run.lastInput===0)run.lastInput=now;}
@@ -177,12 +210,22 @@ function syncArenaRuns(g:PartyGame,now:number) {
 export function partyMiniResults(g:PartyGame) {
   const m=g.mini!;
   const eligible=g.players.filter(p=>!p.passive&&(m.runs[p.id].lastInput>0||m.reports[p.id]!==undefined));
+  if(m.match){
+    // The match module ranks with shared places; non-participants are left out before places are counted.
+    const standings=matchStandings(m.match),place=(id:string)=>standings.find(s=>s.id===id)?.place??99;
+    const order=[...eligible].sort((a,b)=>place(a.id)-place(b.id)||g.order.indexOf(a.id)-g.order.indexOf(b.id));
+    return g.players.map(player=>{
+      const participated=eligible.includes(player),rank=participated?1+eligible.filter(other=>place(other.id)<place(player.id)).length:0;
+      const coins=participated&&!g.opening&&!g.competition?([10,4,2][rank-1]??0):0;
+      return {player,place:rank,coins,participated,score:standings.find(s=>s.id===player.id)?.score??0,attempts:0,detail:standings.find(s=>s.id===player.id)?.detail};
+    }).sort((a,b)=>(a.place||99)-(b.place||99)||order.indexOf(a.player)-order.indexOf(b.player));
+  }
   const better=(a:PartyPlayer,b:PartyPlayer)=>m.runs[a.id].score>m.runs[b.id].score||(m.runs[a.id].score===m.runs[b.id].score&&m.id==="memory"&&m.runs[a.id].attempts<m.runs[b.id].attempts);
   const ranked=[...eligible].sort((a,b)=>better(a,b)?-1:better(b,a)?1:(m.arena?.actors.find(p=>p.id===a.id)?.falls??0)-(m.arena?.actors.find(p=>p.id===b.id)?.falls??0)||g.order.indexOf(a.id)-g.order.indexOf(b.id));
   return g.players.map(player=>{
     const participated=eligible.includes(player),place=participated?ranked.indexOf(player)+1:0;
     const coins=participated&&!g.opening&&!g.competition?([10,4,2][place-1]??0):0;
-    return {player,place,coins,participated,score:m.runs[player.id].score,attempts:m.runs[player.id].attempts};
+    return {player,place,coins,participated,score:m.runs[player.id].score,attempts:m.runs[player.id].attempts,detail:undefined as string|undefined};
   }).sort((a,b)=>(a.place||99)-(b.place||99));
 }
 function rewardMini(g:PartyGame,now:number){
@@ -195,7 +238,7 @@ function rewardMini(g:PartyGame,now:number){
       c.scores[result.player.id] += points[result.player.id];
       if (result.place === 1) result.player.wins++;
     }
-    c.history.push({ miniId: m.id as ArenaId, winnerIds, bets: { ...c.bets }, points });
+    c.history.push({ miniId: m.id as PlayableMiniId, winnerIds, bets: { ...c.bets }, points });
     if (g.round === c.rounds) {
       const best = Math.max(...Object.values(c.scores));
       g.winners = g.mode === "free-minigame" ? winnerIds : g.players.filter(p => c.scores[p.id] === best).map(p => p.id);
@@ -210,7 +253,7 @@ function rewardMini(g:PartyGame,now:number){
   if(!g.opening&&g.mode!=="roll-it-up"&&g.round===g.options.rounds)finishParty(g,now);else phase(g,"mini-result",now);
 }
 
-function finishRun(g:PartyGame,id:string,now:number) {const m=g.mini!;m.runs[id].done=true;
+function finishRun(g:PartyGame,id:string,now:number) {const m=g.mini!;if(m.match)return;m.runs[id].done=true;
   if(m.id==="words"||m.id==="bridge") {if(g.players.filter(p=>!p.passive).every(p=>m.runs[p.id].done)){phase(g,"analog-confirm",now);}return;}
   if(g.players.filter(p=>!p.passive).every(p=>m.runs[p.id].done)) rewardMini(g,now);
   else if(!g.online) {g.localMiniIndex=g.players.findIndex(p=>!p.passive&&!m.runs[p.id].done);phase(g,"mini-intro",now);}
@@ -254,7 +297,7 @@ export function applyPartyAction(current:PartyGame,id:string,action:PartyAction,
   if(!current.players.some(p=>p.id===id)||current.phase==="finished"||current.phase==="aborted")throw new Error("Diese Partie ist nicht aktiv.");
   const g=structuredClone(current),p=activePartyPlayer(g),own=g.players.find(p=>p.id===id)!;
   if(action.type==="abort"){phase(g,"aborted",now);return g;}
-  if(action.type==="resume"){if(!g.resumeOffered)throw new Error("Die Wartezeit läuft noch.");Object.keys(g.disconnected).forEach(id=>{g.players.find(p=>p.id===id)!.passive=true;if(g.mini){g.mini.runs[id].done=true;const actor=g.mini.arena?.actors.find(a=>a.id===id);if(actor){actor.finished=true;actor.inputUntil=0;}}});shiftPartyClock(g,now-g.pausedAt);g.pausedAt=0;g.resumeOffered=false;return g;}
+  if(action.type==="resume"){if(!g.resumeOffered)throw new Error("Die Wartezeit läuft noch.");Object.keys(g.disconnected).forEach(id=>{g.players.find(p=>p.id===id)!.passive=true;if(g.mini?.match)removeMatchPlayer(g.mini.match,id);if(g.mini){g.mini.runs[id].done=true;const actor=g.mini.arena?.actors.find(a=>a.id===id);if(actor){actor.finished=true;actor.inputUntil=0;}}});shiftPartyClock(g,now-g.pausedAt);g.pausedAt=0;g.resumeOffered=false;return g;}
   if(g.pausedAt)throw new Error("Die Partie wartet auf die Verbindung.");
   const miniPhase=["mini-bet","mini-intro","mini-play","analog-confirm"].includes(g.phase) || Boolean(g.competition && g.phase === "mini-result");
   if(!miniPhase && id!==p.id)throw new Error("Du bist nicht am Zug.");
@@ -293,7 +336,12 @@ export function applyPartyAction(current:PartyGame,id:string,action:PartyAction,
   else if(action.type==="ready"&&g.phase==="mini-intro") {const m=g.mini!;if(!g.online&&id!==g.players[g.localMiniIndex].id&&m.id!=="words"&&m.id!=="bridge")throw new Error("Bitte das Gerät weitergeben.");m.runs[id].ready=true;if(!g.online||g.players.filter(p=>!p.passive).every(p=>m.runs[p.id].ready)){if((m.id==="words"||m.id==="bridge")&&!g.players.filter(p=>!p.passive).every(p=>m.material[p.id]===true))throw new Error("Erst das Material bestätigen.");startMini(g,now);}}
   else if(action.type==="material"&&g.phase==="mini-intro"){if(!["words","bridge"].includes(g.mini!.id))throw new Error("Kein Material nötig.");if(!action.available)selectMini(g,now,true);else{if(!g.online)g.players.forEach(p=>g.mini!.material[p.id]=true);else g.mini!.material[id]=true;}}
   else if(action.type==="input"&&g.phase==="mini-play") {if(!g.online&&id!==g.players[g.localMiniIndex].id)throw new Error("Nicht dein Versuch.");partyInput(g,id,action.value,now);}
-  else if(action.type==="finish"&&g.phase==="mini-play"){if(["words","bridge"].includes(g.mini!.id))throw new Error("Analoge Aufgaben laufen bis zum Zeitende.");if(!g.online&&id!==g.players[g.localMiniIndex].id)throw new Error("Nicht dein Versuch.");const actor=g.mini?.arena?.actors.find(a=>a.id===id);if(actor){actor.finished=true;actor.vx=0;actor.vz=0;actor.inputUntil=0;}finishRun(g,id,now);}
+  else if(action.type==="finish"&&g.phase==="mini-play"){if(g.mini!.match){
+    // Giving up leaves the match for good; the module ranks earlier leavers lower.
+    const m=g.mini!;advanceMatch(m.match!,now-m.startAt);removeMatchPlayer(m.match!,id);m.runs[id].done=true;syncMatchRuns(g,now);
+    if(m.match!.done||m.match!.players.every(p=>p.gone))endMatch(g,now);
+    return g;
+  }if(["words","bridge"].includes(g.mini!.id))throw new Error("Analoge Aufgaben laufen bis zum Zeitende.");if(!g.online&&id!==g.players[g.localMiniIndex].id)throw new Error("Nicht dein Versuch.");const actor=g.mini?.arena?.actors.find(a=>a.id===id);if(actor){actor.finished=true;actor.vx=0;actor.vz=0;actor.inputUntil=0;}finishRun(g,id,now);}
   else if(action.type==="report"&&(g.phase==="mini-play"||g.phase==="analog-confirm")){if(!g.mini||!["words","bridge"].includes(g.mini.id)||now<g.deadline&&g.phase==="mini-play")throw new Error("Die Aufgabe läuft noch.");if(!Number.isInteger(action.score)||action.score<0||action.score>200)throw new Error("Bitte 0–200 ganze Punkte eintragen.");g.mini.reports[id]=action.score;g.mini.runs[id].score=action.score;g.mini.confirms={};finishRun(g,id,now);}
   else if(action.type==="confirm"&&g.phase==="analog-confirm"){if(!action.accept)selectMini(g,now,true);else{g.mini!.confirms[id]=true;if(!g.online||g.players.filter(p=>!p.passive).every(p=>g.mini!.confirms[p.id]))rewardMini(g,now);}}
   else if(action.type==="next"&&g.phase==="mini-result"){if(g.competition){g.round++;selectMini(g,now);}else if(g.opening){g.opening=false;g.mini=undefined;g.turn=0;startTurn(g,now);}else if(g.mode!=="roll-it-up"&&g.round===g.options.rounds){finishParty(g,now);}else{g.round++;g.turn=0;g.mini=undefined;startTurn(g,now);}}
@@ -307,6 +355,11 @@ export function tickParty(current:PartyGame,now=Date.now()):PartyGame {
   if(g.phase==="finished"||g.phase==="aborted")return g;
   if(g.phase === "mini-bet" && g.competition && g.players.filter(p => !p.passive).every(p => g.competition!.locked.includes(p.id))) {
     phase(g, "mini-intro", now); if(g.online)g.deadline = now + 90000;
+  }
+  if(g.phase==="mini-play"&&g.mini?.match&&now>=g.mini.startAt){
+    const m=g.mini;advanceMatch(m.match!,now-m.startAt);syncMatchRuns(g,now);
+    if(m.match!.done||now>=g.deadline||m.match!.players.filter(p=>!p.gone).length===0)endMatch(g,now);
+    return g;
   }
   if(g.phase==="mini-play"&&g.mini?.arena&&now>=g.mini.startAt){
     advanceArena(g.mini.arena,now-g.mini.startAt);syncArenaRuns(g,now);
@@ -336,6 +389,7 @@ export function publicParty(current:PartyGame,viewer:string,now=Date.now()):Part
   }
   if(g.mini){const m=g.mini,original=current.mini!,r=original.runs[viewer];m.risk=[];
     if(m.arena)m.arena=publicArena(m.arena,viewer);
+    if(original.match)m.match=publicMatch(original.match,viewer);
     m.cards=original.cards.map((value,i)=>r&&(r.matched.includes(i)||r.opened.includes(i))?value:-1);
     m.trail=g.phase==="mini-play"&&now>=m.startAt&&now<m.startAt+6000?m.trail:[];
     m.targets=original.targets.map((v,i)=>g.phase==="mini-play"&&i===Math.floor((now-m.startAt)/2000)?v:-1);
@@ -345,13 +399,19 @@ export function publicParty(current:PartyGame,viewer:string,now=Date.now()):Part
 }
 
 export function createPartyPractice(id:MiniId,now=Date.now(),selectedCharacter?:CharacterId):PartyGame {
+  if(isMatchId(id)){
+    // Match games need opponents: practise against bots that use the normal input path.
+    const size=MATCH_MODULES[id].meta.players[0];
+    const g=createPartyGame([{id:"practice",name:"Du",characterId:selectedCharacter},...Array.from({length:size-1},(_,i)=>({id:`practice-bot-${i+1}`,name:`Übungsbot ${i+1}`,bot:true}))],{rounds:5},true,now,now);
+    g.opening=false;g.miniBag=[id];selectMini(g,now);startMini(g,now);return g;
+  }
   const g=createPartyGame([{id:"practice",name:"Du",characterId:selectedCharacter},{id:"spectator",name:"Übung"}],{rounds:5},false,now,now);
   g.opening=false;g.players[1].passive=true;g.miniBag=[id];selectMini(g,now);startMini(g,now);return g;
 }
 
 /** Nur der Server darf dies nach Prüfung eines Testraums aufrufen. */
-export function selectPartyTestMini(current:PartyGame,id:ArenaId,now=Date.now()):PartyGame {
-  if(!isArenaId(id))throw new Error("Unbekanntes Minispiel.");
+export function selectPartyTestMini(current:PartyGame,id:PlayableMiniId,now=Date.now()):PartyGame {
+  if(!isArenaId(id)&&!(isMatchId(id)&&miniEligible(id,current.players.filter(p=>!p.passive).length)))throw new Error("Unbekanntes Minispiel.");
   const seed=current.mini?.id===id?current.mini.arenaSeed:undefined;
   const g=structuredClone(current);g.opening=false;g.miniBag=[id];selectMini(g,now);
   if(seed!==undefined)g.mini!.arenaSeed=seed;

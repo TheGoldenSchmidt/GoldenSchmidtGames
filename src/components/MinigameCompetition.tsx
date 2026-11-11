@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { availableBets } from "../../shared/minigameModes";
-import { ARENA_META } from "../../shared/partyArena";
 import { MINIS, partyMiniResults, type PartyAction, type PartyGame } from "../../shared/party";
 import { CharacterAvatar } from "./CharacterAvatar";
 
@@ -53,18 +52,18 @@ export function MinigameResults({ game, viewer, host, busy, send, onExit }: {
     <h1 id="minigame-result-title">{finished ? free ? "Euer Ergebnis" : "Der Wettbewerb ist entschieden!" : "Die Punkte stehen fest!"}</h1>
     {finished && <h2>{game.winners.length ? game.winners.map(id => game.players.find(p => p.id === id)!.name).join(" & ") : "Niemand hat teilgenommen"}</h2>}
     {finished && game.winners.length > 0 && <p>{game.winners.length > 1 ? "Ihr teilt euch den Gesamtsieg." : free ? "Minispiel gewonnen!" : "Die höchste Gesamtpunktzahl gewinnt."}</p>}
-    <h2>{ARENA_META[result.miniId].name}</h2>
+    <h2>{MINIS[result.miniId].name}</h2>
     <ol className="minigame-round-results" aria-label="Minispielergebnis">
       {partyMiniResults(game).map(r => <li key={r.player.id} className={r.player.id === viewer ? "is-you" : ""}>
         <span>{r.place ? `${r.place}.` : "–"}</span><CharacterAvatar id={r.player.characterId} decorative />
-        <div><strong>{r.player.name}</strong><small>{r.participated ? `${r.score} Minispielpunkte` : "Nicht teilgenommen"}{!free && ` · Einsatz ${result.bets[r.player.id] ?? "–"}`}</small></div>
+        <div><strong>{r.player.name}</strong><small>{r.participated ? `${r.score} Minispielpunkte${r.detail ? ` · ${r.detail}` : ""}` : "Nicht teilgenommen"}{!free && ` · Einsatz ${result.bets[r.player.id] ?? "–"}`}</small></div>
         {!free && <b>+{result.points[r.player.id]}<small>Punkte</small></b>}
       </li>)}
     </ol>
-    <p>Bei gleichen Minispielpunkten entscheiden weniger Stürze, dann die zu Beginn ausgeloste Reihenfolge.</p>
+    <p>{game.mini?.match ? "Das Minispiel entscheidet Gleichstände selbst (Stechen, Golden Goal, Sudden Death). Bleibt es gleich, teilt ihr euch den Platz." : "Bei gleichen Minispielpunkten entscheiden weniger Stürze, dann die zu Beginn ausgeloste Reihenfolge."}</p>
     {!free && <><h2>Gesamtpunktestand</h2><MinigameScoreboard game={game} />
       <details className="minigame-history"><summary>Gespielte Minispiele und Einsätze</summary>
-        <ol>{c.history.map((round, i) => <li key={i}><strong>{ARENA_META[round.miniId].name}</strong>
+        <ol>{c.history.map((round, i) => <li key={i}><strong>{MINIS[round.miniId].name}</strong>
           <ul>{game.players.map(p => <li key={p.id}>{p.name}: Einsatz {round.bets[p.id] ?? "–"}, +{round.points[p.id]} Punkte</li>)}</ul>
         </li>)}</ol>
       </details></>}

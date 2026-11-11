@@ -1,5 +1,6 @@
 import { hasFullSet, partyPaths } from "./partyBoard";
 import { availableBets } from "./minigameModes";
+import { botMatchInput } from "./matches/framework";
 import {COMMAND_ZONES,DUO_SWITCHES,GOLF_GATES,HEX_PLATFORMS,hexCue,photoSpot,saysCue,wallHoles,wallCellPoint} from "./arenaChallenges";
 import { activePartyPlayer, applyPartyAction, applyPartyControl, ITEMS, tickParty, type PartyAction, type PartyGame } from "./party";
 import { bridgeCenter, clamp, DASH_BLOCKS, HURDLES, TILT_HOLES, type ArenaActor, type ArenaInput, type ArenaState } from "./partyArena";
@@ -65,6 +66,13 @@ export class PartyBotDriver {
   step(current:PartyGame,now:number,skipWait=false):PartyGame {
     if(current.pausedAt||current.phase==="finished"||current.phase==="aborted")return current;
     let g=current;
+    if(g.phase==="mini-play"&&g.mini?.match&&now>=g.mini.startAt&&now<g.deadline){
+      for(const p of g.players.filter(p=>p.bot&&!p.passive)){
+        const player=g.mini?.match?.players.find(q=>q.id===p.id);
+        if(player&&!player.gone&&!g.mini!.match!.done&&g.phase==="mini-play")g=applyPartyControl(g,p.id,botMatchInput(g.mini!.match!,p.id),player.inputSeq+1,now);
+      }
+      return g;
+    }
     if(g.phase==="mini-play"&&g.mini?.arena&&now>=g.mini.startAt&&now<g.deadline){
       for(const p of g.players.filter(p=>p.bot&&!p.passive)){
         const a=g.mini?.arena?.actors.find(a=>a.id===p.id);

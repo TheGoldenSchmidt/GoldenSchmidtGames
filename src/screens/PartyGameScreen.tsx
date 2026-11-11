@@ -8,6 +8,7 @@ import {CharacterAvatar} from "../components/CharacterAvatar";
 import { useEffect, useRef, useState } from "react";
 import { activePartyPlayer, type PartyGame, FIELD_LABELS, ITEMS, ITEM_IDS, MINIS, partyMiniResults, partyStanding, type MiniId, type PartyAction } from "../../shared/party";
 import { NEUTRAL_INPUT, type ArenaInput, type ArenaState } from "../../shared/partyArena";
+import type { MatchInput, MatchState } from "../../shared/matches/types";
 import type { GuestProfile, RoomState } from "../../shared/types";
 import { PartyBoard } from "../components/PartyBoard";
 import { Celebration, MINI_LOOK, MiniPreview } from "../components/PartyArt";
@@ -44,8 +45,10 @@ export function PartyGameScreen({profile,initialRoom,onExit}:{profile:GuestProfi
   useEffect(()=>{
     const update=(next:RoomState)=>{if(next.code!==initialRoom.code)return;if(next.partyGame?.serverTime)offset.current=next.partyGame.serverTime-Date.now();setRoom(next);};
     const arena=(payload:{code:string;phaseId:number;arena:ArenaState;serverTime:number})=>{if(payload.code!==initialRoom.code)return;offset.current=payload.serverTime-Date.now();setRoom(previous=>{const g=previous.partyGame;if(!g?.mini||g.phaseId!==payload.phaseId||(g.mini.arena?.time??0)>payload.arena.time)return previous;const runs={...g.mini.runs};for(const actor of payload.arena.actors)runs[actor.id]={...runs[actor.id],score:actor.score,feedback:actor.feedback,done:runs[actor.id].done||actor.finished,lastInput:actor.played?(runs[actor.id].lastInput||payload.serverTime):0};return {...previous,partyGame:{...g,serverTime:payload.serverTime,mini:{...g.mini,arena:payload.arena,runs}}};});};
-    socket.on("room:updated",update);socket.on("party:arena",arena);
-    return()=>{socket.off("room:updated",update);socket.off("party:arena",arena);};
+    // Match games: the authority sends each device its own view at 10 or 20 Hz.
+    const match=(payload:{code:string;phaseId:number;match:MatchState;serverTime:number})=>{if(payload.code!==initialRoom.code)return;offset.current=payload.serverTime-Date.now();setRoom(previous=>{const g=previous.partyGame;if(!g?.mini?.match||g.phaseId!==payload.phaseId||g.mini.match.time>payload.match.time)return previous;return {...previous,partyGame:{...g,serverTime:payload.serverTime,mini:{...g.mini,match:payload.match}}};});};
+    socket.on("room:updated",update);socket.on("party:arena",arena);socket.on("party:match",match);
+    return()=>{socket.off("room:updated",update);socket.off("party:arena",arena);socket.off("party:match",match);};
   },[initialRoom.code,profile.id]);
   useEffect(()=>{setError("");setReplace(0);setPractice(undefined);setSelectedItem(undefined);if(game?.phase==="mini-intro")void import("../three/arenaWorld");},[game?.phaseId,game?.itemUsed]);
   useEffect(()=>{setPanel(undefined);},[game?.phase==="mini-play",game?.phase==="aborted",game?.phase==="finished",game?.itemUsed]);
@@ -57,7 +60,7 @@ export function PartyGameScreen({profile,initialRoom,onExit}:{profile:GuestProfi
   },[diceKey]);
   const boardPhase=Boolean(game&&BOARD_PHASES.includes(game.phase));
   useEffect(()=>{if(!boardPhase)window.scrollTo({top:0,behavior:"instant"});},[boardPhase]);
-  useEffect(()=>{if(panel&&game?.phase==="mini-play")control(NEUTRAL_INPUT);},[panel]);
+  useEffect(()=>{if(panel&&game?.phase==="mini-play"&&!game.mini?.match)control(NEUTRAL_INPUT);},[panel]);
 
   useEffect(()=>{
     if(!game)return;
@@ -87,7 +90,8 @@ export function PartyGameScreen({profile,initialRoom,onExit}:{profile:GuestProfi
     setError("");feedback();
     lock.current=true;setPending(true);socket.timeout(8000).emit("party:action",{seq:(g.seq[profile.id]??0)+1,phaseId:g.phaseId,token:room.partyToken,action},(err:Error|null,response:{ok:boolean;data?:RoomState;error?:string})=>{lock.current=false;setPending(false);if(err||!response.ok||!response.data)setError(response?.error??"Der Server antwortet nicht. Die Verbindung wird wiederhergestellt.");else{if(response.data.partyGame?.serverTime)offset.current=response.data.partyGame.serverTime-Date.now();setRoom(response.data);}});
   }
-  function control(input:ArenaInput) {if(!socket.connected||g.pausedAt||g.phase!=="mini-play")return;controlSeq.current=Math.max(controlSeq.current,g.mini?.arena?.actors.find(a=>a.id===viewer)?.inputSeq??0)+1;socket.volatile.emit("party:control",{phaseId:g.phaseId,token:room.partyToken,seq:controlSeq.current,input});}
+  // Stick values may be dropped (volatile); taps and commands use the reliable channel.
+  function control(input:ArenaInput|MatchInput,reliable=false) {if(!socket.connected||g.pausedAt||g.phase!=="mini-play")return;controlSeq.current=Math.max(controlSeq.current,g.mini?.arena?.actors.find(a=>a.id===viewer)?.inputSeq??g.mini?.match?.players.find(p=>p.id===viewer)?.inputSeq??0)+1;(reliable?socket:socket.volatile).emit("party:control",{phaseId:g.phaseId,token:room.partyToken,seq:controlSeq.current,input});}
   const replaceControl=<label>Welches Item möchtest du ersetzen?<select value={replace} onChange={e=>setReplace(Number(e.target.value))}>{p.items.map((item,i)=><option value={i} key={i}>{ITEMS[item].name}</option>)}</select></label>;
   const roster=<div className={`party-standings ${boardPhase?"party-board-roster":""}`} aria-label={boardPhase?"Feste Zugreihenfolge und Punktestand":"Punktestand"}>{(boardPhase?g.order.map(id=>g.players.find(player=>player.id===id)!):standings).map((player,rank)=>{
     const index=g.players.indexOf(player);
@@ -152,7 +156,7 @@ export function PartyGameScreen({profile,initialRoom,onExit}:{profile:GuestProfi
           <button className="button button--primary button--wide" disabled={busy||m.runs[viewer]?.ready||own.passive} onClick={()=>send({type:"ready"})}>{m.runs[viewer]?.ready?"Bereit – wir warten auf die anderen":"Ich bin bereit"}</button>
           <div className="party-ready-players" aria-label="Bereitschaft">{g.players.filter(q=>!q.passive).map(q=><span key={q.id} className={m.runs[q.id].ready?"is-ready":""}><CharacterAvatar id={q.characterId} decorative/>{m.runs[q.id].ready?"✓":"◷"} {q.name}</span>)}</div>
         </div>}
-        {g.phase==="mini-play"&&m&&<><div className="party-mini-player"><CharacterAvatar id={own.characterId}/>{own.name}<small>Alle spielen gleichzeitig</small></div><PartyMini game={projected} id={viewer} now={g.pausedAt||now} send={send} control={control} busy={!socket.connected||own.passive||Boolean(g.pausedAt)||Boolean(panel)}/>{!m.runs[viewer]?.done&&<details className="party-end-attempt"><summary>Versuch vorzeitig beenden</summary><p>Deine bisher erspielten Punkte zählen.</p><button className="button button--ghost" disabled={busy} onClick={()=>send({type:"finish"})}>Versuch beenden</button></details>}</>}
+        {g.phase==="mini-play"&&m&&<><div className="party-mini-player"><CharacterAvatar id={own.characterId}/>{own.name}<small>Alle spielen gleichzeitig</small></div><PartyMini game={projected} id={viewer} now={g.pausedAt||now} send={send} control={control} busy={!socket.connected||own.passive||Boolean(g.pausedAt)||Boolean(panel)}/>{!m.runs[viewer]?.done&&<details className="party-end-attempt"><summary>{m.match?"Aufgeben":"Versuch vorzeitig beenden"}</summary><p>{m.match?"Du scheidest aus diesem Spiel aus und landest hinter allen, die noch spielen.":"Deine bisher erspielten Punkte zählen."}</p><button className="button button--ghost" disabled={busy} onClick={()=>send({type:"finish"})}>{m.match?"Jetzt aufgeben":"Versuch beenden"}</button></details>}</>}
         {!competition&&g.phase==="mini-result"&&m&&<div className="party-mini-results"><Celebration small/><h1>{g.opening?"Eure Reihenfolge steht!":"Schätze verteilt!"}</h1><p>{MINIS[m.id].name}</p>{!g.opening&&miniReward&&<PartyCoinReward coins={miniReward.coins} total={miniReward.total}/>}<ol className="party-awards">{partyMiniResults(g).map(result=><li key={result.player.id} className={result.player.id===viewer?"is-you":""}><span className="party-place">{result.place?`${result.place}.`:"–"}</span><CharacterAvatar id={result.player.characterId} className={`party-avatar party-player-color-${g.players.indexOf(result.player)}`}/><div><strong>{result.player.name}</strong><small>{result.participated?`${result.score} ${m.id==="memory"?`Paare · ${result.attempts} Versuche`:"Punkte"}`:result.player.passive?"Ausgesetzt":"Nicht teilgenommen"}</small></div><b>{g.opening?`${g.order.indexOf(result.player.id)+1}.`:`+${result.coins}`}<small>{g.opening?"Startplatz":"Münzen"}</small></b></li>)}</ol><p className="party-result-note">Bei Punktgleichstand entscheiden weniger Stürze, dann die feste Zugreihenfolge. Im Auftakt entscheidet das Los.</p>{canAct?<button className="button button--primary button--wide" disabled={busy} onClick={()=>send({type:"next"})}>{tray?"Weiter zur Bauschale":g.opening?"Ab auf die Insel":g.round===g.options.rounds?"Zur Siegerehrung":"Weiter zur Insel"}</button>:<p className="party-wait">{p.name} bringt euch gleich zurück {tray?"zur Bauschale":"zur Insel"}.</p>}</div>}
         {g.phase==="finished"&&tray&&<section className="party-finale roll-finale">
           <JayspotFinish player={p}/><h1>Am Jayspot angekommen!</h1>

@@ -4,6 +4,8 @@ import { io, type Socket } from "socket.io-client";
 import { createSpielraumServer } from "../server/index";
 import type { PartyAction } from "../shared/party";
 import type { RoomState } from "../shared/types";
+import { PLAYABLE_MINI_IDS } from "../shared/minigameCatalog";
+import { NEUTRAL_MATCH_INPUT } from "../shared/matches/types";
 
 const server = createSpielraumServer(), port = await server.listen(0), sockets: Socket[] = [];
 const request = <T = RoomState>(s: Socket, event: string, payload?: unknown) => new Promise<T>((resolve, reject) => {
@@ -21,7 +23,7 @@ try {
     let room = await request(host, "room:create", {playerId:ids[0],name:"Anna",characterId:"alpha_rick_prime"});
     await request(guest,"room:join",{code:room.code,playerId:ids[1],name:"Ben",characterId:"alpha_morty_smith"});
     await assert.rejects(request(guest,"room:configure",{gameId:mode,minigames:{rounds:2}}));
-    for(const minigames of [{rounds:0},{rounds:15},{rounds:1.5},{miniId:"missing"}]) await assert.rejects(request(host,"room:configure",{gameId:mode,minigames}));
+    for(const minigames of [{rounds:0},{rounds:PLAYABLE_MINI_IDS.length+1},{rounds:1.5},{miniId:"missing"},{classic:"nein"}]) await assert.rejects(request(host,"room:configure",{gameId:mode,minigames}));
     await request(host,"room:configure",{gameId:mode,playerCount:2,minigames:{rounds:2,miniId:"hurdles"}});
     await request(host,"room:ready"); room = await request(guest,"room:ready");
     const tokens = [(await request(host,"qwixx:state")).partyToken!, room.partyToken!];
@@ -53,12 +55,12 @@ try {
         await assert.rejects(send(0,{type:"bet",value:round}));
       } else assert.equal(room.partyGame!.mini!.id,"hurdles");
       for(let i=0;i<2;i++) await send(i,{type:"ready"});
-      assert.equal(room.partyGame!.mini!.arena!.actors.length,2);
+      assert.equal((room.partyGame!.mini!.arena?.actors ?? room.partyGame!.mini!.match!.players).length,2);
       await new Promise(r=>setTimeout(r,Math.max(0,room.partyGame!.mini!.startAt-Date.now()+100)));
       for(let i=0;i<2;i++) {
-        await request(clients[i],"party:control",{token:tokens[i],phaseId:room.partyGame!.phaseId,seq:1,input:{x:.1,z:0,jump:false,punch:false}});
+        await request(clients[i],"party:control",{token:tokens[i],phaseId:room.partyGame!.phaseId,seq:1,input:room.partyGame!.mini!.match?{...NEUTRAL_MATCH_INPUT,x:.1}:{x:.1,z:0,jump:false,punch:false}});
       }
-      for(let i=0;i<2;i++) await send(i,{type:"finish"});
+      for(let i=0;i<2;i++) if(room.partyGame!.phase==="mini-play") await send(i,{type:"finish"}); // match games end with one player left
       assert.equal(room.partyGame!.competition!.history.length,round);
       if(mode === "goldenschmidt" && round === 1) {
         assert.equal(room.partyGame!.phase,"mini-result");

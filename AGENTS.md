@@ -5,13 +5,14 @@ Private, installierbare Spielesammlung für eine Freundesrunde. Im Online-Spiel 
 ## Spielregeln und Online-Räume
 
 - Lege Regeln und Wertung im jeweiligen Spielmodul in `shared/` ab. Lokales Spiel und beide Hostingarten verwenden dieselben Regelfunktionen. Für ein neues Spiel sind [Spielekatalog](shared/games.ts), [Raumlogik](shared/roomCore.ts) und [Auswahl der Spielansicht](src/App.tsx) die Einstiegspunkte. Inselparty braucht getrennte Geräte, wahlweise mit Node-Server oder Handy-Host.
+- Neue Minispiele sind Match-Module in `shared/matches/` mit Darstellung in `src/matches/`. Vor der Arbeit [Backlog](docs/minigames/backlog.md) und [Konzept](docs/minigames/konzept.md) lesen und den Stand dort nachführen.
 - Die gewählte Raumautorität entscheidet über Züge, Würfe und Punkte. Node-Server und Handy-Worker verwenden `shared/roomCore.ts`; halte die Transportadapter frei von Spielregeln. Prüfe Nachrichten vor jeder Zustandsänderung und bestätige Züge erst nach dem Speichern. Beim Wiederbeitritt muss der Schlüssel zum Raum und zum Spieler passen. Sende jedem Gerät nur seine eigene Sicht, insbesondere bei Durak-Handkarten und Sitzungsschlüsseln. Beim Handy-Hosting bleibt dasselbe Host-Gerät zuständig.
 
 ## Spieloberfläche
 
 Bei **jeder UI-Erweiterung und UI-Bearbeitung** zuerst die [Designregeln](designregeln.md) lesen und anwenden. Sie legen Stil, Farben, Komponenten, Bewegung und responsive Gestaltung fest; den dort beschriebenen Geltungsbereich für Menüs und Spielansichten beachten.
 
-Bei **jeder UI-Designaufgabe** den Skill `frontend-design:frontend-design` lesen und anwenden. Für HUDs, Menüs und Overlays zusätzlich [game-ui-frontend](.agents/skills/game-ui-frontend/SKILL.md) nutzen. Gestalte zuerst für Touch auf getrennten Handys und prüfe die Bedienung auch mit Maus und Tastatur am PC. Animationen erklären Spieleraktionen und respektieren `prefers-reduced-motion`. Beide Bewegungseinstellungen müssen zum selben Spielergebnis führen.
+Bei **jeder UI-Designaufgabe** den Skill `frontend-design:frontend-design` lesen und anwenden. Für HUDs, Menüs und Overlays zusätzlich [game-ui-frontend](.agents/skills/game-ui-frontend/SKILL.md) nutzen. Gestalte zuerst für Touch auf getrennten Handys. Inselparty, Roll It Up! und alle Minispiele sind nur für Smartphones vorgesehen: keine PC-Layouts, keine Tastaturbedienung und keine Desktop-Tests dafür. Die übrigen Ansichten zusätzlich mit Maus und Tastatur am PC prüfen. Animationen erklären Spieleraktionen und respektieren `prefers-reduced-motion`. Beide Bewegungseinstellungen müssen zum selben Spielergebnis führen.
 
 ## Passende Prüfungen
 
@@ -19,10 +20,10 @@ Bei **jeder UI-Designaufgabe** den Skill `frontend-design:frontend-design` lesen
 | --- | --- |
 | Regeln, Wertung oder Bots | `npm run test:rules` |
 | Raum, Sitzung oder Socket-Nachricht | `npm run test:online`. Bei Änderungen am Wiederbeitritt auch `tests/browser/room-session.spec.ts`, für Handy-Hosting `tests/browser/nearby.spec.ts` ausführen. |
-| Spielansicht oder Bedienung | `npm run test:screens`, danach den betroffenen Playwright-Fall in den Projekten `phone` und `desktop` ausführen. |
+| Spielansicht oder Bedienung | `npm run test:screens`, danach den betroffenen Playwright-Fall in den Projekten `phone` und `desktop` ausführen; Inselparty, Roll It Up! und Minispiele nur in `phone`. |
 | PWA-Update oder Auslieferung | `npm run test:pwa` für den Updateablauf, `npm run build` und `npm run test:production` für die gebaute App. |
 
-Playwright startet den Server mit dem Inhalt von `dist/`. Nach Clientänderungen zuerst `npm run build`, dann z. B. `npm run test:browser -- tests/browser/qwixx-cup.spec.ts` ausführen. Das Projekt `phone` emuliert Touch in Chromium. Für Aussagen zur 3D-Leistung oder zu Bewegungssensoren auf einem echten Handy prüfen.
+Playwright startet den Server mit dem Inhalt von `dist/`. Passt der vorinstallierte Browser nicht zur Playwright-Version, `PLAYWRIGHT_CHROMIUM_PATH` auf die Chromium-Datei setzen. Nach Clientänderungen zuerst `npm run build`, dann z. B. `npm run test:browser -- tests/browser/qwixx-cup.spec.ts` ausführen. Das Projekt `phone` emuliert Touch in Chromium. Für Aussagen zur 3D-Leistung oder zu Bewegungssensoren auf einem echten Handy prüfen.
 
 ## Projektwissen und Übergabe
 

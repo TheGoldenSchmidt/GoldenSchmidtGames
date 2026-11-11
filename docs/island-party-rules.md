@@ -113,6 +113,22 @@ im vollständigen Raumzustand gespeichert; andere Geräte erhalten vor der
 Aufdeckung nur die Information, wer bereits gesetzt hat. Die bestehenden
 Pausen-, Wiederbeitritts- und Raumschließungsregeln gelten auch hier.
 
+## Match-Minispiele und klassische Auswahl
+
+Die bisherigen 14 Arenen gelten als **klassisch**. Inselparty, Roll It Up! und
+Schlag den GoldenSchmidt speichern dafür die Option `classic` (Standard: an).
+Ohne Klassiker ziehen die Modi nur neue Match-Minispiele, die zur Zahl der
+aktiven Spieler passen. Die Lobby lehnt Einstellungen ab, für die es kein
+passendes Spiel gibt oder deren Rundenzahl die Auswahl übersteigt.
+
+Match-Minispiele ermitteln ihre Platzierung selbst, einschließlich eigener
+Stechregeln. Bleibt danach ein Gleichstand, teilen sich die Spieler den Platz
+und erhalten dieselbe Belohnung: in der Inselparty die Münzen dieses Platzes
+(10/4/2), im Wettbewerb jeweils den eigenen Einsatz. Ohne eigene Eingabe gilt
+eine Person als nicht teilnehmend. „Aufgeben“ beendet die Teilnahme; später
+Aufgebende stehen vor früher Aufgebenden. Bleibt nur eine Person übrig, endet
+das Match. Details: [Konzept](minigames/konzept.md).
+
 ## Tests
 
 `test:rules` prüft zusätzlich alle neuen Mechaniken, Körperkontakte, Stürze,

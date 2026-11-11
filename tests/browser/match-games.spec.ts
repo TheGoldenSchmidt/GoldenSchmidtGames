@@ -1,0 +1,167 @@
+import { test, expect } from "@playwright/test";
+import { matchStarted, onlineSession } from "./party-session";
+import type { MatchState } from "../../shared/matches/types";
+import type { QuickDrawGame } from "../../shared/matches/quickDraw";
+import type { TrailsGame } from "../../shared/matches/lightTrails";
+import type { PongGame } from "../../shared/matches/neonPong";
+import type { TankGame } from "../../shared/matches/tankTrouble";
+import { CHARACTERS } from "../../shared/characters";
+import { miniPool } from "../../shared/minigameCatalog";
+
+/** Neue Match-Minispiele: nur Smartphone (Projekt `phone`). */
+
+test("Lobby: neue Spiele, Klassik-Checkbox und 320 Pixel ohne Überlauf", async ({ page }, testInfo) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await page.getByRole("button", { name: /Online spielen/ }).click();
+  await page.getByRole("button", { name: "Morty Smith", exact: true }).click();
+  await page.getByRole("button", { name: "Neuen Raum erstellen" }).click();
+  await page.getByLabel("Ausgewähltes Spiel").selectOption("goldenschmidt");
+  const classic = page.getByRole("checkbox", { name: /Klassische Minispiele/ });
+  await expect(classic).toBeChecked();
+  await classic.tap();
+  await expect(classic).not.toBeChecked();
+  await expect(page.getByText(new RegExp(`aus ${miniPool(2, false).length} passenden Spielen`))).toBeVisible();
+  await page.getByLabel("Ausgewähltes Spiel").selectOption("free-minigame");
+  await page.getByRole("combobox", { name: "Minispiel", exact: true }).selectOption("quickdraw");
+  await expect(page.getByText(/Warte auf das rote »ZIEH!«/)).toBeVisible();
+  await page.getByLabel("Ausgewähltes Spiel").selectOption("party");
+  await expect(page.getByRole("checkbox", { name: /Klassische Minispiele/ })).toBeChecked();
+  await page.setViewportSize({ width: 320, height: 760 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.screenshot({ path: testInfo.outputPath("lobby-classic-320.png"), fullPage: true });
+});
+
+for (const reducedMotion of ["reduce", "no-preference"] as const) {
+  test(`Quick Draw: Anleitung, Countdown, Schuss per Tipp und Ergebnis (${reducedMotion})`, async ({ page }, testInfo) => {
+    await page.emulateMedia({ reducedMotion });
+    const errors: string[] = []; page.on("pageerror", e => errors.push(e.message));
+    const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "quickdraw" });
+    try {
+      await expect(page.getByRole("heading", { name: "Quick Draw", exact: true })).toBeVisible();
+      await expect(page.getByText(/Fehlstart/).first()).toBeVisible();
+      await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
+      await session.action({ type: "ready" }, session.ids[1]);
+      await expect(page.locator(".match-stage canvas")).toBeVisible();
+      await expect(page.locator(".match-countdown")).toBeVisible();
+      await page.screenshot({ path: testInfo.outputPath(`countdown-${reducedMotion}.png`) });
+      await matchStarted(page);
+      const trigger = page.getByRole("button", { name: "Ziehen und schießen", exact: true });
+      await expect(trigger).toBeEnabled();
+      // Warten, bis die Autorität das Signal freigibt, dann wie ein Mensch reagieren.
+      const signal = async () => ((await session.state()).partyGame!.mini!.match as MatchState<QuickDrawGame>).game.rounds[0].signalAt;
+      await expect.poll(signal, { timeout: 8000, intervals: [50] }).toBeGreaterThan(0);
+      await page.waitForTimeout(250);
+      await page.screenshot({ path: testInfo.outputPath(`signal-${reducedMotion}.png`) });
+      await trigger.tap();
+      await expect(trigger).toBeDisabled();
+      await expect.poll(async () => {
+        const g = ((await session.state()).partyGame!.mini!.match as MatchState<QuickDrawGame>).game;
+        return g.rounds[0].resolvedAt !== undefined || Boolean(g.rounds[0].shots[session.ids[0]]);
+      }).toBe(true);
+      const own = async () => ((await session.state()).partyGame!.mini!.match as MatchState<QuickDrawGame>).game.rounds[0].shots[session.ids[0]];
+      await expect.poll(async () => (await own())?.early).toBe(false);
+      // Die zweite Person gibt auf: das Duell endet, Ergebnis und Rückkehr.
+      await session.action({ type: "finish" }, session.ids[1]);
+      await expect(page.getByRole("heading", { name: "Euer Ergebnis", exact: true })).toBeVisible();
+      await expect(page.getByRole("list", { name: "Minispielergebnis", exact: true })).toContainText("Bestzeit");
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+      await page.screenshot({ path: testInfo.outputPath(`result-${reducedMotion}.png`), fullPage: true });
+      await page.getByRole("button", { name: "Zurück zu GSG", exact: true }).tap();
+      await expect(page.getByRole("button", { name: /Online spielen/ })).toBeVisible();
+      expect(errors).toEqual([]);
+    } finally { session.close(); }
+  });
+}
+
+test("Quick Draw: Fehlstart vor dem Signal und Übung gegen Bots", async ({ page }, testInfo) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "quickdraw" });
+  try {
+    await page.getByRole("button", { name: "Erst kurz üben", exact: true }).tap();
+    const dialog = page.getByRole("dialog", { name: "Übung: Quick Draw" });
+    await expect(dialog.locator(".match-stage canvas")).toBeVisible();
+    await expect(dialog.locator(".match-standings li")).toHaveCount(2);
+    await page.screenshot({ path: testInfo.outputPath("practice.png") });
+    await dialog.getByRole("button", { name: "Übung schließen" }).tap();
+    await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
+    await session.action({ type: "ready" }, session.ids[1]);
+    await matchStarted(page);
+    await page.getByRole("button", { name: "Ziehen und schießen", exact: true }).tap();
+    const round = async () => ((await session.state()).partyGame!.mini!.match as MatchState<QuickDrawGame>).game.rounds[0];
+    await expect.poll(async () => (await round()).shots[session.ids[0]]?.early).toBe(true);
+    await expect.poll(async () => (await round()).winners).toEqual([session.ids[1]]);
+    await expect(page.locator(".match-feedback")).toContainText(/Fehlstart|Treffer|Kein gültiger/);
+  } finally { session.close(); }
+});
+
+test("Light Trails: Wischen und Abbiegetasten lenken den eigenen Gleiter", async ({ page }, testInfo) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "trails" });
+  try {
+    await expect(page.getByRole("heading", { name: "Light Trails", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
+    await session.action({ type: "ready" }, session.ids[1]);
+    await matchStarted(page);
+    const rider = async () => ((await session.state()).partyGame!.mini!.match as MatchState<TrailsGame>).game.riders[session.ids[0]];
+    const start = await rider();
+    const zone = page.getByRole("group", { name: "Wischen, um abzubiegen" });
+    const box = (await zone.boundingBox())!;
+    // Echte Wischgeste: senkrecht zur Fahrtrichtung.
+    const vertical = start.dir === 1 || start.dir === 3, cx = box.x + box.width / 2, cy = box.y + box.height / 3;
+    await page.mouse.move(cx, cy); await page.mouse.down();
+    await page.mouse.move(vertical ? cx : cx + 60, vertical ? cy + 60 : cy, { steps: 4 }); await page.mouse.up();
+    await expect.poll(async () => (await rider()).path.length, { timeout: 3000 }).toBeGreaterThan(1);
+    await page.getByRole("button", { name: "Links", exact: true }).tap();
+    await expect.poll(async () => (await rider()).path.length, { timeout: 3000 }).toBeGreaterThan(2);
+    await page.screenshot({ path: testInfo.outputPath("trails.png") });
+    await session.action({ type: "finish" }, session.ids[1]);
+    await expect(page.getByRole("heading", { name: "Euer Ergebnis", exact: true })).toBeVisible();
+  } finally { session.close(); }
+});
+
+for (const players of [2, 4] as const) test(`Neon Pong ${players === 2 ? "1v1" : "2v2"}: Finger zieht den eigenen Schläger, eigenes Tor unten`, async ({ page }, testInfo) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const characters = CHARACTERS.slice(0, players).map(c => c.id);
+  const session = await onlineSession(page, false, characters, false, "free-minigame", { miniId: "pong" });
+  try {
+    await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
+    for (const id of session.ids.slice(1)) await session.action({ type: "ready" }, id);
+    await matchStarted(page);
+    const slider = page.getByRole("slider", { name: "Schläger bewegen" }), box = (await slider.boundingBox())!;
+    const paddle = async () => ((await session.state()).partyGame!.mini!.match as MatchState<PongGame>).game.paddles.find(p => p.id === session.ids[0])!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down();
+    await page.mouse.move(box.x + 4, box.y + box.height / 2, { steps: 5 });
+    await expect.poll(async () => { const p = await paddle(); return Math.abs(p.x - p.min) < .2; }, { timeout: 4000 }).toBe(true);
+    await page.mouse.move(box.x + box.width - 4, box.y + box.height / 2, { steps: 5 }); await page.mouse.up();
+    await expect.poll(async () => { const p = await paddle(); return Math.abs(p.x - p.max) < .2; }, { timeout: 4000 }).toBe(true);
+    await expect(page.getByRole("status").filter({ hasText: players === 4 ? "2 gegen 2" : "noch" }).first()).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath(`pong-${players}.png`) });
+    for (const id of session.ids.slice(1)) if ((await session.state()).partyGame!.phase === "mini-play") await session.action({ type: "finish" }, id);
+    await expect(page.getByRole("heading", { name: "Euer Ergebnis", exact: true })).toBeVisible();
+  } finally { session.close(); }
+});
+
+test("Tank Trouble: Stick fährt, Ziehen und Loslassen schießt", async ({ page }, testInfo) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "tanks" });
+  try {
+    await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
+    await session.action({ type: "ready" }, session.ids[1]);
+    await matchStarted(page);
+    const tank = async () => ((await session.state()).partyGame!.mini!.match as MatchState<TankGame>).game.tanks[session.ids[0]];
+    const start = await tank();
+    const stick = page.getByRole("group", { name: "Bewegungsstick" }), box = (await stick.boundingBox())!;
+    const cx = box.x + box.width / 2, cy = box.y + box.height / 2, toCentre = Math.sign(5.6 - start.x) || 1;
+    await page.mouse.move(cx, cy); await page.mouse.down(); await page.mouse.move(cx + 40 * toCentre, cy - 10, { steps: 3 });
+    await expect.poll(async () => Math.hypot((await tank()).x - start.x, (await tank()).y - start.y), { timeout: 4000 }).toBeGreaterThan(.3);
+    await page.mouse.up();
+    const aim = page.getByRole("group", { name: "Zielen und schießen" }), area = (await aim.boundingBox())!;
+    await page.mouse.move(area.x + area.width / 2, area.y + area.height / 2); await page.mouse.down();
+    await page.mouse.move(area.x + area.width / 2 - 50, area.y + area.height / 2 + 20, { steps: 3 }); await page.mouse.up();
+    await expect.poll(async () => (await tank()).lastShot, { timeout: 4000 }).toBeGreaterThan(0);
+    await page.screenshot({ path: testInfo.outputPath("tanks.png") });
+    await session.action({ type: "finish" }, session.ids[1]);
+    await expect(page.getByRole("heading", { name: "Euer Ergebnis", exact: true })).toBeVisible();
+  } finally { session.close(); }
+});
