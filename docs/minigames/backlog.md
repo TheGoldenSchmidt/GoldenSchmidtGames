@@ -14,7 +14,7 @@ Ergebnis, automatisch getestet) · **blockiert**.
 | 0 | Analyse, Konzept, Spezifikation, Backlog | fertig |
 | 1 | Framework, Klassik-Option, Nur-Smartphone-Umstellung, Testspiel | fertig |
 | 2 | Quick Draw, Light Trails, Neon Pong | fertig (Gerätetest offen) |
-| 3 | Tank Trouble, Bomb Arena, Floor is Lava | in Arbeit (Tank Trouble fertig) |
+| 3 | Tank Trouble, Bomb Arena, Floor is Lava | fertig (Gerätetest offen) |
 | 4 | Sumo Smash, Bumper Mayhem, Chaos Run | offen |
 | 5 | Arrow Masters, Tower Tumble, Hook Wars | offen |
 | 6 | Qualitätssicherung, Leistung, Feinschliff, Dokumentation | offen |
@@ -27,8 +27,8 @@ Ergebnis, automatisch getestet) · **blockiert**.
 | 2 | Light Trails | `trails` | 2–6 | P1 | fertig | Regeln (`light-trails-test`), Browser `phone` |
 | 3 | Neon Pong | `pong` | 2 oder 4 | P1 | fertig | Regeln (`neon-pong-test`, 1v1 und 2v2), Browser `phone` 1v1/2v2 |
 | 4 | Tank Trouble | `tanks` | 2–6 | P2 | fertig | Regeln (`tank-trouble-test`), Browser `phone` |
-| 5 | Bomb Arena | – | 2–6 | P2 | offen | – |
-| 6 | Floor is Lava | – | 2–6 | P2 | offen | – |
+| 5 | Bomb Arena | `bombs` | 2–6 | P2 | fertig | Regeln (`bomb-arena-test`), Browser `phone` |
+| 6 | Floor is Lava | `lava` | 2–6 | P2 | fertig | Regeln (`floor-is-lava-test`), Browser `phone` |
 | 7 | Sumo Smash | – | 2–6 | P3 | offen | – |
 | 8 | Bumper Mayhem | – | 2–6 | P3 | offen | – |
 | 9 | Chaos Run | – | 2–6 | P3 | offen | – |
@@ -59,6 +59,17 @@ Leistung und Bedienung auf echten Handys sind für kein Spiel geprüft.
 - Nur Smartphone: Playwright-Projekt `desktop` ignoriert Party- und
   Minispiel-Specs; gemischte Specs überspringen Party-Fälle auf dem Desktop.
 
+## Wiederverwendbare Bausteine aus Phase 2/3
+
+- `geometry.ts`: Kreis-Rechteck-Abstoßung, Kreis-Kreis-Trennung, Strahl-Rechteck-Test.
+- Muster „Durchgänge mit Pause, Punkte je überlebtem Gegner, Stechen“:
+  Light Trails, Bomb Arena, Floor is Lava.
+- Steuerelemente: `Stick`, `ActionButton` mit Abklingring, `AimPad`,
+  `SwipeZone`, `SliderPad`, `TapZone`.
+- Abhängigkeiten der offenen Spiele: Sumo Smash und Bumper Mayhem teilen
+  Ring-Out und Impulse; Tower Tumble braucht einen deterministischen
+  Starrkörperlöser; Hook Wars Plattform- und Seilphysik.
+
 ## Architekturentscheidungen (Kurzfassung)
 
 Siehe [konzept.md](konzept.md#architekturentscheidungen). Ergänzungen aus der
@@ -76,12 +87,12 @@ Umsetzung:
 
 | Prüfung | Stand |
 | --- | --- |
-| `npm run test:rules` inkl. Framework, Quick Draw, Light Trails, Neon Pong, Tank Trouble | grün |
+| `npm run test:rules` inkl. Framework und allen sechs fertigen Spielen | grün |
 | `npm run test:online` inkl. `match-online-test` | grün |
 | `npm run test:screens` | grün |
 | `npm run build` | grün |
 | `npm run test:pwa`, `npm run test:production` | grün |
-| Playwright `phone`, `match-games.spec.ts` und `minigame-modes.spec.ts` | grün (26 von 26 in zwei Wiederholungen) |
+| Playwright `phone`, `match-games.spec.ts` (10 Fälle, alle sechs Spiele) und `minigame-modes.spec.ts` | grün |
 | Playwright `phone`, gesamte Suite (vor Tank Trouble) | 94 grün; rot nur Handy-Einladung/`nearby` (Umgebung) und die inzwischen behobenen Testwettläufe |
 | Playwright `desktop` | entfällt für Party und Minispiele (Auftrag) |
 | Echte Handys (Leistung, Touch, Latenz, Handy-Host mit 6 Spielern) | nicht durchgeführt |
@@ -114,6 +125,7 @@ Umsetzung:
 
 ## Nächste Schritte
 
-1. Phase 3 fortsetzen: Bomb Arena, danach Floor is Lava.
+1. Phase 4: Sumo Smash, Bumper Mayhem, Chaos Run (Ring-Out- und Impulslogik
+   gemeinsam nutzen; `shared/matches/geometry.ts` erweitern).
 2. Gerätetest der Phase-2-Spiele auf mindestens zwei echten Handys
    (Android/iOS) im Node- und Handy-Modus, Ergebnisse hier eintragen.

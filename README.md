@@ -66,6 +66,8 @@ Zusätzlich zu den 14 klassischen 3D-Minispielen entstehen zwölf neue 2D-Arcade
 - **Light Trails** (2–6): Gleiter mit Lichtspuren auf einem Raster, Wischen oder ⟲/⟳, schrumpfende Arena, drei Durchgänge.
 - **Neon Pong** (1v1 oder 2v2): eigenes Tor unten, Schläger per Finger, Power-ups, 7 Tore oder 90 Sekunden mit Golden Goal.
 - **Tank Trouble** (2–6): Labyrinth mit abprallenden Kugeln, zerstörbaren Mauern, Power-ups und Respawn; 7 Abschüsse oder 90 Sekunden mit Stechen.
+- **Bomb Arena** (2–6): Bomben mit Kettenreaktionen, Kisten, Power-ups (Reichweite, Bombe, Tempo, Kick), schließende Arena, zwei Durchgänge und Sudden Death.
+- **Floor is Lava** (2–6): zerbröselnde und zurückkehrende Platten, Sprung mit Abklingzeit, einstürzender Rand, drei Durchgänge und Stechrunde.
 
 In Inselparty, Roll It Up! und Schlag den GoldenSchmidt blendet die Checkbox **Klassische Minispiele** die bisherigen 14 Spiele aus der Zufallsauswahl aus; standardmäßig sind sie dabei. Im freien Modus stehen beide Gruppen getrennt zur Wahl. Spiele, die nicht zur Spielerzahl passen, werden nicht gezogen. Übung gegen Bots, Aufgeben und die bisherigen Pausen-, Wiederbeitritts- und Wertungsabläufe gelten auch hier. Stand, Regeln und Architektur: [Backlog](docs/minigames/backlog.md), [Spezifikation](docs/minigames/spezifikation.md), [Konzept](docs/minigames/konzept.md).
 
