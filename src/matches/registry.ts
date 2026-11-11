@@ -6,6 +6,8 @@ import { neonPongClient } from "./games/neonPong";
 import { tankTroubleClient } from "./games/tankTrouble";
 import { bombArenaClient } from "./games/bombArena";
 import { floorIsLavaClient } from "./games/floorIsLava";
+import { bumperClient, sumoClient } from "./games/ringArena";
+import { chaosRunClient } from "./games/chaosRun";
 
 /** Rendering and touch controls per match game; rules live in `shared/matches/`. */
-export const MATCH_CLIENTS: Record<MatchId, MatchClient> = { quickdraw: quickDrawClient, trails: lightTrailsClient, pong: neonPongClient, tanks: tankTroubleClient, bombs: bombArenaClient, lava: floorIsLavaClient };
+export const MATCH_CLIENTS: Record<MatchId, MatchClient> = { quickdraw: quickDrawClient, trails: lightTrailsClient, pong: neonPongClient, tanks: tankTroubleClient, bombs: bombArenaClient, lava: floorIsLavaClient, sumo: sumoClient, bumpercars: bumperClient, chaosrun: chaosRunClient };

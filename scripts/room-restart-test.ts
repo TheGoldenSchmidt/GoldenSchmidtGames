@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { NEUTRAL_MATCH_INPUT } from "../shared/matches/types";
 import { randomUUID } from "node:crypto";
 import { setTimeout as delay } from "node:timers/promises";
 import { io, type Socket } from "socket.io-client";
@@ -65,7 +66,8 @@ try {
   const arena = playing.partyGame!;
   await delay(Math.max(0, arena.mini!.startAt - Date.now() + 100));
   const control = await reply<{ accepted: boolean }>(p.a, "party:control", {
-    token: p.host, seq: 10, phaseId: arena.phaseId, input: { x: 1, z: 0, jump: false, punch: false }
+    // The opening may be a 3D arena or a match game; both must survive the crash with their inputs.
+    token: p.host, seq: 10, phaseId: arena.phaseId, input: arena.mini!.match ? { ...NEUTRAL_MATCH_INPUT, x: 1 } : { x: 1, z: 0, jump: false, punch: false }
   });
   assert.equal(control.accepted, true);
   await server.crash(); // No shutdown hooks or final flush.
@@ -100,7 +102,7 @@ try {
   assert.equal(restored.phaseId, arena.phaseId);
   assert.ok(restored.mini!.startAt >= arena.mini!.startAt + 700);
   assert.equal(restored.deadline - restored.mini!.startAt, arena.deadline - arena.mini!.startAt);
-  assert.equal(restored.mini!.arena!.actors.find(actor => actor.id === "ada")?.inputSeq, 10);
+  assert.equal((restored.mini!.arena?.actors ?? restored.mini!.match!.players).find(actor => actor.id === "ada")?.inputSeq, 10);
   await reply(p2.a, "party:action", { token: p.host, seq: 2, phaseId: restored.phaseId, action: { type: "abort" } });
   await server.crash(); await server.start();
   await assert.rejects(reply(await connect(url), "room:join", { code: p.code, playerId: "ada", sessionToken: p.host }), /geschlossen/);

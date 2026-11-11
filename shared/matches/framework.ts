@@ -5,15 +5,18 @@ import { neonPong } from "./neonPong";
 import { tankTrouble } from "./tankTrouble";
 import { bombArena } from "./bombArena";
 import { floorIsLava } from "./floorIsLava";
+import { sumoSmash } from "./sumoSmash";
+import { bumperMayhem } from "./bumperMayhem";
+import { chaosRun } from "./chaosRun";
 import { lightTrails } from "./lightTrails";
 
 /**
  * Registry of the new touch minigames ("Match-Minispiele"). Only complete
  * games are listed here; the lobby, pools and bots read this list.
  */
-export const MATCH_IDS = ["quickdraw", "trails", "pong", "tanks", "bombs", "lava"] as const;
+export const MATCH_IDS = ["quickdraw", "trails", "pong", "tanks", "bombs", "lava", "sumo", "bumpercars", "chaosrun"] as const;
 export type MatchId = typeof MATCH_IDS[number];
-export const MATCH_MODULES: Record<MatchId, MatchModule<any>> = { quickdraw: quickDraw, trails: lightTrails, pong: neonPong, tanks: tankTrouble, bombs: bombArena, lava: floorIsLava };
+export const MATCH_MODULES: Record<MatchId, MatchModule<any>> = { quickdraw: quickDraw, trails: lightTrails, pong: neonPong, tanks: tankTrouble, bombs: bombArena, lava: floorIsLava, sumo: sumoSmash, bumpercars: bumperMayhem, chaosrun: chaosRun };
 export const isMatchId = (id: unknown): id is MatchId => typeof id === "string" && (MATCH_IDS as readonly string[]).includes(id);
 export const matchModule = (id: string) => { if (!isMatchId(id)) throw new Error("Unbekanntes Minispiel."); return MATCH_MODULES[id]; };
 export const MATCH_STEP = 50;

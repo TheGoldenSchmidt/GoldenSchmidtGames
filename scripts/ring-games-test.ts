@@ -1,0 +1,136 @@
+import assert from "node:assert/strict";
+import { advanceMatch, botMatchInput, createMatch, matchStandings, removeMatchPlayer, setMatchControl } from "../shared/matches/framework";
+import type { Fighter, RingGame } from "../shared/matches/ringCore";
+import { SUMO } from "../shared/matches/sumoSmash";
+import { BUMPER } from "../shared/matches/bumperMayhem";
+import { NEUTRAL_MATCH_INPUT, type MatchInput, type MatchState } from "../shared/matches/types";
+import { createPartyGame, partyMiniResults, tickParty } from "../shared/party";
+import { PartyBotDriver } from "../shared/partyBots";
+
+type RS = MatchState<RingGame>;
+const make = (id: "sumo" | "bumpercars", count: number) => createMatch(id, Array.from({ length: count }, (_, i) => ({ id: `p${i}`, style: i })), 1) as RS;
+const seqs = new Map<string, number>();
+function send(s: RS, id: string, values: Partial<MatchInput>) {
+  const p = s.players.find(q => q.id === id)!, k = `${s.id}${s.seed}${id}${s.players.length}`, n = (seqs.get(k) ?? 0) + 1; seqs.set(k, n);
+  setMatchControl(s, id, { ...NEUTRAL_MATCH_INPUT, ca: p.usedA, cb: p.usedB, cn: p.usedN, ...values }, n, s.time);
+}
+const act = (s: RS, id: string, values: Partial<MatchInput> = {}) => send(s, id, { ...values, ca: s.players.find(p => p.id === id)!.usedA + 1 });
+const put = (s: RS, id: string, x: number, y: number, heading = 0): Fighter => Object.assign(s.game.fighters[id], { x, y, vx: 0, vy: 0, heading, out: false, alive: true, shieldUntil: 0 });
+const step = (s: RS, ms: number) => advanceMatch(s, s.time + ms);
+
+for (const id of ["sumo", "bumpercars"] as const) {
+  // Startplätze: gleich weit von der Mitte, alle verschieden, 3 Leben.
+  for (const count of [2, 4, 6]) {
+    const s = make(id, count), f = Object.values(s.game.fighters);
+    const radii = f.map(x => Math.hypot(x.x, x.y));
+    assert.ok(radii.every(r => Math.abs(r - radii[0]) < 1e-9)); assert.ok(f.every(x => x.lives === 3));
+    assert.equal(new Set(f.map(x => `${x.x.toFixed(3)},${x.y.toFixed(3)}`)).size, count);
+  }
+  // Ring-Out mit Gutschrift, Respawn mit Schutz, Gutschrift verfällt nach 3 s.
+  {
+    const s = make(id, 3);
+    put(s, "p2", -3, -3);
+    const v = put(s, "p0", s.game.radius - .1, 0); v.vx = 6; v.lastHitBy = "p1"; v.lastHitAt = s.time;
+    step(s, 100);
+    assert.equal(v.out, true); assert.equal(v.lives, 2); assert.equal(s.game.fighters.p1.ringOuts, 1);
+    step(s, 2000);
+    assert.equal(v.out, false); assert.ok(v.shieldUntil > s.time && Math.hypot(v.x, v.y) < s.game.radius - 1, "Respawn mit Schutz innen");
+    const late = put(s, "p0", s.game.radius - .1, 0); late.vx = 6; late.lastHitBy = "p1"; late.lastHitAt = s.time - 3100;
+    step(s, 100);
+    assert.equal(s.game.fighters.p1.ringOuts, 1, "Alte Berührung zählt nicht");
+    assert.equal(matchStandings(s).find(r => r.id === "p1")!.score, 2, "+2 Punkte je Ring-Out");
+  }
+  // Gleichzeitige Ring-Outs, Ausscheiden bei 0 Leben, letzter Überlebender gewinnt.
+  {
+    const s = make(id, 3);
+    for (const [pid, x] of [["p0", 1], ["p1", -1]] as const) { const f = put(s, pid, x * (s.game.radius - .1), 0); f.vx = x * 6; f.lives = 1; }
+    put(s, "p2", 0, 0);
+    step(s, 100);
+    assert.equal(s.game.fighters.p0.alive || s.game.fighters.p1.alive, false);
+    assert.equal(s.game.fighters.p0.outAt, s.game.fighters.p1.outAt);
+    assert.equal(s.done, true); assert.equal(s.game.winner, "p2");
+    assert.deepEqual(matchStandings(s).map(r => r.place), [1, 2, 2], "Gleichzeitig ausgeschieden: gleicher Rang");
+  }
+  // Schrumpfen, 75-Sekunden-Entscheid (Leben, dann Ring-Outs), Sudden Death.
+  {
+    const s = make(id, 3), start = s.game.radius;
+    const hold = () => { for (const [i, f] of Object.values(s.game.fighters).entries()) Object.assign(f, { x: (i - 1) * 1.3, y: 0, vx: 0, vy: 0 }); };
+    for (let t = 0; t < 40000; t += 1000) { hold(); step(s, 1000); }
+    assert.equal(s.game.radius, start, "Vor Sekunde 40 kein Schrumpfen");
+    for (let t = s.time; t < 74000; t += 1000) { hold(); step(s, 1000); }
+    assert.ok(s.game.radius < start);
+    Object.assign(s.game.fighters.p0, { lives: 3, ringOuts: 1 }); Object.assign(s.game.fighters.p1, { lives: 3, ringOuts: 1 }); Object.assign(s.game.fighters.p2, { lives: 1, ringOuts: 4 });
+    hold(); advanceMatch(s, 75000);
+    assert.deepEqual(s.game.sudden?.ids, ["p0", "p1"], "Gleich viele Leben und Ring-Outs: Sudden Death");
+    assert.equal(s.game.fighters.p2.alive, false);
+    const loser = put(s, "p1", s.game.radius - .1, 0); loser.vx = 5;
+    step(s, 100);
+    assert.equal(s.done, true); assert.equal(s.game.winner, "p0");
+    const clear = make(id, 2);
+    Object.assign(clear.game.fighters.p0, { lives: 2, ringOuts: 3 }); Object.assign(clear.game.fighters.p1, { lives: 2, ringOuts: 1 });
+    for (let t = 0; t < 75000; t += 1000) { for (const f of Object.values(clear.game.fighters)) Object.assign(f, { vx: 0, vy: 0, x: f.id === "p0" ? -1 : 1, y: 0 }); step(clear, 1000); }
+    assert.equal(clear.game.winner, "p0", "Gleiche Leben: mehr Ring-Outs gewinnt"); assert.equal(clear.game.sudden, undefined);
+  }
+  // Aufgeben.
+  { const s = make(id, 3); removeMatchPlayer(s, "p1"); assert.equal(s.game.fighters.p1.alive, false); }
+}
+
+// Sumo: Stoß nach vorn, Rückstoß beim Gegner, Abklingzeit 3 s, Schutz nach Respawn.
+{
+  const s = make("sumo", 2);
+  put(s, "p0", -1.2, 0, 0); put(s, "p1", 0, 0);
+  act(s, "p0", { x: 1 }); step(s, 150);
+  const victim = s.game.fighters.p1;
+  assert.ok(victim.vx > SUMO.knock * .5, `Rückstoß ${victim.vx}`); assert.equal(victim.lastHitBy, "p0");
+  const at = s.game.fighters.p0.actionAt;
+  act(s, "p0", { x: 1 }); step(s, 50);
+  assert.equal(s.game.fighters.p0.actionAt, at, "Abklingzeit");
+  step(s, SUMO.cooldown); act(s, "p0", { x: 1 });
+  assert.ok(s.game.fighters.p0.actionAt > at);
+  const t = make("sumo", 2);
+  put(t, "p0", -1.2, 0, 0); put(t, "p1", 0, 0).shieldUntil = 99999;
+  act(t, "p0", { x: 1 }); step(t, 150);
+  assert.ok(Math.abs(t.game.fighters.p1.vx) < 1, "Geschützte Figur wird nicht weggestoßen");
+}
+
+// Bumper: Turbo erhöht das Tempo, Rammwirkung wächst mit der Geschwindigkeit, Pfosten werfen zurück, Abklingzeit 5 s.
+{
+  const drive = (turbo: boolean) => {
+    const s = make("bumpercars", 2); s.game.obstacles = [];
+    put(s, "p0", -4, 0, 0); put(s, "p1", 1, 0, Math.PI);
+    for (let i = 0; i < 20 && s.game.fighters.p1.vx >= 0; i++) { if (turbo && i === 0) act(s, "p0", { x: 1 }); else send(s, "p0", { x: 1 }); step(s, 50); }
+    return { s, top: Math.hypot(s.game.fighters.p0.vx, s.game.fighters.p0.vy), hit: s.game.fighters.p1.vx };
+  };
+  const normal = drive(false), boosted = drive(true);
+  assert.ok(boosted.hit > normal.hit + .5, `Turbo rammt stärker (${boosted.hit} > ${normal.hit})`);
+  assert.equal(boosted.s.game.fighters.p1.lastHitBy, "p0");
+  const s = make("bumpercars", 2);
+  put(s, "p0", -4.5, 0, 0); put(s, "p1", -3, -3);
+  for (let i = 0; i < 30; i++) { send(s, "p0", { x: 1 }); step(s, 50); }
+  assert.equal(s.game.fighters.p0.out, false);
+  assert.ok(Math.hypot(s.game.fighters.p0.vx, s.game.fighters.p0.vy) <= BUMPER.maxSpeed + 1e-9, "Höchstgeschwindigkeit");
+  const at = s.game.fighters.p0.actionAt;
+  act(s, "p0", { x: 1 }); const first = s.game.fighters.p0.actionAt;
+  step(s, 1000); act(s, "p0", { x: 1 });
+  assert.ok(first > at && s.game.fighters.p0.actionAt === first, "Turbo-Abklingzeit");
+  const post = make("bumpercars", 2), o = post.game.obstacles[0];
+  put(post, "p1", -4, 3); const car = put(post, "p0", o.x - 1, o.y); car.vx = 4;
+  step(post, 300);
+  assert.ok(car.vx < 0, "Bewegliches Hindernis wirft zurück");
+}
+
+// Komplette Partien mit Bots über die Party (2, 4, 6), Neustart, Determinismus.
+for (const id of ["sumo", "bumpercars"] as const) {
+  for (const count of [2, 4, 6]) {
+    const players = Array.from({ length: count }, (_, i) => ({ id: `b${i}`, name: `Bot ${i}`, bot: true }));
+    let g = createPartyGame(players, undefined, true, 90 + count, 0, "free-minigame", { miniId: id });
+    const driver = new PartyBotDriver(); let now = 0;
+    for (let i = 0; i < 3000 && g.phase !== "finished"; i++) { now += 50; if (i === 300) g = JSON.parse(JSON.stringify(g)); g = tickParty(driver.step(g, now), now); }
+    assert.equal(g.phase, "finished", `${id} mit ${count} Bots`);
+    assert.ok(partyMiniResults(g).every(r => r.participated));
+  }
+  const play = () => { const s = make(id, 4); for (let t = 50, n = 0; !s.done && t < 120000; t += 50) { for (const p of s.players) setMatchControl(s, p.id, botMatchInput(s, p.id), ++n, t); advanceMatch(s, t); } return s; };
+  const a = play(), b = play();
+  assert.deepEqual(a.game.fighters, b.game.fighters); assert.equal(a.time, b.time);
+}
+console.log("Sumo Smash und Bumper Mayhem erfolgreich: Startplätze, Ring-Out mit Gutschrift und Verfall, Respawnschutz, gleichzeitige Ring-Outs, letzter Überlebender, Schrumpfen, 75-s-Entscheid, Sudden Death, Stoß mit Rückstoß, Abklingzeiten, Turbo-Rammwirkung, Hindernisse, Aufgeben, Bots und Determinismus.");

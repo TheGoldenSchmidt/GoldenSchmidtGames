@@ -15,7 +15,7 @@ Ergebnis, automatisch getestet) · **blockiert**.
 | 1 | Framework, Klassik-Option, Nur-Smartphone-Umstellung, Testspiel | fertig |
 | 2 | Quick Draw, Light Trails, Neon Pong | fertig (Gerätetest offen) |
 | 3 | Tank Trouble, Bomb Arena, Floor is Lava | fertig (Gerätetest offen) |
-| 4 | Sumo Smash, Bumper Mayhem, Chaos Run | offen |
+| 4 | Sumo Smash, Bumper Mayhem, Chaos Run | fertig (Gerätetest offen) |
 | 5 | Arrow Masters, Tower Tumble, Hook Wars | offen |
 | 6 | Qualitätssicherung, Leistung, Feinschliff, Dokumentation | offen |
 
@@ -29,9 +29,9 @@ Ergebnis, automatisch getestet) · **blockiert**.
 | 4 | Tank Trouble | `tanks` | 2–6 | P2 | fertig | Regeln (`tank-trouble-test`), Browser `phone` |
 | 5 | Bomb Arena | `bombs` | 2–6 | P2 | fertig | Regeln (`bomb-arena-test`), Browser `phone` |
 | 6 | Floor is Lava | `lava` | 2–6 | P2 | fertig | Regeln (`floor-is-lava-test`), Browser `phone` |
-| 7 | Sumo Smash | – | 2–6 | P3 | offen | – |
-| 8 | Bumper Mayhem | – | 2–6 | P3 | offen | – |
-| 9 | Chaos Run | – | 2–6 | P3 | offen | – |
+| 7 | Sumo Smash | `sumo` | 2–6 | P3 | fertig | Regeln (`ring-games-test`), Browser `phone` |
+| 8 | Bumper Mayhem | `bumpercars` | 2–6 | P3 | fertig | Regeln (`ring-games-test`), Browser `phone` |
+| 9 | Chaos Run | `chaosrun` | 2–6 | P3 | fertig | Regeln (`chaos-run-test`), Browser `phone` |
 | 10 | Arrow Masters | – | 2–6 | P4 | offen | – |
 | 11 | Tower Tumble | – | 2–6 | P4 | offen | – |
 | 12 | Hook Wars | – | 2–6 | P4 | offen | – |
@@ -87,12 +87,12 @@ Umsetzung:
 
 | Prüfung | Stand |
 | --- | --- |
-| `npm run test:rules` inkl. Framework und allen sechs fertigen Spielen | grün |
+| `npm run test:rules` inkl. Framework und allen neun fertigen Spielen | grün |
 | `npm run test:online` inkl. `match-online-test` | grün |
 | `npm run test:screens` | grün |
 | `npm run build` | grün |
 | `npm run test:pwa`, `npm run test:production` | grün |
-| Playwright `phone`, `match-games.spec.ts` (10 Fälle, alle sechs Spiele) und `minigame-modes.spec.ts` | grün |
+| Playwright `phone`, `match-games.spec.ts` (13 Fälle, alle neun Spiele) und `minigame-modes.spec.ts` | grün |
 | Playwright `phone`, gesamte Suite (vor Tank Trouble) | 94 grün; rot nur Handy-Einladung/`nearby` (Umgebung) und die inzwischen behobenen Testwettläufe |
 | Playwright `desktop` | entfällt für Party und Minispiele (Auftrag) |
 | Echte Handys (Leistung, Touch, Latenz, Handy-Host mit 6 Spielern) | nicht durchgeführt |
@@ -125,7 +125,8 @@ Umsetzung:
 
 ## Nächste Schritte
 
-1. Phase 4: Sumo Smash, Bumper Mayhem, Chaos Run (Ring-Out- und Impulslogik
-   gemeinsam nutzen; `shared/matches/geometry.ts` erweitern).
+1. Phase 5: Arrow Masters, Tower Tumble, Hook Wars. Kennungen frei wählen,
+   aber nicht mit klassischen Arena-Kennungen kollidieren lassen (z. B. ist
+   `bumper` bereits „Kugelrempler“).
 2. Gerätetest der Phase-2-Spiele auf mindestens zwei echten Handys
    (Android/iOS) im Node- und Handy-Modus, Ergebnisse hier eintragen.

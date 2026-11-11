@@ -7,6 +7,8 @@ import type { PongGame } from "../../shared/matches/neonPong";
 import type { TankGame } from "../../shared/matches/tankTrouble";
 import type { BombGame } from "../../shared/matches/bombArena";
 import type { LavaGame } from "../../shared/matches/floorIsLava";
+import type { RingGame } from "../../shared/matches/ringCore";
+import type { RunGame } from "../../shared/matches/chaosRun";
 import { CHARACTERS } from "../../shared/characters";
 import { miniPool } from "../../shared/minigameCatalog";
 
@@ -210,6 +212,51 @@ test("Floor is Lava: Platten zerbröseln unter der eigenen Figur, Sprungknopf mi
     await expect.poll(async () => (await me()).airUntil, { timeout: 3000 }).toBeGreaterThan(0);
     await page.mouse.up();
     await page.screenshot({ path: testInfo.outputPath("lava.png") });
+    await session.action({ type: "finish" }, session.ids[1]);
+    await expect(page.getByRole("heading", { name: "Euer Ergebnis", exact: true })).toBeVisible();
+  } finally { session.close(); }
+});
+
+for (const [miniId, button] of [["sumo", "Stoß"], ["bumpercars", "Turbo"]] as const) test(`${miniId === "sumo" ? "Sumo Smash" : "Bumper Mayhem"}: Stick bewegt, ${button}-Knopf löst die Aktion aus`, async ({ page }, testInfo) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId });
+  try {
+    await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
+    await session.action({ type: "ready" }, session.ids[1]);
+    await matchStarted(page);
+    const me = async () => ((await session.state()).partyGame!.mini!.match as MatchState<RingGame>).game.fighters[session.ids[0]];
+    const start = await me();
+    const stick = page.getByRole("group", { name: "Bewegungsstick" }), box = (await stick.boundingBox())!;
+    // Richtung Mitte steuern (Start oben am Ring).
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2 + 40, { steps: 3 });
+    await expect.poll(async () => Math.hypot((await me()).x - start.x, (await me()).y - start.y), { timeout: 4000 }).toBeGreaterThan(.4);
+    await page.getByRole("button", { name: button, exact: true }).tap();
+    await expect.poll(async () => (await me()).actionAt, { timeout: 3000 }).toBeGreaterThan(0);
+    await page.mouse.up();
+    await page.screenshot({ path: testInfo.outputPath(`${miniId}.png`) });
+    await session.action({ type: "finish" }, session.ids[1]);
+    await expect(page.getByRole("heading", { name: "Euer Ergebnis", exact: true })).toBeVisible();
+  } finally { session.close(); }
+});
+
+test("Chaos Run: Tippen springt, nach unten wischen rutscht, Fortschritt läuft", async ({ page }, testInfo) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "chaosrun" });
+  try {
+    await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
+    await session.action({ type: "ready" }, session.ids[1]);
+    await matchStarted(page);
+    const me = async () => ((await session.state()).partyGame!.mini!.match as MatchState<RunGame>).game.runners[session.ids[0]];
+    const zone = page.getByRole("group", { name: /Tippen zum Springen/ }), box = (await zone.boundingBox())!;
+    await zone.tap({ position: { x: box.width / 2, y: box.height / 3 } });
+    await expect.poll(async () => (await me()).jumpAt, { timeout: 3000 }).toBeGreaterThan(0);
+    await page.waitForTimeout(900);
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 3); await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 3 + 60, { steps: 4 }); await page.mouse.up();
+    await expect.poll(async () => (await me()).slideUntil, { timeout: 3000 }).toBeGreaterThan(0);
+    await expect.poll(async () => (await me()).best, { timeout: 3000 }).toBeGreaterThan(5);
+    await page.screenshot({ path: testInfo.outputPath("chaosrun.png") });
     await session.action({ type: "finish" }, session.ids[1]);
     await expect(page.getByRole("heading", { name: "Euer Ergebnis", exact: true })).toBeVisible();
   } finally { session.close(); }

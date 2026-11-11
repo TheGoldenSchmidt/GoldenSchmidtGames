@@ -134,6 +134,14 @@ im Modul ausgespielt; bleibt danach ein Gleichstand, wird der Platz geteilt.
 | Floor is Lava | Quadratische Platten 9 × 13; Rand bricht bei 10 s und 15 s ein; Sprung 0,55 s mit 1,4-facher Geschwindigkeit (überwindet ein Feld) | Konkrete Werte für Handys |
 | Floor is Lava | Nach Lava sicherer Neustart auf der Platte mit größtem Abstand, 1,2 s Schutz; Überlebende bei Zeitablauf teilen +3 | Fairness; „teilen die beste Platzierung“ |
 | Floor is Lava | Stechrunde bei Gesamtgleichstand: nur die Punktgleichen, 1 Leben | Spezifikation verlangt Stechrunde |
+| Sumo Smash / Bumper Mayhem | Gemeinsamer Kern `ringCore.ts`; Ring-Out wird der Person gutgeschrieben, die in den letzten 3 s am stärksten geschoben hat | „Verursacher“ eindeutig und für beide Spiele gleich |
+| Sumo Smash / Bumper Mayhem | Spielpunkte = 2 × Ring-Outs; Rangfolge: Sieger, Ausscheidezeitpunkt, Leben, Ring-Outs | Punkte laut Spezifikation, Platzierung nach Überleben |
+| Sumo Smash / Bumper Mayhem | Sudden Death nur für die nach 75 s Gleichauf-Liegenden, 1 Leben, kleiner Ring, höchstens 20 s, danach geteilter Platz | Begrenzte Dauer |
+| Sumo Smash | Stoß: 0,22 s Vorwärtsschub; Rückstoß nur bei Treffer während des Stoßes; Ring schrumpft ab 40 s bis 75 s von 5,5 auf 3,2 | Konkrete Werte |
+| Bumper Mayhem | Lenkung in Stickrichtung mit begrenzter Drehrate, automatisches Gas; Turbo 0,8 s; zwei kreisende Pfosten als bewegliche Hindernisse; Arena schrumpft ab 45 s | Einfache Ein-Daumen-Steuerung |
+| Chaos Run | Brücken stürzen je Läufer ein (0,6 s nach dem Betreten); keine gegenseitige Beeinflussung | Version 1 ohne Spielerinteraktion, faire Bedingungen |
+| Chaos Run | Strecke aus 8 Modulen à 24 m, jeder der 6 Typen mindestens einmal; Checkpoint an jedem Modulbeginn; Wand 1,7 hoch (nur mit gehaltenem Sprung), Balken nur rutschend passierbar | „Halten für höhere Sprünge“ bekommt eine Aufgabe |
+| Chaos Run | Wischen nach unten in der Luft lässt schnell fallen und startet das Rutschen | Tippen und Wischen auf einer Fläche ohne Verzögerung |
 
 Weitere Abweichungen werden beim jeweiligen Spiel ergänzt.
 
