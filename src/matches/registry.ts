@@ -9,6 +9,7 @@ import { floorIsLavaClient } from "./games/floorIsLava";
 import { bumperClient, sumoClient } from "./games/ringArena";
 import { chaosRunClient } from "./games/chaosRun";
 import { arrowMastersClient } from "./games/arrowMasters";
+import { towerTumbleClient } from "./games/towerTumble";
 
 /** Rendering and touch controls per match game; rules live in `shared/matches/`. */
-export const MATCH_CLIENTS: Record<MatchId, MatchClient> = { quickdraw: quickDrawClient, trails: lightTrailsClient, pong: neonPongClient, tanks: tankTroubleClient, bombs: bombArenaClient, lava: floorIsLavaClient, sumo: sumoClient, bumpercars: bumperClient, chaosrun: chaosRunClient, arrows: arrowMastersClient };
+export const MATCH_CLIENTS: Record<MatchId, MatchClient> = { quickdraw: quickDrawClient, trails: lightTrailsClient, pong: neonPongClient, tanks: tankTroubleClient, bombs: bombArenaClient, lava: floorIsLavaClient, sumo: sumoClient, bumpercars: bumperClient, chaosrun: chaosRunClient, arrows: arrowMastersClient, tower: towerTumbleClient };

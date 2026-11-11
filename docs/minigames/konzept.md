@@ -146,6 +146,10 @@ im Modul ausgespielt; bleibt danach ein Gleichstand, wird der Platz geteilt.
 | Arrow Masters | Arena 20 × 14 mit festen Plätzen, Mittelpfeiler und zwei Simsen; zwei Zielscheiben je Runde an neuen Stellen; Wind bis ±3 | Konkrete Werte |
 | Arrow Masters | Besiegte stehen bis zur nächsten Runde nicht mehr als Ziel bereit; Eigentreffer kosten Trefferpunkte, bringen aber keine Punkte | Spezifikation sagt nichts zu Eigentreffern |
 | Arrow Masters | Stechen: nur die Punktgleichen, eine Scheibe ohne Wind; der kleinste Abstand der Flugbahn zur Mitte gewinnt | „Präzisions-Stechen“ messbar umsetzen |
+| Tower Tumble | **Statisches Gleichgewicht statt kontinuierlicher Starrkörpersimulation:** Steine fallen senkrecht mit Schwerkraft und landen auf der höchsten Fläche. Danach wird von oben nach unten geprüft, ob die Resultierende aus Eigengewicht und aufliegenden Lasten (an den Kontaktflächen, bei zwei Auflagen nach dem Hebelgesetz) innerhalb der eigenen Auflage liegt. Der tiefste instabile Stein kippt mit allem, was er trägt; das wiederholt sich bis zur Ruhe. | Die Spezifikation verlangt „eindeutige physikalische Kriterien“. Das Modell ist eindeutig, für alle Geräte gleich, testbar und auf dem Handy-Host billig. Drehbewegung beim Kippen ist reine Darstellung. |
+| Tower Tumble | Sieben Formen (Quadrat, Brett, Säule, Breitstein, Klein, L, T) ohne Drehen; „wesentlicher Einsturz“ = mindestens ein bereits gesetzter Stein fällt; „deutliche Rekordhöhe“ = mindestens 0,5 m über dem bisherigen Rekord | Konkrete Schwellen |
+| Tower Tumble | Stechrunde: die Punktgleichen mit gleichem besten Höhenbeitrag setzen je einen Stein; der größte stabile Höhenbeitrag gewinnt | Spezifikation verlangt Stechrunde |
+| Tower Tumble | Mit 6 Personen dauert eine Partie etwa 2½ Minuten | 18 Züge à höchstens 5 s Zielzeit plus Fall und Auswertung |
 
 Weitere Abweichungen werden beim jeweiligen Spiel ergänzt.
 

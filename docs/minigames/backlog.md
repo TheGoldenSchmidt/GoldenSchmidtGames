@@ -16,7 +16,7 @@ Ergebnis, automatisch getestet) · **blockiert**.
 | 2 | Quick Draw, Light Trails, Neon Pong | fertig (Gerätetest offen) |
 | 3 | Tank Trouble, Bomb Arena, Floor is Lava | fertig (Gerätetest offen) |
 | 4 | Sumo Smash, Bumper Mayhem, Chaos Run | fertig (Gerätetest offen) |
-| 5 | Arrow Masters, Tower Tumble, Hook Wars | in Arbeit (Arrow Masters fertig) |
+| 5 | Arrow Masters, Tower Tumble, Hook Wars | in Arbeit (Arrow Masters, Tower Tumble fertig) |
 | 6 | Qualitätssicherung, Leistung, Feinschliff, Dokumentation | offen |
 
 ## Spiele
@@ -33,7 +33,7 @@ Ergebnis, automatisch getestet) · **blockiert**.
 | 8 | Bumper Mayhem | `bumpercars` | 2–6 | P3 | fertig | Regeln (`ring-games-test`), Browser `phone` |
 | 9 | Chaos Run | `chaosrun` | 2–6 | P3 | fertig | Regeln (`chaos-run-test`), Browser `phone` |
 | 10 | Arrow Masters | `arrows` | 2–6 | P4 | fertig | Regeln (`arrow-masters-test`), Browser `phone` |
-| 11 | Tower Tumble | – | 2–6 | P4 | offen | – |
+| 11 | Tower Tumble | `tower` | 2–6 | P4 | fertig | Regeln (`tower-tumble-test`), Browser `phone` |
 | 12 | Hook Wars | – | 2–6 | P4 | offen | – |
 
 „Fertig“ heißt: in Lobby, Zufallspool, Übung (gegen Bots), Bot-Testraum,

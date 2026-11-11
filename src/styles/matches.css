@@ -100,3 +100,8 @@ body:has(.party-screen--playing .match-game) { padding-block:0; }
 .arrow-aim-area .match-aim-pad { border-top:2px dashed #24133f44; }
 .arrow-aim-hint { position:absolute; left:50%; bottom:16px; transform:translateX(-50%); padding:4px 12px; border-radius:999px; background:#24133fcc; color:#ffe44e; font-size:.72rem; font-weight:800; white-space:nowrap; pointer-events:none; }
 .match-preview--arrows { background:linear-gradient(#8fd3ff, #d8f1ff 60%, #6fa84a 60%); color:#e3263b; }
+/* Tower Tumble: the whole stage moves the block on your turn. */
+.match-slider.tower-slider { top:0; height:auto; }
+.tower-hint,.tower-wait { position:absolute; left:50%; bottom:16px; transform:translateX(-50%); margin:0; padding:4px 12px; border-radius:999px; background:#24133fcc; color:#ffe44e; font-size:.72rem; font-weight:800; white-space:nowrap; pointer-events:none; }
+.tower-wait:empty { display:none; }
+.match-preview--tower { background:linear-gradient(#ffd166, #ff86c8); color:#24133f; }

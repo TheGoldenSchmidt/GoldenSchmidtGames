@@ -63,16 +63,17 @@ export function SwipeZone({ onSwipe, label, children, className = "" }: { onSwip
 }
 
 /** Absolute horizontal slider across the full width: finger position → -1…1. */
-export function SliderPad({ onMove, label, children }: { onMove: (x: number) => void; label: string; children?: ReactNode }) {
+export function SliderPad({ onMove, onRelease, label, children, className = "" }: { onMove: (x: number) => void; onRelease?: () => void; label: string; children?: ReactNode; className?: string }) {
   const pointer = useRef<number | undefined>(undefined);
   const update = (event: React.PointerEvent<HTMLDivElement>) => {
     if (event.pointerId !== pointer.current) return;
     const box = event.currentTarget.getBoundingClientRect();
     onMove(Math.max(-1, Math.min(1, ((event.clientX - box.left) / box.width) * 2 - 1)));
   };
-  return <div className="match-slider" role="slider" aria-label={label} aria-valuemin={-1} aria-valuemax={1}
+  const end = (event: React.PointerEvent) => { if (event.pointerId !== pointer.current) return; pointer.current = undefined; onRelease?.(); };
+  return <div className={`match-slider ${className}`} role="slider" aria-label={label} aria-valuemin={-1} aria-valuemax={1}
     onPointerDown={event => { pointer.current = event.pointerId; event.currentTarget.setPointerCapture(event.pointerId); update(event); }}
-    onPointerMove={update} onPointerUp={() => { pointer.current = undefined; }} onPointerCancel={() => { pointer.current = undefined; }}>
+    onPointerMove={update} onPointerUp={end} onPointerCancel={() => { pointer.current = undefined; }}>
     {children}
   </div>;
 }
