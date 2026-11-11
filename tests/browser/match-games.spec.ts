@@ -9,6 +9,7 @@ import type { BombGame } from "../../shared/matches/bombArena";
 import type { LavaGame } from "../../shared/matches/floorIsLava";
 import type { RingGame } from "../../shared/matches/ringCore";
 import type { RunGame } from "../../shared/matches/chaosRun";
+import type { ArrowGame } from "../../shared/matches/arrowMasters";
 import { CHARACTERS } from "../../shared/characters";
 import { miniPool } from "../../shared/minigameCatalog";
 
@@ -257,6 +258,29 @@ test("Chaos Run: Tippen springt, nach unten wischen rutscht, Fortschritt läuft"
     await expect.poll(async () => (await me()).slideUntil, { timeout: 3000 }).toBeGreaterThan(0);
     await expect.poll(async () => (await me()).best, { timeout: 3000 }).toBeGreaterThan(5);
     await page.screenshot({ path: testInfo.outputPath("chaosrun.png") });
+    await session.action({ type: "finish" }, session.ids[1]);
+    await expect(page.getByRole("heading", { name: "Euer Ergebnis", exact: true })).toBeVisible();
+  } finally { session.close(); }
+});
+
+test("Arrow Masters: Ziehen spannt den Bogen, alle Pfeile fliegen nach der Zielphase", async ({ page }, testInfo) => {
+  test.setTimeout(90000);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "arrows" });
+  try {
+    await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
+    await session.action({ type: "ready" }, session.ids[1]);
+    await matchStarted(page);
+    const game = async () => ((await session.state()).partyGame!.mini!.match as MatchState<ArrowGame>).game;
+    const pad = page.getByRole("group", { name: "Bogen spannen und zielen" }), box = (await pad.boundingBox())!;
+    // Nach unten links ziehen = nach oben rechts schießen.
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 3); await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 - 70, box.y + box.height / 3 + 70, { steps: 4 });
+    await expect.poll(async () => (await game()).archers[session.ids[0]].aim?.power ?? 0).toBeGreaterThan(.5);
+    await page.mouse.up();
+    await page.screenshot({ path: testInfo.outputPath("arrows-aim.png") });
+    await expect.poll(async () => (await game()).phase, { timeout: 15000 }).not.toBe("aim");
+    expect((await game()).arrows.some(a => a.owner === session.ids[0])).toBe(true);
     await session.action({ type: "finish" }, session.ids[1]);
     await expect(page.getByRole("heading", { name: "Euer Ergebnis", exact: true })).toBeVisible();
   } finally { session.close(); }
