@@ -3,8 +3,17 @@ import type { PartyGame } from "../../shared/party";
 import { MATCH_MODULES, matchStandings, type MatchId } from "../../shared/matches/framework";
 import { NEUTRAL_MATCH_INPUT, type MatchInput, type MatchState } from "../../shared/matches/types";
 import { MATCH_CLIENTS } from "./registry";
-import { playerColor, type MatchIO } from "./client";
+import { playerColor, type MatchIO, type MatchWorld } from "./client";
+import { preloadFigures } from "../figures/catalog";
 import { playSfx, setSoundEnabled, soundEnabled, unlockSound, vibrate } from "./sfx";
+
+/** True when this browser can create a WebGL context (checked once). */
+let webgl: boolean | undefined;
+function webglAvailable() {
+  if (webgl !== undefined) return webgl;
+  try { const c = document.createElement("canvas"); webgl = !!(c.getContext("webgl2") ?? c.getContext("webgl")); } catch { webgl = false; }
+  return webgl;
+}
 
 interface Props { game: PartyGame; id: string; now: number; control: (input: MatchInput, reliable: boolean) => void; busy?: boolean }
 
@@ -81,10 +90,36 @@ export function MatchStage({ game, id, now, control, busy = false }: Props) {
     if (mine) setFeedback({ text: mine.text, key: mine.seq, good: !/false|hit|out|dead|lost/.test(mine.kind) || !mine.ids.includes(id) });
   }, [match.eventSeq]);
 
+  // Interpolation data for one drawn frame (canvas and 3D world alike).
+  const frameData = (t: number) => {
+    const snap = snapshots.current, interval = 1000 / meta.hz;
+    const alpha = reduced ? 1 : Math.max(0, Math.min(1, (performance.now() - snap.at) / interval));
+    const simTime = snap.cur.time + Math.min(250, performance.now() - snap.at);
+    return { prev: snap.prev, cur: snap.cur, alpha, viewer: id, reduced, local: local.current, input: input.current, t, simTime };
+  };
+  const frameRef = useRef(frameData); frameRef.current = frameData;
+
+  // 2.5D/3D world: loaded on demand; without WebGL or on any error the canvas takes over.
+  const [world, setWorld] = useState<"loading" | "ready" | "off">(() => client.world && webglAvailable() ? "loading" : "off");
+  const worldHost = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (world === "off" || !client.world || !worldHost.current) return;
+    let cancelled = false, scene: MatchWorld | undefined;
+    const names = Object.fromEntries(game.players.map(p => [p.id, p.name]));
+    const characters = Object.fromEntries(game.players.map(p => [p.id, p.characterId]));
+    const fail = () => { if (!cancelled) setWorld("off"); };
+    void Promise.all([client.world(), preloadFigures(match.players.map(p => characters[p.id]))]).then(([factory]) => {
+      if (cancelled || !worldHost.current) return;
+      try { scene = factory(worldHost.current, () => ({ ...frameRef.current(performance.now()), names, characters }), fail); setWorld("ready"); }
+      catch { fail(); }
+    }).catch(fail);
+    return () => { cancelled = true; scene?.dispose(); };
+  }, [matchId, id, startAt, world === "off"]);
+
   // Canvas loop: draws continuously, independent of the 10/20 Hz snapshots.
   useEffect(() => {
     const element = canvas.current;
-    if (!element) return;
+    if (!element || world !== "off") return;
     const ctx = element.getContext("2d");
     if (!ctx) return;
     const names = Object.fromEntries(game.players.map(p => [p.id, p.name]));
@@ -98,16 +133,13 @@ export function MatchStage({ game, id, now, control, busy = false }: Props) {
     resize();
     const observer = new ResizeObserver(resize); observer.observe(element);
     const draw = (t: number) => {
-      const snap = snapshots.current, interval = 1000 / meta.hz;
-      const alpha = reduced ? 1 : Math.max(0, Math.min(1, (performance.now() - snap.at) / interval));
       ctx.clearRect(0, 0, width, height);
-      const simTime = snap.cur.time + Math.min(250, performance.now() - snap.at);
-      client.render(ctx, { prev: snap.prev, cur: snap.cur, alpha, viewer: id, reduced, names, local: local.current, input: input.current, w: width, h: height, t, simTime });
+      client.render(ctx, { ...frameRef.current(t), names, w: width, h: height });
       frame = requestAnimationFrame(draw);
     };
     frame = requestAnimationFrame(draw);
     return () => { cancelAnimationFrame(frame); observer.disconnect(); };
-  }, [matchId, id, startAt]);
+  }, [matchId, id, startAt, world === "off"]);
 
   const standings = matchStandings(match), score = standings.find(s => s.id === id)?.score ?? 0;
   const count = Math.ceil((startAt - now) / 1000);
@@ -124,7 +156,11 @@ export function MatchStage({ game, id, now, control, busy = false }: Props) {
       </li>; })}
     </ol>
     <div className="match-stage">
-      <canvas ref={canvas} className="match-canvas" role="img" aria-label={`Spielfeld: ${meta.name}`} />
+      {world === "off"
+        ? <canvas ref={canvas} className="match-canvas" role="img" aria-label={`Spielfeld: ${meta.name}`} />
+        : <div ref={worldHost} className="match-world" role="img" aria-label={`3D-Spielfeld: ${meta.name}`} />}
+      {world === "loading" && <div className="match-world-loading" role="status">Arena wird gebaut …</div>}
+      {world !== "off" && (() => { const banner = client.banner?.(match, id); return banner && <div className="match-banner" role="status"><b>{banner.title}</b><span>{banner.text}</span></div>; })()}
       <div className="match-controls"><Controls io={io} view={match} viewer={id} active={active} /></div>
       {count > 0 && <div className="match-countdown" role="status"><b key={count}>{count}</b><span>{meta.controls}</span></div>}
       {match.done && <div className="match-countdown match-done" role="status"><b>✓</b><span>Das Ergebnis steht fest!</span></div>}

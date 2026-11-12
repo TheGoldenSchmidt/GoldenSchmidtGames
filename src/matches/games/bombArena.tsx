@@ -65,6 +65,13 @@ function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
 
 export const bombArenaClient: MatchClient = {
   render,
+  // 2.5D presentation; the canvas above stays as fallback without WebGL.
+  world: () => import("../../three/bombWorld").then(m => m.createBombWorld),
+  banner(view, viewer) {
+    const g = view.game as BombGame, last = g.history.at(-1);
+    if (g.phase === "play" || view.done) return undefined;
+    return { title: last?.sudden ? "Sudden Death entschieden" : `Durchgang ${g.round} vorbei`, text: last?.winners.includes(viewer) ? "Du gewinnst diesen Durchgang!" : `+${last?.points[viewer] ?? 0} Punkte für dich` };
+  },
   quiet: ["bomb", "boom", "kick"],
   Controls({ io, view, viewer, active }) {
     const g = view.game as BombGame, me = g.bombers[viewer];

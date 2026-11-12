@@ -20,6 +20,15 @@ export interface MatchFrame {
   simTime: number;
 }
 
+/** Frame for a 3D world: the same snapshot data as the canvas, plus the chosen figures. */
+export interface MatchWorldFrame extends Omit<MatchFrame, "w" | "h"> {
+  /** Figure per player id (as chosen in the lobby). */
+  characters: Record<string, string | undefined>;
+}
+export interface MatchWorld { dispose(): void }
+/** Builds a WebGL scene in `host`; `read` returns the current frame, `onError` falls back to the canvas. */
+export type MatchWorldFactory = (host: HTMLElement, read: () => MatchWorldFrame, onError: () => void) => MatchWorld;
+
 export interface MatchIO {
   readonly input: MatchInput;
   local: Record<string, number>;
@@ -42,6 +51,13 @@ export interface MatchClient {
   quiet?: readonly string[];
   /** Label under the HUD score; defaults to "Punkte". */
   unit?: string;
+  /**
+   * Optional 2.5D/3D presentation, loaded on demand. Without WebGL or after an
+   * error the stage falls back to `render` on the canvas; rules are unaffected.
+   */
+  world?: () => Promise<MatchWorldFactory>;
+  /** Text overlay for the 3D world (the canvas draws its own). */
+  banner?(view: MatchState, viewer: string): { title: string; text: string } | undefined;
 }
 
 export const lerp = (a: number, b: number, t: number) => a + (b - a) * t;

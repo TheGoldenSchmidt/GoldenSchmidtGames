@@ -145,7 +145,7 @@ Gefühl auf echten Handys ist für die umgesetzten Punkte weiter ungeprüft.
 
 | Spiel | Stand |
 | --- | --- |
-| Bomb Arena | **geplant**: Plan in [plan-2-5d.md](plan-2-5d.md) (gewählt vor Tank Trouble) |
+| Bomb Arena | **umgesetzt**, Gerätetest offen: 3D-Feld mit gewählten Figuren, 2D-Rückfall; Stand in [plan-2-5d.md](plan-2-5d.md#umsetzungsstand) |
 | Tank Trouble | offen; soll das 2.5D-Gerüst aus Bomb Arena übernehmen |
 
 ## Nächste Schritte

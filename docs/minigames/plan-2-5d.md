@@ -1,6 +1,6 @@
 # Plan: Bomb Arena in 2.5D
 
-Stand: Nov. 2026 · Status: **geplant**, noch nichts umgesetzt.
+Stand: Nov. 2026 · Status: **umgesetzt** bis auf den Gerätetest (siehe „Umsetzungsstand“ am Ende).
 Ziel: Bomb Arena bekommt eine echte 3D-Darstellung mit schräg geneigter Kamera
 und den freigegebenen Figuren. Regeln, Wertung und Netzwerk bleiben unverändert.
 
@@ -127,3 +127,13 @@ weitere 2.5D-Fassungen wiederverwendbar.
   Qualitätsstufen und der 2D-Rückfall.
 - **Ladezeit:** Figuren und Szene werden erst beim Matchstart geladen;
   vorladen, sobald das Minispiel feststeht (Intro-Phase).
+
+## Umsetzungsstand
+
+| Schritt | Stand |
+| --- | --- |
+| 1 Gerüst | **umgesetzt**: `MatchClient.world` (bei Bedarf geladen) und `banner`; `MatchStage` wählt WebGL oder Canvas, fällt bei fehlendem WebGL, Ladefehler oder Kontextverlust auf die Canvas zurück; Figuren und Szene werden schon im Minispiel-Intro vorgeladen (`preloadMatchWorld`) |
+| 2 Szene | **umgesetzt** in `src/three/bombWorld.ts`: Kamera 64° geneigt, Bildwinkel 26°, Abstand und Zielpunkt werden je Seitenverhältnis so gewählt, dass das ganze Feld sichtbar ist und der untere Streifen den Steuerelementen bleibt; Instanzen für Boden, Mauern, Kisten, schließende Arena, Flammen und Splitter; Figuren mit `attack`/`hit`/`death`, Lebenspunkte und gelbe Markierung über der eigenen Figur |
+| 3 Leistung | in Chromium-Emulation mit sechs Figuren 174 Zeichenaufrufe, ≈ 225 000 Dreiecke; Szene als eigenes Modul (≈ 8 KB) im PWA-Cache. **FPS auf echten Handys nicht gemessen** |
+| 4 Tests | Playwright `phone`: 3D-Feld mit den gewählten Figuren, Laufen, Bombe und Explosion mit und ohne reduzierte Bewegung, sechs Figuren mit Grenze für Zeichenaufrufe, Rückfall ohne WebGL bis zum Ergebnis. Regeltests unverändert |
+| 5 Abnahme | offen: Gerätetest (Android und iOS), Lesbarkeit der hinteren Reihen, Erwärmung |

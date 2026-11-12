@@ -123,7 +123,9 @@ unter dem laufenden Brett. Die bestehende Farbwelt der Spielansicht bleibt erhal
 
 Match-Minispiele (`src/matches/`) teilen eine Bühne: oben ein dunkles HUD mit
 gelbem Spieltitel, eigener Punktzahl und Tontaste, darunter ein Zwischenstand
-in Spielerfarben, darunter die Canvas-Spielfläche bis zum unteren Rand. Jedes
+in Spielerfarben, darunter die Canvas-Spielfläche bis zum unteren Rand (Bomb Arena:
+WebGL-Szene in 2.5D, die Canvas bleibt Rückfall; der untere Streifen bleibt den
+Steuerelementen). Jedes
 Spiel hat eine eigene Themenwelt innerhalb der Fläche; Countdown, Rückmeldung,
 Ergebnis und Steuerelemente sind gemeinsam. Die Bedienung ist ausschließlich
 Touch: große Tippflächen, Stick links, Aktionstasten rechts, mindestens 44 px.

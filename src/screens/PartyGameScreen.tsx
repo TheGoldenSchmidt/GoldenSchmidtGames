@@ -14,6 +14,7 @@ import { PartyBoard } from "../components/PartyBoard";
 import { Celebration, MINI_LOOK, MiniPreview } from "../components/PartyArt";
 import { PartyDice } from "../components/PartyDice";
 import { PartyMini, PartyPractice } from "../components/PartyMini";
+import { preloadMatchWorld } from "../matches/registry";
 import { PartyPanel } from "../components/PartyPanel";
 import { PartyTestTools } from "../components/PartyTestTools";
 import { socket } from "../lib/socket";
@@ -50,7 +51,7 @@ export function PartyGameScreen({profile,initialRoom,onExit}:{profile:GuestProfi
     socket.on("room:updated",update);socket.on("party:arena",arena);socket.on("party:match",match);
     return()=>{socket.off("room:updated",update);socket.off("party:arena",arena);socket.off("party:match",match);};
   },[initialRoom.code,profile.id]);
-  useEffect(()=>{setError("");setReplace(0);setPractice(undefined);setSelectedItem(undefined);if(game?.phase==="mini-intro")void import("../three/arenaWorld");},[game?.phaseId,game?.itemUsed]);
+  useEffect(()=>{setError("");setReplace(0);setPractice(undefined);setSelectedItem(undefined);if(game?.phase==="mini-intro"){if(game.mini?.match)preloadMatchWorld(game.mini.match.id,game.players.map(p=>p.characterId));else void import("../three/arenaWorld");}},[game?.phaseId,game?.itemUsed]);
   useEffect(()=>{setPanel(undefined);},[game?.phase==="mini-play",game?.phase==="aborted",game?.phase==="finished",game?.itemUsed]);
   useEffect(()=>{
     if(lastDice.current===diceKey)return;

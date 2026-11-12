@@ -173,13 +173,19 @@ test("Tank Trouble: Stick fährt, Ziehen und Loslassen schießt", async ({ page 
   } finally { session.close(); }
 });
 
-test("Bomb Arena: Stick läuft über das Raster, Knopf legt eine Bombe", async ({ page }, testInfo) => {
-  await page.emulateMedia({ reducedMotion: "no-preference" });
+for (const motion of ["no-preference", "reduce"] as const) test(`Bomb Arena 2.5D (${motion}): Figuren im 3D-Feld, Stick läuft, Bombe zerstört Kisten`, async ({ page }, testInfo) => {
+  await page.emulateMedia({ reducedMotion: motion });
   const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "bombs" });
   try {
     await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
     await session.action({ type: "ready" }, session.ids[1]);
     await matchStarted(page);
+    const world = page.locator(".match-world");
+    await expect(world).toHaveAttribute("data-webgl", "ready");
+    // The chosen figures of both players stand in the field.
+    const chosen = Object.fromEntries((await session.state()).partyGame!.players.map(p => [p.id, p.characterId]));
+    await expect.poll(async () => JSON.parse(await world.getAttribute("data-figures") ?? "{}")).toEqual(chosen);
+    await expect(page.locator(".match-canvas")).toHaveCount(0);
     const game = async () => ((await session.state()).partyGame!.mini!.match as MatchState<BombGame>).game;
     await page.getByRole("button", { name: "Bombe", exact: true }).tap();
     await expect.poll(async () => (await game()).bombs.filter(b => b.owner === session.ids[0]).length).toBe(1);
@@ -190,7 +196,53 @@ test("Bomb Arena: Stick läuft über das Raster, Knopf legt eine Bombe", async (
     await page.mouse.move(cx, cy); await page.mouse.down(); await page.mouse.move(cx + 45, cy, { steps: 3 });
     await expect.poll(async () => (await game()).bombers[session.ids[0]].cx !== start.cx, { timeout: 4000 }).toBe(true);
     await page.mouse.up();
-    await page.screenshot({ path: testInfo.outputPath("bombs.png") });
+    await page.screenshot({ path: testInfo.outputPath(`bombs-3d-${motion}.png`) });
+    // The bomb goes off after its fuse; flames burn only briefly, so wait for the bomb to vanish.
+    await expect.poll(async () => (await game()).bombs.filter(b => b.owner === session.ids[0]).length, { timeout: 4000 }).toBe(0);
+    await page.screenshot({ path: testInfo.outputPath(`bombs-3d-boom-${motion}.png`) });
+    expect(Number(await world.getAttribute("data-draw-calls"))).toBeLessThan(300);
+    await session.action({ type: "finish" }, session.ids[1]);
+    await expect(page.getByRole("heading", { name: "Euer Ergebnis", exact: true })).toBeVisible();
+  } finally { session.close(); }
+});
+
+test("Bomb Arena 2.5D mit sechs Figuren: alle stehen im Feld, Zeichenaufwand bleibt begrenzt", async ({ page }, testInfo) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  const six = ["alpha_rick_prime", "alpha_morty_smith", "alpha_summer_smith", "alpha_eric_cartman", "alpha_korvo", "alpha_mr_poopybutthole"] as const;
+  const session = await onlineSession(page, false, [...six], false, "free-minigame", { miniId: "bombs" });
+  try {
+    await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
+    for (const other of session.ids.slice(1)) await session.action({ type: "ready" }, other);
+    await matchStarted(page);
+    const world = page.locator(".match-world");
+    await expect.poll(async () => Object.values(JSON.parse(await world.getAttribute("data-figures") ?? "{}")).sort()).toEqual([...six].sort());
+    await expect.poll(async () => Number(await world.getAttribute("data-frames")), { timeout: 5000 }).toBeGreaterThan(30);
+    const calls = Number(await world.getAttribute("data-draw-calls")), triangles = Number(await world.getAttribute("data-triangles"));
+    console.log("Bomb Arena 2.5D, six figures:", { calls, triangles });
+    expect(calls).toBeLessThan(300);
+    await page.screenshot({ path: testInfo.outputPath("bombs-3d-six.png") });
+    for (const other of session.ids.slice(1)) await session.action({ type: "finish" }, other);
+    await expect(page.getByRole("heading", { name: "Euer Ergebnis", exact: true })).toBeVisible();
+  } finally { session.close(); }
+});
+
+test("Bomb Arena ohne WebGL: die 2D-Fläche übernimmt, das Spiel läuft bis zum Ergebnis", async ({ page }) => {
+  await page.addInitScript(() => {
+    const original = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, kind: string, ...rest: unknown[]) {
+      return kind.startsWith("webgl") ? null : (original as (...a: unknown[]) => RenderingContext | null).call(this, kind, ...rest);
+    } as typeof original;
+  });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "bombs" });
+  try {
+    await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
+    await session.action({ type: "ready" }, session.ids[1]);
+    await matchStarted(page);
+    await expect(page.locator(".match-canvas")).toBeVisible();
+    await expect(page.locator(".match-world")).toHaveCount(0);
+    await page.getByRole("button", { name: "Bombe", exact: true }).tap();
+    await expect.poll(async () => ((await session.state()).partyGame!.mini!.match as MatchState<BombGame>).game.bombs.length).toBe(1);
     await session.action({ type: "finish" }, session.ids[1]);
     await expect(page.getByRole("heading", { name: "Euer Ergebnis", exact: true })).toBeVisible();
   } finally { session.close(); }
