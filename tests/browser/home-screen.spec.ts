@@ -11,13 +11,12 @@ for (const reducedMotion of ["no-preference", "reduce"] as const) {
     const online = page.getByRole("button", { name: /Online spielen/ });
     await expect(local).toBeInViewport();
     await expect(online).toBeInViewport();
-    const stage = page.locator(".home-party__canvas");
-    await expect(stage).toHaveAttribute("data-webgl", "ready");
-    await expect(page.locator(".home-party__canvas canvas")).toHaveCount(1);
-    await expect(stage).toHaveAttribute("data-motion", "still", { timeout: 10000 });
-    const frames = await stage.getAttribute("data-frames");
-    await page.waitForTimeout(200);
-    expect(await stage.getAttribute("data-frames")).toBe(frames);
+    // The emblem entrance plays once and then the start screen rests; no 3D scene is loaded.
+    await expect(page.locator(".home__emblem svg")).toBeVisible();
+    await expect(page.locator(".home canvas")).toHaveCount(0);
+    await expect.poll(() => page.evaluate(() => document.getAnimations()
+      .filter(animation => (animation.effect as KeyframeEffect | null)?.target?.closest(".home"))
+      .filter(animation => animation.playState === "running").length), { timeout: 5000 }).toBe(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.screenshot({ path: info.outputPath(`start-${reducedMotion}.png`), fullPage: true });
 
@@ -25,7 +24,6 @@ for (const reducedMotion of ["no-preference", "reduce"] as const) {
     await local.focus();
     await page.keyboard.press("Enter");
     await expect(page.getByRole("heading", { name: "Lokal spielen", exact: true })).toBeVisible();
-    await expect(page.locator(".home-party__canvas canvas")).toHaveCount(0);
     await page.getByRole("button", { name: "Zurück", exact: true }).click();
     await page.getByRole("button", { name: /Online spielen/ }).click();
     await expect(page.getByRole("heading", { name: "Online spielen", exact: true })).toBeVisible();
@@ -48,22 +46,4 @@ test("Startbildschirm: Profil, Installationshilfe und schmale Ansicht", async ({
   await expect(page.getByRole("button", { name: /Online spielen/ })).toBeInViewport({ ratio: 1 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: info.outputPath("start-320-installation.png"), fullPage: true });
-});
-
-test("Startbildschirm: ohne WebGL bleiben Figuren und Spielzugänge sichtbar", async ({ page }, info) => {
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.addInitScript(() => {
-    const getContext = HTMLCanvasElement.prototype.getContext;
-    HTMLCanvasElement.prototype.getContext = function (type: string, ...args: unknown[]) {
-      if (type.startsWith("webgl")) return null;
-      return Reflect.apply(getContext, this, [type, ...args]);
-    } as typeof getContext;
-  });
-  await page.goto("/");
-  await expect(page.locator(".home-party__fallback img")).toHaveCount(4);
-  await expect(page.locator(".home-party__fallback")).toBeVisible();
-  await expect(page.getByRole("button", { name: /Online spielen/ })).toBeInViewport();
-  await page.screenshot({ path: info.outputPath("start-ohne-webgl.png"), fullPage: true });
-  await page.getByRole("button", { name: /Lokal spielen/ }).click();
-  await expect(page.getByRole("heading", { name: "Lokal spielen", exact: true })).toBeVisible();
 });

@@ -8,7 +8,7 @@ Technische Vorgaben und Prüfabläufe stehen in [AGENTS.md](AGENTS.md).
 
 GoldenSchmidtGames ist ein Spieleabend mit Freunden: bunt, frech, einladend.
 Kräftige Schrift, klare Konturen und fühlbare Spielbuttons tragen den Stil.
-Der Schriftzug oder die Figurenbühne bilden den Blickfang; die Bedienung bleibt
+Der Schriftzug, das GSG-Icon oder die Figurenbühne bilden den Blickfang; die Bedienung bleibt
 ruhig und eindeutig. Jede Ansicht soll ihre wichtigste nächste Aktion zeigen.
 
 Der Party-Stil ist im Startbildschirm, lokalen Setup, Online-Menü, in der Lobby,
@@ -99,6 +99,9 @@ Portraits dürfen nicht verzerrt oder durch Flex-Layouts beschnitten werden.
 Bewegung erklärt einen Auftritt oder eine Aktion. Keine dauernden Wackel-, Blink-
 oder Schwebeeffekte über die gesamte Oberfläche verteilen. Der Startbildschirm
 hat eine kurze Begrüßung und wird danach ruhig; Spielzugänge sind sofort bedienbar.
+Er zeigt keine Figuren: Blickfang ist das Logo-Lockup aus GSG-Icon und dreizeiligem
+Schriftzug. Das Icon wird einmal hereingeworfen (mit kurzem Punkte-Burst und Glanz),
+die Wörter gleiten hinter dem Icon hervor; die Spielbuttons stehen gerade, ohne Drehung.
 Bei `prefers-reduced-motion` entfallen dekorative Animationen und Übergänge.
 Bestätigung, Auswahl und Spielergebnis bleiben gleich. Ohne WebGL bleiben
 Ersatzdarstellung und Menüaktionen nutzbar; fehlende Grafik blockiert keinen Zugang.
