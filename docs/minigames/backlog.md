@@ -141,6 +141,13 @@ geprüft; echte Funknetze nicht.
 
 Gefühl auf echten Handys ist für die umgesetzten Punkte weiter ungeprüft.
 
+## 2.5D-Fassungen
+
+| Spiel | Stand |
+| --- | --- |
+| Bomb Arena | **geplant**: Plan in [plan-2-5d.md](plan-2-5d.md) (gewählt vor Tank Trouble) |
+| Tank Trouble | offen; soll das 2.5D-Gerüst aus Bomb Arena übernehmen |
+
 ## Nächste Schritte
 
 1. Gerätetest aller zwölf Spiele auf mindestens zwei echten Handys
