@@ -1,6 +1,6 @@
 # Plan: Floor is Lava – 2.5D und Schubsen
 
-Stand: Nov. 2026 · Status: **in Arbeit**.
+Stand: Nov. 2026 · Status: **umgesetzt** bis auf den Gerätetest (siehe „Umsetzungsstand“).
 
 ## Warum dieses Spiel als nächstes
 
@@ -56,3 +56,15 @@ Nach der Umsetzung Überarbeitung mit dem Skill `frontend-design:frontend-design
 - Playwright `phone`: 3D-Feld mit Figuren, Laufen, Springen, Schubsen,
   beide Bewegungseinstellungen, sechs Figuren, Rückfall ohne WebGL.
 - Gerätetest auf echten Handys bleibt offen.
+
+## Umsetzungsstand
+
+| Teil | Stand |
+| --- | --- |
+| Schubser (Regeln, Bots) | umgesetzt; Regeltest deckt Stoß, Abklingzeit, Rutschen ohne Kontrolle, Gutschrift im Ereignis, Ausweichen im Sprung und Schutzzeit ab |
+| 2.5D-Szene `src/three/lavaWorld.ts` | umgesetzt: fließende, glühende Lava mit Glut, Tempelplatten mit gemeißeltem Rand, Erhitzen und Zittern beim Bröckeln, Kippen und Versinken, aufsteigende Runenplatten, Geisterumriss zurückkehrender Platten, 1,5-s-Warnung vor dem Randeinsturz, Figuren mit Sprungbogen, Schatten, Schlingern nach Stößen und Versinken beim Ausscheiden |
+| Steuerung | Stick links, rechts „Schubsen“ (⇉) über „Springen“ (⤒), beide mit Abklingring |
+| Gestaltung mit `frontend-design` | Themenwelt „Vulkantempel bei Nacht“ (Basalt `#2a0f0a`, Sandstein, Glut `#ff6a1f`, Schmelzgold `#ffd166`, Runentürkis `#57e4cb`); Blickfang ist allein die Lava, alles andere ruhig. Nach Sichtprüfung: hellere Platten und schwächeres Glühlicht für Kontrast, feinere Runen, Emoji-Symbol ersetzt, Banner im Glutton, kürzere Statuszeile |
+| Leistung | sechs Figuren: 180 Zeichenaufrufe, ≈ 237 000 Dreiecke (Chromium-Emulation) |
+| Tests | Playwright `phone`: Figuren, Laufen, Springen, Schubsen in beiden Bewegungseinstellungen, sechs Figuren, Rückfall ohne WebGL |
+| Offen | Gerätetest (FPS, Lesbarkeit der Runen, Gefühl des Schubsers); Blinken während der Schutzzeit blendet Figuren kurz ganz aus – auf echten Geräten beurteilen |
