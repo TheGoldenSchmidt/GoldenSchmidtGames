@@ -219,7 +219,7 @@ for (const motion of ["no-preference", "reduce"] as const) test(`Bomb Arena 2.5D
   } finally { session.close(); }
 });
 
-for (const [miniId, name] of [["bombs", "Bomb Arena"], ["tanks", "Tank Trouble"]] as const) test(`${name} 2.5D mit sechs Figuren: alle stehen im Feld, Zeichenaufwand bleibt begrenzt`, async ({ page }, testInfo) => {
+for (const [miniId, name] of [["bombs", "Bomb Arena"], ["tanks", "Tank Trouble"], ["lava", "Floor is Lava"]] as const) test(`${name} 2.5D mit sechs Figuren: alle stehen im Feld, Zeichenaufwand bleibt begrenzt`, async ({ page }, testInfo) => {
   await page.emulateMedia({ reducedMotion: "no-preference" });
   const six = ["alpha_rick_prime", "alpha_morty_smith", "alpha_summer_smith", "alpha_eric_cartman", "alpha_korvo", "alpha_mr_poopybutthole"] as const;
   const session = await onlineSession(page, false, [...six], false, "free-minigame", { miniId });
@@ -239,7 +239,7 @@ for (const [miniId, name] of [["bombs", "Bomb Arena"], ["tanks", "Tank Trouble"]
   } finally { session.close(); }
 });
 
-for (const [miniId, name] of [["bombs", "Bomb Arena"], ["tanks", "Tank Trouble"]] as const) test(`${name} ohne WebGL: die 2D-Fläche übernimmt, das Spiel läuft bis zum Ergebnis`, async ({ page }) => {
+for (const [miniId, name] of [["bombs", "Bomb Arena"], ["tanks", "Tank Trouble"], ["lava", "Floor is Lava"]] as const) test(`${name} ohne WebGL: die 2D-Fläche übernimmt, das Spiel läuft bis zum Ergebnis`, async ({ page }) => {
   await page.addInitScript(() => {
     const original = HTMLCanvasElement.prototype.getContext;
     HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, kind: string, ...rest: unknown[]) {
@@ -263,8 +263,40 @@ for (const [miniId, name] of [["bombs", "Bomb Arena"], ["tanks", "Tank Trouble"]
   } finally { session.close(); }
 });
 
-test("Floor is Lava: Platten zerbröseln unter der eigenen Figur, Sprungknopf mit Abklingzeit", async ({ page }, testInfo) => {
-  await page.emulateMedia({ reducedMotion: "reduce" });
+for (const motion of ["no-preference", "reduce"] as const) test(`Floor is Lava 2.5D (${motion}): Figuren auf Tempelplatten, Platten zerbröseln, Springen und Schubsen`, async ({ page }, testInfo) => {
+  await page.emulateMedia({ reducedMotion: motion });
+  const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "lava" });
+  try {
+    await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
+    await session.action({ type: "ready" }, session.ids[1]);
+    await matchStarted(page);
+    const world = page.locator(".match-world");
+    await expect(world).toHaveAttribute("data-webgl", "ready");
+    const chosen = Object.fromEntries((await session.state()).partyGame!.players.map(p => [p.id, p.characterId]));
+    await expect.poll(async () => JSON.parse(await world.getAttribute("data-figures") ?? "{}")).toEqual(chosen);
+    const game = async () => ((await session.state()).partyGame!.mini!.match as MatchState<LavaGame>).game;
+    const me = async () => (await game()).runners[session.ids[0]];
+    await expect.poll(async () => (await game()).tiles.includes("2")).toBe(true);
+    const start = await me();
+    const stick = page.getByRole("group", { name: "Bewegungsstick" }), box = (await stick.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2 - 40, { steps: 3 });
+    await expect.poll(async () => Math.hypot((await me()).x - start.x, (await me()).y - start.y), { timeout: 4000 }).toBeGreaterThan(.4);
+    await page.getByRole("button", { name: "Springen", exact: true }).tap();
+    await expect.poll(async () => (await me()).airUntil, { timeout: 3000 }).toBeGreaterThan(0);
+    await page.screenshot({ path: testInfo.outputPath(`lava-3d-jump-${motion}.png`) });
+    await page.mouse.up();
+    // After landing: the shove starts a dash and its cooldown.
+    await page.waitForTimeout(700);
+    await page.getByRole("button", { name: "Schubsen", exact: true }).tap();
+    await expect.poll(async () => (await me()).shoveReady, { timeout: 3000 }).toBeGreaterThan(start.shoveReady);
+    await page.waitForTimeout(500);
+    await page.screenshot({ path: testInfo.outputPath(`lava-3d-crumble-${motion}.png`) });
+    expect(Number(await world.getAttribute("data-draw-calls"))).toBeLessThan(300);
+    await session.action({ type: "finish" }, session.ids[1]);
+    await expect(page.getByRole("heading", { name: "Euer Ergebnis", exact: true })).toBeVisible();
+  } finally { session.close(); }
+});
   const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "lava" });
   try {
     await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();

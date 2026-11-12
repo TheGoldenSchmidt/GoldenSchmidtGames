@@ -67,7 +67,7 @@ Zusätzlich zu den 14 ersten 3D-Minispielen gibt es zwölf 2D-Arcade-Minispiele 
 - **Neon Pong** (1v1 oder 2v2): eigenes Tor unten, Schläger per Finger, Power-ups, 7 Tore oder 90 Sekunden mit Golden Goal.
 - **Tank Trouble** (2–6): Labyrinth mit abprallenden Kugeln, zerstörbaren Mauern, Power-ups und Respawn; 7 Abschüsse oder 90 Sekunden mit Stechen. In 2.5D mit der gewählten Figur in der Panzerluke; ohne WebGL die 2D-Fläche.
 - **Bomb Arena** (2–6): Bomben mit Kettenreaktionen, Kisten, Power-ups (Reichweite, Bombe, Tempo, Kick), schließende Arena, zwei Durchgänge und Sudden Death. In 2.5D mit den gewählten Figuren; ohne WebGL die 2D-Fläche.
-- **Floor is Lava** (2–6): zerbröselnde und zurückkehrende Platten, Sprung mit Abklingzeit, einstürzender Rand, drei Durchgänge und Stechrunde.
+- **Floor is Lava** (2–6): Tempelplatten über Lava, die unter den Füßen zerbröseln und teils zurückkehren; Sprung und Schubser mit Abklingzeit, einstürzender Rand mit Vorwarnung, drei Durchgänge und Stechrunde. In 2.5D mit den gewählten Figuren; ohne WebGL die 2D-Fläche.
 - **Sumo Smash** und **Bumper Mayhem** (2–6): Ring-Outs mit Stoß beziehungsweise Turbo, 3 Leben, schrumpfende Arena, Entscheidung nach 75 Sekunden und Sudden Death.
 - **Chaos Run** (2–6): Auto-Runner mit Lücken, Hämmern, Plattformen, einstürzenden Brücken, Wänden und Balken; Checkpoints und Fortschrittsanzeige.
 - **Arrow Masters** (2–6): 10 Sekunden verdeckt zielen, alle Pfeile fliegen gleichzeitig, Wind, Hindernisse, Zielscheiben, fünf Runden und Präzisions-Stechen.

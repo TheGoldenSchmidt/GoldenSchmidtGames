@@ -110,6 +110,11 @@ body:has(.party-screen--playing .match-game) { padding-block:0; }
 .tower-hint { position:absolute; left:50%; bottom:14px; transform:translateX(-50%); margin:0; padding:4px 12px; border-radius:999px; background:#24133fcc; color:#ffe44e; font-size:.72rem; font-weight:800; white-space:nowrap; pointer-events:none; }
 .tower-buttons { position:absolute; right:10px; bottom:10px; display:flex; flex-direction:column; gap:10px; }
 .match-game--tower .tower-buttons .match-action { width:80px; height:80px; }
+.lava-buttons { display:flex; flex-direction:column; gap:10px; }
+/* Floor is Lava: banner in the temple theme (basalt with an ember edge). */
+.match-game--lava .match-banner { background:#2a0f0ae6; border-color:#ff6a1f; }
+.match-game--lava .match-banner b { color:#ffd166; }
+.match-game--lava .lava-buttons .match-action { width:76px; height:76px; }
 .match-preview--tower { background:linear-gradient(#ffd166, #ff86c8); color:#24133f; }
 /* Hook Wars: stick bottom left, the right half fires and holds the hook. */
 .match-game--hooks .match-controls { justify-content:flex-start; }

@@ -137,7 +137,7 @@ geprüft; echte Funknetze nicht.
 | Arrow Masters | Nach jedem Schuss andere Startplätze | **umgesetzt**: neun Plätze, jede Runde neu verteilt |
 | Tower Tumble | Mechanik und Physik nicht schön | **umgesetzt**: Neubau als Turmrennen mit echter 2D-Starrkörperphysik, Drehen, schnellem Fallen und Landehilfe (eigenständiges Spiel im Genre, keine Kopie); Gefühl auf echten Handys offen |
 | Hook Wars | Prinzip unverständlich | **umgesetzt**: vorerst zu den 1st Generation Minigames verschoben (nur mit Haken im Zufallspool, weiter direkt wählbar) |
-| Floor is Lava | Lieber als 3D-Hindernislauf mit Figuren | **offen**: Aufwandsschätzung abgegeben |
+| Floor is Lava | Lieber als 3D-Hindernislauf mit Figuren | **umgesetzt** als 2.5D-Tempel über Lava mit Figuren und neuem Schubser (kein Hindernislauf); Plan und Stand in [plan-floor-is-lava.md](plan-floor-is-lava.md), Gerätetest offen |
 
 Gefühl auf echten Handys ist für die umgesetzten Punkte weiter ungeprüft.
 
@@ -146,6 +146,7 @@ Gefühl auf echten Handys ist für die umgesetzten Punkte weiter ungeprüft.
 | Spiel | Stand |
 | --- | --- |
 | Bomb Arena | **umgesetzt**, Gerätetest offen: 3D-Feld mit gewählten Figuren, 2D-Rückfall; Stand in [plan-2-5d.md](plan-2-5d.md#umsetzungsstand) |
+| Floor is Lava | **umgesetzt**, Gerätetest offen: siehe [plan-floor-is-lava.md](plan-floor-is-lava.md) |
 | Tank Trouble | **umgesetzt**, Gerätetest offen: Panzer mit Figur in der Luke, Ziellaser, 2D-Rückfall; Stand in [plan-2-5d.md](plan-2-5d.md#tank-trouble-zweites-spiel-umgesetzt) |
 
 ## Nächste Schritte

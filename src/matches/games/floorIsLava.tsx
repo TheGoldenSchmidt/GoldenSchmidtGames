@@ -30,7 +30,10 @@ function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
     const air = !grounded(s, r), lift = air ? size * .25 : 0, blink = f.simTime < r.invulnUntil && !f.reduced && Math.floor(f.t / 110) % 2 === 0;
     ctx.fillStyle = "#00000055"; ctx.beginPath(); ctx.ellipse(X(x), Y(y) + size * .12, size * FL.radius, size * FL.radius * .5, 0, 0, Math.PI * 2); ctx.fill();
     if (blink) continue;
+    // Shove: a white streak behind; facing shown as a small nose.
+    if (s.time < r.shoveUntil && !f.reduced) { ctx.strokeStyle = "#fff9ed"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(X(x), Y(y) - lift); ctx.lineTo(X(x - r.fx * .6), Y(y - r.fy * .6) - lift); ctx.stroke(); }
     ctx.fillStyle = playerColor(p.style); ctx.beginPath(); ctx.arc(X(x), Y(y) - lift, size * FL.radius * (air ? 1.15 : 1), 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#2a1a10"; ctx.beginPath(); ctx.arc(X(x + r.fx * FL.radius * .7), Y(y + r.fy * FL.radius * .7) - lift, size * .06, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = p.id === f.viewer ? "#ffe44e" : "#2a1a10"; ctx.lineWidth = p.id === f.viewer ? 3 : 2; ctx.stroke();
     for (let i = 0; i < r.lives; i++) { ctx.fillStyle = "#fff9ed"; ctx.beginPath(); ctx.arc(X(x) - size * .12 + i * size * .24, Y(y) - lift - size * .5, size * .07, 0, Math.PI * 2); ctx.fill(); }
   }
@@ -47,13 +50,24 @@ function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
 
 export const floorIsLavaClient: MatchClient = {
   render,
-  quiet: ["jump"],
+  // 2.5D presentation; the canvas above stays as fallback without WebGL.
+  world: () => import("../../three/lavaWorld").then(m => m.createLavaWorld),
+  banner(view, viewer) {
+    const g = view.game as LavaGame, last = g.history.at(-1);
+    if (g.phase === "play" || view.done) return undefined;
+    return { title: last?.tiebreak ? "Stechrunde vorbei" : `Durchgang ${g.round} vorbei`, text: last?.winners.includes(viewer) ? "Du stehst am längsten!" : `+${last?.points[viewer] ?? 0} Punkte für dich` };
+  },
+  quiet: ["jump", "dash"],
   Controls({ io, view, viewer, active }) {
     const g = view.game as LavaGame, me = g.runners[viewer];
-    const charge = me ? Math.max(0, Math.min(1, 1 - (me.jumpReady - view.time) / FL.jumpCooldown)) : 0;
+    const charge = (ready: number, cooldown: number) => me ? Math.max(0, Math.min(1, 1 - (ready - view.time) / cooldown)) : 0;
+    const off = !active || !me?.alive || g.phase !== "play";
     return <>
       <Stick disabled={!active} onMove={(x, y) => io.set({ x, y }, true)} />
-      <ActionButton icon="⤒" label="Springen" tone="gold" charge={charge} disabled={!active || !me?.alive || g.phase !== "play"} onPress={() => io.press("a")} />
+      <div className="lava-buttons">
+        <ActionButton icon="⇉" label="Schubsen" tone="pink" charge={charge(me?.shoveReady ?? 0, FL.shoveCooldown)} disabled={off} onPress={() => io.press("b")} />
+        <ActionButton icon="⤒" label="Springen" tone="gold" charge={charge(me?.jumpReady ?? 0, FL.jumpCooldown)} disabled={off} onPress={() => io.press("a")} />
+      </div>
     </>;
   },
   status(view, viewer) {
@@ -63,7 +77,8 @@ export const floorIsLavaClient: MatchClient = {
   },
   sound(event, viewer) {
     if (event.kind === "jump") return event.ids.includes(viewer) ? "bounce" : undefined;
-    if (event.kind === "hit" || event.kind === "out") return event.ids.includes(viewer) ? "fail" : "hit";
+    if (event.kind === "hit" || event.kind === "out") return event.ids[0] === viewer ? "fail" : event.ids[1] === viewer ? "win" : "hit";
+    if (event.kind === "shove") return event.ids[0] === viewer ? "hit" : event.ids[1] === viewer ? "bounce" : undefined;
     if (event.kind === "result") return event.ids.includes(viewer) ? "win" : "score";
     if (event.kind === "round" || event.kind === "shrink") return "tick";
     return undefined;

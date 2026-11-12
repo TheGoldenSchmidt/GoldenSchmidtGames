@@ -131,6 +131,39 @@ for (const count of [2, 4, 6]) {
   assert.equal(quit.game.runners.p1.alive, false);
 }
 
+// Schubser: Stoß in Blickrichtung, Abklingzeit, Opfer rutscht ohne Kontrolle; Sprung weicht aus; Schutzzeit schützt.
+{
+  const shove = (s: LS, id: string, values: Partial<MatchInput> = {}) => send(s, id, { ...values, cb: s.players.find(p => p.id === id)!.usedB + 1 });
+  const s = make(2); noRegen(s);
+  put(s, "p0", 3.5, 6.5); put(s, "p1", 4.3, 6.5);
+  shove(s, "p0", { x: 1 }); step(s, 50);
+  const victim = s.game.runners.p1;
+  assert.ok(victim.vx > FL.knock * .8 && victim.slideUntil > s.time, `Getroffen rutscht weg (${victim.vx})`);
+  assert.equal(victim.pushedBy, "p0");
+  assert.ok(s.events.some(e => e.kind === "shove" && e.ids[0] === "p1" && e.ids[1] === "p0"));
+  const start = victim.x;
+  send(s, "p1", { x: -1 }); step(s, 150);
+  assert.ok(victim.x > start + .5, "Während des Rutschens hilft Gegensteuern nicht");
+  const ready = s.game.runners.p0.shoveReady;
+  shove(s, "p0", { x: 1 }); step(s, 50);
+  assert.equal(s.game.runners.p0.shoveReady, ready, "Abklingzeit 2,5 s");
+  // In die Lava geschubst: Ereignis nennt die stoßende Person.
+  const t = make(2); noRegen(t);
+  put(t, "p0", 1.5, 6.5); put(t, "p1", 2.3, 6.5);
+  for (let x = 3; x < FL.cols; x++) t.game.tiles = t.game.tiles.slice(0, 6 * FL.cols + x) + "0" + t.game.tiles.slice(6 * FL.cols + x + 1);
+  shove(t, "p0", { x: 1 }); step(t, 600);
+  assert.ok(t.events.some(e => (e.kind === "hit" || e.kind === "out") && e.ids[0] === "p1" && e.ids[1] === "p0"), "Sturz nach Stoß wird gutgeschrieben");
+  // Wer springt, weicht aus; wer geschützt ist, auch.
+  const u = make(2); noRegen(u);
+  put(u, "p0", 3.5, 6.5); put(u, "p1", 4.3, 6.5);
+  jump(u, "p1"); step(u, 50); shove(u, "p0", { x: 1 }); step(u, 100);
+  assert.equal(u.game.runners.p1.slideUntil, 0, "Springende werden nicht getroffen");
+  const v = make(2); noRegen(v);
+  put(v, "p0", 3.5, 6.5); put(v, "p1", 4.3, 6.5); v.game.runners.p1.invulnUntil = 1e12;
+  shove(v, "p0", { x: 1 }); step(v, 100);
+  assert.equal(v.game.runners.p1.slideUntil, 0, "Schutzzeit schützt vor Stößen");
+}
+
 // Komplette Partien mit Bots über die Party (2, 4, 6), Neustart, Determinismus.
 for (const count of [2, 4, 6]) {
   const players = Array.from({ length: count }, (_, i) => ({ id: `b${i}`, name: `Bot ${i}`, bot: true }));
@@ -145,4 +178,4 @@ for (const count of [2, 4, 6]) {
   const a = play(), b = play();
   assert.deepEqual(a.game.points, b.game.points); assert.equal(a.time, b.time);
 }
-console.log("Floor is Lava erfolgreich: Startplätze, Plattenzustände, Regeneration, Sprung über Lücken, Abklingzeit, Lava, sicherer Respawn, Randabbruch, Zeitablauf mit geteilter Platzierung, gleichzeitiges Ausscheiden, Stechrunde, Aufgeben, Bots und Determinismus.");
+console.log("Floor is Lava erfolgreich: Startplätze, Plattenzustände, Regeneration, Sprung über Lücken, Abklingzeit, Lava, sicherer Respawn, Randabbruch, Zeitablauf mit geteilter Platzierung, gleichzeitiges Ausscheiden, Stechrunde, Schubser (Stoß, Abklingzeit, Rutschen, Gutschrift, Ausweichen, Schutz), Aufgeben, Bots und Determinismus.");
