@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { availableBets, checkMinigameSetup, minigameOptions } from "../shared/minigameModes";
-import { miniPool, PLAYABLE_MINI_IDS } from "../shared/minigameCatalog";
+import { isClassicMini, isPlayableMini, miniPool, PLAYABLE_MINI_IDS } from "../shared/minigameCatalog";
 import { ACTION_MINI_IDS } from "../shared/partyArena";
 import { applyPartyAction, applyPartyControl, createPartyGame, publicParty, tickParty, type PartyGame } from "../shared/party";
 import { PartyBotDriver } from "../shared/partyBots";
@@ -16,7 +16,9 @@ assert.equal(minigameOptions({ rounds: 1 }).rounds, 1);
 assert.equal(minigameOptions({ rounds: 14 }).rounds, 14);
 assert.equal(minigameOptions({ rounds: total }).rounds, total);
 // Klassische Minispiele lassen sich ausschließen; Rundenzahl und Spielerzahl müssen zum Pool passen.
-assert.ok(miniPool(2, false).length >= 1 && miniPool(2, false).every(id => !ACTION_MINI_IDS.includes(id as never)));
+assert.ok(miniPool(2, false).length >= 1 && miniPool(2, false).every(id => !isClassicMini(id)));
+// Hook Wars gehört zu den 1st Generation Minigames: nur mit Haken im Pool, aber weiter direkt wählbar.
+assert.ok(!miniPool(4, false).includes("hooks") && miniPool(4, true).includes("hooks") && isPlayableMini("hooks"));
 assert.equal(miniPool(2, true).length, total);
 assert.throws(() => checkMinigameSetup("goldenschmidt", minigameOptions({ rounds: miniPool(2, false).length + 1, classic: false }), 2));
 checkMinigameSetup("goldenschmidt", minigameOptions({ rounds: miniPool(2, false).length, classic: false }), 2);
@@ -49,7 +51,7 @@ assert.deepEqual(play(createPartyGame(players, undefined, true, 123, now, "free-
 
 for (const [rounds, classic] of [[1, true], [5, true], [14, true], [total, true], [miniPool(2, false).length, false]] as const) {
   let g = createPartyGame(players, undefined, true, 123, now, "goldenschmidt", { rounds, classic });
-  if (!classic) assert.ok(g.miniBag.concat(g.mini!.id).every(id => !ACTION_MINI_IDS.includes(id as never)), "Ohne Klassiker nur neue Spiele");
+  if (!classic) assert.ok(g.miniBag.concat(g.mini!.id).every(id => !isClassicMini(id)), "Ohne 1st Generation nur neue Spiele");
   const replay = createPartyGame(players, undefined, true, 123, now, "goldenschmidt", { rounds, classic });
   assert.equal(g.mini!.id, replay.mini!.id); assert.deepEqual(g.miniBag, replay.miniBag);
   const selected = new Set<string>();

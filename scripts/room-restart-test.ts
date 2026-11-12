@@ -102,7 +102,9 @@ try {
   assert.equal(restored.phaseId, arena.phaseId);
   assert.ok(restored.mini!.startAt >= arena.mini!.startAt + 700);
   assert.equal(restored.deadline - restored.mini!.startAt, arena.deadline - arena.mini!.startAt);
-  assert.equal((restored.mini!.arena?.actors ?? restored.mini!.match!.players).find(actor => actor.id === "ada")?.inputSeq, 10);
+  // Read ada's own view: match games hide other players' input counters from the guest.
+  const own = p2.host.partyGame!.mini!;
+  assert.equal((own.arena?.actors ?? own.match!.players).find(actor => actor.id === "ada")?.inputSeq, 10);
   await reply(p2.a, "party:action", { token: p.host, seq: 2, phaseId: restored.phaseId, action: { type: "abort" } });
   await server.crash(); await server.start();
   await assert.rejects(reply(await connect(url), "room:join", { code: p.code, playerId: "ada", sessionToken: p.host }), /geschlossen/);

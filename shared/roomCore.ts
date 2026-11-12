@@ -511,7 +511,7 @@ hub.onPeer((socket) => {
       // Reject settings that could not start, so a room never fails at its start signal.
       try {
         if (minis && isMinigameMode(game.id)) checkMinigameSetup(game.id, minis, playerCount);
-        else if (isPartyMode(game.id) && !miniPool(playerCount, options.classic ?? true).length) throw new Error("Ohne klassische Minispiele gibt es für diese Spielerzahl noch kein passendes Spiel.");
+        else if (isPartyMode(game.id) && !miniPool(playerCount, options.classic ?? true).length) throw new Error("Ohne 1st Generation Minigames gibt es für diese Spielerzahl noch kein passendes Spiel.");
       } catch (error) { return callback({ok:false,error:error instanceof Error ? error.message : "Ungültige Minispiel-Einstellungen."}); }
       room.config = {
         gameId: game.id,

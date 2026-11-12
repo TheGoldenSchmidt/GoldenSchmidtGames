@@ -24,7 +24,7 @@ export function checkMinigameSetup(mode: MinigameMode, options: MinigameOptions,
     return;
   }
   const pool = miniPool(players, options.classic);
-  if (!pool.length) throw new Error("Für diese Spielerzahl gibt es ohne klassische Minispiele noch kein passendes Spiel.");
+  if (!pool.length) throw new Error("Für diese Spielerzahl gibt es ohne 1st Generation Minigames noch kein passendes Spiel.");
   if (options.rounds > pool.length) throw new Error(`Für ${players} Spieler stehen ${pool.length} Minispiele zur Auswahl. Wähle höchstens ${pool.length}.`);
 }
 

@@ -54,13 +54,13 @@ Auf dem Startbildschirm prüft „Nach Updates suchen“ den Service Worker ohne
 
 Unter **Online spielen → Neuen Raum erstellen → Ausgewähltes Spiel** sind beide Modi für 2–6 Personen verfügbar. Jede Person spielt am eigenen Gerät. Im Modus **Freies Minispiel** wählt der Host eines der 26 Minispiele aus (12 neue, 14 klassische), sofern es zur Spielerzahl passt. Nach Anleitung, optionaler Übung und gemeinsamem Countdown wird genau dieses Spiel gewertet und das Ergebnis angezeigt.
 
-Bei **Schlag den GoldenSchmidt** wählt der Host 1 bis zur Zahl der passenden Minispiele (Standard: 5; ohne Klassiker entsprechend weniger). Die Raumautorität zieht die Spiele zufällig ohne Wiederholung. Vor jedem Spiel kennt ihr die Aufgabe und setzt verdeckt einen eigenen, noch freien Wert von 1 bis zur gewählten Spielanzahl. Sobald alle gesetzt haben, werden die Einsätze aufgedeckt. Ein gesetzter Wert ist auch bei einer Niederlage verbraucht und kann nicht geändert werden. Die erstplatzierte Person erhält ihren eigenen Einsatz als Punkte; alle anderen erhalten 0 Punkte. Die höchste Gesamtpunktzahl gewinnt. Bei gleichem Gesamtstand wird der Sieg geteilt. Der Host startet jeweils das nächste Minispiel.
+Bei **Schlag den GoldenSchmidt** wählt der Host 1 bis zur Zahl der passenden Minispiele (Standard: 5; ohne 1st Generation Minigames entsprechend weniger). Die Raumautorität zieht die Spiele zufällig ohne Wiederholung. Vor jedem Spiel kennt ihr die Aufgabe und setzt verdeckt einen eigenen, noch freien Wert von 1 bis zur gewählten Spielanzahl. Sobald alle gesetzt haben, werden die Einsätze aufgedeckt. Ein gesetzter Wert ist auch bei einer Niederlage verbraucht und kann nicht geändert werden. Die erstplatzierte Person erhält ihren eigenen Einsatz als Punkte; alle anderen erhalten 0 Punkte. Die höchste Gesamtpunktzahl gewinnt. Bei gleichem Gesamtstand wird der Sieg geteilt. Der Host startet jeweils das nächste Minispiel.
 
 Beide Modi verwenden die bestehenden Arena- und Gleichstandsregeln und vergeben keine Brettspielmünzen. Gespeicherte Einsätze bleiben bei Wiederbeitritt und Neustart erhalten. Die Bot-Testauswahl bietet beide Modi ebenfalls an; dabei gibt es keine Werkzeuge zum Überspringen gewerteter Runden. Die Regeltests, Socket-Tests und `tests/browser/minigame-modes.spec.ts` prüfen den Ablauf, verdeckte und einmalige Einsätze sowie Wiederbeitritt. Weitere Details stehen in [Inselparty-Regeln](docs/island-party-rules.md#eigenständige-minispielmodi).
 
 ## Neue Match-Minispiele
 
-Zusätzlich zu den 14 klassischen 3D-Minispielen gibt es zwölf neue 2D-Arcade-Minispiele für Smartphones:
+Zusätzlich zu den 14 ersten 3D-Minispielen gibt es zwölf 2D-Arcade-Minispiele für Smartphones; Hook Wars zählt inzwischen zu den **1st Generation Minigames**:
 
 - **Quick Draw** (2–6): Duell bis 3 Siege oder 5 Gruppen-Durchgänge mit 3/2/1 Punkten, Täuschungen, Fehlstarts und Stechen. Der Server allein kennt den Signalzeitpunkt und prüft gemeldete Reaktionszeiten gegen seine eigene Uhr und die gemessene Laufzeit.
 - **Light Trails** (2–6): Gleiter mit Lichtspuren auf einem Raster, Wischen oder ⟲/⟳, schrumpfende Arena, drei Durchgänge.
@@ -72,9 +72,9 @@ Zusätzlich zu den 14 klassischen 3D-Minispielen gibt es zwölf neue 2D-Arcade-M
 - **Chaos Run** (2–6): Auto-Runner mit Lücken, Hämmern, Plattformen, einstürzenden Brücken, Wänden und Balken; Checkpoints und Fortschrittsanzeige.
 - **Arrow Masters** (2–6): 10 Sekunden verdeckt zielen, alle Pfeile fliegen gleichzeitig, Wind, Hindernisse, Zielscheiben, fünf Runden und Präzisions-Stechen.
 - **Tower Tumble** (2–6): abwechselnd Steine auf einen gemeinsamen Turm setzen; Stabilität nach statischem Gleichgewicht, Rekordhöhe, Einsturz und Stechrunde.
-- **Hook Wars** (2–6): Greifhaken mit Schwingen und Heranziehen, Energiekerne in die eigene Zone bringen, Gegnern Kerne abluchsen.
+- **Hook Wars** (2–6, 1st Generation): Greifhaken mit Schwingen und Heranziehen, Energiekerne in die eigene Zone bringen, Gegnern Kerne abluchsen.
 
-In Inselparty, Roll It Up! und Schlag den GoldenSchmidt blendet die Checkbox **Klassische Minispiele** die bisherigen 14 Spiele aus der Zufallsauswahl aus; standardmäßig sind sie dabei. Im freien Modus stehen beide Gruppen getrennt zur Wahl. Spiele, die nicht zur Spielerzahl passen, werden nicht gezogen. Übung gegen Bots, Aufgeben und die bisherigen Pausen-, Wiederbeitritts- und Wertungsabläufe gelten auch hier. Stand, Regeln und Architektur: [Backlog](docs/minigames/backlog.md), [Spezifikation](docs/minigames/spezifikation.md), [Konzept](docs/minigames/konzept.md).
+In Inselparty, Roll It Up! und Schlag den GoldenSchmidt blendet die Checkbox **1st Generation Minigames** die 14 ersten 3D-Minispiele und Hook Wars aus der Zufallsauswahl aus; standardmäßig sind sie dabei. Im freien Modus stehen beide Gruppen getrennt zur Wahl. Spiele, die nicht zur Spielerzahl passen, werden nicht gezogen. Übung gegen Bots, Aufgeben und die bisherigen Pausen-, Wiederbeitritts- und Wertungsabläufe gelten auch hier. Stand, Regeln und Architektur: [Backlog](docs/minigames/backlog.md), [Spezifikation](docs/minigames/spezifikation.md), [Konzept](docs/minigames/konzept.md).
 
 ## Roll It Up!
 

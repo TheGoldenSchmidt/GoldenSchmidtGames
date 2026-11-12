@@ -34,7 +34,7 @@ Ergebnis, automatisch getestet) · **blockiert**.
 | 9 | Chaos Run | `chaosrun` | 2–6 | P3 | fertig | Regeln (`chaos-run-test`), Browser `phone` |
 | 10 | Arrow Masters | `arrows` | 2–6 | P4 | fertig | Regeln (`arrow-masters-test`), Browser `phone` |
 | 11 | Tower Tumble | `tower` | 2–6 | P4 | fertig | Regeln (`tower-tumble-test`), Browser `phone` |
-| 12 | Hook Wars | `hooks` | 2–6 | P4 | fertig | Regeln (`hook-wars-test`), Browser `phone` |
+| 12 | Hook Wars | `hooks` | 2–6 | P4 | fertig, seit Nov. 2026 bei den 1st Generation Minigames | Regeln (`hook-wars-test`), Browser `phone` |
 
 „Fertig“ heißt: in Lobby, Zufallspool, Übung (gegen Bots), Bot-Testraum,
 Wettbewerb und Inselparty spielbar; Ergebnis fließt in die bestehende Wertung.
@@ -52,7 +52,7 @@ Leistung und Bedienung auf echten Handys sind für kein Spiel geprüft.
   Wertung (`partyMiniResults`), Pausen, Neustart, `party:match` mit 10/20 Hz.
 - `src/matches/`: Bühne (`MatchStage`), Steuerelemente (Tippfläche, Stick,
   Aktionstaste, Wischfläche, Schieberegler, Zielfläche), Töne, Registrierung.
-- Lobby: Checkbox „Klassische Minispiele“, getrennte Auswahlgruppen,
+- Lobby: Checkbox „1st Generation Minigames“ (früher „Klassische Minispiele“), getrennte Auswahlgruppen,
   Übungsliste mit neuen Spielen, Bot-Testwerkzeug mit allen Spielen.
 - Testspiel: `scripts/match-framework-test.ts` prüft das Framework mit einem
   eigenen Tippzähler-Modul ohne Lobbyeintrag.
@@ -135,7 +135,7 @@ geprüft; echte Funknetze nicht.
 | Neon Pong | Schläger zu langsam | **umgesetzt**: 42 statt 16 Feldeinheiten/s, eigene Anzeige läuft weiter voraus |
 | Arrow Masters | Nach jedem Schuss andere Startplätze | **umgesetzt**: neun Plätze, jede Runde neu verteilt |
 | Tower Tumble | Mechanik und Physik nicht schön | **offen**: Neubau mit echter 2D-Starrkörperphysik und Drehen geplant (eigenständiges Spiel im Genre, keine Kopie) |
-| Hook Wars | Prinzip unverständlich | **offen**: Neuentwurf oder Ersatz, Entscheidung ausstehend |
+| Hook Wars | Prinzip unverständlich | **umgesetzt**: vorerst zu den 1st Generation Minigames verschoben (nur mit Haken im Zufallspool, weiter direkt wählbar) |
 | Floor is Lava | Lieber als 3D-Hindernislauf mit Figuren | **offen**: Aufwandsschätzung abgegeben |
 
 Gefühl auf echten Handys ist für die umgesetzten Punkte weiter ungeprüft.

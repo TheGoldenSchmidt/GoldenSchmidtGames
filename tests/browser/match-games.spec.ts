@@ -17,14 +17,14 @@ import { miniPool } from "../../shared/minigameCatalog";
 
 /** Neue Match-Minispiele: nur Smartphone (Projekt `phone`). */
 
-test("Lobby: neue Spiele, Klassik-Checkbox und 320 Pixel ohne Überlauf", async ({ page }, testInfo) => {
+test("Lobby: neue Spiele, 1st-Generation-Checkbox und 320 Pixel ohne Überlauf", async ({ page }, testInfo) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   await page.getByRole("button", { name: /Online spielen/ }).click();
   await page.getByRole("button", { name: "Morty Smith", exact: true }).click();
   await page.getByRole("button", { name: "Neuen Raum erstellen" }).click();
   await page.getByLabel("Ausgewähltes Spiel").selectOption("goldenschmidt");
-  const classic = page.getByRole("checkbox", { name: /Klassische Minispiele/ });
+  const classic = page.getByRole("checkbox", { name: /1st Generation Minigames/ });
   await expect(classic).toBeChecked();
   await classic.tap();
   await expect(classic).not.toBeChecked();
@@ -33,7 +33,7 @@ test("Lobby: neue Spiele, Klassik-Checkbox und 320 Pixel ohne Überlauf", async 
   await page.getByRole("combobox", { name: "Minispiel", exact: true }).selectOption("quickdraw");
   await expect(page.getByText(/Warte auf das rote »ZIEH!«/)).toBeVisible();
   await page.getByLabel("Ausgewähltes Spiel").selectOption("party");
-  await expect(page.getByRole("checkbox", { name: /Klassische Minispiele/ })).toBeChecked();
+  await expect(page.getByRole("checkbox", { name: /1st Generation Minigames/ })).toBeChecked();
   await page.setViewportSize({ width: 320, height: 760 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({ path: testInfo.outputPath("lobby-classic-320.png"), fullPage: true });

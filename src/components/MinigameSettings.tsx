@@ -1,12 +1,12 @@
 import { ACTION_MINI_IDS, ARENA_META } from "../../shared/partyArena";
 import { MATCH_IDS, MATCH_MODULES } from "../../shared/matches/framework";
-import { miniEligible, miniName, miniPlayerHint, miniPool, PLAYABLE_MINI_IDS, type PlayableMiniId } from "../../shared/minigameCatalog";
+import { FIRST_GEN_LABEL, FIRST_GEN_MINI_IDS, miniEligible, miniName, miniPlayerHint, miniPool, NEW_MATCH_IDS, PLAYABLE_MINI_IDS, type PlayableMiniId } from "../../shared/minigameCatalog";
 import { MINIGAME_DEFAULTS, type MinigameMode, type MinigameOptions } from "../../shared/minigameModes";
 
-/** The original 14 3D arenas are "classic" and can be left out of random draws. */
+/** The "1st Generation Minigames" (14 3D arenas and Hook Wars) can be left out of random draws. */
 export function ClassicToggle({ value, onChange }: { value: boolean; onChange: (value: boolean) => void }) {
   return <label className="option-toggle classic-toggle">
-    <span><strong>Klassische Minispiele</strong><small>Die 14 bisherigen 3D-Minispiele mitspielen. Ohne Haken kommen nur die neuen Spiele dran.</small></span>
+    <span><strong>{FIRST_GEN_LABEL}</strong><small>Die 14 ersten 3D-Minispiele und Hook Wars mitspielen. Ohne Haken kommen nur die neuen Spiele dran.</small></span>
     <input type="checkbox" checked={value} onChange={event => onChange(event.target.checked)} />
   </label>;
 }
@@ -21,8 +21,8 @@ export function MinigameSettings({ mode, value = MINIGAME_DEFAULTS, players, dis
     <legend>{mode === "free-minigame" ? "Direkt ins Minispiel" : "Euer Wettbewerb"}</legend>
     {mode === "free-minigame" ? <>
       <label><span>Minispiel</span><select value={options.miniId} onChange={e => onChange({ ...options, miniId: e.target.value as PlayableMiniId })}>
-        <optgroup label="Neue Minispiele">{MATCH_IDS.map(id => <option key={id} value={id} disabled={!miniEligible(id, players)}>{miniName(id)}{miniEligible(id, players) ? "" : ` (${miniPlayerHint(id)})`}</option>)}</optgroup>
-        <optgroup label="Klassische Minispiele">{ACTION_MINI_IDS.map(id => <option key={id} value={id}>{ARENA_META[id].name}</option>)}</optgroup>
+        <optgroup label="Neue Minispiele">{NEW_MATCH_IDS.map(id => <option key={id} value={id} disabled={!miniEligible(id, players)}>{miniName(id)}{miniEligible(id, players) ? "" : ` (${miniPlayerHint(id)})`}</option>)}</optgroup>
+        <optgroup label={FIRST_GEN_LABEL}>{FIRST_GEN_MINI_IDS.map(id => <option key={id} value={id} disabled={!miniEligible(id, players)}>{miniName(id)}{miniEligible(id, players) ? "" : ` (${miniPlayerHint(id)})`}</option>)}</optgroup>
       </select></label>
       <p>{instruction(options.miniId)}</p>
       <p>Ein Minispiel, alle gleichzeitig auf dem eigenen Handy. Vor dem Start könnt ihr ohne Wertung üben.</p>

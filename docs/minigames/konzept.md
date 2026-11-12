@@ -61,8 +61,8 @@ Den Arbeitsstand führt der [Backlog](backlog.md).
    Tippen, Wischen, Ziehen). Keine Tastaturbelegung, keine PC-Layouts, keine
    Tests im Playwright-Projekt `desktop` für Inselparty, Roll It Up! und
    Minispiele.
-8. **Klassische Minispiele abschaltbar.** Die bisherigen 14 Arenen tragen die
-   Kennung „klassisch“. Inselparty, Roll It Up! und Schlag den
+8. **1st Generation Minigames abschaltbar.** Die 14 ersten Arenen und
+   Hook Wars (nach Spielrückmeldung verschoben) bilden die erste Generation. Inselparty, Roll It Up! und Schlag den
    GoldenSchmidt erhalten die Option `classic` (Standard: an). Ist sie aus,
    ziehen die Modi nur aus den neuen Spielen, die zur Spielerzahl passen.
 
