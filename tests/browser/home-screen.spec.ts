@@ -17,7 +17,9 @@ for (const reducedMotion of ["no-preference", "reduce"] as const) {
     await expect.poll(() => page.evaluate(() => document.getAnimations()
       .filter(animation => (animation.effect as KeyframeEffect | null)?.target?.closest(".home"))
       .filter(animation => animation.playState === "running").length), { timeout: 5000 }).toBe(0);
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    // One fixed screen: nothing scrolls, the table objects are decoration only.
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
+    await expect(page.locator(".home-prop").first()).toBeVisible();
     await page.screenshot({ path: info.outputPath(`start-${reducedMotion}.png`), fullPage: true });
 
     // Both modes remain immediately accessible, including from the keyboard.
@@ -39,11 +41,20 @@ test("Startbildschirm: Profil, Installationshilfe und schmale Ansicht", async ({
   await page.getByRole("textbox", { name: "Anzeigename" }).fill("Die wilde Spielerunde");
   await page.getByRole("button", { name: "Speichern", exact: true }).click();
   await expect(page.getByRole("button", { name: "Gastprofil: Die wilde Spielerunde", exact: true })).toBeVisible();
+  // The installation help opens above the utility row instead of growing the page.
   await page.getByRole("button", { name: /Als App installieren/ }).click();
-  await expect(page.locator(".install-help")).toBeVisible();
+  await expect(page.locator(".install-help")).toBeInViewport({ ratio: 1 });
+  expect(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight)).toBe(true);
+  await page.getByRole("button", { name: "Installationshilfe schließen", exact: true }).click();
+  await expect(page.locator(".install-help")).toHaveCount(0);
   await expect(page.getByRole("complementary", { name: "App aktualisieren" }).getByRole("button", { name: /Nach Updates suchen|Neue Version laden/ })).toBeVisible();
-  await page.setViewportSize({ width: 320, height: 640 });
-  await expect(page.getByRole("button", { name: /Online spielen/ })).toBeInViewport({ ratio: 1 });
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await page.screenshot({ path: info.outputPath("start-320-installation.png"), fullPage: true });
+  for (const viewport of [{ width: 320, height: 550 }, { width: 320, height: 640 }, { width: 360, height: 660 }]) {
+    await page.setViewportSize(viewport);
+    await expect(page.getByRole("button", { name: /Lokal spielen/ })).toBeInViewport({ ratio: 1 });
+    await expect(page.getByRole("button", { name: /Online spielen/ })).toBeInViewport({ ratio: 1 });
+    await expect(page.getByRole("button", { name: /Als App installieren/ })).toBeInViewport({ ratio: 1 });
+    await expect(page.getByRole("button", { name: /^Gastprofil:/ })).toBeInViewport({ ratio: 1 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
+    await page.screenshot({ path: info.outputPath(`start-${viewport.width}x${viewport.height}.png`) });
+  }
 });

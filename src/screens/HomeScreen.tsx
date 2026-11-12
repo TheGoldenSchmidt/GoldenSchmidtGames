@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import type { GuestProfile } from "../../shared/types";
 import { InstallPrompt } from "../components/InstallPrompt";
 import { AppUpdate } from "../components/AppUpdate";
+import { HomeHeroProps, HomePlayProps, HomeSpread } from "../components/HomeTable";
 import { displayName } from "../lib/profile";
 
 // Same drawing as public/gsg-icon.svg, inlined so the emblem is ready for its entrance.
@@ -62,6 +63,7 @@ export function HomeScreen({
       <div className="home__main">
         <section className="home__hero" aria-label="Willkommen bei GoldenSchmidtGames">
           <div className="home__lockup">
+            <HomeHeroProps />
             <div className="home__emblem">
               <span className="home__emblem-toss"><GsgEmblem /></span>
               {IMPACT_PIPS.map(index => (
@@ -78,6 +80,7 @@ export function HomeScreen({
         </section>
 
         <section className="home__play" aria-labelledby="home-play-title">
+          <HomePlayProps />
           <h2 id="home-play-title" className="home__play-title">Wie spielt ihr heute?</h2>
           <div className="mode-stack" aria-label="Spielmodus wählen">
             <button className="mode-card mode-card--local" onClick={onLocal}>
@@ -121,6 +124,8 @@ export function HomeScreen({
           {resumeError && <p className="home__error" role="alert">{resumeError}</p>}
         </section>
       </div>
+
+      <HomeSpread />
 
       <div className="home__utilities">
         <InstallPrompt />

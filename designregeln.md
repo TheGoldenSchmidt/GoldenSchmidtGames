@@ -102,6 +102,16 @@ hat eine kurze Begrüßung und wird danach ruhig; Spielzugänge sind sofort bedi
 Er zeigt keine Figuren: Blickfang ist das Logo-Lockup aus GSG-Icon und dreizeiligem
 Schriftzug. Das Icon wird einmal hereingeworfen (mit kurzem Punkte-Burst und Glanz),
 die Wörter gleiten hinter dem Icon hervor; die Spielbuttons stehen gerade, ohne Drehung.
+Um Logo und Spielbuttons liegen Tischobjekte als flache Vektor-Sticker mit dunkler
+Kontur und hartem Schatten (Karten, Würfel, Spielfiguren, Münzen aus
+`HomeTable.tsx`); sie landen einmal nach dem Icon und ruhen dann. Dahinter liegt ein
+blasses, schräges Muster aus Kartenfarben und Würfelpunkten. Objekte dürfen hinter
+Logo und Buttons hervorschauen, aber keinen Text und keine Aktion verdecken; der
+Streifen unter den Spielbuttons blendet seine Objekte aus, wenn der Platz fehlt.
+Der Startbildschirm ist genau eine Bildschirmhöhe groß und scrollt nicht: Größen
+richten sich nach Breite und Höhe, Installation und Updates stehen als kompakte
+Zeile am unteren Rand, die Installationshilfe öffnet sich als schließbares Feld
+darüber.
 Bei `prefers-reduced-motion` entfallen dekorative Animationen und Übergänge.
 Bestätigung, Auswahl und Spielergebnis bleiben gleich. Ohne WebGL bleiben
 Ersatzdarstellung und Menüaktionen nutzbar; fehlende Grafik blockiert keinen Zugang.
