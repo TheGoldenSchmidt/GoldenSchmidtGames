@@ -147,6 +147,7 @@ Gefühl auf echten Handys ist für die umgesetzten Punkte weiter ungeprüft.
 | --- | --- |
 | Bomb Arena | **umgesetzt**, Gerätetest offen: 3D-Feld mit gewählten Figuren, 2D-Rückfall; Stand in [plan-2-5d.md](plan-2-5d.md#umsetzungsstand) |
 | Floor is Lava | **umgesetzt**, Gerätetest offen: siehe [plan-floor-is-lava.md](plan-floor-is-lava.md) |
+| Sumo Smash | **Prototyp umgesetzt**, Gerätetest offen: animierte Mannequins (GLB), Kampfspiel-Kamera; [prototyp-sumo-rigged.md](prototyp-sumo-rigged.md) |
 | Tank Trouble | **umgesetzt**, Gerätetest offen: Panzer mit Figur in der Luke, Ziellaser, 2D-Rückfall; Stand in [plan-2-5d.md](plan-2-5d.md#tank-trouble-zweites-spiel-umgesetzt) |
 
 ## Nächste Schritte

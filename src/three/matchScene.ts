@@ -84,3 +84,29 @@ export class Impact {
     else if (camera.position.x !== 0) camera.position.x = 0;
   }
 }
+
+/**
+ * Camera placement that frames the box [x0, x1] × [z0, z1] (blocks up to `top`)
+ * from the given tilt, as close as possible, leaving `reservePx` at the bottom
+ * for the touch controls. Returns position and look-at target without moving
+ * the camera, so callers can glide towards it.
+ */
+export function frameBox(kit: SceneKit, x0: number, x1: number, z0: number, z1: number, top: number, tilt: number, reservePx = 132) {
+  const height = kit.host.getBoundingClientRect().height || 600, bottom = Math.min(-.2, -1 + 2 * reservePx / height + .02), upper = .9, mid = (upper + bottom) / 2;
+  const camera = kit.camera.clone(), corners = [x0, x1].flatMap(x => [z0, z1].flatMap(z => [0, top].map(y => new T.Vector3(x, y, z))));
+  const target = new T.Vector3((x0 + x1) / 2, 0, (z0 + z1) / 2), pos = new T.Vector3();
+  const place = (d: number) => { pos.set(target.x, Math.sin(tilt) * d, target.z + Math.cos(tilt) * d); camera.position.copy(pos); camera.lookAt(target); camera.updateMatrixWorld(); };
+  const project = () => corners.map(c => c.clone().project(camera));
+  const fits = (d: number) => { place(d); return project().every(p => Math.abs(p.x) < .95 && p.y < upper && p.y > bottom); };
+  let d = 0;
+  for (let pass = 0; pass < 3; pass++) {
+    let lo = 4, hi = 200;
+    for (let i = 0; i < 22; i++) { const m = (lo + hi) / 2; if (fits(m)) hi = m; else lo = m; }
+    d = hi; place(d);
+    // Shift the aim so the framed box sits in the middle of the free area above the controls.
+    const ys = project().map(p => p.y), centre = (Math.max(...ys) + Math.min(...ys)) / 2;
+    target.z -= (centre - mid) * d * .35;
+  }
+  place(d);
+  return { position: pos.clone(), target: target.clone() };
+}

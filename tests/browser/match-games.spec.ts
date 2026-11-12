@@ -219,7 +219,7 @@ for (const motion of ["no-preference", "reduce"] as const) test(`Bomb Arena 2.5D
   } finally { session.close(); }
 });
 
-for (const [miniId, name] of [["bombs", "Bomb Arena"], ["tanks", "Tank Trouble"], ["lava", "Floor is Lava"]] as const) test(`${name} 2.5D mit sechs Figuren: alle stehen im Feld, Zeichenaufwand bleibt begrenzt`, async ({ page }, testInfo) => {
+for (const [miniId, name] of [["bombs", "Bomb Arena"], ["tanks", "Tank Trouble"], ["lava", "Floor is Lava"], ["sumo", "Sumo Smash"]] as const) test(`${name} 2.5D mit sechs Figuren: alle stehen im Feld, Zeichenaufwand bleibt begrenzt`, async ({ page }, testInfo) => {
   await page.emulateMedia({ reducedMotion: "no-preference" });
   const six = ["alpha_rick_prime", "alpha_morty_smith", "alpha_summer_smith", "alpha_eric_cartman", "alpha_korvo", "alpha_mr_poopybutthole"] as const;
   const session = await onlineSession(page, false, [...six], false, "free-minigame", { miniId });
@@ -228,7 +228,8 @@ for (const [miniId, name] of [["bombs", "Bomb Arena"], ["tanks", "Tank Trouble"]
     for (const other of session.ids.slice(1)) await session.action({ type: "ready" }, other);
     await matchStarted(page);
     const world = page.locator(".match-world");
-    await expect.poll(async () => Object.values(JSON.parse(await world.getAttribute("data-figures") ?? "{}")).sort()).toEqual([...six].sort());
+    // Sumo Smash uses the rigged mannequin (tinted per player) instead of the chosen figures.
+    await expect.poll(async () => Object.values(JSON.parse(await world.getAttribute("data-figures") ?? "{}")).sort(), { timeout: 15000 }).toEqual(miniId === "sumo" ? Array(6).fill("mannequin") : [...six].sort());
     // Measure while all figures are still on the field (in Floor is Lava idle players soon sink).
     await expect.poll(async () => Number(await world.getAttribute("data-draw-calls")), { timeout: 5000 }).toBeGreaterThan(40);
     const calls = Number(await world.getAttribute("data-draw-calls")), triangles = Number(await world.getAttribute("data-triangles"));
@@ -240,7 +241,7 @@ for (const [miniId, name] of [["bombs", "Bomb Arena"], ["tanks", "Tank Trouble"]
   } finally { session.close(); }
 });
 
-for (const [miniId, name] of [["bombs", "Bomb Arena"], ["tanks", "Tank Trouble"], ["lava", "Floor is Lava"]] as const) test(`${name} ohne WebGL: die 2D-Fläche übernimmt, das Spiel läuft bis zum Ergebnis`, async ({ page }) => {
+for (const [miniId, name] of [["bombs", "Bomb Arena"], ["tanks", "Tank Trouble"], ["lava", "Floor is Lava"], ["sumo", "Sumo Smash"]] as const) test(`${name} ohne WebGL: die 2D-Fläche übernimmt, das Spiel läuft bis zum Ergebnis`, async ({ page }) => {
   await page.addInitScript(() => {
     const original = HTMLCanvasElement.prototype.getContext;
     HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, kind: string, ...rest: unknown[]) {
@@ -293,6 +294,36 @@ for (const motion of ["no-preference", "reduce"] as const) test(`Floor is Lava 2
     await expect.poll(async () => (await me()).shoveReady, { timeout: 3000 }).toBeGreaterThan(start.shoveReady);
     await page.waitForTimeout(500);
     await page.screenshot({ path: testInfo.outputPath(`lava-3d-crumble-${motion}.png`) });
+    expect(Number(await world.getAttribute("data-draw-calls"))).toBeLessThan(300);
+    await session.action({ type: "finish" }, session.ids[1]);
+    await expect(page.getByRole("heading", { name: "Euer Ergebnis", exact: true })).toBeVisible();
+  } finally { session.close(); }
+});
+
+for (const motion of ["no-preference", "reduce"] as const) test(`Sumo Smash 2.5D (${motion}): animierte Figuren, Kamera rahmt alle, Stoß`, async ({ page }, testInfo) => {
+  await page.emulateMedia({ reducedMotion: motion });
+  const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "sumo" });
+  try {
+    await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
+    await session.action({ type: "ready" }, session.ids[1]);
+    await matchStarted(page);
+    const world = page.locator(".match-world");
+    await expect(world).toHaveAttribute("data-webgl", "ready", { timeout: 15000 });
+    await expect.poll(async () => Object.keys(JSON.parse(await world.getAttribute("data-figures") ?? "{}")).sort()).toEqual([...session.ids].sort());
+    const fighter = async () => ((await session.state()).partyGame!.mini!.match as MatchState<RingGame>).game.fighters[session.ids[0]];
+    const start = await fighter();
+    // Walk towards the centre, then dash.
+    const stick = page.getByRole("group", { name: "Bewegungsstick" }), box = (await stick.boundingBox())!;
+    const len = Math.hypot(start.x, start.y) || 1;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 - start.x / len * 40, box.y + box.height / 2 - start.y / len * 40, { steps: 3 });
+    await expect.poll(async () => Math.hypot((await fighter()).x - start.x, (await fighter()).y - start.y), { timeout: 4000 }).toBeGreaterThan(.4);
+    await page.screenshot({ path: testInfo.outputPath(`sumo-3d-walk-${motion}.png`) });
+    await page.getByRole("button", { name: "Stoß", exact: true }).tap();
+    await expect.poll(async () => (await fighter()).actionAt, { timeout: 3000 }).toBeGreaterThan(0);
+    await page.mouse.up();
+    await page.waitForTimeout(200);
+    await page.screenshot({ path: testInfo.outputPath(`sumo-3d-dash-${motion}.png`) });
     expect(Number(await world.getAttribute("data-draw-calls"))).toBeLessThan(300);
     await session.action({ type: "finish" }, session.ids[1]);
     await expect(page.getByRole("heading", { name: "Euer Ergebnis", exact: true })).toBeVisible();

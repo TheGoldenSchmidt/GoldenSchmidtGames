@@ -8,7 +8,7 @@ export default defineConfig({
     VitePWA({
       registerType: "prompt",
       injectRegister: false,
-      includeAssets: ["gsg-icon.svg", "gsg-icon-192.png", "gsg-icon-512.png", "gsg-apple-touch-icon.png", "characters/*.png"],
+      includeAssets: ["gsg-icon.svg", "gsg-icon-192.png", "gsg-icon-512.png", "gsg-apple-touch-icon.png", "characters/*.png", "models/*.glb"],
       manifest: {
         id: "/",
         name: "GoldenSchmidtGames",
