@@ -1,5 +1,3 @@
-import { Brand } from "./Brand";
-
 export function ScreenHeader({ title, onBack }: { title: string; onBack: () => void }) {
   return (
     <header className="screen-header">
@@ -7,7 +5,7 @@ export function ScreenHeader({ title, onBack }: { title: string; onBack: () => v
         <span aria-hidden="true">‹</span>
       </button>
       <h1>{title}</h1>
-      <Brand compact />
+      <span className="menu-brand" role="img" aria-label="GoldenSchmidtGames">GSG<span aria-hidden="true">✦</span></span>
     </header>
   );
 }

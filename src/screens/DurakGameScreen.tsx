@@ -41,13 +41,14 @@ function actorId(game: DurakGameState) {
   return game.phase === "defend" ? game.defenderId : game.attackerId;
 }
 
-export function DurakGameScreen({ profile, localNames, localCharacters, initialRoom, cheatMode = false, onExit }: {
+export function DurakGameScreen({ profile, localNames, localCharacters, initialRoom, cheatMode = false, onExit, onLobby }: {
   profile: GuestProfile;
   localNames?: string[];
   localCharacters?:CharacterId[];
   initialRoom?: RoomState;
   cheatMode?: boolean;
   onExit: () => void;
+  onLobby?: () => void;
 }) {
   const characters=playerCharacters(initialRoom,localNames,localCharacters);
   const online = Boolean(initialRoom);
@@ -265,7 +266,7 @@ export function DurakGameScreen({ profile, localNames, localCharacters, initialR
           <h1>Partie beendet</h1>
           <p>{phaseText()}</p>
           <ol>{game.finishedPlayerIds.map((id, index) => <li key={id}><span><CharacterAvatar id={characters[id]} decorative/>{index + 1}. {game.playerNames[id]}</span><strong>kartenfrei</strong></li>)}</ol>
-          <button className="button button--secondary button--wide" onClick={onExit}>Zum Startmenü</button>
+          <button className="button button--secondary button--wide" onClick={onLobby ?? onExit}>{onLobby ? "Zurück zur Lobby" : "Zum Startmenü"}</button>
         </section>
       )}
     </main>

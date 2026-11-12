@@ -17,7 +17,10 @@ import { PartyGameScreen } from "../src/screens/PartyGameScreen";
 import { createPartyGame, createPartyPractice, publicParty } from "../shared/party";
 import { PartyMini } from "../src/components/PartyMini";
 import { ACTION_MINI_IDS } from "../shared/partyArena";
+import { MATCH_IDS, MATCH_MODULES } from "../shared/matches/framework";
 import { LocalSetupScreen } from "../src/screens/LocalSetupScreen";
+import { MinigameSettings } from "../src/components/MinigameSettings";
+import { applyPartyAction } from "../shared/party";
 
 const players = [{ id: "a", name: "Anna" }, { id: "b", name: "Ben" }];
 // tsx verwendet außerhalb des Vite-Builds den klassischen JSX-Laufzeitpfad.
@@ -64,13 +67,38 @@ room.game.phase = "finished"; room.game.winnerIds = ["a"];
 assert.match(renderToString(<QwixxGameScreen profile={profile} initialRoom={room} onExit={exit} />), /Fehlwürfe/);
 room.durakGame = createDurakGame(players); room.durakGame.phase = "finished"; room.durakGame.durakId = "b";
 assert.match(renderToString(<DurakGameScreen profile={profile} initialRoom={room} onExit={exit} />), /Ben ist der Durak/);
+room.config.gameId="party";
 room.partyGame=boardGame(players,{rounds:5},true,123);
 const partyStart=renderToString(<PartyGameScreen profile={profile} initialRoom={room} onExit={exit}/>);
 assert.match(partyStart,/Inselparty/);assert.match(partyStart,/Inselkarte/);assert.match(partyStart,/Trophäenstand/);
 room.partyGame.phase="finished";room.partyGame.winners=["a"];
 assert.match(renderToString(<PartyGameScreen profile={profile} initialRoom={room} onExit={exit}/>),/Die Insel feiert euch/);
+room.config.gameId="roll-it-up";
+room.partyGame=boardGame(players,{rounds:5},true,123,100000,"roll-it-up");
+room.partyGame.turn=room.partyGame.order.indexOf(profile.id);
+room.partyGame.phase="supply";
+room.partyGame.players.find(p=>p.id===profile.id)!.position=2;
+const purchase=renderToString(<PartyGameScreen profile={profile} initialRoom={room} onExit={exit}/>).replace(/<!--.*?-->/g,"");
+assert.match(purchase,/Grinder kaufen · 8 Münzen/);
+assert.doesNotMatch(purchase,/Trophäe/);
+room.partyGame.phase="finished";room.partyGame.winners=[profile.id];
+assert.match(renderToString(<PartyGameScreen profile={profile} initialRoom={room} onExit={exit}/>).replace(/<!--.*?-->/g,""),/Anna gewinnt Roll It Up!/);
 for(const id of ["targets","colors","memory","timing","trail","risk",...ACTION_MINI_IDS] as const){const practice=createPartyPractice(id);assert.ok(renderToString(<PartyMini game={publicParty(practice,"practice")} id="practice" now={Date.now()} send={()=>{}}/>).length>100);}
-const localSetup=renderToString(<LocalSetupScreen onBack={exit} onStart={exit}/>);assert.doesNotMatch(localSetup,/Inselparty/);assert.match(localSetup,/Qwixx/);
+// Neue Match-Spiele: Bühne mit HUD, Zwischenstand, Spielfeld und Touch-Steuerung (Übung gegen Bots).
+for(const id of MATCH_IDS){const practice=createPartyPractice(id),html=renderToString(<PartyMini game={publicParty(practice,"practice")} id="practice" now={practice.mini!.startAt-1000} send={()=>{}}/>);assert.match(html,/match-stage/);assert.match(html,/Zwischenstand/);assert.match(html,new RegExp(MATCH_MODULES[id].meta.name));}
+const localSetup=renderToString(<LocalSetupScreen onBack={exit} onStart={exit}/>);assert.doesNotMatch(localSetup,/Inselparty|Roll It Up!/);assert.match(localSetup,/Qwixx/);
+for(const mode of ["free-minigame","goldenschmidt"] as const) {
+  room.config.gameId=mode;room.partyGame=createPartyGame(players,undefined,true,123,100000,mode,{rounds:1,miniId:"dash"});
+  const start=renderToString(<PartyGameScreen profile={profile} initialRoom={room} onExit={exit}/>);
+  assert.match(start,mode==="goldenschmidt"?/Was setzt du auf deinen Sieg/:/Schatzsprint/);
+  assert.doesNotMatch(start,/Trophäen|Münzen aus dem Minispiel|10 · Platz/);
+  if(mode==="goldenschmidt") for(const p of players)room.partyGame=applyPartyAction(room.partyGame,p.id,{type:"bet",value:1},100000);
+  for(const p of players)room.partyGame=applyPartyAction(room.partyGame,p.id,{type:"ready"},100000);
+  for(const p of players)if(room.partyGame.phase==="mini-play")room.partyGame=applyPartyAction(room.partyGame,p.id,{type:"finish"},104000); // Match-Spiele enden, sobald nur eine Person übrig ist
+  const result=renderToString(<PartyGameScreen profile={profile} initialRoom={room} onExit={exit}/>);
+  assert.match(result,/Zurück zu GSG/);assert.doesNotMatch(result,/Die Insel feiert|Trophäen/);
+  assert.match(renderToString(<MinigameSettings mode={mode} players={2} disabled={false} onChange={exit}/>),mode==="goldenschmidt"?/Anzahl Minispiele/:/Direkt ins Minispiel/);
+}
 // Ohne beforeinstallprompt muss die Installationshilfe trotzdem erreichbar bleiben.
 const originalNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");
 const originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");

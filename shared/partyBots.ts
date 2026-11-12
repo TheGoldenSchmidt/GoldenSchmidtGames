@@ -1,5 +1,8 @@
+import { hasFullSet, partyPaths } from "./partyBoard";
+import { availableBets } from "./minigameModes";
+import { botMatchInput } from "./matches/framework";
 import {COMMAND_ZONES,DUO_SWITCHES,GOLF_GATES,HEX_PLATFORMS,hexCue,photoSpot,saysCue,wallHoles,wallCellPoint} from "./arenaChallenges";
-import { activePartyPlayer, applyPartyAction, applyPartyControl, BOARD, ITEMS, tickParty, type PartyAction, type PartyGame } from "./party";
+import { activePartyPlayer, applyPartyAction, applyPartyControl, ITEMS, tickParty, type PartyAction, type PartyGame } from "./party";
 import { bridgeCenter, clamp, DASH_BLOCKS, HURDLES, TILT_HOLES, type ArenaActor, type ArenaInput, type ArenaState } from "./partyArena";
 
 /** Bots kennen nur die sichtbare Arena und senden normale Eingaben. */
@@ -38,12 +41,19 @@ export function botArenaInput(s:ArenaState,a:ArenaActor):ArenaInput {
 }
 
 export function botBoardAction(g:PartyGame):PartyAction|undefined {
+  if(g.competition && g.phase === "mini-result") return;
   const p=activePartyPlayer(g);
   if(g.phase==="turn"){
     const index=p.items.findIndex(i=>i==="sprint"||i==="double"||i==="shield"&&!p.shield);
     return !g.itemUsed&&index>=0?{type:"item",index}:{type:"roll"};
   }
-  if(g.phase==="path")return {type:"path",destination:BOARD[p.position].next[0]};
+  if(g.phase==="path"){
+    const paths = partyPaths(g,p);
+    // The second route leads uphill at both forks and onward to the bench.
+    const uphill = g.mode === "roll-it-up" && hasFullSet(p);
+    return {type:"path", destination: uphill ? paths[1] : paths[0]};
+  }
+  if(g.phase==="supply")return {type:"supply",buy:true};
   if(g.phase==="trophy")return {type:"trophy",buy:p.coins>=20};
   if(g.phase==="gift")return {type:"gift",accept:true,replace:0};
   if(g.phase==="shop")return {type:"shop",item:p.coins>=25&&p.items.length<3&&p.coins>=ITEMS.double.price?"double":undefined};
@@ -56,6 +66,13 @@ export class PartyBotDriver {
   step(current:PartyGame,now:number,skipWait=false):PartyGame {
     if(current.pausedAt||current.phase==="finished"||current.phase==="aborted")return current;
     let g=current;
+    if(g.phase==="mini-play"&&g.mini?.match&&now>=g.mini.startAt&&now<g.deadline){
+      for(const p of g.players.filter(p=>p.bot&&!p.passive)){
+        const player=g.mini?.match?.players.find(q=>q.id===p.id);
+        if(player&&!player.gone&&!g.mini!.match!.done&&g.phase==="mini-play")g=applyPartyControl(g,p.id,botMatchInput(g.mini!.match!,p.id),player.inputSeq+1,now);
+      }
+      return g;
+    }
     if(g.phase==="mini-play"&&g.mini?.arena&&now>=g.mini.startAt&&now<g.deadline){
       for(const p of g.players.filter(p=>p.bot&&!p.passive)){
         const a=g.mini?.arena?.actors.find(a=>a.id===p.id);
@@ -66,6 +83,15 @@ export class PartyBotDriver {
     if(g.phaseId!==this.phaseId){this.phaseId=g.phaseId;this.due=now+650;}
     if(!skipWait&&now<this.due)return g;
     this.due=now+650;
+    if(g.phase === "mini-bet" && g.competition) {
+      for(const p of g.players.filter(p => p.bot && !p.passive)) {
+        if(g.phase === "mini-bet" && !g.competition!.locked.includes(p.id)) {
+          const available = availableBets(g.competition!, p.id);
+          g = applyPartyAction(g, p.id, {type:"bet", value:available[(g.round + g.players.indexOf(p)) % available.length]}, now);
+        }
+      }
+      return g;
+    }
     if(g.phase==="mini-intro"){
       for(const p of g.players.filter(p=>p.bot&&!p.passive))if(g.phase==="mini-intro"&&!g.mini!.runs[p.id].ready)g=applyPartyAction(g,p.id,{type:"ready"},now);
       return g;

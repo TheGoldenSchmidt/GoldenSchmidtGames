@@ -1,8 +1,11 @@
-import { getGame } from "./games";
-import { applyPartyAction, applyPartyControl, createPartyGame, partyOptions, publicParty, selectPartyTestMini, shiftPartyClock, tickParty, type PartyAction, type PartyOptions } from "./party";
+import { getGame, isPartyMode } from "./games";
+import { checkMinigameSetup, isMinigameMode, minigameOptions, type MinigameOptions } from "./minigameModes";
+import { isPlayableMini, miniPool, type PlayableMiniId } from "./minigameCatalog";
+import { MATCH_MODULES, publicMatch, type MatchId } from "./matches/framework";
+import { applyPartyAction, applyPartyControl, createPartyGame, neutralizePartyInputs, partyOptions, publicParty, selectPartyTestMini, shiftPartyClock, tickParty, type PartyAction, type PartyOptions } from "./party";
 import { CHARACTERS, characterId, isCharacterId } from "./characters";
 import { PartyBotDriver } from "./partyBots";
-import { isArenaId, NEUTRAL_INPUT, publicArena, type ArenaInput } from "./partyArena";
+import { publicArena, type ArenaInput } from "./partyArena";
 import { createKribbelnGame, rollKribbeln, submitKribbeln } from "./kribbeln";
 import { accuseDurak, attackDurak, cheatDefendDurak, cheatThrowInDurak, createDurakGame, defendDurak, finishDurakBout, takeDurak, throwInDurak, transferDurak } from "./durak";
 import {
@@ -79,9 +82,7 @@ async function restore(records: SavedRoom[]) {
       for (const player of game.players) {
         if (!player.bot && !player.passive) game.disconnected[player.id] = Date.now();
       }
-      for (const actor of game.mini?.arena?.actors ?? []) {
-        actor.input = { ...NEUTRAL_INPUT }; actor.inputUntil = 0;
-      }
+      neutralizePartyInputs(game);
       if (room.partyTest) botDrivers.set(room.code, new PartyBotDriver());
     }
     if (record.emptySince === undefined) newlyOffline.set(room.code, snapshot(room.code));
@@ -172,7 +173,9 @@ function forgetRoom(code: string) {
   checkpointAt.delete(code); emptySince.delete(code); closingRooms.delete(code);
 }
 
+// Only seeded test rooms are closed after the game; regular rooms return to their lobby.
 function closePartyRoom(room: RoomState) {
+  if (!room.partyTest) return;
   const reason = room.partyGame?.phase;
   if (reason !== "finished" && reason !== "aborted") return;
   closingRooms.add(room.code);
@@ -209,9 +212,9 @@ function startRoom(room: RoomState) {
   if (room.config.gameId === "qwixx") room.game = createQwixxGame(players);
   else if (room.config.gameId === "durak") room.durakGame = createDurakGame(players, Math.random, room.config.durakCheatMode ?? false);
   else if (room.config.gameId === "kribbeln") room.kribbelnGame = createKribbelnGame(players);
-  else if (room.config.gameId === "party") {
+  else if (isPartyMode(room.config.gameId)) {
     players.forEach((p,i)=>p.characterId=characterId(p.characterId,i));
-    room.partyGame = createPartyGame(players, room.config.party, true, room.partyTest?.seed??randomInt(0x100000000));
+    room.partyGame = createPartyGame(players, room.config.party, true, room.partyTest?.seed??randomInt(0x100000000), Date.now(), room.config.gameId, room.config.minigames);
     if(room.partyTest)botDrivers.set(room.code,new PartyBotDriver());
   }
   else throw new Error("Dieses Spiel ist noch nicht verfügbar.");
@@ -236,10 +239,7 @@ function leaveRoom(socketId: string) {
     const now = Date.now();
     party.disconnected[player.id] = now;
     if (!party.pausedAt) party.pausedAt = now;
-    for (const actor of party.mini?.arena?.actors ?? []) {
-      actor.input = { ...NEUTRAL_INPUT };
-      actor.inputUntil = 0;
-    }
+    neutralizePartyInputs(party);
   }
   player.ready = false;
   const connectedPlayers = room.players.filter((entry) => entry.connected&&!entry.bot);
@@ -300,15 +300,17 @@ hub.onPeer((socket) => {
     if(available)socket.join(`party-status:${room!.code}`);
     callback({ok:true,data:{available}});
   });
-  withPayload("party:test-create",(payload:{playerId?:string;name?:string;bots?:number;seed?:number;characterId?:unknown},callback:(ack:Ack<RoomState>)=>void)=>{
+  withPayload("party:test-create",(payload:{playerId?:string;name?:string;bots?:number;seed?:number;gameId?:GameId;characterId?:unknown},callback:(ack:Ack<RoomState>)=>void)=>{
     if (ownerPeer && socket.id !== ownerPeer) return callback({ok:false,error:"Nur das Host-Gerät kann Räume erstellen."});
     if(!isCharacterId(payload?.characterId))return callback({ok:false,error:"Wähle zuerst eine Spielfigur."});
     if(!Number.isInteger(payload?.bots)||payload.bots!<1||payload.bots!>5||!Number.isInteger(payload.seed)||payload.seed!<0||payload.seed!>0xffffffff)return callback({ok:false,error:"Wähle 1–5 Bots und einen Startwert von 0 bis 4294967295."});
+    const mode = payload.gameId ?? "party";
+    if (!isPartyMode(mode)) return callback({ok:false,error:"Unbekannter Partymodus."});
     const id=cleanPlayerId(payload.playerId),code=createCode();
     if (!id) return callback({ok:false,error:"Ungültige Spieler-ID."});
     const players:Player[]=[{id,name:cleanName(payload.name,"Gast"),connected:true,ready:false,score:0,characterId:payload.characterId}];
     for(let i=0;i<payload.bots!;i++)players.push({id:`bot-${randomUUID()}`,name:`Inselbot ${i+1}`,connected:true,ready:true,score:0,bot:true,characterId:CHARACTERS[randomInt(CHARACTERS.length)].id});
-    const room:RoomState={code,hostId:id,players,phase:"lobby",config:{gameId:"party",playerCount:players.length,party:partyOptions({rounds:5})},partyTest:{seed:payload.seed!}};
+    const room:RoomState={code,hostId:id,players,phase:"lobby",config:{gameId:mode,playerCount:players.length,party:partyOptions({rounds:5})},partyTest:{seed:payload.seed!}};
     registerRoom(room);enterRoom(socket.id,room,id);callback({ok:true,data:publicRoom(room,id)});
   });
   withPayload("room:character",(payload:{characterId?:unknown},callback:(ack:Ack<RoomState>)=>void)=>{
@@ -327,13 +329,15 @@ hub.onPeer((socket) => {
     if(seq<=(room.partyTest.commandSeq??0))return callback({ok:true,data:publicRoom(room,member.playerId)});
     if(g.pausedAt)return callback({ok:false,error:"Die Testpartie ist pausiert."});
     if(payload.command==="restart"){
-      room.partyGame=createPartyGame(room.players,room.config.party,true,room.partyTest.seed);
+      room.partyGame=createPartyGame(room.players,room.config.party,true,room.partyTest.seed,Date.now(),g.mode,room.config.minigames);
       room.partyGame.phaseId=g.phaseId+1;room.partyGame.seq={...g.seq};botDrivers.set(room.code,new PartyBotDriver());
-    }else if(payload.command==="mini"&&isArenaId(payload.miniId??""))room.partyGame=selectPartyTestMini(g,payload.miniId as import("../shared/partyArena").ArenaId);
+    }else if(payload.command==="mini"&&!g.competition&&isPlayableMini(payload.miniId)){
+      try{room.partyGame=selectPartyTestMini(g,payload.miniId as PlayableMiniId);}catch(error){return callback({ok:false,error:error instanceof Error?error.message:"Minispiel nicht verfügbar."});}
+    }
     else if(payload.command==="skip-bots")room.partyGame=botDrivers.get(room.code)!.skipTurns(g,Date.now());
     else return callback({ok:false,error:"Unbekanntes Testwerkzeug."});
     room.partyTest.commandSeq=seq;
-    broadcast(room);callback({ok:true,data:publicRoom(room,member.playerId)});
+    broadcast(room);callback({ok:true,data:publicRoom(room,member.playerId)});closePartyRoom(room);
   });
   withPayload("party:control",(payload:{phaseId?:number;token?:string;seq?:number;input?:ArenaInput},callback:(ack:Ack<{accepted:boolean}>)=>void, acknowledged:boolean)=>{
     const member=socketMembership.get(socket.id),room=member?rooms.get(member.roomCode):undefined,g=room?.partyGame;
@@ -351,6 +355,7 @@ hub.onPeer((socket) => {
     if(payload.seq! <= (g.seq[member.playerId]??0))return callback({ok:true,data:publicRoom(room,member.playerId)});
     if(payload.phaseId!==g.phaseId)return callback({ok:false,error:"Der Spielzug hat sich geändert. Bitte erneut wählen."});
     if((payload.action.type==="resume"||payload.action.type==="abort")&&room.hostId!==member.playerId)return callback({ok:false,error:"Nur der Host kann fortsetzen oder abbrechen."});
+    if(g.competition&&payload.action.type==="next"&&room.hostId!==member.playerId)return callback({ok:false,error:"Nur der Host startet das nächste Minispiel."});
     try {room.partyGame=applyPartyAction(g,member.playerId,payload.action);room.partyGame.seq[member.playerId]=payload.seq!;broadcast(room);callback({ok:true,data:publicRoom(room,member.playerId)});closePartyRoom(room);}
     catch(error){callback({ok:false,error:error instanceof Error?error.message:"Aktion nicht möglich."});}
   });
@@ -483,7 +488,7 @@ hub.onPeer((socket) => {
   withPayload(
     "room:configure",
     (
-      payload: { gameId?: GameId; playerCount?: number; durakCheatMode?: boolean; party?: Partial<PartyOptions> },
+      payload: { gameId?: GameId; playerCount?: number; durakCheatMode?: boolean; party?: Partial<PartyOptions>; minigames?: Partial<MinigameOptions> },
       callback: (ack: Ack<RoomState>) => void
     ) => {
       const membership = socketMembership.get(socket.id);
@@ -493,19 +498,29 @@ hub.onPeer((socket) => {
         return callback({ ok: false, error: "Nur der Host kann das Spiel einstellen." });
       }
       if(room.phase!=="lobby")return callback({ok:false,error:"Die Partie läuft bereits."});
-      if(room.partyTest&&((payload.gameId&&payload.gameId!=="party")||(payload.playerCount!==undefined&&payload.playerCount!==room.config.playerCount)))return callback({ok:false,error:"Ein Testraum bleibt eine Inselparty mit der gewählten Botanzahl."});
+      if(room.partyTest&&((payload.gameId&&payload.gameId!==room.config.gameId)||(payload.playerCount!==undefined&&payload.playerCount!==room.config.playerCount)))return callback({ok:false,error:"Spiel und Botanzahl des Testraums stehen bereits fest."});
       let options: PartyOptions;
       try { options=partyOptions(payload.party??room.config.party); } catch {return callback({ok:false,error:"Ungültige Inselparty-Einstellungen."});}
       let game;
       try { game=getGame(payload?.gameId??room.config.gameId); } catch {return callback({ok:false,error:"Unbekanntes Spiel."});}
       if(game.status!=="ready")return callback({ok:false,error:"Dieses Spiel ist noch nicht verfügbar."});
+      let minis: MinigameOptions | undefined;
+      try { minis = isMinigameMode(game.id) ? minigameOptions(payload.minigames ?? room.config.minigames) : room.config.minigames; }
+      catch(error) { return callback({ok:false,error:error instanceof Error ? error.message : "Ungültige Minispiel-Einstellungen."}); }
       const requestedCount = payload.playerCount ?? room.config.playerCount;
       if(!Number.isInteger(requestedCount))return callback({ok:false,error:"Ungültige Spielerzahl."});
+      const playerCount = Math.max(game.minPlayers, Math.min(game.maxPlayers, requestedCount));
+      // Reject settings that could not start, so a room never fails at its start signal.
+      try {
+        if (minis && isMinigameMode(game.id)) checkMinigameSetup(game.id, minis, playerCount);
+        else if (isPartyMode(game.id) && !miniPool(playerCount, options.classic ?? true).length) throw new Error("Ohne 1st Generation Minigames gibt es für diese Spielerzahl noch kein passendes Spiel.");
+      } catch (error) { return callback({ok:false,error:error instanceof Error ? error.message : "Ungültige Minispiel-Einstellungen."}); }
       room.config = {
         gameId: game.id,
-        playerCount: Math.max(game.minPlayers, Math.min(game.maxPlayers, requestedCount)),
+        playerCount,
         durakCheatMode: game.id === "durak" ? Boolean(payload.durakCheatMode ?? room.config.durakCheatMode) : false,
-        party: options
+        party: options,
+        minigames: minis
       };
       room.players.forEach((player) => {
         player.ready = Boolean(player.bot);
@@ -529,6 +544,23 @@ hub.onPeer((socket) => {
     }
     broadcast(room);
     callback({ ok: true, data: publicRoom(room, membership?.playerId) });
+  });
+
+  withoutPayload("room:lobby", (callback: (ack: Ack<RoomState>) => void) => {
+    const membership = socketMembership.get(socket.id);
+    const room = membership ? rooms.get(membership.roomCode) : undefined;
+    if (!membership || !room) return callback({ ok: false, error: "Du bist in keinem Raum." });
+    if (room.phase === "lobby") return callback({ ok: true, data: publicRoom(room, membership.playerId) });
+    const over = room.game?.phase === "finished" || room.durakGame?.phase === "finished" || room.kribbelnGame?.finished
+      || ["finished", "aborted"].includes(room.partyGame?.phase ?? "");
+    if (!over || room.partyTest) return callback({ ok: false, error: "Die Partie läuft noch." });
+    room.phase = "lobby";
+    delete room.game; delete room.durakGame; delete room.kribbelnGame; delete room.partyGame;
+    botDrivers.delete(room.code);
+    moveSequences.set(room.code, new Map());
+    room.players.forEach(player => { player.ready = Boolean(player.bot); player.score = 0; });
+    broadcast(room);
+    callback({ ok: true, data: publicRoom(room, membership.playerId) });
   });
 
   withoutPayload("room:start", (callback: (ack: Ack<RoomState>) => void) => {
@@ -698,9 +730,7 @@ hub.onPeer((socket) => {
         const game = room.partyGame;
         if (!game || game.pausedAt) continue;
         shiftPartyClock(game, gap);
-        for (const actor of game.mini?.arena?.actors ?? []) {
-          actor.input = { ...NEUTRAL_INPUT }; actor.inputUntil = 0;
-        }
+        neutralizePartyInputs(game);
         broadcast(room);
       }
     }
@@ -715,12 +745,21 @@ hub.onPeer((socket) => {
     for (const room of rooms.values()) {
       const before = room.partyGame;
       if (!before || emptySince.has(room.code)) continue;
-      const realtime = before.phase === "mini-play" && !!before.mini?.arena && !before.pausedAt;
+      const realtime = before.phase === "mini-play" && !!(before.mini?.arena || before.mini?.match) && !before.pausedAt;
       if (!realtime && pulse % 5 !== 0) continue;
       const withBots = room.partyTest ? botDrivers.get(room.code)!.step(before, now) : before;
       const after = tickParty(withBots, now);
       room.partyGame = after;
-      if (realtime && after.phaseId === before.phaseId && after.mini?.arena) {
+      if (realtime && after.phaseId === before.phaseId && after.mini?.match) {
+        if (now - (checkpointAt.get(room.code) ?? 0) >= 1000) transactions.dirty(room.code);
+        const match = after.mini.match;
+        if (MATCH_MODULES[match.id as MatchId].meta.hz === 20 || pulse % 2 === 0) transactions.publish(() => {
+          for (const id of hub.members(room.code) ?? []) {
+            const viewer = socketMembership.get(id)?.playerId;
+            if (viewer) hub.peer(id)?.emit("party:match", { code: room.code, phaseId: after.phaseId, match: publicMatch(match, viewer), serverTime: now });
+          }
+        });
+      } else if (realtime && after.phaseId === before.phaseId && after.mini?.arena) {
         if (now - (checkpointAt.get(room.code) ?? 0) >= 1000) transactions.dirty(room.code);
         if (pulse % 2 === 0) transactions.publish(() => {
           for (const id of hub.members(room.code) ?? []) {
@@ -759,9 +798,7 @@ hub.onPeer((socket) => {
           const g = room.partyGame;
           if (g && hidden) {
             if (!g.pausedAt) g.pausedAt = Date.now();
-            for (const actor of g.mini?.arena?.actors ?? []) {
-              actor.input = { ...NEUTRAL_INPUT }; actor.inputUntil = 0;
-            }
+            neutralizePartyInputs(g);
           }
           if (g && !hidden && g.pausedAt && !Object.keys(g.disconnected).length) {
             shiftPartyClock(g, Date.now() - g.pausedAt); g.pausedAt = 0; g.resumeOffered = false;

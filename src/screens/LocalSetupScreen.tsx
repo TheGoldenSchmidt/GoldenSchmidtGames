@@ -1,3 +1,4 @@
+import { isPartyMode } from "../../shared/games";
 import { useMemo, useState } from "react";
 import { GAMES, getGame } from "../../shared/games";
 import type { GameId } from "../../shared/types";
@@ -30,7 +31,7 @@ export function LocalSetupScreen({
   }
 
   return (
-    <main className="page screen-enter">
+    <main className="page party-menu local-setup screen-enter">
       <ScreenHeader title="Lokal spielen" onBack={onBack} />
       <section className="page__content">
         <div className="section-heading">
@@ -39,7 +40,7 @@ export function LocalSetupScreen({
         </div>
 
         <div className="game-choices">
-          {GAMES.filter(entry=>entry.id!=="party").map((entry) => (
+          {GAMES.filter(entry=>!isPartyMode(entry.id)).map((entry) => (
             <button
               className={`game-choice game-choice--${entry.id} ${entry.id === gameId ? "is-selected" : ""}`}
               key={entry.id}

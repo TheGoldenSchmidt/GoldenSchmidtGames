@@ -51,7 +51,8 @@ test("Handy-Host startet ohne Internet aus der installierten PWA",async({page,br
   }finally{await guest.close();}
 });
 
-test("Fünf Geräte steuern gemeinsam, ein zweiter Tisch bleibt unabhängig",async({page,browser})=>{
+test("Fünf Geräte steuern gemeinsam, ein zweiter Tisch bleibt unabhängig",async({page,browser},info)=>{
+  test.skip(info.project.name==="desktop","Inselparty ist nur für Smartphones vorgesehen.");
   test.setTimeout(120000);
   const guests=await Promise.all(Array.from({length:4},()=>browser.newPage({viewport:page.viewportSize()!})));
   const other=await browser.newPage({viewport:page.viewportSize()!});
@@ -182,15 +183,16 @@ test("Handy-Host setzt seinen Tisch fort und entfernt geschlossene Partien",asyn
   await page.getByRole("button",{name:"Verlassen",exact:true}).click();
   await page.getByRole("button",{name:"Handy-Tisch fortsetzen",exact:true}).click();
   await expect(page.locator(".party-mini-intro")).toBeVisible();
-  await page.locator(".party-host-menu>summary").click();
+  await page.getByRole("button",{name:"Spielmenü öffnen",exact:true}).click();
   await page.getByRole("button",{name:"Partie für alle beenden",exact:true}).click();
   await page.getByRole("button",{name:"Zum Startmenü",exact:true}).click();
   await expect(page.getByRole("button",{name:"Handy-Tisch fortsetzen",exact:true})).toHaveCount(0);
   expect(await page.evaluate(()=>localStorage.getItem("spielraum.last-host.v1"))).toBeNull();
 });
 
-for(const [game,marker] of [["qwixx",".qwixx-turn"],["kribbeln",".kribbel-score-strip"],["durak",".durak-players"],["party",".party-mini-intro"]]) {
-  test(`Handy-Tisch spielt ${game} per direktem Datenkanal`,async({page,browser})=>{
+for(const [game,marker] of [["qwixx",".qwixx-turn"],["kribbeln",".kribbel-score-strip"],["durak",".durak-players"],["party",".party-mini-intro"],["roll-it-up",".roll-it-up .party-mini-intro"],["free-minigame",".party-mini-intro"],["goldenschmidt",".minigame-betting"]]) {
+  test(`Handy-Tisch spielt ${game} per direktem Datenkanal`,async({page,browser},info)=>{
+    test.skip(!["qwixx","kribbeln","durak"].includes(game)&&info.project.name==="desktop","Party und Minispiele sind nur für Smartphones vorgesehen.");
     test.setTimeout(120000);
     const guest=await browser.newPage({viewport:page.viewportSize()!});
     try{
@@ -200,6 +202,12 @@ for(const [game,marker] of [["qwixx",".qwixx-turn"],["kribbeln",".kribbel-score-
       await pair(page,guest);
       for(const device of [guest,page])await device.getByRole("button",{name:"Ich bin bereit",exact:true}).click();
       for(const device of [page,guest])await expect(device.locator(marker)).toBeVisible();
+      if(game==="goldenschmidt") {
+        await page.getByRole("button",{name:"5 Punkte setzen",exact:true}).click();
+        await page.getByRole("button",{name:"Einsatz festlegen · 5",exact:true}).click();
+        await expect(page.getByRole("status").filter({hasText:/Dein Einsatz/})).toContainText("5 Punkte");
+        await expect(guest.getByRole("button",{name:"5 Punkte setzen",exact:true})).toBeEnabled();
+      }
       if(game==="qwixx"){
         await page.getByRole("button",{name:"Würfeln",exact:true}).click();
         const white=guest.getByRole("button",{name:"Weiße Aktion auslassen",exact:true});
@@ -215,6 +223,12 @@ for(const [game,marker] of [["qwixx",".qwixx-turn"],["kribbeln",".kribbel-score-
         await page.reload();await guest.reload();
         await pair(page,guest);
         for(const device of [page,guest])await expect(device.locator(marker)).toBeVisible();
+        if(game==="goldenschmidt") {
+          await expect(page.getByRole("status").filter({hasText:/Dein Einsatz/})).toContainText("5 Punkte");
+          await guest.getByRole("button",{name:"2 Punkte setzen",exact:true}).click();
+          await guest.getByRole("button",{name:"Einsatz festlegen · 2",exact:true}).click();
+          for(const device of [page,guest])await expect(device.locator(".party-mini-intro")).toBeVisible();
+        }
       }
     } finally {await guest.close();}
   });

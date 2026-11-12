@@ -48,9 +48,13 @@ in normaler Rotation, im Solo-Testraum und als kurze Übung verfügbar.
 
 ## Lesbares Brett und Ankunft
 
-Farbig eingefasste, nummerierte Felder, kräftige Verbindungen und eine höhere
-Kameraperspektive rücken die Wege in den Vordergrund. Zusätzlich gibt es eine
-umschaltbare klare Übersicht und eine Legende. Auf kleinen Displays bleibt der
+Inselparty und Roll It Up! zeigen größere Figuren auf weiter auseinanderliegenden
+Feldern. Schmale Verbindungen und flach aufliegende Symbole lassen die Figuren
+frei. Die Kamera startet bei der aktiven Figur; Tasten wechseln zur ganzen Karte
+oder zurück zur Figur. Die Welt füllt den Bildschirm; Spielerstände und Aktionen
+liegen als Overlays darin. Feldinfos erscheinen beim Antippen als Pop-up, ohne den
+Kameraausschnitt zu verändern. Zusätzlich gibt es eine umschaltbare klare Übersicht
+und eine aufklappbare Legende mit Feld- und Figurensuche. Auf kleinen Displays bleibt der
 Würfelknopf am unteren Rand erreichbar. Auf dem Brett gibt es keine kurze
 Entscheidungsfrist; die Tempo-Einstellung steuert die Bewegungsgeschwindigkeit.
 Die Minispiele behalten ihre jeweiligen Zeitlimits und den gemeinsamen Start.
@@ -77,12 +81,64 @@ Geschlossene Räume melden dies auch an angemeldete Status-Beobachter; der Knopf
 und der lokale Sitzungsverweis verschwinden dann sofort. Ohne Serververbindung
 wird kein ungeprüfter Wiederbeitritt angeboten.
 
+## Eigenständige Minispielmodi
+
+**Freies Minispiel** und **Schlag den GoldenSchmidt** verwenden dieselben
+Minispiele (14 klassische Arenen und 12 Match-Spiele), Teilnahme- und
+Gleichstandsregeln wie die Inselparty. Beide
+Modi laufen für 2–6 Personen auf getrennten Geräten mit Node-Server oder
+Handy-Host. Brett, Auftakt zur Zugreihenfolge und Münzausschüttung entfallen.
+In klassischen Arenen entscheiden bei gleichen Minispielpunkten weniger Stürze
+und danach die einmal zu Beginn ausgeloste Reihenfolge; Match-Spiele teilen
+Plätze nach ihren eigenen Stechregeln (siehe unten).
+
+Im freien Modus bestimmt der Host das Minispiel in der Lobby. Nach einer
+gewerteten Runde endet die Partie mit dem Minispielergebnis. Ohne Teilnahme
+gibt es keinen Minispielsieger. Üben ist vor dem gemeinsamen Start möglich.
+
+Im Wettbewerb spielen alle gegeneinander. Der Host wählt X zwischen 1 und der
+Zahl der zur Spielerzahl passenden Minispiele (Standard: 5). Die Raumautorität zieht X unterschiedliche Minispiele; künftige
+Spiele bleiben verborgen. Vor jeder Runde wird die Aufgabe angezeigt. Jede
+Person legt dann verdeckt einen eigenen Einsatz von 1 bis X fest. Jede Zahl
+darf pro Person genau einmal verwendet werden, unabhängig vom Rundenergebnis.
+Ein bestätigter Einsatz ist unveränderlich. Es gibt keine automatische Auswahl
+nach Zeitablauf. Erst wenn alle aktiven Personen gesetzt haben, erscheinen die
+Einsätze und die gemeinsame Bereitschaftsanzeige.
+
+Die erstplatzierte teilnehmende Person erhält ihren eigenen Einsatz als
+Wettbewerbspunkte, alle anderen erhalten 0 Punkte. Nichtteilnahme bleibt ohne
+Punkte. Nach X Runden gewinnt die höchste Gesamtpunktzahl; bei gleichem
+Gesamtstand wird der Sieg geteilt. Nach einer Zwischenwertung startet nur der
+Host die nächste Runde. Die Abschlussansicht enthält Gesamtstand und sämtliche
+Rundeneinsätze. Bestätigte Einsätze, verbrauchte Werte und Gesamtpunkte werden
+im vollständigen Raumzustand gespeichert; andere Geräte erhalten vor der
+Aufdeckung nur die Information, wer bereits gesetzt hat. Die bestehenden
+Pausen-, Wiederbeitritts- und Raumschließungsregeln gelten auch hier.
+
+## Match-Minispiele und 1st Generation Minigames
+
+Die 14 ersten Arenen und das Match-Spiel Hook Wars bilden die **1st Generation
+Minigames** (`FIRST_GEN_MINI_IDS`). Inselparty, Roll It Up! und Schlag den
+GoldenSchmidt speichern dafür die Option `classic` (Standard: an). Ohne sie
+ziehen die Modi nur neue Match-Minispiele, die zur Zahl der
+aktiven Spieler passen. Die Lobby lehnt Einstellungen ab, für die es kein
+passendes Spiel gibt oder deren Rundenzahl die Auswahl übersteigt.
+
+Match-Minispiele ermitteln ihre Platzierung selbst, einschließlich eigener
+Stechregeln. Bleibt danach ein Gleichstand, teilen sich die Spieler den Platz
+und erhalten dieselbe Belohnung: in der Inselparty die Münzen dieses Platzes
+(10/4/2), im Wettbewerb jeweils den eigenen Einsatz. Ohne eigene Eingabe gilt
+eine Person als nicht teilnehmend. „Aufgeben“ beendet die Teilnahme; später
+Aufgebende stehen vor früher Aufgebenden. Bleibt nur eine Person übrig, endet
+das Match. Details: [Konzept](minigames/konzept.md).
+
 ## Tests
 
 `test:rules` prüft zusätzlich alle neuen Mechaniken, Körperkontakte, Stürze,
 eindeutige Auszahlungen, den Auftakt, feste Reihenfolge und Wirkungen nach
-Ankunft. Deterministische Replays und echte Botsteuerung laufen für 14 Arenen.
-`test:online` spielt eine vollständige Partie und prüft geschlossene Räume,
+Ankunft. Deterministische Replays und echte Botsteuerung laufen für 14 Arenen
+und alle 12 Match-Spiele (je ein eigener Regeltest in `scripts/`).
+`test:online` spielt eine vollständige Partie und prüft die Rückkehr in die Lobby nach Spielende,
 Host-Rechte, Status-Beobachter und ungültige Tokens. Browserfälle decken alle
 14 Arenen, Neigung, Touch-/Tastatursteuerung, sechs Modelle, Kartenansichten,
 Auftakt und Wiederbeitritt ab. Die gesamte bestehende CI führt diese Befehle aus.
@@ -90,3 +146,12 @@ Auftakt und Wiederbeitritt ab. Die gesamte bestehende CI führt diese Befehle au
 Die Browser-CI verteilt Handy und PC auf jeweils drei Teilläufe. Die voneinander
 unabhängigen Arena-Fälle lassen sich einzeln verteilen, damit die erweiterte
 Palette die Prüflaufzeit nicht auf einen einzelnen Job konzentriert.
+
+Die eigenständigen Modi haben zusätzliche Regel- und Socketfälle in
+`scripts/minigame-modes-test.ts` und `scripts/minigame-modes-online-test.ts`.
+Sie sind in `test:rules` beziehungsweise `test:online` eingebunden. Der
+Neustarttest prüft einen gespeicherten, weiterhin verdeckten Einsatz.
+`tests/browser/minigame-modes.spec.ts` prüft Lobby, Eingabe, Wiederbeitritt und
+Abschluss in beiden Bewegungseinstellungen; `nearby.spec.ts` enthält beide
+Modi mit direktem Datenkanal und erneuter Paarung. Dies ersetzt keine Prüfung
+auf echten Handys.

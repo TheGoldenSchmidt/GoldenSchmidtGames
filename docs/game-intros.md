@@ -7,6 +7,10 @@ Qwixx zeigt sechs Würfel und vierfarbige Blätter, Kribbeln eine Würfelmulde u
 sechs Farbwürfel. Bei Inselparty fliegt die Kamera auf eine kleine Insel mit
 Hafen, Palmen und Spielfeldern zu.
 
+Freies Minispiel und Schlag den GoldenSchmidt öffnen unmittelbar die
+Minispielanleitung beziehungsweise die Einsatzauswahl. Nach der Bereitschaft
+beginnt die Arena mit ihrem gemeinsamen Drei-Sekunden-Countdown.
+
 ## Gestaltung
 
 - Filzgrün `#205b50`, dunkles Petrol `#102f32`, Holz `#925c3d`, Messing

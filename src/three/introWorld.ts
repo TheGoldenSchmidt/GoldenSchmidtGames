@@ -1,3 +1,4 @@
+import { rollingTray } from "./rollingTray";
 import * as T from "three";
 import type { GameId } from "../../shared/types";
 import { character, PLAYER_COLORS, SceneKit } from "./sceneKit";
@@ -134,10 +135,17 @@ export function createIntroWorld(host: HTMLElement, gameId: GameId, players: Int
   const kit = new SceneKit(host, onError);
   try {
     const world = new T.Group(); kit.scene.add(world);
-    if (gameId === "party") islandScene(kit, world, players); else tableScene(kit, world, gameId, players);
+    if (gameId === "roll-it-up") {
+      const tray = new T.Group(); world.add(tray); tray.scale.setScalar(.36); rollingTray(kit,tray);
+      players.forEach((player,i) => {
+        const pawn=character(kit,world,i,player.name,player.characterId);
+        const angle=(i+.5)/players.length*Math.PI;
+        pawn.group.position.set(Math.cos(angle)*3.4,.38,Math.sin(angle)*3.4);
+      });
+    } else if (gameId === "party") islandScene(kit, world, players); else tableScene(kit, world, gameId, players);
     const labels: T.Sprite[] = [];
     world.traverse(object => { if (object instanceof T.Sprite) labels.push(object); });
-    const target = new T.Vector3(0, gameId === "party" ? .8 : 1.8, 0);
+    const target = new T.Vector3(0, gameId === "party" || gameId === "roll-it-up" ? .8 : 1.8, 0);
     return {
       render(elapsed: number) {
         const progress = T.MathUtils.clamp((elapsed - 950) / 2100, 0, 1);

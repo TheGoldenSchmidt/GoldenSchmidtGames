@@ -38,8 +38,7 @@
 .party-map-scroll { height:min(100vw,40dvh); overflow:auto; overscroll-behavior:contain; background:linear-gradient(#31b3bb,#087f9b); }
 .party-map-scroll > svg { display:block; max-width:none; min-width:100%; height:100%; }
 .party-region { fill:#24583f; font-size:2.5px; text-anchor:middle; font-weight:800; paint-order:stroke; stroke:#a7d89e; stroke-width:.8px; stroke-linejoin:round; }
-.party-field { cursor:pointer; }.party-field > circle { fill:#fffbed; stroke:#bca56f; stroke-width:.4; }.party-field > text { font-size:3px; text-anchor:middle; fill:#345756; font-weight:900; pointer-events:none; }
-.party-field--coin > circle { fill:#c8ebba; stroke:#5a9a63; }.party-field--bad > circle { fill:#ffc1a5; stroke:#c96a4f; }.party-field--event > circle { fill:#e5c5f1; stroke:#9975af; }.party-field--gift > circle { fill:var(--sun); stroke:#c98f24; }.party-field--shop > circle { fill:#b9e8ee; stroke:#3b98a8; }
+.party-field { cursor:pointer; }.party-field > circle { fill:var(--field-color,#fffbed); stroke:#96aea7; stroke-width:.4; }.party-field > text { font-size:3px; text-anchor:middle; fill:#345756; font-weight:900; pointer-events:none; }
 .party-field.is-choice > circle { stroke:var(--deep); stroke-width:1; }.party-field.is-selected > circle,.party-field:focus-visible > circle { stroke:#10485b; stroke-width:1; }.party-field:focus-visible { outline:none; }
 .party-map-trophy text { fill:#694611; text-anchor:middle; font-size:3.8px; stroke:none; }
 .party-pawn { transition:transform .145s linear; pointer-events:none; }.party-pawn > path { fill:var(--pawn); stroke:#fff9e0; stroke-width:.5; }.party-pawn > circle { fill:var(--pawn); stroke:#fff9e0; stroke-width:.5; }.party-pawn > text { text-anchor:middle; fill:white; font-size:1.8px; }

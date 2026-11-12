@@ -1,7 +1,15 @@
 import type { GameDefinition, GameId } from "./types";
+import { isMinigameMode, type MinigameMode } from "./minigameModes";
+
+export function isPartyMode(id: unknown): id is "party" | "roll-it-up" | MinigameMode {
+  return id === "party" || id === "roll-it-up" || isMinigameMode(id);
+}
 
 export const GAMES: GameDefinition[] = [
+  { id: "roll-it-up", name: "Roll It Up!", shortDescription: "Sammle sechs Utensilien in der Bauschale und erreiche den Jayspot.", minPlayers: 2, maxPlayers: 6, status: "ready" },
   { id: "party", name: "Inselparty", shortDescription: "Eine Insel, Trophäen, Items und gemeinsame Minispiele.", minPlayers: 2, maxPlayers: 6, status: "ready" },
+  { id: "free-minigame", name: "Freies Minispiel", shortDescription: "Wählt ein Minispiel und spielt direkt gegeneinander.", minPlayers: 2, maxPlayers: 6, status: "ready" },
+  { id: "goldenschmidt", name: "Schlag den GoldenSchmidt", shortDescription: "Zufällige Minispiele, einmalige Einsätze und ein Gesamtsieg.", minPlayers: 2, maxPlayers: 6, status: "ready" },
   {
     id: "qwixx",
     name: "Qwixx",

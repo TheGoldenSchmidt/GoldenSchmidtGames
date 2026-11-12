@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { NEUTRAL_MATCH_INPUT } from "../shared/matches/types";
 import { randomUUID } from "node:crypto";
 import { setTimeout as delay } from "node:timers/promises";
 import { io, type Socket } from "socket.io-client";
@@ -21,7 +22,7 @@ async function reply<T = RoomState>(s: Socket, event: string, ...args: object[])
   assert.ok(ack.ok, ack.error);
   return ack.data!;
 }
-async function startRoom(url: string, gameId: "qwixx" | "durak" | "kribbeln" | "party") {
+async function startRoom(url: string, gameId: "qwixx" | "durak" | "kribbeln" | "party" | "goldenschmidt" | "free-minigame") {
   const [a, b] = await Promise.all([connect(url), connect(url)]);
   const host = await reply(a, "room:create", { playerId: "ada", characterId: "alpha_rick_prime" });
   const guest = await reply(b, "room:join", { code: host.code, playerId: "ben", characterId: "alpha_korvo" });
@@ -47,6 +48,8 @@ try {
   assert.match(await page.text(), /<title>GoldenSchmidtGames<\/title>/);
   const q = await startRoom(url, "qwixx"), d = await startRoom(url, "durak");
   const k = await startRoom(url, "kribbeln"), p = await startRoom(url, "party");
+  const m = await startRoom(url, "goldenschmidt"), f = await startRoom(url, "free-minigame");
+  await reply(m.a, "party:action", {token:m.host,seq:1,phaseId:m.start.partyGame!.phaseId,action:{type:"bet",value:5}});
   await reply(q.a, "qwixx:roll");
   const white = await reply(q.b, "qwixx:white-choice", { color: null });
   const attackerIsHost = d.start.durakGame!.attackerId === "ada";
@@ -63,7 +66,8 @@ try {
   const arena = playing.partyGame!;
   await delay(Math.max(0, arena.mini!.startAt - Date.now() + 100));
   const control = await reply<{ accepted: boolean }>(p.a, "party:control", {
-    token: p.host, seq: 10, phaseId: arena.phaseId, input: { x: 1, z: 0, jump: false, punch: false }
+    // The opening may be a 3D arena or a match game; both must survive the crash with their inputs.
+    token: p.host, seq: 10, phaseId: arena.phaseId, input: arena.mini!.match ? { ...NEUTRAL_MATCH_INPUT, x: 1 } : { x: 1, z: 0, jump: false, punch: false }
   });
   assert.equal(control.accepted, true);
   await server.crash(); // No shutdown hooks or final flush.
@@ -83,15 +87,28 @@ try {
   assert.equal((await reply(k2.a, "kribbeln:roll", { keep: [] },
     { ...move, moveSequence: 2, id: randomUUID() })).kribbelnGame?.rolls, 2);
   const p2 = await rejoin(url, p), restored = p2.guest.partyGame!;
+  const m2 = await rejoin(url, m), f2 = await rejoin(url, f);
+  assert.equal(m2.host.partyGame!.phase, "mini-bet");
+  assert.equal(m2.host.partyGame!.competition!.bets.ada, 5);
+  assert.equal(m2.guest.partyGame!.competition!.bets.ada, undefined);
+  assert.deepEqual(m2.guest.partyGame!.competition!.used.ada, []);
+  assert.deepEqual(m2.host.partyGame!.competition!.used.ada, [5]);
+  await assert.rejects(reply(m2.a,"party:action",{token:m.host,seq:2,phaseId:m2.host.partyGame!.phaseId,action:{type:"bet",value:4}}),/bereits fest/);
+  const bet = await reply(m2.b,"party:action",{token:m.guest,seq:1,phaseId:m2.guest.partyGame!.phaseId,action:{type:"bet",value:2}});
+  assert.equal(bet.partyGame!.phase,"mini-intro"); assert.equal(bet.partyGame!.competition!.bets.ada,5);
+  assert.equal(f2.guest.partyGame!.phase,"mini-intro");
+  assert.equal(f2.guest.partyGame!.mini!.id,f.start.partyGame!.mini!.id);
   assert.ok(p2.host.partyGame!.pausedAt); assert.equal(restored.pausedAt, 0);
   assert.equal(restored.phaseId, arena.phaseId);
   assert.ok(restored.mini!.startAt >= arena.mini!.startAt + 700);
   assert.equal(restored.deadline - restored.mini!.startAt, arena.deadline - arena.mini!.startAt);
-  assert.equal(restored.mini!.arena!.actors.find(actor => actor.id === "ada")?.inputSeq, 10);
+  // Read ada's own view: match games hide other players' input counters from the guest.
+  const own = p2.host.partyGame!.mini!;
+  assert.equal((own.arena?.actors ?? own.match!.players).find(actor => actor.id === "ada")?.inputSeq, 10);
   await reply(p2.a, "party:action", { token: p.host, seq: 2, phaseId: restored.phaseId, action: { type: "abort" } });
   await server.crash(); await server.start();
   await assert.rejects(reply(await connect(url), "room:join", { code: p.code, playerId: "ada", sessionToken: p.host }), /geschlossen/);
-  console.log("Prozessabbruch: vier Spiele fortgesetzt, Karten geschützt, Zugwiederholung, Arenauhr und dauerhafte Raumschließung geprüft.");
+  console.log("Prozessabbruch: sechs Spiele fortgesetzt, verdeckte Einsätze erhalten, Karten geschützt, Zugwiederholung, Arenauhr und dauerhafte Raumschließung geprüft.");
 } finally {
   sockets.forEach(s => s.disconnect());
   await server.close();

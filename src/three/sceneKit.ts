@@ -16,8 +16,8 @@ export class SceneKit {
   private disposed=false;
   private frameTime=0;private slowFrames=0;private qualityChanged=false;
   private lost:(event:Event)=>void;
-  constructor(readonly host:HTMLElement,onError:()=>void) {
-    this.renderer=new T.WebGLRenderer({antialias:true,powerPreference:"high-performance"});
+  constructor(readonly host:HTMLElement,onError:()=>void,options:{alpha?:boolean}={}) {
+    this.renderer=new T.WebGLRenderer({antialias:true,alpha:options.alpha??false,powerPreference:"high-performance"});
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
     this.renderer.shadowMap.enabled=true;this.renderer.shadowMap.type=T.PCFSoftShadowMap;
     this.renderer.outputColorSpace=T.SRGBColorSpace;this.renderer.toneMapping=T.ACESFilmicToneMapping;this.renderer.toneMappingExposure=.92;
@@ -41,9 +41,9 @@ export class SceneKit {
   cylinder(parent:T.Object3D,color:number,x:number,y:number,z:number,r:number,h:number) {return this.mesh(parent,this.cylinderGeometry,color,x,y,z,r,h,r);}
   cone(parent:T.Object3D,color:number,x:number,y:number,z:number,r:number,h:number) {return this.mesh(parent,this.coneGeometry,color,x,y,z,r,h,r);}
   beam(parent:T.Object3D,color:number,from:T.Vector3,to:T.Vector3,width:number) {const mesh=this.box(parent,color,0,0,0,width,from.distanceTo(to),width);mesh.position.copy(from).add(to).multiplyScalar(.5);mesh.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),to.clone().sub(from).normalize());return mesh;}
-  label(parent:T.Object3D,text:string,color="#10485b",width=2.8) {
+  label(parent:T.Object3D,text:string,color="#10485b",width=2.8,fontSize=52) {
     const canvas=document.createElement("canvas");canvas.width=512;canvas.height=128;const ctx=canvas.getContext("2d")!;
-    ctx.fillStyle="rgba(255,251,226,.95)";ctx.beginPath();ctx.roundRect(4,8,504,104,36);ctx.fill();ctx.font="bold 52px 'Trebuchet MS',sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillStyle=color;ctx.fillText(text.slice(0,24),256,63,470);
+    ctx.fillStyle="rgba(255,251,226,.95)";ctx.beginPath();ctx.roundRect(4,8,504,104,36);ctx.fill();ctx.font=`bold ${fontSize}px 'Trebuchet MS',sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillStyle=color;ctx.fillText(text.slice(0,24),256,63,470);
     const texture=new T.CanvasTexture(canvas);texture.colorSpace=T.SRGBColorSpace;
     const sprite=new T.Sprite(new T.SpriteMaterial({map:texture,depthTest:true}));sprite.scale.set(width,width/4,1);parent.add(sprite);return sprite;
   }
@@ -80,7 +80,7 @@ export class SceneKit {
   }
 }
 
-export interface Character {group:T.Group;pose:(heading:number,speed:number,time:number,jump:number,punch:boolean,reduce:boolean)=>void}
+export interface Character {group:T.Group;act?:(clip:"attack"|"hit"|"death",time:number)=>void;pose:(heading:number,speed:number,time:number,jump:number,punch:boolean,reduce:boolean)=>void}
 export function character(kit:SceneKit,parent:T.Object3D,index:number,name?:string,selected?:string):Character {
   const figure=figureCharacter(parent,characterId(selected,index));
   const ring=kit.mesh(figure.group,new T.TorusGeometry(.4,.045,6,24),PLAYER_COLORS[index%6],0,.045,0);ring.rotation.x=Math.PI/2;

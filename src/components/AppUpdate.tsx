@@ -51,7 +51,7 @@ export function AppUpdate() {
     catch (error) { setStatus("error"); setMessage(error instanceof Error ? error.message : "Aktualisierung fehlgeschlagen."); }
   }
 
-  return <aside className="app-update" aria-label="App aktualisieren">
+  return <aside className="app-update" aria-label="App aktualisieren" data-status={status}>
     <button className="button button--secondary button--wide" onClick={status === "ready" ? apply : check} disabled={["checking", "applying", "unsupported"].includes(status)}>
       {status === "ready" ? "Neue Version laden" : status === "checking" ? "Suche nach Updates …" : status === "applying" ? "Update wird geladen …" : "Nach Updates suchen"}
     </button>

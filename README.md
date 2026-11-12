@@ -10,15 +10,23 @@ Eine installierbare Smartphone-PWA für lokale und Online-Spiele. Das aktuelle G
 - Qwixx-, Durak- und Kribbeln-Spielmodule für lokale und Online-Partien
 - Offline-Cache als installierbare PWA
 - 13 freigegebene alpha_-Charaktere mit Pflichtauswahl vor Raumzugang und zufälliger Bot-Zuordnung; dieselbe Figur in allen Spielen
-- Inselparty für 2–6 Personen ausschließlich online: eine echte 3D-Insel, eigene steuerbare Figuren, 34 Felder, fünf Items und 14 gemeinsame 3D-Minispiele mit Touch-, Tastatur- und Neigungssteuerung
+- Inselparty für 2–6 Personen ausschließlich online: eine echte 3D-Insel, eigene steuerbare Figuren, 34 Felder, fünf Items, 14 klassische 3D-Minispiele und neue Match-Minispiele
+- Freies Minispiel und Schlag den GoldenSchmidt für 2–6 Personen auf getrennten Geräten, mit denselben Minispielen und beiden Hostingarten
+- Inselparty, Roll It Up! und alle Minispiele sind nur für Smartphones vorgesehen (Touch-Steuerung, keine PC-Tests)
 
 Das Qwixx-Modul enthält den gemeinsamen weißen Wurf, die zusätzliche Farbaktion der aktiven Person, vier getrennte Wertungsblätter, Fehlwürfe, Reihenschlüsse, automatische Wertung und die Spielergebnisanzeige.
+
+Der Startbildschirm zeigt das GSG-Icon neben dem gestapelten GoldenSchmidtGames-Schriftzug auf violettem Grund, darunter gelbe und pinke Spielbuttons. Beim Öffnen wird das Icon einmal auf den Tisch geworfen, die drei Wörter gleiten dahinter hervor; danach ist die Seite ruhig. Bei reduzierter Bewegung steht alles sofort im Endzustand. Um das Logo liegen gezeichnete Karten, Würfel, Spielfiguren und Münzen; Figuren und 3D-Szene gibt es auf dem Startbildschirm nicht. Die Seite füllt genau einen Bildschirm und scrollt nicht, die Installationshilfe öffnet sich als Feld über der unteren Zeile. Beide Spielmodi, Gastprofil, Installation, Updates und Wiederbeitritt bleiben direkt über die bisherigen Aktionen erreichbar.
+
+Lokales Setup, Online-Menü, Lobby, Gastprofil und QR-Dialog übernehmen diesen Party-Stil mit violetten Kopfbereichen, gelber Auswahl und kräftigen Konturen. Auf dem PC stehen im lokalen Setup Spielauswahl und Spieler nebeneinander; auf dem Handy bleibt die Startaktion am unteren Rand erreichbar. Die Gestaltung ist auf diese Menüs begrenzt; Spielflächen und Spielregeln behalten ihre bisherige Darstellung und Funktion.
+
+Für UI-Erweiterungen und Überarbeitungen gelten die [Designregeln](designregeln.md).
 
 Qwixx bleibt nach dem Intro in einer runden 3D-Tischarena: Die aktive Figur rückt zum Becher vor, zwei weiße und vier einfarbige Würfel fliegen mit festen Identitäten auf wechselnde freie Landepunkte und können danach als gültige Kombination angehoben werden. Die Punktekarte liegt dauerhaft darunter. Der Becher lässt sich mit Finger oder Maus, optionaler Handybewegung oder dem Würfeln-Knopf bedienen; geschlossene Farbreihen nehmen ihren Würfel aus dem nächsten Wurf und reduzierte Bewegung zeigt Ergebnisse sofort. Mehr dazu in [Qwixx mit Würfelbecher](docs/qwixx-cup.md).
 
 Durak verwendet 36 Karten für zwei bis sechs Spieler. Enthalten sind Trumpf, Angriff und Verteidigung, Aufnehmen, Nachlegen, Weiterschieben sowie verdeckte Online-Handkarten. Im lokalen Modus schützt eine Übergabeansicht die Hand der jeweils aktiven Person.
 
-Neue Partien beginnen mit einem etwa vier Sekunden langen 3D-Intro: Bei Durak sitzen die Spieler am runden Filztisch, bei Qwixx und Kribbeln liegen die jeweiligen Würfel und Blätter bereit. Die Kamera fährt näher und richtet sich senkrecht auf den Tisch aus. Inselparty beginnt mit einem Anflug auf eine kleine Insel. Die Sequenzen sind per Button oder Escape überspringbar, entfallen bei reduzierter Bewegung und werden beim Wiederbeitritt nicht erneut abgespielt. Ohne WebGL steht eine Ersatzszene bereit. Mehr dazu in [Spiel-Intros](docs/game-intros.md).
+Qwixx, Durak, Kribbeln und Inselparty beginnen mit einem etwa vier Sekunden langen 3D-Intro: Bei Durak sitzen die Spieler am runden Filztisch, bei Qwixx und Kribbeln liegen die jeweiligen Würfel und Blätter bereit. Die Kamera fährt näher und richtet sich senkrecht auf den Tisch aus. Inselparty beginnt mit einem Anflug auf eine kleine Insel. Die Sequenzen sind per Button oder Escape überspringbar, entfallen bei reduzierter Bewegung und werden beim Wiederbeitritt nicht erneut abgespielt. Ohne WebGL steht eine Ersatzszene bereit. Mehr dazu in [Spiel-Intros](docs/game-intros.md).
 
 Kribbeln ist für zwei bis fünf Personen lokal und online spielbar: sechs Farbwürfel, bis zu drei Würfe mit frei wählbarem Behalten, sechs Farbaufgaben und vier streng ansteigende Kribbelfelder. Bei einer nicht erfüllten Aufgabe kann auf ein freies Kribbelfeld derselben Gruppe ausgewichen werden; danach gibt es drei neue Versuche. Jede abgeschlossene Zeile wird nach Platzierung gewertet, Gleichstände erhalten den niedrigeren Platz. Bei gleichen Endpunkten entscheidet das vierte Kribbelfeld.
 
@@ -28,7 +36,7 @@ Die aktuelle Kribbeln-Aufgabe wird als Mengenbild mit Würfeln, Farbgruppen oder
 
 ## Zwei Hostingarten
 
-Beim Erstellen eines Raums wählt der Host **Node-Server** (Standard) oder **Dieses Handy**. Alle vier Spiele verwenden dieselbe Raum- und Regellogik. Die Auswahl gilt für diesen Raum; laufende Partien wechseln ihre Hostingart nicht.
+Beim Erstellen eines Raums wählt der Host **Node-Server** (Standard) oder **Dieses Handy**. Alle verfügbaren Spiele verwenden dieselbe Raum- und Regellogik. Die Auswahl gilt für diesen Raum; laufende Partien wechseln ihre Hostingart nicht.
 
 Im Node-Modus verbindet sich jedes Gerät über das Internet mit dem bisherigen Server und tritt per Raumcode bei. Im Handy-Modus spielt der Host selbst mit und führt die gemeinsame Simulation in einem Worker aus. Gäste verbinden sich im selben WLAN oder Hotspot einzeln per Einladung und Antwort als QR-Code. Der Spielverkehr läuft direkt zwischen den Geräten, ohne Signalisierungsdienst, STUN/TURN oder Cloud-Datenbank. Verschiedene Gruppen haben unabhängige Hosts.
 
@@ -36,17 +44,51 @@ Für den Einsatz ohne Internet die aktuelle PWA vorher auf **jedem** Gerät voll
 
 ## Automatische Prüfungen
 
-Online-Plätze sind ab der Lobby an einen privaten Schlüssel auf dem jeweiligen Gerät gebunden. Nach einem Verbindungsabbruch meldet sich das Gerät im selben Raum wieder an. Auch nach dem Neuladen öffnet das Gerät seine zuletzt aktive Online-Partie. Wer nur den Raumcode oder eine fremde Spieler-ID kennt, erhält keinen Zugriff auf einen bereits belegten Platz. Der Server speichert bestätigte Züge, verdeckte Karten und Sitzungsschlüssel. Solange der Speicher erhalten bleibt, setzen alle vier Spiele nach einem Neustart im selben Raum fort. Auf Render starten beide Hostingarten auch ohne Turso; der lokale Node-Speicher ist dort flüchtig. Optionen für dauerhafte Node-Spielstände stehen in [DEPLOYMENT.md](DEPLOYMENT.md).
+Online-Plätze sind ab der Lobby an einen privaten Schlüssel auf dem jeweiligen Gerät gebunden. Nach einem Verbindungsabbruch meldet sich das Gerät im selben Raum wieder an. Auch nach dem Neuladen öffnet das Gerät seine zuletzt aktive Online-Partie. Wer nur den Raumcode oder eine fremde Spieler-ID kennt, erhält keinen Zugriff auf einen bereits belegten Platz. Der Server speichert bestätigte Züge, verdeckte Karten, Minispieleinsätze und Sitzungsschlüssel. Solange der Speicher erhalten bleibt, setzen laufende Spiele nach einem Neustart im selben Raum fort. Auf Render starten beide Hostingarten auch ohne Turso; der lokale Node-Speicher ist dort flüchtig. Optionen für dauerhafte Node-Spielstände stehen in [DEPLOYMENT.md](DEPLOYMENT.md).
 
 Auf dem Startbildschirm prüft „Nach Updates suchen“ den Service Worker ohne Browsercache. Eine heruntergeladene Version wird mit „Neue Version laden“ ausdrücklich aktiviert; erst nach Übernahme wird diese App-Ansicht neu geladen. Laufende Spiele besitzen keinen Update-Button und werden vom Update-Code nicht automatisch neu geladen. Die Tests dafür laufen mit `npm run test:pwa` auch in CI.
 
-`.github/workflows/ci.yml` führt unter Node 22 bei Pushes und Pull Requests Installation, TypeScript-/PWA-Build, Regeltests aller vier Spiele, Socket-Integration, Produktionsprüfung und echte Chromium-Browsertests aus. Manuelle Starts sind ebenfalls möglich. Die Regeltests umfassen Feldgrenzen, Schlösser und Fehlwürfe bei Qwixx, Kartenvergleiche, Weiterschieben und Schummelmodus bei Durak sowie alle 46.656 Farbkombinationen und Runden-/Wertungslogik bei Kribbeln. Die Socket-Tests verwenden echte UUIDs und prüfen alle vier Spielstarts. Dies ist keine Garantie, dass jeder denkbare Browser- oder Netzwerkfehler abgedeckt ist.
+`.github/workflows/ci.yml` führt unter Node 22 bei Pushes und Pull Requests Installation, TypeScript-/PWA-Build, Regeltests der spielbaren Module, Socket-Integration, Produktionsprüfung und echte Chromium-Browsertests aus. Manuelle Starts sind ebenfalls möglich. Die Regeltests umfassen Feldgrenzen, Schlösser und Fehlwürfe bei Qwixx, Kartenvergleiche, Weiterschieben und Schummelmodus bei Durak sowie alle 46.656 Farbkombinationen und Runden-/Wertungslogik bei Kribbeln. Die Socket-Tests verwenden echte UUIDs und prüfen unter anderem beide eigenständigen Minispielmodi und ihre verdeckten Einsätze. Dies ist keine Garantie, dass jeder denkbare Browser- oder Netzwerkfehler abgedeckt ist.
+
+## Freies Minispiel und Schlag den GoldenSchmidt
+
+Unter **Online spielen → Neuen Raum erstellen → Ausgewähltes Spiel** sind beide Modi für 2–6 Personen verfügbar. Jede Person spielt am eigenen Gerät. Im Modus **Freies Minispiel** wählt der Host eines der 26 Minispiele aus (12 neue, 14 klassische), sofern es zur Spielerzahl passt. Nach Anleitung, optionaler Übung und gemeinsamem Countdown wird genau dieses Spiel gewertet und das Ergebnis angezeigt.
+
+Bei **Schlag den GoldenSchmidt** wählt der Host 1 bis zur Zahl der passenden Minispiele (Standard: 5; ohne 1st Generation Minigames entsprechend weniger). Die Raumautorität zieht die Spiele zufällig ohne Wiederholung. Vor jedem Spiel kennt ihr die Aufgabe und setzt verdeckt einen eigenen, noch freien Wert von 1 bis zur gewählten Spielanzahl. Sobald alle gesetzt haben, werden die Einsätze aufgedeckt. Ein gesetzter Wert ist auch bei einer Niederlage verbraucht und kann nicht geändert werden. Die erstplatzierte Person erhält ihren eigenen Einsatz als Punkte; alle anderen erhalten 0 Punkte. Die höchste Gesamtpunktzahl gewinnt. Bei gleichem Gesamtstand wird der Sieg geteilt. Der Host startet jeweils das nächste Minispiel.
+
+Beide Modi verwenden die bestehenden Arena- und Gleichstandsregeln und vergeben keine Brettspielmünzen. Gespeicherte Einsätze bleiben bei Wiederbeitritt und Neustart erhalten. Die Bot-Testauswahl bietet beide Modi ebenfalls an; dabei gibt es keine Werkzeuge zum Überspringen gewerteter Runden. Die Regeltests, Socket-Tests und `tests/browser/minigame-modes.spec.ts` prüfen den Ablauf, verdeckte und einmalige Einsätze sowie Wiederbeitritt. Weitere Details stehen in [Inselparty-Regeln](docs/island-party-rules.md#eigenständige-minispielmodi).
+
+## Neue Match-Minispiele
+
+Zusätzlich zu den 14 ersten 3D-Minispielen gibt es zwölf 2D-Arcade-Minispiele für Smartphones; Hook Wars zählt inzwischen zu den **1st Generation Minigames**:
+
+- **Quick Draw** (2–6): Duell bis 3 Siege oder 5 Gruppen-Durchgänge mit 3/2/1 Punkten, Täuschungen, Fehlstarts und Stechen. Der Server allein kennt den Signalzeitpunkt und prüft gemeldete Reaktionszeiten gegen seine eigene Uhr und die gemessene Laufzeit.
+- **Light Trails** (2–6): Gleiter mit Lichtspuren auf einem Raster, Wischen oder ⟲/⟳, schrumpfende Arena, drei Durchgänge.
+- **Neon Pong** (1v1 oder 2v2): eigenes Tor unten, Schläger per Finger, Power-ups, 7 Tore oder 90 Sekunden mit Golden Goal.
+- **Tank Trouble** (2–6): Labyrinth mit abprallenden Kugeln, zerstörbaren Mauern, Power-ups und Respawn; 7 Abschüsse oder 90 Sekunden mit Stechen. In 2.5D mit der gewählten Figur in der Panzerluke; ohne WebGL die 2D-Fläche.
+- **Bomb Arena** (2–6): Bomben mit Kettenreaktionen, Kisten, Power-ups (Reichweite, Bombe, Tempo, Kick), schließende Arena, zwei Durchgänge und Sudden Death. In 2.5D mit den gewählten Figuren; ohne WebGL die 2D-Fläche.
+- **Floor is Lava** (2–6): Tempelplatten über Lava, die unter den Füßen zerbröseln und teils zurückkehren; Sprung und Schubser mit Abklingzeit, einstürzender Rand mit Vorwarnung, drei Durchgänge und Stechrunde. In 2.5D mit den gewählten Figuren; ohne WebGL die 2D-Fläche.
+- **Sumo Smash** und **Bumper Mayhem** (2–6): Ring-Outs mit Stoß beziehungsweise Turbo, 3 Leben, schrumpfende Arena, Entscheidung nach 75 Sekunden und Sudden Death. Sumo Smash als Prototyp in 2.5D mit animierten Figuren (Quaternius, CC0) und mitgehender Kamera.
+- **Chaos Run** (2–6): Auto-Runner mit Lücken, Hämmern, Plattformen, einstürzenden Brücken, Wänden und Balken; Checkpoints und Fortschrittsanzeige.
+- **Arrow Masters** (2–6): 10 Sekunden verdeckt zielen, alle Pfeile fliegen gleichzeitig, Wind, Hindernisse, Zielscheiben, fünf Runden und Präzisions-Stechen.
+- **Tower Tumble** (2–6): Turmrennen – alle bauen gleichzeitig auf einem eigenen schmalen Sockel mit derselben Steinfolge; Steine verschieben, drehen, schnell fallen lassen; nach dem Aufsetzen echte Starrkörperphysik. Wer zuerst 2 s über 16 m steht, gewinnt, sonst nach 2 Minuten die Höhe.
+- **Hook Wars** (2–6, 1st Generation): Greifhaken mit Schwingen und Heranziehen, Energiekerne in die eigene Zone bringen, Gegnern Kerne abluchsen.
+
+In Inselparty, Roll It Up! und Schlag den GoldenSchmidt blendet die Checkbox **1st Generation Minigames** die 14 ersten 3D-Minispiele und Hook Wars aus der Zufallsauswahl aus; standardmäßig sind sie dabei. Im freien Modus stehen beide Gruppen getrennt zur Wahl. Spiele, die nicht zur Spielerzahl passen, werden nicht gezogen. Übung gegen Bots, Aufgeben und die bisherigen Pausen-, Wiederbeitritts- und Wertungsabläufe gelten auch hier. Stand, Regeln und Architektur: [Backlog](docs/minigames/backlog.md), [Spezifikation](docs/minigames/spezifikation.md), [Konzept](docs/minigames/konzept.md).
+
+## Roll It Up!
+
+Wählt im Online-Raum **Roll It Up!** für 2–6 Personen. Der Modus läuft auf dem Node-Server und beim Handy-Hosting. Für eine Solopartie lässt sich im Online-Menü ein Testspiel mit Bots erstellen.
+
+Das Auftakt-Minispiel legt die Zugreihenfolge fest. Ihr würfelt, entscheidet an Abzweigungen und verdient in gemeinsamen Minispielen Münzen. In der Bauschale liegen sechs feste Kaufstellen jeweils fünf Felder auseinander. Der Grinder kostet 8 Münzen, Pape und Filter kosten je 3, jeder der drei Weedbuds kostet 5. Beim Passieren kann jede Figur an jeder Station einmal für ihr eigenes Set einkaufen. Die normalen Zug-Items haben weiterhin drei eigene Inventarplätze.
+
+Mit vollständigem Set könnt ihr auf einem der beiden Hügelwege von Feld 31 oder 33 zur Bank auf Feld 34 abbiegen. Die erste Ankunft am Jayspot beendet die Partie sofort, auch bei übrigen Würfelschritten. Es gibt kein Rundenlimit.
 
 ## Inselparty
 
-Die Partyinsel wird ausschließlich online gespielt. Jede Person öffnet den Link auf dem eigenen Handy oder PC und tritt dem Raum bei. Die anderen Spielmodule behalten ihren lokalen Modus. Die Lobby bietet 5–15 Runden und drei Tempostufen. Standard sind acht Runden; die tatsächliche Dauer hängt von der Spielerzahl und den Entscheidungen ab. Startkapital: 10 Münzen. Eine Trophäe kostet 20 Münzen. Trophäen, danach Münzen, danach Minispielsiege entscheiden über den Sieg. Auf dem Brett wirken normale Felder beim Landen. Am Hafen gibt es beim Überqueren 3 Münzen. Die Trophäe wechselt nach dem Kauf zwischen den Shops 6, 15 und 24. Inventarlimit: drei Items, ein Einsatz vor dem Würfeln.
+Die Partyinsel wird ausschließlich online gespielt. Jede Person öffnet den Link auf dem eigenen Handy und tritt dem Raum bei. Die anderen Spielmodule behalten ihren lokalen Modus. Die Lobby bietet 5–15 Runden und drei Tempostufen. Standard sind acht Runden; die tatsächliche Dauer hängt von der Spielerzahl und den Entscheidungen ab. Startkapital: 10 Münzen. Eine Trophäe kostet 20 Münzen. Trophäen, danach Münzen, danach Minispielsiege entscheiden über den Sieg. Auf dem Brett wirken normale Felder beim Landen. Am Hafen gibt es beim Überqueren 3 Münzen. Die Trophäe wechselt nach dem Kauf zwischen den Shops 6, 15 und 24. Inventarlimit: drei Items, ein Einsatz vor dem Würfeln.
 
-Nach jeder Brett-Runde folgt eines von 14 3D-Minispielen. Alle spielen nach einem gemeinsamen Countdown gleichzeitig in derselben Arena und steuern die eigene Figur. Wer nicht teilnimmt, bekommt keine Münzen. Platzierungen erhalten 10/4/2/0 Münzen; Gleichstände werden eindeutig aufgelöst. Der erste Sturz halbiert die aktuellen Punkte, der zweite beendet den Versuch mit dem bestehenden Stand. Ein zufälliger Auftakt bestimmt die feste Zugreihenfolge. Minispiel-Anleitungen erhalten bis zu 90 Sekunden, damit ein Übungsversuch möglich ist. Die Lobby und das Spiel bieten außerdem eine Übersicht zum Ausprobieren ohne Wertung.
+Nach jeder Brett-Runde folgt ein Minispiel: eines der 14 klassischen 3D-Minispiele oder, je nach Spielerzahl, eines der neuen Match-Minispiele. Alle spielen nach einem gemeinsamen Countdown gleichzeitig. Wer nicht teilnimmt, bekommt keine Münzen. Platzierungen erhalten 10/4/2/0 Münzen; Gleichstände werden eindeutig aufgelöst. Der erste Sturz halbiert die aktuellen Punkte, der zweite beendet den Versuch mit dem bestehenden Stand. Ein zufälliger Auftakt bestimmt die feste Zugreihenfolge. Minispiel-Anleitungen erhalten bis zu 90 Sekunden, damit ein Übungsversuch möglich ist. Die Lobby bietet eine Übungsübersicht; vor jedem Minispiel lässt sich die anstehende Aufgabe ohne Wertung üben. Im laufenden Brettspiel entfällt die zusätzliche Übungsauswahl.
 
 | Minispiel | Aufgabe | Steuerung |
 | --- | --- | --- |
@@ -57,7 +99,7 @@ Nach jeder Brett-Runde folgt eines von 14 3D-Minispielen. Alle spielen nach eine
 | Wackelsteg | Die Figur über eine schmale, gewundene Brücke balancieren | Neigung oder Stick |
 | Kugelkapitäne | Auf einer Kugel Kristalle sammeln und Löcher umfahren | Neigung oder Stick |
 
-Am Handy gibt es einen analogen Touch-Stick und passende Aktionsknöpfe. Am PC funktionieren WASD/Pfeile, Leertaste zum Springen und E/J zum Schlagen. Neigung wird über „Neigung aktivieren“ bewusst freigegeben, beim ersten gültigen Signal kalibriert und kann jederzeit neu kalibriert oder ausgeschaltet werden. Bei verweigerter Freigabe, fehlenden Sensoren oder ausbleibenden Daten bleiben Stick und Tastatur nutzbar. Analoge Aufgaben mit Papier oder anderem Material sind nicht mehr Teil der Partyinsel.
+Am Handy gibt es einen analogen Touch-Stick und passende Aktionsknöpfe. Die älteren Tastaturkürzel (WASD/Pfeile, Leertaste, E/J) bestehen noch, werden aber nicht mehr weiterentwickelt oder auf dem PC getestet. Neigung wird über „Neigung aktivieren“ bewusst freigegeben, beim ersten gültigen Signal kalibriert und kann jederzeit neu kalibriert oder ausgeschaltet werden. Bei verweigerter Freigabe, fehlenden Sensoren oder ausbleibenden Daten bleiben Stick und Tastatur nutzbar. Analoge Aufgaben mit Papier oder anderem Material sind nicht mehr Teil der Partyinsel.
 
 Das Gerät speichert Raum und Sitzungsschlüssel, sodass „Online-Inselparty wieder beitreten“ nach einem Verbindungsabbruch funktioniert. Die Gruppe pausiert bis zu 60 Sekunden; anschließend kann der Host ohne getrennte Spieler fortsetzen oder abbrechen. Bei einem Serverneustart pausiert die Arena. Nach dem Wiederbeitritt läuft sie ab dem gespeicherten Stand weiter. Sitzungsschlüssel dürfen nicht mit fremden Personen geteilt werden. Der Server berechnet Bewegung, Kollisionen, Sprünge, Treffer und Punkte in festen 50-ms-Schritten. Clients senden nur geprüfte Steuerwerte; sie können keine Position oder Punktzahl vorgeben. Zustände werden zehnmal pro Sekunde verteilt, die eigene Bewegung wird kurz vorausberechnet und visuell geglättet.
 

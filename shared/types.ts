@@ -1,4 +1,4 @@
-export type GameId = "qwixx" | "durak" | "kribbeln" | "binokel" | "party";
+export type GameId = "qwixx" | "durak" | "kribbeln" | "binokel" | "party" | "roll-it-up" | "free-minigame" | "goldenschmidt";
 
 export type QwixxColor = "red" | "yellow" | "green" | "blue";
 
@@ -92,6 +92,7 @@ export interface RoomConfig {
   playerCount: number;
   durakCheatMode?: boolean;
   party?: import("./party").PartyOptions;
+  minigames?: import("./minigameModes").MinigameOptions;
 }
 
 export interface RoomState {

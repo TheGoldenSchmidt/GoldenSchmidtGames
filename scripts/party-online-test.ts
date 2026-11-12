@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { io, type Socket } from "socket.io-client";
 import { createSpielraumServer } from "../server/index";
 import { activePartyPlayer, type PartyAction } from "../shared/party";
+import { isArenaId } from "../shared/partyArena";
 import type { RoomState } from "../shared/types";
 
 const server=createSpielraumServer(),port=await server.listen(0),url=`http://127.0.0.1:${port}`;
@@ -47,6 +48,21 @@ try{
   const returned=await request(restored,"room:join",{characterId:"alpha_rick_prime",code:room.code,playerId:b,name:"Ben",partyToken:guestToken});assert.equal(returned.partyGame!.pausedAt,0);assert.equal(returned.partyToken,guestToken);
   byId[b]=restored;room=returned;
   const sendAs=async(id:string,action:PartyAction)=>{room=await request(byId[id],"party:action",{seq:(room.partyGame!.seq[id]??0)+1,phaseId:room.partyGame!.phaseId,token:tokens[id],action});};
+  // Match games can be drawn too; play them out regularly until a 3D arena comes up for the arena checks below.
+  for(let guard=0;guard<20&&!isArenaId(room.partyGame!.mini!.id);guard++){
+    if(room.partyGame!.phase==="mini-intro"){if(!room.partyGame!.mini!.runs[a].ready)await sendAs(a,{type:"ready"});if(room.partyGame!.phase==="mini-intro")await sendAs(b,{type:"ready"});}
+    for(const id of [a,b])if(room.partyGame!.phase==="mini-play")await sendAs(id,{type:"finish"});
+    for(let count=0;count<40&&room.partyGame!.phase!=="mini-intro";count++){
+      const g=room.partyGame!,p=activePartyPlayer(g);
+      if(g.phase==="moving"){await new Promise(r=>setTimeout(r,300));room=await request(host,"qwixx:state");continue;}
+      if(g.phase==="turn")await command({type:"roll"});
+      else if(g.phase==="path")await command({type:"path",destination:p.position===8?9:19});
+      else if(g.phase==="gift")await command({type:"gift",accept:false});
+      else if(g.phase==="shop")await command({type:"shop"});
+      else if(g.phase==="trophy")await command({type:"trophy",buy:false});
+      else await command({type:"next"});
+    }
+  }
   // Both devices control separate figures in the same server-authoritative arena.
   if(!room.partyGame!.mini!.runs[a].ready)await sendAs(a,{type:"ready"});if(room.partyGame!.phase==="mini-intro"&&!room.partyGame!.mini!.runs[b].ready)await sendAs(b,{type:"ready"});
   assert.equal(room.partyGame!.mini!.arena!.actors.length,2);
@@ -86,7 +102,7 @@ try{
       if(["words","bridge"].includes(g.mini!.id))await sendAs(a,{type:"material",available:false});
       else {await sendAs(a,{type:"ready"});await sendAs(b,{type:"ready"});}
     }else if(g.phase==="mini-play"){
-      await sendAs(a,{type:"finish"});await sendAs(b,{type:"finish"});
+      for(const id of [a,b])if(room.partyGame!.phase==="mini-play")await sendAs(id,{type:"finish"});
     }else throw new Error(`Unerwartete Phase ${g.phase}`);
   }
   assert.equal(room.partyGame!.phase,"finished");assert.ok(room.partyGame!.winners.length>0);

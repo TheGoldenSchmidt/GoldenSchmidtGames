@@ -21,7 +21,7 @@ for(const motion of ['no-preference','reduce'] as const) {
       const sizes=info.project.name==='phone'?[{width:390,height:844},{width:320,height:740}]:[{width:1280,height:900}];
       for(const size of sizes){
         await page.setViewportSize(size);
-        const status=page.locator(size.width<900?'.party-roll-status':'.party-turn-title');
+        const status=page.locator('.party-roll-status');
         const roll=page.getByRole('button',{name:'Würfeln & losziehen',exact:true});
         await expectInsideViewport(page,status);await expectInsideViewport(page,roll);
         const a=(await status.boundingBox())!,b=(await roll.boundingBox())!;

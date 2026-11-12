@@ -77,11 +77,15 @@ Animationstracks erzeugen automatisch eigene Oberflächengruppen für ihr Ziel.
 Materialeigenschaften, Farben und durchsichtige Flächen bleiben getrennt.
 Die Ressourcen gehören zur einzelnen Szene; keine fremde Szene verliert beim
 Schließen ihre Geometrien. Lauf- und Schlaggewichte werden weich eingeblendet,
-beim Anhalten ausgeblendet. Doctor Timothys Räder drehen sich beim Fahren.
+beim Anhalten ausgeblendet. Hüftgelenke führen vor einzelnen Beinsegmenten;
+unabhängige Schuhe erhalten eigene Schrittbewegungen. Doctor Timothys Räder
+drehen sich beim Fahren, Pupa bewegt sich ohne Beinrig mit dem Körper.
+Die Modellprüfung vergleicht dafür gerenderte Oberflächentransformationen
+im Stand und beim Laufen sowie die Ruhe bei reduzierter Bewegung.
 
 Für die sechs gemischt getesteten Modelle sinken die Oberflächengruppen von
-607 auf 67, ohne Schatten- und Umgebungspässe mitzuzählen. Einzelmodelle sind
-z. B. Scary Terry 295 → 7 und Prime Rick 69 → 15. Langsame Darstellung reduziert
+607 auf 71, ohne Schatten- und Umgebungspässe mitzuzählen. Einzelmodelle sind
+z. B. Scary Terry 295 → 9 und Prime Rick 69 → 17. Langsame Darstellung reduziert
 Pixelauflösung und Echtzeitschatten; die Spielphysik bleibt unverändert.
 Das ist kein gemessener FPS-Nachweis auf einem physischen Smartphone.
 

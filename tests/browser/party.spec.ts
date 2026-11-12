@@ -1,6 +1,6 @@
 import { test,expect } from "@playwright/test";
-import { ACTION_MINI_IDS, ARENA_META } from "../../shared/partyArena";
-import { onlineSession, toMini } from "./party-session";
+import { ACTION_MINI_IDS, ARENA_META, NEUTRAL_INPUT } from "../../shared/partyArena";
+import { onlineSession, toArenaMini, practiceSession } from "./party-session";
 
 // Independent rooms allow the expanded arena palette to be evenly sharded in CI.
 test.describe.configure({mode:"parallel"});
@@ -25,19 +25,24 @@ test("Echte 3D-Insel: Kamera, Felder, sichtbare Hauptaktion und Wiederbeitritt",
     expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBe(320);
     await page.setViewportSize(viewport);
     const camera=await page.locator(".party-world").getAttribute("data-camera");
+    await page.getByRole("button",{name:"Kamera öffnen",exact:true}).click();
     await page.getByRole("button",{name:"Kamera nach rechts drehen",exact:true}).click();
     await expect.poll(()=>page.locator(".party-world").getAttribute("data-camera")).not.toBe(camera);
     await page.getByRole("button",{name:"Karte vergrößern",exact:true}).click();
     await page.getByRole("button",{name:"Karte verkleinern",exact:true}).click();
     await page.getByRole("button",{name:"Zur Figur",exact:true}).click();
+    await page.getByRole("button",{name:"Kamera schließen",exact:true}).click();
     await page.screenshot({path:info.outputPath("party-3d-figur.png"),fullPage:false,animations:"disabled"});
+    await page.getByRole("button",{name:"Kamera öffnen",exact:true}).click();
     await page.getByRole("button",{name:"Ganze Insel",exact:true}).click();
-    await page.getByText("Felder und Figuren",{exact:true}).click();
+    await page.getByRole("button",{name:"Kamera schließen",exact:true}).click();
+    await page.getByRole("button",{name:"Felder und Figuren",exact:true}).click();
     await page.getByRole("button",{name:"Feld 0: Hafen",exact:true}).click();
-    await expect(page.getByText("Beim Passieren bekommst du 3 Münzen.",{exact:true})).toBeVisible();
-    await page.getByText("Felder und Figuren",{exact:true}).click();
+    await expect(page.getByRole("dialog").getByText("Beim Passieren bekommst du 3 Münzen.",{exact:true})).toBeVisible();
+    await page.getByRole("button",{name:"Felder und Figuren schließen",exact:true}).click();
     await page.screenshot({path:info.outputPath("party-3d-insel.png"),fullPage:true,animations:"disabled"});
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+    await page.getByRole("button",{name:"Spielmenü öffnen",exact:true}).click();
     await page.getByRole("button",{name:"Verlassen",exact:true}).click();
     await expect(page.getByRole("button",{name:"Lokale Inselparty fortsetzen",exact:true})).toHaveCount(0);
     await page.getByRole("button",{name:"Online-Inselparty wieder beitreten",exact:true}).click();
@@ -47,10 +52,8 @@ test("Echte 3D-Insel: Kamera, Felder, sichtbare Hauptaktion und Wiederbeitritt",
 
 for(const mini of ACTION_MINI_IDS)test(`3D-Minispiel ${mini}: eigene Figur mit echter Steuerung`,async({page},info)=>{
   const errors:string[]=[];page.on("pageerror",error=>errors.push(error.message));
-  const session=await onlineSession(page);
+  const session=await practiceSession(page,mini);
   try{
-    await page.getByText("Die 3D-Minispiele ausprobieren",{exact:true}).click();
-    await page.getByRole("button",{name:new RegExp(`^${ARENA_META[mini].name}`)}).click();
     const dialog=page.getByRole("dialog");
     await expect(dialog.locator('.party-action-world[data-webgl="ready"] canvas')).toBeVisible({timeout:15000});
     await expect(dialog.locator(".party-action-countdown")).toHaveCount(0,{timeout:10000});
@@ -73,9 +76,8 @@ for(const mini of ACTION_MINI_IDS)test(`3D-Minispiel ${mini}: eigene Figur mit e
 
 test("Neigung: ausdrückliche Freigabe, Kalibrierung und Sensorsteuerung",async({page})=>{
   await page.addInitScript(()=>{Object.defineProperty(DeviceOrientationEvent,"requestPermission",{configurable:true,value:async()=>{(window as unknown as {sensorRequests:number}).sensorRequests=((window as unknown as {sensorRequests:number}).sensorRequests??0)+1;return "granted";}});});
-  const session=await onlineSession(page);
+  const session=await practiceSession(page,"tilt");
   try{
-    await page.getByText("Die 3D-Minispiele ausprobieren",{exact:true}).click();await page.getByRole("button",{name:/^Kugelkapitäne/}).click();
     await expect(page.getByRole("dialog").locator(".party-action-countdown")).toHaveCount(0,{timeout:15000});
     expect(await page.evaluate(()=>(window as unknown as {sensorRequests?:number}).sensorRequests??0)).toBe(0);
     await page.getByRole("button",{name:"Neigung aktivieren",exact:true}).click();
@@ -92,9 +94,8 @@ test("Neigung: ausdrückliche Freigabe, Kalibrierung und Sensorsteuerung",async(
 
 test("Verweigerte Sensorfreigabe und ausbleibende Daten erhalten Ersatzsteuerung",async({page})=>{
   await page.addInitScript(()=>Object.defineProperty(DeviceOrientationEvent,"requestPermission",{configurable:true,value:async()=>"denied"}));
-  const session=await onlineSession(page);
+  const session=await practiceSession(page,"balance");
   try{
-    await page.getByText("Die 3D-Minispiele ausprobieren",{exact:true}).click();await page.getByRole("button",{name:/^Wackelsteg/}).click();
     await page.getByRole("button",{name:"Neigung aktivieren",exact:true}).click();
     await expect(page.getByText(/Sensorfreigabe abgelehnt/)).toBeVisible();
     await expect(page.getByRole("dialog").locator(".party-action-countdown")).toHaveCount(0,{timeout:15000});
@@ -110,7 +111,7 @@ test("Verweigerte Sensorfreigabe und ausbleibende Daten erhalten Ersatzsteuerung
 test("Online: beide Figuren bewegen sich in derselben Arena",async({page})=>{
   const session=await onlineSession(page);
   try{
-    await toMini(session);await session.action({type:"ready"},session.ids[1]);
+    await toArenaMini(session);await session.action({type:"ready"},session.ids[1]);
     await page.getByRole("button",{name:"Ich bin bereit",exact:true}).click();
     await expect(page.locator('.party-action-world[data-webgl="ready"] canvas')).toBeVisible();
     await expect(page.locator(".party-action-countdown")).toHaveCount(0,{timeout:10000});
@@ -120,5 +121,18 @@ test("Online: beide Figuren bewegen sich in derselben Arena",async({page})=>{
     await expect.poll(async()=>{const arena=(await session.state()).partyGame!.mini!.arena!;return arena.actors.every(a=>{const before=initial.actors.find(p=>p.id===a.id)!;return sideways?a.x>before.x+.05:a.z<before.z-.05;});}).toBe(true);
     const rendered=JSON.parse(await page.locator(".party-action-world").getAttribute("data-actors")??"[]");
     expect(rendered.map((a:{id:string})=>a.id).sort()).toEqual([...session.ids].sort());
+    const own=async()=>(await session.state()).partyGame!.mini!.arena!.actors.find(actor=>actor.id===session.ids[0])!;
+    await page.keyboard.down(key);
+    await expect.poll(async()=>{const actor=await own();return sideways?actor.input.x:actor.input.z;}).not.toBe(0);
+    await page.getByRole("button",{name:"Spielmenü öffnen",exact:true}).click();
+    await expect.poll(async()=>(await own()).input).toEqual(NEUTRAL_INPUT);
+    const inputSeq=(await own()).inputSeq;
+    await page.keyboard.up(key);await page.keyboard.press("ArrowRight");await page.keyboard.press("e");
+    expect((await own()).inputSeq).toBe(inputSeq);
+    expect((await session.state()).partyGame!.pausedAt).toBe(0);
+    await page.keyboard.press("Escape");
+    await page.keyboard.down(key);
+    await expect.poll(async()=>{const actor=await own();return sideways?actor.input.x:actor.input.z;}).not.toBe(0);
+    await page.keyboard.up(key);
   }finally{session.close();}
 });

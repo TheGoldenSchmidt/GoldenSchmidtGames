@@ -1,3 +1,5 @@
+import { GAMES, isPartyMode } from "../shared/games";
+import { isMinigameMode } from "../shared/minigameModes";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { GameId, GuestProfile, RoomState } from "../shared/types";
 import { ProfileDialog } from "./components/ProfileDialog";
@@ -51,6 +53,12 @@ export default function App() {
     const closed=({code}:{code:string})=>{if(session?.code===code){clearActiveSession(session,true);setSession(undefined);}if(readPartySave<PartySavedSession>(PARTY_ONLINE_SAVE)?.code===code){localStorage.removeItem(PARTY_ONLINE_SAVE);setCanResumeParty(false);}};
     socket.on("party:closed",closed);return()=>{socket.off("party:closed",closed);};
   },[session]);
+  useEffect(()=>{
+    // Another player returned to the lobby: follow them.
+    if(view!=="game-online")return;
+    const follow=(next:RoomState)=>{if(next.code===room?.code&&next.phase==="lobby"){setRoom(next);setView("room");}};
+    socket.on("room:updated",follow);return()=>{socket.off("room:updated",follow);};
+  },[view,room?.code]);
   useEffect(()=>{
     if(view!=="home" || session)return;let cancelled=false;setCanResumeParty(false);
     const check=()=>{
@@ -166,6 +174,13 @@ export default function App() {
     setView("home");
   }
 
+  function backToLobby() {
+    socket.timeout(8000).emit("room:lobby",(err:Error|null,response:{ok:boolean;data?:RoomState;error?:string})=>{
+      if(err||!response?.ok||!response.data)return leaveOnline();
+      keepSession(response.data);setRoom(response.data);setView("room");
+    });
+  }
+
   function resumeHost() {
     const saved=loadLastHost(profile.id);
     if(saved){joinedSocket.current=undefined;storeActiveSession(saved);setSession(saved);setReconnecting(true);}
@@ -178,7 +193,7 @@ export default function App() {
     socket.connect();socket.timeout(8000).emit("room:join",{code:saved.code,playerId:profile.id,name:profile.username,partyToken:saved.partyToken},(err:Error|null,response:{ok:boolean;data?:RoomState;error?:string})=>{if(err||!response.ok||!response.data){setCanResumeParty(false);if(!err)localStorage.removeItem(PARTY_ONLINE_SAVE);setResumeError(response?.error??"Der Raum ist nicht erreichbar. Versuche es erneut.");return;}keepSession(response.data);openOnlineGame(response.data, false);});
   }
 
-  if (session && reconnecting) return <main className="page"><section className="page__content party-connection">
+  if (session && reconnecting) return <main className="page party-menu"><section className="page__content party-connection">
     <h2 role="status">Verbindung wird wiederhergestellt …</h2>
     {session.nearby?.role === "guest" && (needsPairing
       ? <GuestPair expectedTable={session.nearby.table} onOffer={()=>{}}/>
@@ -196,6 +211,7 @@ export default function App() {
           onLocal={() => setView("local-setup")}
           onOnline={() => {useTableTransport(); setView("online-entry");}}
           onResumeHost={loadLastHost(profile.id)?resumeHost:undefined}
+          resumeGameName={GAMES.find(game=>game.id===readPartySave<PartySavedSession>(PARTY_ONLINE_SAVE)?.gameId)?.name??"Inselparty"}
           onResumeOnline={canResumeParty?resumeParty:undefined}
           resumeError={resumeError}
         />
@@ -244,12 +260,12 @@ export default function App() {
         </GameIntro>
       )}
       {view === "game-online" && room && (
-        <GameIntro gameId={room.config.gameId} players={room.players.filter(player => player.connected)} enabled={playIntro}>
+        <GameIntro gameId={room.config.gameId} players={room.players.filter(player => player.connected)} enabled={playIntro&&!isMinigameMode(room.config.gameId)}>
           {room.config.gameId === "qwixx"
-            ? <QwixxGameScreen profile={profile} initialRoom={room} onExit={leaveOnline} />
-            : room.config.gameId === "durak" ? <DurakGameScreen profile={profile} initialRoom={room} onExit={leaveOnline} />
-            : room.config.gameId === "kribbeln" ? <KribbelnGameScreen profile={profile} initialRoom={room} onExit={leaveOnline} />
-            : room.config.gameId === "party" && <PartyGameScreen profile={profile} initialRoom={room} onExit={leaveOnline}/>}
+            ? <QwixxGameScreen profile={profile} initialRoom={room} onExit={leaveOnline} onLobby={backToLobby} />
+            : room.config.gameId === "durak" ? <DurakGameScreen profile={profile} initialRoom={room} onExit={leaveOnline} onLobby={backToLobby} />
+            : room.config.gameId === "kribbeln" ? <KribbelnGameScreen profile={profile} initialRoom={room} onExit={leaveOnline} onLobby={backToLobby} />
+            : isPartyMode(room.config.gameId) && <PartyGameScreen profile={profile} initialRoom={room} onExit={leaveOnline} onLobby={backToLobby}/>}
         </GameIntro>
       )}
       {view==="game-online" && room && !room.partyTest && session?.nearby?.role==="host" && <HostInvite code={room.code}/>}

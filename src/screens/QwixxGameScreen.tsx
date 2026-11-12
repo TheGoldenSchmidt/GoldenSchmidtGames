@@ -33,13 +33,15 @@ export function QwixxGameScreen({
   localNames,
   localCharacters,
   initialRoom,
-  onExit
+  onExit,
+  onLobby
 }: {
   profile: GuestProfile;
   localNames?: string[];
   localCharacters?:CharacterId[];
   initialRoom?: RoomState;
   onExit: () => void;
+  onLobby?: () => void;
 }) {
   const online = Boolean(initialRoom);
   const introActive = useContext(GameIntroActive);
@@ -317,7 +319,7 @@ export function QwixxGameScreen({
               </li>
             ))}
           </ol>
-          <button className="button button--secondary button--wide" onClick={onExit}>Zum Startmenü</button>
+          <button className="button button--secondary button--wide" onClick={onLobby ?? onExit}>{onLobby ? "Zurück zur Lobby" : "Zum Startmenü"}</button>
         </section>
       )}
     </main>
