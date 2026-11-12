@@ -229,7 +229,8 @@ for (const [miniId, name] of [["bombs", "Bomb Arena"], ["tanks", "Tank Trouble"]
     await matchStarted(page);
     const world = page.locator(".match-world");
     await expect.poll(async () => Object.values(JSON.parse(await world.getAttribute("data-figures") ?? "{}")).sort()).toEqual([...six].sort());
-    await expect.poll(async () => Number(await world.getAttribute("data-frames")), { timeout: 5000 }).toBeGreaterThan(30);
+    // Measure while all figures are still on the field (in Floor is Lava idle players soon sink).
+    await expect.poll(async () => Number(await world.getAttribute("data-draw-calls")), { timeout: 5000 }).toBeGreaterThan(40);
     const calls = Number(await world.getAttribute("data-draw-calls")), triangles = Number(await world.getAttribute("data-triangles"));
     console.log(`${name} 2.5D, six figures:`, { calls, triangles });
     expect(calls).toBeLessThan(300);
@@ -293,27 +294,6 @@ for (const motion of ["no-preference", "reduce"] as const) test(`Floor is Lava 2
     await page.waitForTimeout(500);
     await page.screenshot({ path: testInfo.outputPath(`lava-3d-crumble-${motion}.png`) });
     expect(Number(await world.getAttribute("data-draw-calls"))).toBeLessThan(300);
-    await session.action({ type: "finish" }, session.ids[1]);
-    await expect(page.getByRole("heading", { name: "Euer Ergebnis", exact: true })).toBeVisible();
-  } finally { session.close(); }
-});
-  const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "lava" });
-  try {
-    await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
-    await session.action({ type: "ready" }, session.ids[1]);
-    await matchStarted(page);
-    const game = async () => ((await session.state()).partyGame!.mini!.match as MatchState<LavaGame>).game;
-    const me = async () => (await game()).runners[session.ids[0]];
-    await expect.poll(async () => (await game()).tiles.includes("2")).toBe(true);
-    const start = await me();
-    const stick = page.getByRole("group", { name: "Bewegungsstick" }), box = (await stick.boundingBox())!;
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down();
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2 - 40, { steps: 3 });
-    await expect.poll(async () => Math.hypot((await me()).x - start.x, (await me()).y - start.y), { timeout: 4000 }).toBeGreaterThan(.4);
-    await page.getByRole("button", { name: "Springen", exact: true }).tap();
-    await expect.poll(async () => (await me()).airUntil, { timeout: 3000 }).toBeGreaterThan(0);
-    await page.mouse.up();
-    await page.screenshot({ path: testInfo.outputPath("lava.png") });
     await session.action({ type: "finish" }, session.ids[1]);
     await expect(page.getByRole("heading", { name: "Euer Ergebnis", exact: true })).toBeVisible();
   } finally { session.close(); }

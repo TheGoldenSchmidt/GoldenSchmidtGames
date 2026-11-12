@@ -13,7 +13,7 @@ import { SceneKit, type Character } from "./sceneKit";
 const COLS = FL.cols, ROWS = FL.rows, TILES = COLS * ROWS;
 const wx = (x: number) => x - COLS / 2, wz = (y: number) => y - ROWS / 2;
 const SLAB = .42, TILT = 62 * Math.PI / 180, EMBERS = 36;
-const COLOR = { night: 0x2a0f0a, stone: 0xb9a37a, hot: 0xff6a1f, rune: 0x57e4cb, lava: 0xff5a14, glow: 0xffb347, own: 0xffe44e, life: 0xfff9ed, shadow: 0x1a0a06 } as const;
+const COLOR = { night: 0x2a0f0a, stone: 0xfff3dc, hot: 0xff6a1f, rune: 0x57e4cb, lava: 0xff5a14, glow: 0xffb347, own: 0xffe44e, life: 0xfff9ed, shadow: 0x1a0a06 } as const;
 
 function texture(draw: (c: CanvasRenderingContext2D, n: number) => void, repeat = 1) {
   const canvas = document.createElement("canvas"); canvas.width = canvas.height = 256;
@@ -35,7 +35,7 @@ const lavaTexture = () => texture((c, n) => {
 }, 3);
 /** Temple slab: sandstone with a carved inner border. */
 const slabTexture = () => texture((c, n) => {
-  c.fillStyle = "#c9b48a"; c.fillRect(0, 0, n, n);
+  c.fillStyle = "#e3d0a4"; c.fillRect(0, 0, n, n);
   c.strokeStyle = "#8f7a52"; c.lineWidth = 14; c.strokeRect(22, 22, n - 44, n - 44);
   c.strokeStyle = "#e6d5ae"; c.lineWidth = 4; c.strokeRect(34, 34, n - 68, n - 68);
   c.fillStyle = "#a8946a"; for (const [x, y] of [[60, 70], [170, 90], [110, 180], [190, 200]]) { c.beginPath(); c.arc(x, y, 6, 0, Math.PI * 2); c.fill(); }
@@ -55,12 +55,12 @@ export function createLavaWorld(host: HTMLElement, read: () => MatchWorldFrame, 
   const lavaMap = lavaTexture();
   const lava = new T.Mesh(new T.PlaneGeometry(COLS + 8, ROWS + 8), new T.MeshStandardMaterial({ map: lavaMap, emissive: COLOR.lava, emissiveMap: lavaMap, emissiveIntensity: .9, roughness: 1 }));
   lava.rotation.x = -Math.PI / 2; lava.position.y = -.7; lava.receiveShadow = true; world.add(lava);
-  const heat = new T.PointLight(COLOR.glow, 6, 22, 1.4); heat.position.set(0, .4, 0); world.add(heat);
+  const heat = new T.PointLight(COLOR.glow, 3, 22, 1.4); heat.position.set(0, .4, 0); world.add(heat);
 
   // Slabs, runes on returning slabs, and a ghost outline where a slab will come back.
   const slabs = new T.InstancedMesh(box, new T.MeshStandardMaterial({ map: slabTexture(), roughness: .85 }), TILES);
   slabs.castShadow = true; slabs.receiveShadow = true; world.add(slabs);
-  const runes = new T.InstancedMesh(new T.TorusGeometry(.17, .035, 6, 24), new T.MeshBasicMaterial({ color: COLOR.rune }), TILES); runes.count = 0; world.add(runes);
+  const runes = new T.InstancedMesh(new T.TorusGeometry(.13, .025, 6, 24), new T.MeshBasicMaterial({ color: COLOR.rune }), TILES); runes.count = 0; world.add(runes);
   const ghosts = new T.InstancedMesh(new T.BoxGeometry(1, 1, 1), new T.MeshBasicMaterial({ color: COLOR.rune, transparent: true, opacity: .28, depthWrite: false }), TILES); ghosts.count = 0; world.add(ghosts);
   const state: Slab[] = Array.from({ length: TILES }, () => ({ state: "1", changedAt: -1e9, from: 0 }));
 
@@ -93,7 +93,7 @@ export function createLavaWorld(host: HTMLElement, read: () => MatchWorldFrame, 
     last = time;
     if (kit.camera.aspect !== aspect) { aspect = kit.camera.aspect; fitTiltedCamera(kit, COLS / 2 + .1, ROWS / 2 + .1, .2, TILT); }
     if (!reduced) { lavaMap.offset.x += dt * .012; lavaMap.offset.y += dt * .007; }
-    heat.intensity = reduced ? 6 : 6 + Math.sin(time / 600) * 1.2;
+    heat.intensity = reduced ? 3 : 3 + Math.sin(time / 600) * .6;
 
     // Slabs: tremble and heat while crumbling, tip and sink when gone, rise when they return.
     // The ring that collapses next glows a warning 1.5 s ahead.

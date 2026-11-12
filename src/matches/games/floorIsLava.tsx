@@ -73,7 +73,7 @@ export const floorIsLavaClient: MatchClient = {
   status(view, viewer) {
     const g = view.game as LavaGame, me = g.runners[viewer];
     const left = Math.max(0, Math.ceil(((g.tiebreak ? FL.tiebreakMax : FL.roundMax) - (view.time - g.roundStart)) / 1000));
-    return `${g.tiebreak ? "Stechrunde" : `Durchgang ${g.round} von ${FL.rounds}`} · ${g.phase === "play" ? `noch ${left} s` : "Pause"} · ${me?.alive ? `${me.lives} Leben` : "raus"}`;
+    return `${g.tiebreak ? "Stechrunde" : `Runde ${g.round}/${FL.rounds}`} · ${g.phase === "play" ? `${left} s` : "Pause"} · ${me?.alive ? `${me.lives} Leben` : "raus"}`;
   },
   sound(event, viewer) {
     if (event.kind === "jump") return event.ids.includes(viewer) ? "bounce" : undefined;

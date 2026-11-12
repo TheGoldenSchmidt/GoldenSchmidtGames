@@ -84,8 +84,8 @@ export const bombArenaClient: MatchClient = {
   status(view, viewer) {
     const g = view.game as BombGame, me = g.bombers[viewer];
     const left = Math.max(0, Math.ceil(((g.sudden ? BA.suddenMax : BA.roundMax) - (view.time - g.roundStart)) / 1000));
-    const round = g.sudden ? "Sudden Death" : `Durchgang ${g.round} von ${BA.rounds}`;
-    return `${round} · ${g.phase === "play" ? `noch ${left} s` : "Pause"} · ${me?.alive ? `${me.lives} Leben` : "raus"}`;
+    const round = g.sudden ? "Sudden Death" : `Runde ${g.round}/${BA.rounds}`;
+    return `${round} · ${g.phase === "play" ? `${left} s` : "Pause"} · ${me?.alive ? `${me.lives} Leben` : "raus"}`;
   },
   sound(event, viewer) {
     if (event.kind === "boom") return "boom";
