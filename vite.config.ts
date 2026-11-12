@@ -45,6 +45,8 @@ export default defineConfig({
         ]
       },
       workbox: {
+        // Fonts are part of the offline app shell.
+        globPatterns: ["**/*.{js,css,html,woff2}"],
         navigateFallback: "/index.html",
         skipWaiting: false,
         clientsClaim: true

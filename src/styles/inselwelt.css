@@ -1,0 +1,171 @@
+/* Inselwelt: shared tokens and building blocks of the island style (see designregeln.md).
+   Screens opt in by using these classes; nothing here restyles a screen on its own. */
+@font-face {
+  font-family: "Lilita One";
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url("@fontsource/lilita-one/files/lilita-one-latin-400-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Lexend";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("@fontsource-variable/lexend/files/lexend-latin-wght-normal.woff2") format("woff2-variations");
+}
+
+:root {
+  --iw-font-display: "Lilita One", "Trebuchet MS", sans-serif;
+  --iw-font-ui: "Lexend", "Trebuchet MS", "Aptos", sans-serif;
+
+  /* Sky, from zenith to horizon */
+  --iw-sky-night: #272a6e;
+  --iw-sky-dusk: #4a47a6;
+  --iw-sky-day: #5f70d8;
+  --iw-sky-haze: #7f9be8;
+  --iw-sky-rose: #d9b8ee;
+
+  /* Materials: highlight edge, face top, face bottom, side wall */
+  --iw-gold-light: #ffe58a;
+  --iw-gold: #fdc955;
+  --iw-gold-deep: #eda43e;
+  --iw-gold-side: #b4651f;
+  --iw-violet-light: #ecb6fb;
+  --iw-violet: #c886f6;
+  --iw-violet-deep: #a567e4;
+  --iw-violet-side: #5b2f9f;
+  --iw-stone-light: #a6a2c4;
+  --iw-stone: #5d5272;
+  --iw-stone-deep: #4a405e;
+  --iw-stone-side: #2b253f;
+  --iw-wood-light: #f4c88f;
+  --iw-wood: #dfa468;
+  --iw-wood-side: #9a5e34;
+  --iw-grass-light: #a9dc42;
+  --iw-grass: #6fbf35;
+  --iw-grass-deep: #2f7a2e;
+
+  /* Text and outlines */
+  --iw-ink: #221b4f;
+  --iw-ink-gold: #3d2412;
+  --iw-ink-violet: #1f0d45;
+  --iw-paper: #fff8ea;
+  --iw-glass: rgb(31 28 84 / .74);
+  --iw-shadow: rgb(26 16 60 / .4);
+
+  /* Signals */
+  --iw-ok: #3fe6a0;
+  --iw-pink: #ff7fc6;
+  --iw-danger: #c8353e;
+}
+
+/* Tafel: a carved slab with chipped corners. Three layers: outline, side wall, face.
+   Markup: <button class="iw-slab iw-slab--gold"><span class="iw-slab__face">…</span></button> */
+.iw-slab {
+  --slab-light: var(--iw-gold-light);
+  --slab-top: var(--iw-gold);
+  --slab-bottom: var(--iw-gold-deep);
+  --slab-side: var(--iw-gold-side);
+  --slab-ink: var(--iw-ink-gold);
+  --slab-depth: 7px;
+  --slab-cut: 11px;
+  --slab-shape: polygon(
+    var(--slab-cut) 0, 37% 0, calc(37% + 5px) 2px, calc(37% + 15px) 0,
+    calc(100% - var(--slab-cut)) 0, 100% var(--slab-cut),
+    100% calc(100% - var(--slab-cut)), calc(100% - var(--slab-cut)) 100%,
+    66% 100%, calc(66% - 6px) calc(100% - 2px), calc(66% - 16px) 100%,
+    var(--slab-cut) 100%, 0 calc(100% - var(--slab-cut)), 0 var(--slab-cut));
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  min-width: 44px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  color: var(--slab-ink);
+  font-family: var(--iw-font-ui);
+  text-align: left;
+  cursor: pointer;
+  filter: drop-shadow(0 5px 0 var(--iw-shadow));
+  -webkit-tap-highlight-color: transparent;
+}
+.iw-slab::before,
+.iw-slab::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  clip-path: var(--slab-shape);
+}
+.iw-slab::before { inset: 0; background: var(--iw-ink); }
+.iw-slab::after { inset: 3px; background: var(--slab-side); }
+.iw-slab__face {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  margin: 3px 3px calc(3px + var(--slab-depth));
+  clip-path: var(--slab-shape);
+  background: linear-gradient(180deg, var(--slab-light) 0 3px, var(--slab-top) 3px, var(--slab-bottom) 100%);
+  transition: transform .09s ease-out;
+}
+.iw-slab:active:not(:disabled) .iw-slab__face { transform: translateY(calc(var(--slab-depth) - 2px)); }
+.iw-slab:focus-visible { outline: 3px solid var(--iw-paper); outline-offset: 3px; }
+.iw-slab:disabled { cursor: not-allowed; filter: grayscale(.7) opacity(.62); }
+
+.iw-slab--violet {
+  --slab-light: var(--iw-violet-light);
+  --slab-top: var(--iw-violet);
+  --slab-bottom: var(--iw-violet-deep);
+  --slab-side: var(--iw-violet-side);
+  --slab-ink: var(--iw-ink-violet);
+}
+.iw-slab--stone {
+  --slab-light: var(--iw-stone-light);
+  --slab-top: var(--iw-stone);
+  --slab-bottom: var(--iw-stone-deep);
+  --slab-side: var(--iw-stone-side);
+  --slab-ink: var(--iw-paper);
+  --slab-depth: 4px;
+  --slab-cut: 9px;
+}
+.iw-slab--stone .iw-slab__face {
+  background: linear-gradient(180deg, var(--slab-light) 0 2px, var(--slab-top) 2px, var(--slab-bottom) 100%);
+}
+
+/* Chips: a dark glass pill for status, a light one for tappable identity. */
+.iw-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 6px 14px;
+  border: 1.5px solid rgb(255 255 255 / .3);
+  border-radius: 999px;
+  background: var(--iw-glass);
+  color: var(--iw-paper);
+  font-family: var(--iw-font-ui);
+  font-size: .8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.iw-chip--light {
+  min-height: 44px;
+  border: 3px solid var(--iw-ink);
+  background: #eee7fb;
+  box-shadow: 0 0 0 1.5px rgb(255 255 255 / .6), 0 4px 0 1px var(--iw-shadow);
+  color: var(--iw-ink);
+  font-weight: 700;
+}
+button.iw-chip { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+button.iw-chip:active { transform: translateY(2px); box-shadow: 0 0 0 1.5px rgb(255 255 255 / .6), 0 2px 0 1px var(--iw-shadow); }
+button.iw-chip:focus-visible { outline: 3px solid var(--iw-paper); outline-offset: 3px; }
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .iw-slab:hover:not(:disabled):not(:active) .iw-slab__face { transform: translateY(-1px); filter: brightness(1.05); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .iw-slab__face { transition: none; }
+}

@@ -105,9 +105,9 @@ const originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
 try {
   Object.defineProperty(globalThis, "navigator", { configurable: true, value: { userAgent: "Android Chrome", platform: "Linux", maxTouchPoints: 1 } });
   Object.defineProperty(globalThis, "window", { configurable: true, value: { matchMedia: () => ({ matches: false }) } });
-  assert.match(renderToString(<InstallPrompt />), /Als App installieren/);
+  assert.match(renderToString(<InstallPrompt />), /App installieren/);
   Object.defineProperty(globalThis, "navigator", { configurable: true, value: { userAgent: "iPhone Safari", platform: "iPhone", maxTouchPoints: 1 } });
-  assert.match(renderToString(<InstallPrompt />), /Als App installieren/);
+  assert.match(renderToString(<InstallPrompt />), /App installieren/);
   Object.defineProperty(globalThis, "window", { configurable: true, value: { matchMedia: () => ({ matches: true }) } });
   assert.equal(renderToString(<InstallPrompt />), "", "In der App-Ansicht keine erneute Installation anbieten");
 } finally {
