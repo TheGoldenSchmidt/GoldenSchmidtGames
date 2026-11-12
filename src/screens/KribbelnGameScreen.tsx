@@ -8,7 +8,7 @@ import { KribbelnTask } from "../components/KribbelnTask";
 import type { GuestProfile, RoomState } from "../../shared/types";
 import { sendGameMove, socket } from "../lib/socket";
 
-export function KribbelnGameScreen({ profile, localNames, localCharacters, initialRoom, onExit }: { profile: GuestProfile; localNames?: string[]; localCharacters?:CharacterId[]; initialRoom?: RoomState; onExit: () => void }) {
+export function KribbelnGameScreen({ profile, localNames, localCharacters, initialRoom, onExit, onLobby }: { profile: GuestProfile; localNames?: string[]; localCharacters?:CharacterId[]; initialRoom?: RoomState; onExit: () => void; onLobby?: () => void }) {
   const characters=playerCharacters(initialRoom,localNames,localCharacters);
   const online = Boolean(initialRoom);
   const [room, setRoom] = useState(initialRoom);
@@ -101,7 +101,7 @@ export function KribbelnGameScreen({ profile, localNames, localCharacters, initi
       </>}
       <details className="kribbel-scorebook" open={game.finished}><summary>Wertungsblatt ansehen</summary><div className="kribbel-sheet"><table><thead><tr><th>Aufgabe</th>{game.order.map(id => <th key={id}><CharacterAvatar id={characters[id]} decorative/>{game.names[id]}<br />{game.scores[id]} P.</th>)}</tr></thead><tbody>{KRIBBEL_ROWS.map((entry, i) => <tr key={i} className={i === game.row && !game.finished ? "is-current" : ""}><th>{entry.label}</th>{game.order.map(id => <td key={id}>{game.results[id][i] === -1 ? "–" : game.results[id][i] === null ? "×" : game.results[id][i]}</td>)}</tr>)}</tbody></table></div></details>
       <details><summary>Spielregeln · digitales Aufgabenblatt</summary><p>Bis zu drei Würfe pro Zug. Behaltene Würfel können jederzeit wieder freigegeben werden. Gewertet wird die Summe aller sechs Würfel, wenn die Farbaufgabe erfüllt ist. Bei Misserfolg kannst du streichen oder auf ein freies Kribbelfeld derselben Gruppe ausweichen und die Aufgabe erneut versuchen. Kribbelsummen müssen immer höher als die bisherigen eigenen Kribbelsummen sein.</p><p>Pro Zeile erhält der Beste so viele Punkte, wie Spieler teilnehmen. Jeder weitere Platz erhält einen Punkt weniger; gleiche Summen zählen zum niedrigeren Platz. Ein Kreuz ergibt null Punkte.</p><p>Jeder Würfel trägt die Zahlen 1 bis 6 und jede der sechs Farben genau einmal. Über alle sechs Würfel kommt jedes Zahl-Farbe-Paar genau einmal vor. Dieses digitale Blatt verwendet eigene Farb-Zahlen-Zuordnungen.</p></details>
-      {game.finished && <button className="button button--primary button--wide" onClick={onExit}>Zum Startmenü</button>}
+      {game.finished && <button className="button button--primary button--wide" onClick={onLobby ?? onExit}>{onLobby ? "Zurück zur Lobby" : "Zum Startmenü"}</button>}
     </section>
   </main>;
 }

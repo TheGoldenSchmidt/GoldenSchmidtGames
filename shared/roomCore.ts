@@ -173,7 +173,9 @@ function forgetRoom(code: string) {
   checkpointAt.delete(code); emptySince.delete(code); closingRooms.delete(code);
 }
 
+// Only seeded test rooms are closed after the game; regular rooms return to their lobby.
 function closePartyRoom(room: RoomState) {
+  if (!room.partyTest) return;
   const reason = room.partyGame?.phase;
   if (reason !== "finished" && reason !== "aborted") return;
   closingRooms.add(room.code);
@@ -542,6 +544,23 @@ hub.onPeer((socket) => {
     }
     broadcast(room);
     callback({ ok: true, data: publicRoom(room, membership?.playerId) });
+  });
+
+  withoutPayload("room:lobby", (callback: (ack: Ack<RoomState>) => void) => {
+    const membership = socketMembership.get(socket.id);
+    const room = membership ? rooms.get(membership.roomCode) : undefined;
+    if (!membership || !room) return callback({ ok: false, error: "Du bist in keinem Raum." });
+    if (room.phase === "lobby") return callback({ ok: true, data: publicRoom(room, membership.playerId) });
+    const over = room.game?.phase === "finished" || room.durakGame?.phase === "finished" || room.kribbelnGame?.finished
+      || ["finished", "aborted"].includes(room.partyGame?.phase ?? "");
+    if (!over || room.partyTest) return callback({ ok: false, error: "Die Partie läuft noch." });
+    room.phase = "lobby";
+    delete room.game; delete room.durakGame; delete room.kribbelnGame; delete room.partyGame;
+    botDrivers.delete(room.code);
+    moveSequences.set(room.code, new Map());
+    room.players.forEach(player => { player.ready = Boolean(player.bot); player.score = 0; });
+    broadcast(room);
+    callback({ ok: true, data: publicRoom(room, membership.playerId) });
   });
 
   withoutPayload("room:start", (callback: (ack: Ack<RoomState>) => void) => {

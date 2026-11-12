@@ -138,7 +138,7 @@ das Match. Details: [Konzept](minigames/konzept.md).
 eindeutige Auszahlungen, den Auftakt, feste Reihenfolge und Wirkungen nach
 Ankunft. Deterministische Replays und echte Botsteuerung laufen für 14 Arenen
 und alle 12 Match-Spiele (je ein eigener Regeltest in `scripts/`).
-`test:online` spielt eine vollständige Partie und prüft geschlossene Räume,
+`test:online` spielt eine vollständige Partie und prüft die Rückkehr in die Lobby nach Spielende,
 Host-Rechte, Status-Beobachter und ungültige Tokens. Browserfälle decken alle
 14 Arenen, Neigung, Touch-/Tastatursteuerung, sechs Modelle, Kartenansichten,
 Auftakt und Wiederbeitritt ab. Die gesamte bestehende CI führt diese Befehle aus.

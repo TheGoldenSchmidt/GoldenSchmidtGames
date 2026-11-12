@@ -30,7 +30,7 @@ function pathPreview(game:PartyGame,steps:number,destination:number) {
   return {fields,label:fieldName(game,fields.at(-1)!)};
 }
 
-export function PartyGameScreen({profile,initialRoom,onExit}:{profile:GuestProfile;initialRoom:RoomState;onExit:()=>void}) {
+export function PartyGameScreen({profile,initialRoom,onExit,onLobby}:{profile:GuestProfile;initialRoom:RoomState;onExit:()=>void;onLobby?:()=>void}) {
   const [room,setRoom]=useState(initialRoom);
   const [miniReward,setMiniReward]=useState<MiniReward>();
   const [now,setNow]=useState(Date.now()),[error,setError]=useState(""),[pending,setPending]=useState(false),[practice,setPractice]=useState<MiniId>();
@@ -150,7 +150,7 @@ export function PartyGameScreen({profile,initialRoom,onExit}:{profile:GuestProfi
 
         {competition&&g.mode==="goldenschmidt"&&["mini-bet","mini-intro"].includes(g.phase)&&<MinigameScoreboard game={g}/>}
         {g.phase==="mini-bet"&&<MinigameBetting key={g.phaseId} game={g} viewer={viewer} busy={busy||Boolean(g.pausedAt)} send={send}/>}
-        {competition&&["mini-result","finished"].includes(g.phase)&&<MinigameResults game={g} viewer={viewer} host={host} busy={busy||Boolean(g.pausedAt)} send={send} onExit={onExit}/>}
+        {competition&&["mini-result","finished"].includes(g.phase)&&<MinigameResults game={g} viewer={viewer} host={host} busy={busy||Boolean(g.pausedAt)} send={send} onExit={onLobby??onExit}/>}
         {g.phase==="mini-intro"&&m&&<div className="party-mini-intro">
           <MiniPreview id={m.id}/><p className="party-mini-round">{g.opening?"Auftakt: Bestimmt eure Zugreihenfolge":`Minispiel der Runde ${g.round}`}</p><h1>{MINIS[m.id].name}</h1><p className="party-mini-tagline">{MINI_LOOK[m.id].action}</p><p>{MINIS[m.id].instruction}</p><div className="party-mini-facts"><span>{MINI_LOOK[m.id].goal}</span><span>{competition?(g.mode==="goldenschmidt"?`Dein Einsatz: ${competition.bets[viewer]??"–"} Punkte`:"Ein Spiel · ein Ergebnis"):g.opening?"Ergebnis bestimmt euren Startplatz":"Platz 1: 10 · Platz 2: 4 · Platz 3: 2 Münzen"}</span></div>
           <button className="button button--secondary button--wide" onClick={()=>setPractice(m.id)}>Erst kurz üben</button>
@@ -162,10 +162,10 @@ export function PartyGameScreen({profile,initialRoom,onExit}:{profile:GuestProfi
         {g.phase==="finished"&&tray&&<section className="party-finale roll-finale">
           <JayspotFinish player={p}/><h1>Am Jayspot angekommen!</h1>
           <h2>{p.name} gewinnt Roll It Up!</h2><p>Das Set ist komplett. Zeit, auf der Bank zu entspannen.</p>
-          <button className="button button--primary button--wide" onClick={onExit}>Zurück zu GSG</button>
+          <button className="button button--primary button--wide" onClick={onLobby??onExit}>{onLobby?"Zurück zur Lobby":"Zurück zu GSG"}</button>
         </section>}
-        {g.phase==="finished"&&!tray&&!competition&&<section className="party-finale"><Celebration/><p>Alle {g.options.rounds} Runden gespielt</p>{miniReward&&<PartyCoinReward coins={miniReward.coins} total={miniReward.total}/>}<h1>Die Insel feiert euch!</h1><h2>{g.winners.map(id=>g.players.find(q=>q.id===id)!.name).join(" & ")}</h2><p>{g.winners.length>1?"Ihr teilt euch den Sieg!":"Du gewinnst die Inselparty!"}</p><ol>{standings.map((q,i)=><li key={q.id}><span>{i+1}.</span><CharacterAvatar id={q.characterId} className={`party-avatar party-player-color-${g.players.indexOf(q)}`}/><strong>{q.name}<small>★ {q.trophies} · ◉ {q.coins} · {q.wins} Minispielsiege</small></strong></li>)}</ol>{m&&<details className="party-final-awards"><summary>Letztes Minispiel: {MINIS[m.id].name}</summary><ul>{partyMiniResults(g).map(r=><li key={r.player.id}><strong>{r.player.name}</strong><span>{r.score} Punkte · +{r.coins} Münzen</span></li>)}</ul></details>}<button className="button button--primary button--wide" onClick={onExit}>Zurück zu GSG</button></section>}
-        {g.phase==="aborted"&&<><h2>Partie beendet</h2><button className="button button--primary" onClick={onExit}>Zum Startmenü</button></>}
+        {g.phase==="finished"&&!tray&&!competition&&<section className="party-finale"><Celebration/><p>Alle {g.options.rounds} Runden gespielt</p>{miniReward&&<PartyCoinReward coins={miniReward.coins} total={miniReward.total}/>}<h1>Die Insel feiert euch!</h1><h2>{g.winners.map(id=>g.players.find(q=>q.id===id)!.name).join(" & ")}</h2><p>{g.winners.length>1?"Ihr teilt euch den Sieg!":"Du gewinnst die Inselparty!"}</p><ol>{standings.map((q,i)=><li key={q.id}><span>{i+1}.</span><CharacterAvatar id={q.characterId} className={`party-avatar party-player-color-${g.players.indexOf(q)}`}/><strong>{q.name}<small>★ {q.trophies} · ◉ {q.coins} · {q.wins} Minispielsiege</small></strong></li>)}</ol>{m&&<details className="party-final-awards"><summary>Letztes Minispiel: {MINIS[m.id].name}</summary><ul>{partyMiniResults(g).map(r=><li key={r.player.id}><strong>{r.player.name}</strong><span>{r.score} Punkte · +{r.coins} Münzen</span></li>)}</ul></details>}<button className="button button--primary button--wide" onClick={onLobby??onExit}>{onLobby?"Zurück zur Lobby":"Zurück zu GSG"}</button></section>}
+        {g.phase==="aborted"&&<><h2>Partie beendet</h2><button className="button button--primary" onClick={onLobby??onExit}>{onLobby?"Zurück zur Lobby":"Zum Startmenü"}</button></>}
         {error&&!panel&&<p className="error-message" role="alert">{error}</p>}
       </section>
     </div>
