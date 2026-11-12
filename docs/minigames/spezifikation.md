@@ -128,6 +128,10 @@ Fehlstarts. Client-Reaktionszeiten dürfen nicht ungeprüft übernommen werden.
 
 ## 4. Tower Tumble – Der wackelige Turm
 
+> **Stand Nov. 2026:** Nach Spielrückmeldung als gleichzeitiges Turmrennen mit
+> echter Physik neu gebaut; diese Ursprungsfassung gilt nicht mehr. Aktuelle
+> Regeln: [Konzept](konzept.md).
+
 **Spieler:** 2–6
 
 **Szenario:** In einem verrückten Bauwettbewerb stapeln Spieler gemeinsam

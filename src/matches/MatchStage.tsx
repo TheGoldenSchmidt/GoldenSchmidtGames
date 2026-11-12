@@ -115,7 +115,7 @@ export function MatchStage({ game, id, now, control, busy = false }: Props) {
   return <section className={`match-game match-game--${matchId}`} aria-label={meta.name}>
     <header className="match-hud">
       <div><h2>{meta.name}</h2><p role="status">{client.status?.(match, id) ?? meta.look.hint}</p></div>
-      <strong className="match-score"><b>{score}</b><small>Punkte</small></strong>
+      <strong className="match-score"><b>{score}</b><small>{client.unit ?? "Punkte"}</small></strong>
       <button type="button" className="match-sound" aria-pressed={sound} aria-label={sound ? "Ton ausschalten" : "Ton einschalten"} onClick={() => { const next = !sound; setSound(next); setSoundEnabled(next); if (next) unlockSound(); }}>{sound ? "♪" : "×"}</button>
     </header>
     <ol className="match-standings" aria-label="Zwischenstand">

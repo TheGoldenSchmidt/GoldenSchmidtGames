@@ -101,9 +101,11 @@ body:has(.party-screen--playing .match-game) { padding-block:0; }
 .arrow-aim-hint { position:absolute; left:50%; bottom:16px; transform:translateX(-50%); padding:4px 12px; border-radius:999px; background:#24133fcc; color:#ffe44e; font-size:.72rem; font-weight:800; white-space:nowrap; pointer-events:none; }
 .match-preview--arrows { background:linear-gradient(#8fd3ff, #d8f1ff 60%, #6fa84a 60%); color:#e3263b; }
 /* Tower Tumble: the whole stage moves the block on your turn. */
-.match-slider.tower-slider { top:0; height:auto; }
-.tower-hint,.tower-wait { position:absolute; left:50%; bottom:16px; transform:translateX(-50%); margin:0; padding:4px 12px; border-radius:999px; background:#24133fcc; color:#ffe44e; font-size:.72rem; font-weight:800; white-space:nowrap; pointer-events:none; }
-.tower-wait:empty { display:none; }
+/* Tower Tumble: a drag strip along the bottom, turn and drop buttons stacked on the right. */
+.match-slider.tower-slider { height:30%; right:104px; background:linear-gradient(#24133f00, #24133f55); border-top:2px dashed #fff9ed66; }
+.tower-hint { position:absolute; left:50%; bottom:14px; transform:translateX(-50%); margin:0; padding:4px 12px; border-radius:999px; background:#24133fcc; color:#ffe44e; font-size:.72rem; font-weight:800; white-space:nowrap; pointer-events:none; }
+.tower-buttons { position:absolute; right:10px; bottom:10px; display:flex; flex-direction:column; gap:10px; }
+.match-game--tower .tower-buttons .match-action { width:80px; height:80px; }
 .match-preview--tower { background:linear-gradient(#ffd166, #ff86c8); color:#24133f; }
 /* Hook Wars: stick bottom left, the right half fires and holds the hook. */
 .match-game--hooks .match-controls { justify-content:flex-start; }

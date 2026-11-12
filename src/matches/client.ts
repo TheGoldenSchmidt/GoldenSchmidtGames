@@ -40,6 +40,8 @@ export interface MatchClient {
   sound?(event: MatchEvent, viewer: string): Sfx | undefined;
   /** Event kinds that must not appear as a text chip (e.g. decoys would give the trick away). */
   quiet?: readonly string[];
+  /** Label under the HUD score; defaults to "Punkte". */
+  unit?: string;
 }
 
 export const lerp = (a: number, b: number, t: number) => a + (b - a) * t;

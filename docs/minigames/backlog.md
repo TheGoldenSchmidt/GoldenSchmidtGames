@@ -82,8 +82,8 @@ Siehe [konzept.md](konzept.md#architekturentscheidungen) und die Tabelle
   nicht teilnehmend und erhält keine Münzen oder Einsatzpunkte.
 - **Schlanke öffentliche Sicht:** fremde Spieler nur mit Kennung, Farbe, Team
   und Anwesenheit; Ereignisse der letzten 1,5 s; Zahlen auf 1/1000 gerundet.
-- **Tower Tumble** nutzt statisches Gleichgewicht statt kontinuierlicher
-  Starrkörperphysik (Begründung im Konzept).
+- **Tower Tumble** ist seit Nov. 2026 ein Turmrennen mit eigener,
+  deterministischer Starrkörperphysik (`physics2d.ts`, Begründung im Konzept).
 - **Klassische Tastaturbedienung** der 3D-Arenen bleibt vorerst im Code
   (bestehende `phone`-Tests nutzen sie), wird aber nicht weiterentwickelt.
 
@@ -119,8 +119,9 @@ geprüft; echte Funknetze nicht.
 - **Bots** sind für Übung und Testräume gedacht, nicht als starke Gegner;
   besonders Hook Wars und Chaos Run spielen einfach.
 - **Neon Pong** steht nur bei 2 oder 4 aktiven Spielern im Pool.
-- **Tower Tumble** dauert mit sechs Personen etwa 2½ Minuten (Vorgaben: 3
-  Steine je Person, 5 s Zielzeit).
+- **Tower Tumble** braucht als einziges Spiel spürbar Rechenzeit (≈ 40 ms je
+  Spielsekunde in Node); auf einem Handy-Host ungeprüft. Bots verlieren viele
+  Steine und taugen nur zum Üben.
 - **Zufallsziehung in Tests:** Tests, die ein bestimmtes Minispiel erwarten,
   müssen es wählen oder gezogene Match-Spiele durchspielen
   (`toArenaMini`, `participate` in `tests/browser/party-session.ts`).
@@ -134,7 +135,7 @@ geprüft; echte Funknetze nicht.
 | Sumo Smash, Bumper Mayhem | Rückstoß viel zu klein | **umgesetzt**: Kontrollverlust nach Treffern, stärkerer Stoß; Wurfweite im Regeltest abgesichert (Sumo ≈ 5 statt 0,8 Einheiten, seitlicher Rammstoß ≈ 6 statt 3,5) |
 | Neon Pong | Schläger zu langsam | **umgesetzt**: 42 statt 16 Feldeinheiten/s, eigene Anzeige läuft weiter voraus |
 | Arrow Masters | Nach jedem Schuss andere Startplätze | **umgesetzt**: neun Plätze, jede Runde neu verteilt |
-| Tower Tumble | Mechanik und Physik nicht schön | **offen**: Neubau mit echter 2D-Starrkörperphysik und Drehen geplant (eigenständiges Spiel im Genre, keine Kopie) |
+| Tower Tumble | Mechanik und Physik nicht schön | **umgesetzt**: Neubau als Turmrennen mit echter 2D-Starrkörperphysik, Drehen, schnellem Fallen und Landehilfe (eigenständiges Spiel im Genre, keine Kopie); Gefühl auf echten Handys offen |
 | Hook Wars | Prinzip unverständlich | **umgesetzt**: vorerst zu den 1st Generation Minigames verschoben (nur mit Haken im Zufallspool, weiter direkt wählbar) |
 | Floor is Lava | Lieber als 3D-Hindernislauf mit Figuren | **offen**: Aufwandsschätzung abgegeben |
 

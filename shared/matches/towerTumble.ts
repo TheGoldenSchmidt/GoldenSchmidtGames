@@ -1,256 +1,270 @@
-import { emit, hash, inputOfPlayer, presence, rank, random, type MatchModule, type MatchState } from "./types";
+import { bodiesOverlap, stepBodies, type RigidBody, type WarmStart } from "./physics2d";
+import { emit, hash, inputOfPlayer, presence, rank, shuffled, type MatchModule, type MatchState } from "./types";
 
 /**
- * Tower Tumble – players take turns dropping blocks onto one shared tower.
- * Physics model: blocks fall straight down under gravity and land on the
- * highest surface below them. Stability follows static equilibrium: a block
- * stays if the common centre of mass of itself and everything it carries
- * lies within its contact span on the blocks below. Unstable blocks topple
- * together with their load; checks repeat until the tower is at rest.
+ * Tower Tumble – a tower race. Everyone builds at the same time on an own
+ * narrow pedestal, with the same sequence of four-cell pieces. The falling
+ * piece is steered (half-cell steps, quarter turns, fast drop); as soon as
+ * it touches the tower it becomes a rigid body in a real physics simulation
+ * (`physics2d.ts`), so pieces tip, slide and topple. The first tower that
+ * stays above the finish line for two seconds wins; at the time limit the
+ * height decides. World units: one cell = 1, pedestal top at y = 0.
  */
 export const TW = {
-  width: 10, baseX0: 3, baseX1: 7, spawnGap: 3.2, gravity: 30, aimMs: 5000, settleMs: 900, resultMs: 1300,
-  placements: 3, recordStep: .5, collapsePenalty: 2, margin: .02, contact: .05, maxMs: 230000
+  baseHalf: 2.5, baseDepth: 1.2, laneHalf: 6, goal: 16, holdMs: 2000,
+  fall: 2.2, fastFall: 12, move: 16, spawnGap: 4.5, spawnDelay: 300, lostY: -6,
+  gravity: 18, substeps: 3, iterations: 12, friction: .9, bias: .2, slop: .01,
+  sleepSpeed: .08, sleepMs: 400, settleSpeed: .5, regular: 120000
 } as const;
-export interface Part { dx: number; dy: number; w: number; h: number }
-export interface Shape { kind: string; parts: Part[]; w: number; h: number }
-export interface Block { id: number; owner: string; kind: string; parts: Part[]; x: number; y: number; w: number; h: number }
-export interface TowerGame {
-  turns: string[];
-  turn: number;
-  phase: "aim" | "drop" | "settle" | "result" | "done";
-  phaseStart: number;
-  current?: { shape: Shape; x: number; y: number; vy: number; owner: string };
-  blocks: Block[];
-  falling: { block: Block; at: number }[];
+
+export type PieceKind = "I" | "O" | "T" | "L" | "J" | "S" | "Z";
+export const PIECE_KINDS: readonly PieceKind[] = ["I", "O", "T", "L", "J", "S", "Z"];
+const GRID: Record<PieceKind, [number, number][]> = {
+  I: [[0, 0], [1, 0], [2, 0], [3, 0]], O: [[0, 0], [1, 0], [0, 1], [1, 1]], T: [[0, 0], [1, 0], [2, 0], [1, 1]],
+  L: [[0, 0], [1, 0], [2, 0], [2, 1]], J: [[0, 0], [1, 0], [2, 0], [0, 1]], S: [[0, 0], [1, 0], [1, 1], [2, 1]], Z: [[1, 0], [2, 0], [0, 1], [1, 1]]
+};
+/** Cell centres of a piece relative to its centre of mass, after `r` clockwise quarter turns. */
+export function pieceCells(kind: PieceKind, r: number): [number, number][] {
+  let cells = GRID[kind].map(([x, y]) => [x, y] as [number, number]);
+  for (let i = 0; i < ((r % 4) + 4) % 4; i++) cells = cells.map(([x, y]) => [y, -x]);
+  const mx = cells.reduce((n, c) => n + c[0], 0) / cells.length, my = cells.reduce((n, c) => n + c[1], 0) / cells.length;
+  return cells.map(([x, y]) => [x - mx, y - my]);
+}
+/** Snaps a centre-of-mass x so that cell edges sit on the half-cell grid. */
+export function snapX(kind: PieceKind, r: number, x: number) {
+  const off = pieceCells(kind, r)[0][0] - .5;
+  return Math.round((x + off) * 2) / 2 - off;
+}
+
+export interface TowerBody { id: number; k: PieceKind; r: number; x: number; y: number; a: number; vx: number; vy: number; w: number }
+export interface FallingPiece { n: number; k: PieceKind; r: number; x: number; y: number; tx: number }
+export interface Tower {
+  bodies: TowerBody[];
+  warm: WarmStart;
+  piece?: FallingPiece;
+  spawnAt: number;
+  /** Index of the next piece in the shared sequence. */
+  next: number;
   nextId: number;
-  record: number;
-  points: Record<string, number>;
-  bestGain: Record<string, number>;
-  last?: { owner: string; outcome: "stable" | "slip" | "collapse"; gain: number; bonus: boolean };
-  tiebreak?: string[];
-  tiebreakGain: Record<string, number>;
-  winner?: string;
+  asleep: boolean;
+  calm: number;
+  height: number;
+  best: number;
+  placed: number;
+  lost: number;
+  holdSince?: number;
+  finishedAt?: number;
 }
-const SHAPES: Shape[] = [
-  { kind: "square", parts: [{ dx: 0, dy: 0, w: 1, h: 1 }], w: 1, h: 1 },
-  { kind: "plank", parts: [{ dx: 0, dy: 0, w: 3, h: .5 }], w: 3, h: .5 },
-  { kind: "pillar", parts: [{ dx: 0, dy: 0, w: .8, h: 1.6 }], w: .8, h: 1.6 },
-  { kind: "wide", parts: [{ dx: 0, dy: 0, w: 2, h: 1 }], w: 2, h: 1 },
-  { kind: "small", parts: [{ dx: 0, dy: 0, w: .7, h: .7 }], w: .7, h: .7 },
-  { kind: "ell", parts: [{ dx: 0, dy: 0, w: .6, h: 1.2 }, { dx: .6, dy: 0, w: 1.4, h: .5 }], w: 2, h: 1.2 },
-  { kind: "tee", parts: [{ dx: .8, dy: 0, w: .6, h: .7 }, { dx: 0, dy: .7, w: 2.2, h: .5 }], w: 2.2, h: 1.2 }
-];
-const area = (p: Part) => p.w * p.h;
-const top = (g: TowerGame) => Math.max(0, ...g.blocks.map(b => b.y + b.h));
-const base = { x0: TW.baseX0, x1: TW.baseX1 };
+export interface TowerGame { sequence: PieceKind[]; towers: Record<string, Tower>; winner?: string; decided: boolean }
+/** Packed body for the network view: [id, kind index, rotation, x, y, angle]. */
+export type PackedBody = [number, number, number, number, number, number];
+export interface TowerView extends Omit<Tower, "bodies" | "warm"> { packed: PackedBody[] }
 
-/** Highest landing height for a shape whose left edge is at x. */
-export function landingY(blocks: Block[], shape: { parts: Part[] }, x: number) {
-  let y = -Infinity;
-  for (const part of shape.parts) {
-    const x0 = x + part.dx, x1 = x0 + part.w;
-    let floor = x1 > base.x0 + 1e-9 && x0 < base.x1 - 1e-9 ? 0 : -Infinity;
-    for (const b of blocks) for (const q of b.parts) {
-      const qx0 = b.x + q.dx, qx1 = qx0 + q.w;
-      if (x1 > qx0 + 1e-9 && x0 < qx1 - 1e-9) floor = Math.max(floor, b.y + q.dy + q.h);
-    }
-    y = Math.max(y, floor - part.dy);
+const PEDESTAL: RigidBody = { id: -1, x: 0, y: -TW.baseDepth / 2, a: 0, vx: 0, vy: 0, w: 0, invMass: 0, invI: 0, fixtures: [{ x: 0, y: 0, hw: TW.baseHalf, hh: TW.baseDepth / 2 }] };
+const CELL = .5;
+
+export function rigid(b: Pick<TowerBody, "id" | "k" | "r" | "x" | "y" | "a"> & Partial<TowerBody>, dynamic = true): RigidBody {
+  const cells = pieceCells(b.k, b.r);
+  // Unit squares: mass 1 each; inertia 1/6 per cell plus the parallel-axis term.
+  const inertia = cells.reduce((n, [x, y]) => n + 1 / 6 + x * x + y * y, 0);
+  return { id: b.id, x: b.x, y: b.y, a: b.a, vx: b.vx ?? 0, vy: b.vy ?? 0, w: b.w ?? 0, invMass: dynamic ? 1 / cells.length : 0, invI: dynamic ? 1 / inertia : 0, fixtures: cells.map(([x, y]) => ({ x, y, hw: CELL, hh: CELL })) };
+}
+const pieceBody = (p: FallingPiece, y = p.y, x = p.x, r = p.r) => rigid({ id: -2, k: p.k, r, x, y, a: 0 }, false);
+/** Rough reach of a piece from its centre of mass (I piece: 2 cells and a corner). */
+const REACH = 2.25;
+const blocked = (t: Tower, probe: RigidBody) => (probe.y < REACH && bodiesOverlap(probe, PEDESTAL, .002))
+  || t.bodies.some(b => Math.abs(b.x - probe.x) < 2 * REACH && Math.abs(b.y - probe.y) < 2 * REACH && bodiesOverlap(probe, rigid(b, false), .002));
+/** Highest point of any cell corner of a body. */
+export function bodyTop(b: Pick<TowerBody, "k" | "r" | "x" | "y" | "a">) {
+  const c = Math.cos(b.a), s = Math.sin(b.a);
+  let top = -Infinity;
+  for (const [x, y] of pieceCells(b.k, b.r)) for (const [dx, dy] of [[-CELL, -CELL], [CELL, -CELL], [CELL, CELL], [-CELL, CELL]]) top = Math.max(top, b.y + s * (x + dx) + c * (y + dy));
+  return top;
+}
+
+function kindAt(g: TowerGame, s: MatchState<TowerGame>, index: number) {
+  // A shuffled bag of all seven kinds keeps the shared sequence fair.
+  while (g.sequence.length <= index) g.sequence.push(...shuffled(s, PIECE_KINDS));
+  return g.sequence[index];
+}
+
+function spawn(s: MatchState<TowerGame>, t: Tower) {
+  const g = s.game, k = kindAt(g, s, t.next), top = Math.max(0, ...t.bodies.map(bodyTop));
+  t.piece = { n: t.next, k, r: 0, x: snapX(k, 0, 0), y: top + TW.spawnGap, tx: snapX(k, 0, 0) };
+  t.next++;
+}
+
+/** Moves the falling piece for one sub-step; on contact it joins the simulation. */
+function steer(s: MatchState<TowerGame>, id: string, t: Tower, fast: boolean, h: number) {
+  const p = t.piece!;
+  if (p.tx !== p.x) {
+    const nx = p.x + Math.max(-TW.move * h, Math.min(TW.move * h, p.tx - p.x));
+    if (!blocked(t, pieceBody(p, p.y, nx))) p.x = nx; else p.tx = p.x;
   }
-  return y;
-}
-
-/** Contact spans of a block's bottom faces, grouped by supporter (another block or the base). */
-function supports(blocks: Block[], b: Block) {
-  const spans = new Map<Block | "base", [number, number]>();
-  const add = (key: Block | "base", a: number, c: number) => { const old = spans.get(key); spans.set(key, old ? [Math.min(old[0], a), Math.max(old[1], c)] : [a, c]); };
-  for (const part of b.parts) {
-    const bottom = b.y + part.dy, x0 = b.x + part.dx, x1 = x0 + part.w;
-    if (Math.abs(bottom) < 1e-6) { const a = Math.max(x0, base.x0), c = Math.min(x1, base.x1); if (c - a > TW.contact) add("base", a, c); }
-    for (const o of blocks) if (o !== b) for (const q of o.parts) {
-      if (Math.abs(o.y + q.dy + q.h - bottom) > 1e-6) continue;
-      const a = Math.max(x0, o.x + q.dx), c = Math.min(x1, o.x + q.dx + q.w);
-      if (c - a > TW.contact) add(o, a, c);
-    }
+  const speed = fast ? TW.fastFall : TW.fall, ny = p.y - speed * h;
+  if (!blocked(t, pieceBody(p, ny))) {
+    p.y = ny;
+    // Steered past the pedestal: the piece is lost and the next one comes.
+    if (p.y < TW.lostY) { t.piece = undefined; t.lost++; t.spawnAt = s.time + TW.spawnDelay; emit(s, "lost", "Stein verloren!", [id]); }
+    return;
   }
-  return spans;
+  // Find the first touching height between the old and new position.
+  let free = p.y, hit = ny;
+  for (let i = 0; i < 8; i++) { const mid = (free + hit) / 2; if (blocked(t, pieceBody(p, mid))) hit = mid; else free = mid; }
+  t.bodies.push({ id: t.nextId++, k: p.k, r: p.r, x: p.x, y: free, a: 0, vx: 0, vy: -speed, w: 0 });
+  t.piece = undefined; t.placed++; t.spawnAt = s.time + TW.spawnDelay; t.asleep = false; t.calm = 0;
 }
 
-/**
- * Static check from the top down: each block carries its own weight plus the
- * forces of the blocks resting on it, applied at their contact areas. It is
- * stable if the resultant lies within its own support span. A block on two
- * or more supporters passes its load on by the lever rule between the
- * outermost contacts.
- */
-function unstableBlocks(blocks: Block[]) {
-  const forces = new Map<Block, { f: number; x: number }[]>(blocks.map(b => [b, []]));
-  const unstable: Block[] = [];
-  const order = [...blocks].sort((a, b) => (b.y - a.y) || (b.id - a.id));
-  for (const b of order) {
-    const mass = b.parts.reduce((n, p) => n + area(p), 0), cx = b.parts.reduce((n, p) => n + area(p) * (b.x + p.dx + p.w / 2), 0) / mass;
-    const incoming = forces.get(b)!, load = mass + incoming.reduce((n, f) => n + f.f, 0);
-    const rx = (mass * cx + incoming.reduce((n, f) => n + f.f * f.x, 0)) / load;
-    const spans = [...supports(blocks, b).entries()];
-    if (!spans.length) { unstable.push(b); continue; }
-    const lo = Math.min(...spans.map(([, s]) => s[0])), hi = Math.max(...spans.map(([, s]) => s[1]));
-    // A tipping block still presses on the edge it tips over, so it can drag its supporter along.
-    if (rx < lo - TW.margin || rx > hi + TW.margin) unstable.push(b);
-    if (spans.length === 1) { const [key, [a, c]] = spans[0]; if (key !== "base") forces.get(key)!.push({ f: load, x: Math.max(a, Math.min(c, rx)) }); continue; }
-    const centres = spans.map(([key, [a, c]]) => ({ key, x: (a + c) / 2, a, c })).sort((p, q) => p.x - q.x);
-    const left = centres[0], right = centres.at(-1)!;
-    const toRight = right.x - left.x < 1e-9 ? .5 : Math.max(0, Math.min(1, (rx - left.x) / (right.x - left.x)));
-    for (const [side, share] of [[left, 1 - toRight], [right, toRight]] as const) if (side.key !== "base" && share > 0) forces.get(side.key)!.push({ f: load * share, x: side.x });
+function simulate(s: MatchState<TowerGame>, id: string, t: Tower, dt: number) {
+  if (t.asleep) return;
+  const bodies = t.bodies.map(b => rigid(b)), all = [PEDESTAL, ...bodies];
+  for (let i = 0; i < TW.substeps; i++) t.warm = stepBodies(all, t.warm, dt / TW.substeps, TW);
+  let fastest = 0;
+  bodies.forEach((r, i) => { Object.assign(t.bodies[i], { x: r.x, y: r.y, a: r.a, vx: r.vx, vy: r.vy, w: r.w }); fastest = Math.max(fastest, Math.hypot(r.vx, r.vy), Math.abs(r.w)); });
+  // Pieces that fell past the pedestal are gone.
+  const kept = t.bodies.filter(b => b.y > TW.lostY);
+  if (kept.length < t.bodies.length) {
+    const ids = new Set(kept.map(b => b.id));
+    t.lost += t.bodies.length - kept.length; t.bodies = kept;
+    for (const key of Object.keys(t.warm)) if (!key.split("|").slice(0, 2).every(part => Number(part.split(".")[0]) < 0 || ids.has(Number(part.split(".")[0])))) delete t.warm[key];
+    emit(s, "lost", "Stein verloren!", [id]);
   }
-  return unstable;
+  // A resting tower falls asleep: no more creeping, and no work for the solver.
+  t.calm = fastest < TW.sleepSpeed ? t.calm + dt * 1000 : 0;
+  if (t.calm >= TW.sleepMs) { t.asleep = true; for (const b of t.bodies) { b.vx = 0; b.vy = 0; b.w = 0; } }
 }
 
-/** Everything resting on a block, directly or indirectly. */
-function carried(blocks: Block[], b: Block, seen = new Set<Block>()): Block[] {
-  if (seen.has(b)) return [];
-  seen.add(b);
-  return [b, ...blocks.filter(o => o !== b && supports(blocks, o).has(b)).flatMap(o => carried(blocks, o, seen))];
-}
-
-/** Removes toppling blocks until the tower is in static equilibrium. Returns the blocks that fell. */
-export function settle(blocks: Block[]) {
-  let standing = [...blocks];
-  const fallen: Block[] = [];
-  for (let guard = 0; guard < 50; guard++) {
-    const unstable = unstableBlocks(standing);
-    if (!unstable.length) break;
-    // The lowest unstable block topples first, taking its load with it.
-    const lowest = unstable.sort((a, b) => a.y - b.y || a.id - b.id)[0], group = new Set(carried(standing, lowest));
-    for (const b of group) fallen.push(b);
-    standing = standing.filter(b => !group.has(b));
-  }
-  return { standing, fallen };
-}
-
-function shapeFor(s: MatchState<TowerGame>) { return SHAPES[Math.floor(random(s) * SHAPES.length)]; }
-
-function startTurn(s: MatchState<TowerGame>) {
-  const g = s.game, owner = g.tiebreak ? g.tiebreak[g.turn] : g.turns[g.turn], shape = shapeFor(s);
-  g.current = { shape, x: (TW.width - shape.w) / 2, y: top(g) + TW.spawnGap, vy: 0, owner };
-  g.phase = "aim"; g.phaseStart = s.time;
-  emit(s, "turn", "Dein Baustein!", [owner]);
-}
-
-function evaluate(s: MatchState<TowerGame>) {
-  const g = s.game, current = g.current!, before = top(g);
-  const block: Block = { id: g.nextId++, owner: current.owner, kind: current.shape.kind, parts: current.shape.parts, x: current.x, y: current.y, w: current.shape.w, h: current.shape.h };
-  const { standing, fallen } = settle([...g.blocks, block]);
-  const others = fallen.filter(b => b !== block);
-  g.falling = fallen.map(b => ({ block: b, at: s.time }));
-  g.current = undefined;
-  if (others.length) {
-    // Significant collapse caused by this placement: penalty and a fresh tower.
-    if (!g.tiebreak) g.points[block.owner] -= TW.collapsePenalty; else g.tiebreakGain[block.owner] = -1;
-    // The whole tower comes down for the animation; the next block starts a new tower.
-    g.falling = [...standing, ...fallen].map(b => ({ block: b, at: s.time }));
-    g.blocks = [];
-    g.last = { owner: block.owner, outcome: "collapse", gain: 0, bonus: false };
-    emit(s, "collapse", "Einsturz! −2", [block.owner]);
-  } else if (fallen.includes(block)) {
-    g.blocks = standing;
-    g.last = { owner: block.owner, outcome: "slip", gain: 0, bonus: false };
-    if (g.tiebreak) g.tiebreakGain[block.owner] = 0;
-    emit(s, "slip", "Abgerutscht – kein Punkt", [block.owner]);
-  } else {
-    g.blocks = standing;
-    const height = top(g), gain = Math.max(0, height - before), bonus = height >= g.record + TW.recordStep;
-    if (bonus) g.record = height;
-    if (g.tiebreak) g.tiebreakGain[block.owner] = gain;
-    else { g.points[block.owner] += 1 + (bonus ? 1 : 0); g.bestGain[block.owner] = Math.max(g.bestGain[block.owner], gain); }
-    g.last = { owner: block.owner, outcome: "stable", gain, bonus };
-    emit(s, bonus ? "record" : "stable", bonus ? "Neue Rekordhöhe! +2" : "Steht! +1", [block.owner]);
-  }
-  g.phase = "result"; g.phaseStart = s.time;
-}
-
-function next(s: MatchState<TowerGame>) {
-  const g = s.game;
-  g.turn++;
-  const active = (id: string) => !s.players.find(p => p.id === id)?.gone;
-  const list = g.tiebreak ?? g.turns;
-  while (g.turn < list.length && !active(list[g.turn])) g.turn++;
-  if (g.turn < list.length) { startTurn(s); return; }
-  if (g.tiebreak) {
-    const best = Math.max(...g.tiebreak.map(id => g.tiebreakGain[id] ?? -1)), top2 = g.tiebreak.filter(id => (g.tiebreakGain[id] ?? -1) === best);
-    if (top2.length === 1 && best > 0) g.winner = top2[0];
-    g.phase = "done"; s.done = true; return;
-  }
-  const ids = s.players.filter(p => !p.gone).map(p => p.id);
-  const most = Math.max(...ids.map(id => g.points[id])), tied = ids.filter(id => g.points[id] === most);
-  const gain = Math.max(...tied.map(id => g.bestGain[id])), still = tied.filter(id => g.bestGain[id] === gain);
-  if (still.length > 1) { g.tiebreak = still; g.turn = 0; startTurn(s); emit(s, "tiebreak", "Stechrunde!", still); return; }
-  g.phase = "done"; s.done = true;
+function measure(s: MatchState<TowerGame>, id: string, t: Tower) {
+  // Only resting pieces count towards the height; tumbling ones do not.
+  const resting = t.bodies.filter(b => Math.hypot(b.vx, b.vy) < TW.settleSpeed && Math.abs(b.w) < TW.settleSpeed);
+  t.height = Math.max(0, ...resting.map(bodyTop));
+  t.best = Math.max(t.best, t.height);
+  if (t.height >= TW.goal) {
+    if (t.holdSince === undefined) { t.holdSince = s.time; emit(s, "hold", "Über der Ziellinie – halten!", [id]); }
+    else if (s.time - t.holdSince >= TW.holdMs && t.finishedAt === undefined) t.finishedAt = s.time;
+  } else if (t.holdSince !== undefined) { t.holdSince = undefined; emit(s, "drop", "Wieder unter der Linie", [id]); }
 }
 
 export const towerTumble: MatchModule<TowerGame> = {
   id: "tower",
   meta: {
-    name: "Tower Tumble", seconds: TW.maxMs / 1000, players: [2, 3, 4, 5, 6], hz: 20,
-    instruction: "Ihr baut abwechselnd an einem gemeinsamen Turm. Schiebe deinen Baustein mit dem Finger waagrecht und lass los, um ihn fallen zu lassen (nach 5 Sekunden fällt er von selbst). Steht er stabil: +1. Deutlich neue Rekordhöhe: +1 extra. Reißt deine Platzierung andere Steine mit: −2 und ein neuer Turm beginnt. Jeder setzt 3 Steine.",
-    controls: "Waagrecht ziehen · loslassen zum Fallenlassen.",
-    look: { icon: "▦", action: "Bau höher, ohne alles umzuwerfen", hint: "Ziehen und loslassen", goal: "Die meisten Punkte nach 3 Steinen" }
+    name: "Tower Tumble", seconds: TW.regular / 1000 + 2, players: [2, 3, 4, 5, 6], hz: 20,
+    instruction: "Turmrennen: Alle bauen gleichzeitig auf einem eigenen, schmalen Sockel und bekommen dieselben Steine. Ziehe auf der Leiste, um den fallenden Stein zu verschieben, tippe ⟳ zum Drehen und halte ⇩ zum schnellen Fallen. Sobald ein Stein aufsetzt, gilt echte Physik: Steine kippen, rutschen und stürzen ab. Wer zuerst zwei Sekunden lang über der Ziellinie steht, gewinnt. Nach zwei Minuten entscheidet die Höhe.",
+    controls: "Leiste ziehen: verschieben · ⟳ drehen · ⇩ halten: schnell fallen.",
+    look: { icon: "▦", action: "Bau schneller als die anderen", hint: "Ziehen · ⟳ drehen · ⇩ fallen", goal: "Zuerst über der Ziellinie" }
   },
   create(s) {
-    const ids = s.players.map(p => p.id), turns: string[] = [];
-    // Order rotates between passes: pass k starts with player k.
-    for (let pass = 0; pass < TW.placements; pass++) for (let i = 0; i < ids.length; i++) turns.push(ids[(i + pass) % ids.length]);
-    s.game = { turns, turn: 0, phase: "aim", phaseStart: 0, blocks: [], falling: [], nextId: 1, record: 0, points: Object.fromEntries(ids.map(id => [id, 0])), bestGain: Object.fromEntries(ids.map(id => [id, 0])), tiebreakGain: {} };
-    startTurn(s);
+    s.game = { sequence: [], towers: {}, decided: false };
+    for (const p of s.players) s.game.towers[p.id] = { bodies: [], warm: {}, spawnAt: 0, next: 0, nextId: 1, asleep: true, calm: 0, height: 0, best: 0, placed: 0, lost: 0 };
     return s.game;
   },
   step(s, dt) {
-    const g = s.game, current = g.current;
-    if (g.phase === "aim" && current) {
-      const p = s.players.find(q => q.id === current.owner)!, input = inputOfPlayer(s, p);
-      if (s.time <= p.inputUntil && !p.gone) current.x = Math.max(0, Math.min(TW.width - current.shape.w, (input.x + 1) / 2 * (TW.width - current.shape.w)));
-      if (s.time - g.phaseStart >= TW.aimMs || p.gone) { g.phase = "drop"; g.phaseStart = s.time; emit(s, "drop", "", [current.owner]); }
-      return;
+    const g = s.game;
+    for (const p of s.players) {
+      const t = g.towers[p.id];
+      if (p.gone) { t.piece = undefined; continue; }
+      if (!t.piece && s.time >= t.spawnAt) spawn(s, t);
+      const input = inputOfPlayer(s, p);
+      if (t.piece && input.hb) t.piece.tx = snapX(t.piece.k, t.piece.r, Math.max(-TW.laneHalf, Math.min(TW.laneHalf, input.x * TW.laneHalf)));
+      for (let i = 0; i < TW.substeps && t.piece; i++) steer(s, p.id, t, input.ha, dt / TW.substeps);
     }
-    if (g.phase === "drop" && current) {
-      const floor = landingY(g.blocks, current.shape, current.x);
-      current.vy -= TW.gravity * dt; current.y += current.vy * dt;
-      // Nothing below: the block falls past the tower and counts as slipped.
-      if (!Number.isFinite(floor)) { if (current.y < -4) evaluate(s); }
-      else if (current.y <= floor) { current.y = floor; g.phase = "settle"; g.phaseStart = s.time; emit(s, "land", "", [current.owner]); }
-      return;
-    }
-    if (g.phase === "settle" && s.time - g.phaseStart >= TW.settleMs) { evaluate(s); return; }
-    if (g.phase === "result" && s.time - g.phaseStart >= TW.resultMs) { g.falling = []; next(s); }
+    for (const p of s.players) simulate(s, p.id, g.towers[p.id], dt);
+    for (const p of s.players) if (!p.gone) measure(s, p.id, g.towers[p.id]);
+    const finished = s.players.filter(p => !p.gone && g.towers[p.id].finishedAt !== undefined);
+    if (finished.length) {
+      g.winner = finished.length === 1 ? finished[0].id : undefined; g.decided = true; s.done = true;
+      emit(s, "finish", "Ziel erreicht!", finished.map(p => p.id));
+    } else if (s.time >= TW.regular) { g.decided = true; s.done = true; }
   },
   press(s, p, kind) {
-    const g = s.game;
-    if (kind !== "a" || g.phase !== "aim" || g.current?.owner !== p.id) return;
-    // Releasing the finger drops the block at the latest position.
-    g.current.x = Math.max(0, Math.min(TW.width - g.current.shape.w, (p.input.x + 1) / 2 * (TW.width - g.current.shape.w)));
-    g.phase = "drop"; g.phaseStart = s.time;
-    emit(s, "drop", "", [p.id]);
+    const t = s.game.towers[p.id], piece = t?.piece;
+    if (kind !== "a" || !piece || p.gone) return;
+    // Quarter turn clockwise; if blocked, try small sideways nudges.
+    const r = (piece.r + 1) % 4;
+    for (const dx of [0, .5, -.5, 1, -1]) {
+      const x = snapX(piece.k, r, piece.x + dx);
+      if (!blocked(t, pieceBody(piece, piece.y, x, r))) { piece.r = r; piece.x = x; piece.tx = snapX(piece.k, r, piece.tx); return; }
+    }
   },
+  remove(s, id) { const t = s.game.towers[id]; if (t) t.piece = undefined; },
   standings(s) {
     const g = s.game;
-    return rank(s.players.map(p => ({ id: p.id, score: g.points[p.id], detail: g.winner === p.id ? "Stechrunde gewonnen" : `Bester Höhenbeitrag ${g.bestGain[p.id].toFixed(1)} m`,
-      keys: [presence(p), g.points[p.id], Math.round(g.bestGain[p.id] * 100), g.winner === p.id ? 1 : 0] })));
+    return rank(s.players.map(p => {
+      const t = g.towers[p.id], finished = t.finishedAt !== undefined;
+      return { id: p.id, score: Math.round(t.height * 10) / 10, detail: `${finished ? "im Ziel" : `${t.height.toFixed(1)} m`} · ${t.placed} Steine · ${t.lost} verloren`,
+        keys: [presence(p), finished ? 1 : 0, finished ? -t.finishedAt! : 0, Math.round(t.height * 100)] };
+    }));
   },
-  finish(s) { s.game.phase = "done"; },
-  bot(s, id) {
-    const g = s.game, current = g.current;
-    if (g.phase !== "aim" || current?.owner !== id) return {};
-    // Try positions and prefer stable, high placements; vary a little per bot.
-    let bestX = (TW.width - current.shape.w) / 2, bestScore = -Infinity;
-    for (let i = 0; i <= 40; i++) {
-      const x = i / 40 * (TW.width - current.shape.w), y = landingY(g.blocks, current.shape, x);
-      if (!Number.isFinite(y)) continue;
-      const block = { id: -1, owner: id, kind: current.shape.kind, parts: current.shape.parts, x, y, w: current.shape.w, h: current.shape.h };
-      const { fallen } = settle([...g.blocks, block]);
-      const score = fallen.length ? -10 - fallen.length : y + current.shape.h - Math.abs(x + current.shape.w / 2 - TW.width / 2) * .15 + (hash(`${id}:${g.turn}:${i}`) % 10) * .01;
-      if (score > bestScore) { bestScore = score; bestX = x; }
+  finish(s) { s.game.decided = true; },
+  view(s, viewer) {
+    // Velocities and the solver's warm-start data stay with the authority; bodies travel packed.
+    // Foreign towers are only thumbnails on this device, so centimetres are enough there.
+    const coarse = (v: number) => Math.round(v * 100) / 100;
+    for (const [id, t] of Object.entries(s.game.towers)) {
+      const { bodies, warm, ...rest } = t, own = id === viewer; void warm;
+      (s.game.towers as unknown as Record<string, TowerView>)[id] = { ...rest, packed: bodies.map(b => own ? [b.id, PIECE_KINDS.indexOf(b.k), b.r, b.x, b.y, b.a] : [b.id, PIECE_KINDS.indexOf(b.k), b.r, coarse(b.x), coarse(b.y), coarse(b.a)]) };
     }
-    const target = bestX / (TW.width - current.shape.w) * 2 - 1, here = current.x / (TW.width - current.shape.w) * 2 - 1;
-    const ready = s.time - g.phaseStart > 900 && Math.abs(here - target) < .02;
-    return { x: target, pressA: ready };
+    s.game.sequence = s.game.sequence.slice(0, Math.max(...Object.values(s.game.towers).map(t => t.next)) + 1);
+  },
+  bot(s, id) {
+    const t = (s.game.towers as unknown as Record<string, TowerView>)[id], piece = t?.piece;
+    if (!piece) return {};
+    const plan = botPlan(t, piece, hash(`${id}:${piece.n}`));
+    const aligned = piece.r === plan.r && Math.abs(piece.x - plan.x) < .01;
+    // One quarter turn at a time, roughly every 300 ms.
+    const turn = piece.r !== plan.r && hash(`${id}:${Math.floor(s.time / 300)}`) % 2 === 0;
+    // Bots wait a moment before dropping fast, so practice rounds keep a human pace.
+    const settled = aligned && piece.y < Math.max(0, t.height) + TW.spawnGap - 1.5;
+    return { x: plan.x / TW.laneHalf, hb: true, ha: settled, pressA: turn };
   }
 };
+
+/** Column surface heights (half-cell columns) of a packed tower, for bots. */
+export function surface(t: TowerView) {
+  const cols = new Map<number, number>();
+  for (let c = -TW.baseHalf * 2; c < TW.baseHalf * 2; c++) cols.set(c, 0);
+  for (const [, ki, r, x, y, a] of t.packed) {
+    const k = PIECE_KINDS[ki], co = Math.cos(a), si = Math.sin(a);
+    for (const [cx, cy] of pieceCells(k, r)) {
+      const wx = x + co * cx - si * cy, wy = y + si * cx + co * cy, top = wy + CELL;
+      for (let c = Math.floor((wx - CELL) * 2 + .01); c < Math.ceil((wx + CELL) * 2 - .01); c++) cols.set(c, Math.max(cols.get(c) ?? -Infinity, top));
+    }
+  }
+  return cols;
+}
+
+/** Approximate resting height (centre of mass) of a piece dropped straight down; undefined beside the tower. */
+export function restingY(t: TowerView, k: PieceKind, r: number, x: number, cols = surface(t)) {
+  let land = -Infinity;
+  for (const [cx, cy] of pieceCells(k, r)) {
+    let support = -Infinity;
+    for (let c = Math.round((x + cx - CELL) * 2); c < Math.round((x + cx + CELL) * 2); c++) support = Math.max(support, cols.get(c) ?? -Infinity);
+    land = Math.max(land, support - (cy - CELL));
+  }
+  return Number.isFinite(land) ? land : undefined;
+}
+
+/** Greedy placement: low, flat, centred and fully on the tower. */
+function botPlan(t: TowerView, piece: FallingPiece, salt: number) {
+  const cols = surface(t);
+  let best = { r: piece.r, x: piece.x, score: Infinity };
+  for (let r = 0; r < 4; r++) {
+    const cells = pieceCells(piece.k, r);
+    for (let x = -TW.baseHalf; x <= TW.baseHalf; x += .5) {
+      const px = snapX(piece.k, r, x), land = restingY(t, piece.k, r, px, cols);
+      if (land === undefined) continue;
+      // Cells hanging over a gap make the placement wobbly.
+      let unsupported = 0;
+      for (const [cx, cy] of cells) {
+        let support = -Infinity;
+        for (let c = Math.round((px + cx - CELL) * 2); c < Math.round((px + cx + CELL) * 2); c++) support = Math.max(support, cols.get(c) ?? -Infinity);
+        const gap = land + cy - CELL - support;
+        if (gap > .25) unsupported += Number.isFinite(gap) ? gap : 4;
+      }
+      const top = land + Math.max(...cells.map(([, cy]) => cy + CELL));
+      const score = top + unsupported * 1.5 + Math.abs(px) * .15 + ((salt + r * 7 + Math.round(px * 2)) % 10) * .01;
+      if (score < best.score) best = { r, x: px, score };
+    }
+  }
+  return best;
+}

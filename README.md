@@ -71,7 +71,7 @@ Zusätzlich zu den 14 ersten 3D-Minispielen gibt es zwölf 2D-Arcade-Minispiele 
 - **Sumo Smash** und **Bumper Mayhem** (2–6): Ring-Outs mit Stoß beziehungsweise Turbo, 3 Leben, schrumpfende Arena, Entscheidung nach 75 Sekunden und Sudden Death.
 - **Chaos Run** (2–6): Auto-Runner mit Lücken, Hämmern, Plattformen, einstürzenden Brücken, Wänden und Balken; Checkpoints und Fortschrittsanzeige.
 - **Arrow Masters** (2–6): 10 Sekunden verdeckt zielen, alle Pfeile fliegen gleichzeitig, Wind, Hindernisse, Zielscheiben, fünf Runden und Präzisions-Stechen.
-- **Tower Tumble** (2–6): abwechselnd Steine auf einen gemeinsamen Turm setzen; Stabilität nach statischem Gleichgewicht, Rekordhöhe, Einsturz und Stechrunde.
+- **Tower Tumble** (2–6): Turmrennen – alle bauen gleichzeitig auf einem eigenen schmalen Sockel mit derselben Steinfolge; Steine verschieben, drehen, schnell fallen lassen; nach dem Aufsetzen echte Starrkörperphysik. Wer zuerst 2 s über 16 m steht, gewinnt, sonst nach 2 Minuten die Höhe.
 - **Hook Wars** (2–6, 1st Generation): Greifhaken mit Schwingen und Heranziehen, Energiekerne in die eigene Zone bringen, Gegnern Kerne abluchsen.
 
 In Inselparty, Roll It Up! und Schlag den GoldenSchmidt blendet die Checkbox **1st Generation Minigames** die 14 ersten 3D-Minispiele und Hook Wars aus der Zufallsauswahl aus; standardmäßig sind sie dabei. Im freien Modus stehen beide Gruppen getrennt zur Wahl. Spiele, die nicht zur Spielerzahl passen, werden nicht gezogen. Übung gegen Bots, Aufgeben und die bisherigen Pausen-, Wiederbeitritts- und Wertungsabläufe gelten auch hier. Stand, Regeln und Architektur: [Backlog](docs/minigames/backlog.md), [Spezifikation](docs/minigames/spezifikation.md), [Konzept](docs/minigames/konzept.md).

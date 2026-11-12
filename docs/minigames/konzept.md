@@ -146,10 +146,10 @@ im Modul ausgespielt; bleibt danach ein Gleichstand, wird der Platz geteilt.
 | Arrow Masters | Arena 20 × 14 mit neun Standplätzen, jede Runde zufällig (deterministisch) neu verteilt, Hinweis „DU“ zu Beginn des Zielens; Mittelpfeiler und zwei Simsen; zwei Zielscheiben je Runde an neuen Stellen; Wind bis ±3 | Konkrete Werte |
 | Arrow Masters | Besiegte stehen bis zur nächsten Runde nicht mehr als Ziel bereit; Eigentreffer kosten Trefferpunkte, bringen aber keine Punkte | Spezifikation sagt nichts zu Eigentreffern |
 | Arrow Masters | Stechen: nur die Punktgleichen, eine Scheibe ohne Wind; der kleinste Abstand der Flugbahn zur Mitte gewinnt | „Präzisions-Stechen“ messbar umsetzen |
-| Tower Tumble | **Statisches Gleichgewicht statt kontinuierlicher Starrkörpersimulation:** Steine fallen senkrecht mit Schwerkraft und landen auf der höchsten Fläche. Danach wird von oben nach unten geprüft, ob die Resultierende aus Eigengewicht und aufliegenden Lasten (an den Kontaktflächen, bei zwei Auflagen nach dem Hebelgesetz) innerhalb der eigenen Auflage liegt. Der tiefste instabile Stein kippt mit allem, was er trägt; das wiederholt sich bis zur Ruhe. | Die Spezifikation verlangt „eindeutige physikalische Kriterien“. Das Modell ist eindeutig, für alle Geräte gleich, testbar und auf dem Handy-Host billig. Drehbewegung beim Kippen ist reine Darstellung. |
-| Tower Tumble | Sieben Formen (Quadrat, Brett, Säule, Breitstein, Klein, L, T) ohne Drehen; „wesentlicher Einsturz“ = mindestens ein bereits gesetzter Stein fällt; „deutliche Rekordhöhe“ = mindestens 0,5 m über dem bisherigen Rekord | Konkrete Schwellen |
-| Tower Tumble | Stechrunde: die Punktgleichen mit gleichem besten Höhenbeitrag setzen je einen Stein; der größte stabile Höhenbeitrag gewinnt | Spezifikation verlangt Stechrunde |
-| Tower Tumble | Mit 6 Personen dauert eine Partie etwa 2½ Minuten | 18 Züge à höchstens 5 s Zielzeit plus Fall und Auswertung |
+| Tower Tumble | **Neubau nach Spielrückmeldung (Nov. 2026): Turmrennen statt reihum an einem gemeinsamen Turm.** Alle bauen gleichzeitig auf eigenem Sockel (5 Zellen breit), dieselbe Steinfolge aus 7er-Beuteln von Vier-Zellen-Steinen; erster Turm, der 2 s über 16 m steht, gewinnt; nach 120 s entscheidet die Höhe ruhender Steine, gleiche Höhe teilt den Platz | Rückmeldung „Mechanik und Physik nicht schön“; Genre wie Stapel-Rennspiele, eigene Gestaltung und kein Nachbau eines bestimmten Spiels. Die Spezifikation (reihum, Punkte je Stein) gilt für dieses Spiel nicht mehr |
+| Tower Tumble | **Eigene deterministische Starrkörperphysik** (`physics2d.ts`, nach Box2D-Lite): Quader mit Clipping-Kontakten, sequentielle Impulse mit Warmstart, Reibung 0,9, 3 Teilschritte je 50 ms, 12 Iterationen. Alle Zwischenwerte (auch Warmstart-Impulse) liegen als JSON im Zustand | Der Raumkern klont den Zustand je Takt; eine externe Physikbibliothek müsste ihre Welt jedes Mal neu aufbauen. So setzt ein Neustart die Physik exakt fort (Regeltest) |
+| Tower Tumble | Fallender Stein ist kinematisch (Halbzellenraster, Vierteldrehung mit seitlichem Ausweichen, 2,2 bzw. 12 Zellen/s); beim ersten Kontakt wird er zum Körper. Ein ruhender Turm schläft nach 0,4 s und wird beim nächsten Aufsetzen geweckt. Steine unter −6 m oder neben dem Sockel gelten als verloren | Steuerbarkeit wie in Fallblockspielen, danach echte Physik; Schlafen verhindert Kriechen hoher Türme und spart Rechenzeit |
+| Tower Tumble | Sicht: Körper gepackt `[id, Form, Drehung, x, y, Winkel]`, fremde Türme auf 1 cm gerundet, ohne Geschwindigkeiten und Warmstart; Steinfolge nur bis zum nächsten Stein | Datenmenge bei sechs Türmen |
 | Hook Wars | Haken als Strahl ohne Flugzeit (Reichweite 7,5); trifft den nächsten Anker in 0,7 Abstand zur Linie oder einen Gegner davor | Robust bei Netzlatenz, eindeutig entscheidbar |
 | Hook Wars | Gehaltener Haken zieht mit 5 Einheiten/s heran, die Seillänge begrenzt den Abstand (Schwingen); Loslassen behält den Schwung | „Schwingen oder heranziehen“ in einer Geste |
 | Hook Wars | Stick nach oben = Sprung von einer Plattform; Plattformen sind von unten durchlässig | Ohne Sprung wären untere Ebenen Sackgassen |
@@ -177,7 +177,7 @@ Gemessen mit `publicMatch` je Gerät nach bis zu 30 s Bot-Spiel, sechs Spieler
 | Bumper Mayhem | 20 | 2,2 | 266 | 0,3 |
 | Chaos Run | 20 | 2,4 | 293 | 0,6 |
 | Arrow Masters | 10 | 1,6 | 96 | 0,2 |
-| Tower Tumble | 20 | 1,6 | 187 | 0,1 |
+| Tower Tumble (Neubau) | 20 | 2,6 | 313 | 39,5 |
 | Hook Wars | 20 | 2,3 | 274 | 0,2 |
 
 Echte Spieler-IDs (UUIDs) vergrößern jede Sicht um etwa 0,5–1 KB. Der Handy-Host
@@ -197,6 +197,8 @@ unkritisch, auf echten Handys aber **nicht gemessen**.
 - **Spielerzahlen:** Neon Pong passt nur zu 2 oder 4 Spielern. Wird ein Pool
   ohne klassische Spiele für eine Spielerzahl leer, lehnt die Lobby die
   Einstellung mit einer Meldung ab.
-- **Physikintensive Spiele (Phase 4/5):** Tower Tumble und Hook Wars brauchen
-  eigene deterministische Starrkörper- beziehungsweise Seilphysik. Sie
-  stehen bewusst am Ende.
+- **Physikintensive Spiele:** Tower Tumble rechnet mit echter Starrkörperphysik
+  etwa 40 ms je Spielsekunde (Node, sechs Türme, Spitzen bis 13 ms je Schritt),
+  ein Vielfaches der anderen Spiele. Auf einem Handy-Host mit sechs Geräten
+  ist das **nicht gemessen**; falls es ruckelt, zuerst Teilschritte oder
+  Iterationen senken.
