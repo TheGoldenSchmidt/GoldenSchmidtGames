@@ -131,6 +131,7 @@ im Modul ausgespielt; bleibt danach ein Gleichstand, wird der Platz geteilt.
 | Bomb Arena | Kettenreaktionen bilden eine Explosion: höchstens ein Schaden je Spieler | „Dieselbe Explosion“ einheitlich auslegen |
 | Bomb Arena | Arena schließt sich ab 25 s spiralförmig (ein Feld je 0,35 s); geteilter Rundenbonus anteilig (z. B. 1,5) | Konkrete Werte; Teilen laut Spezifikation |
 | Bomb Arena | Sudden Death nur für die Punktgleichen: 1 Leben, Arena schließt ab 8 s, höchstens 30 s | Kurzer, eindeutiger Entscheid |
+| Tank Trouble | **2.5D-Darstellung** (Nov. 2026): WebGL-Szene mit gewählter Figur in der Panzerluke; roter Ziellaser nur beim eigenen Zielen bis zur ersten Wand (keine Abprallvorhersage); Canvas als Rückfall; Regeln unverändert | Lesbarkeit der Abpraller bleibt Aufgabe der Spieler; der Laser zeigt nur die eigene Richtung |
 | Bomb Arena | **2.5D-Darstellung** (Nov. 2026): WebGL-Szene mit fester, geneigter Kamera und den gewählten Figuren; die Canvas-Fassung bleibt als Rückfall. Regeln, Sicht und Eingaben unverändert | Spielrückmeldung „cooleres Spielerlebnis“; Plan und Abwägung gegen Tank Trouble in [plan-2-5d.md](plan-2-5d.md) |
 | Floor is Lava | Quadratische Platten 9 × 13; Rand bricht bei 10 s und 15 s ein; Sprung 0,55 s mit 1,4-facher Geschwindigkeit (überwindet ein Feld) | Konkrete Werte für Handys |
 | Floor is Lava | Nach Lava sicherer Neustart auf der Platte mit größtem Abstand, 1,2 s Schutz; Überlebende bei Zeitablauf teilen +3 | Fairness; „teilen die beste Platzierung“ |

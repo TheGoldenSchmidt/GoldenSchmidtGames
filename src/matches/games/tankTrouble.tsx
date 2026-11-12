@@ -77,6 +77,13 @@ function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
 
 export const tankTroubleClient: MatchClient = {
   render,
+  // 2.5D presentation; the canvas above stays as fallback without WebGL.
+  world: () => import("../../three/tankWorld").then(m => m.createTankWorld),
+  banner(view, viewer) {
+    const me = (view.game as TankGame).tanks[viewer];
+    if (!me || me.alive || view.done) return undefined;
+    return { title: "Zerstört!", text: `Zurück in ${Math.max(0, Math.ceil((me.respawnAt - view.time) / 1000))} s` };
+  },
   quiet: ["shot", "bounce", "crack", "break"],
   Controls({ io, active }) {
     return <>
@@ -91,7 +98,7 @@ export const tankTroubleClient: MatchClient = {
   status(view, viewer) {
     const g = view.game as TankGame, me = g.tanks[viewer];
     const left = Math.max(0, Math.ceil((TT.regular - view.time) / 1000));
-    return `${g.overtime ? "Stechen" : `noch ${left} s`} · ${me ? `${me.hp} von ${TT.hp} Treffern übrig` : "Zuschauen"}`;
+    return `${g.overtime ? "Stechen" : `noch ${left} s`} · ${me ? `${me.hp}/${TT.hp} Treffer` : "Zuschauen"}`;
   },
   sound(event, viewer) {
     if (event.kind === "shot") return event.ids.includes(viewer) ? "shot" : undefined;

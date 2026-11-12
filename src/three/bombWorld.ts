@@ -1,7 +1,8 @@
 import * as T from "three";
 import { BA, DIR4, type Bomber, type BombGame, type BombPower } from "../../shared/matches/bombArena";
 import type { MatchWorld, MatchWorldFrame } from "../matches/client";
-import { character, SceneKit, type Character } from "./sceneKit";
+import { Debris, fittedFigure, fitTiltedCamera, Impact } from "./matchScene";
+import { SceneKit, type Character } from "./sceneKit";
 
 /**
  * Bomb Arena in 2.5D: a fixed, tilted camera over the 11 × 15 field, blocks
@@ -32,7 +33,6 @@ const wallTexture = () => canvasTexture((c, n) => {
 });
 
 interface Figure { fig: Character; lives: T.Mesh[]; marker?: T.Mesh; deadAt?: number }
-interface Particle { x: number; y: number; z: number; vx: number; vy: number; vz: number; born: number; spin: number }
 
 export function createBombWorld(host: HTMLElement, read: () => MatchWorldFrame, onError: () => void): MatchWorld {
   const kit = new SceneKit(host, onError), world = new T.Group();
@@ -61,32 +61,17 @@ export function createBombWorld(host: HTMLElement, read: () => MatchWorldFrame, 
   const flames = new T.InstancedMesh(box, new T.MeshBasicMaterial({ color: COLOR.flame, transparent: true, opacity: .88, depthWrite: false }), CELLS);
   const cores = new T.InstancedMesh(box, new T.MeshBasicMaterial({ color: COLOR.core, transparent: true, opacity: .95, depthWrite: false }), CELLS);
   for (const mesh of [flames, cores]) { mesh.count = 0; mesh.frustumCulled = false; world.add(mesh); }
-  const flash = new T.PointLight(0xffa04a, 0, 7, 1.6); flash.position.set(0, 1.2, 0); world.add(flash);
+  const impact = new Impact(world, kit);
 
   // Debris of bursting crates.
-  const MAX_DEBRIS = 96, debris = new T.InstancedMesh(box, new T.MeshStandardMaterial({ map: crates.material.map, roughness: .8 }), MAX_DEBRIS);
-  debris.count = 0; debris.frustumCulled = false; world.add(debris);
-  const particles: Particle[] = [];
+  const debris = new Debris(world, 96, new T.MeshStandardMaterial({ map: crates.material.map, roughness: .8 }));
 
   const bombs = new Map<number, T.Group>(), items = new Map<string, T.Group>(), figures = new Map<string, Figure>();
   const appeared = new Map<number, number>();
-  let cells = "", lastSeq = 0, shakeUntil = 0, flashAt = -1e9, frame = 0, aspect = 0;
+  let cells = "", lastSeq = 0, frame = 0, aspect = 0;
   const seenGroups = new Set<number>();
 
-  /**
-   * Fits the tilted camera: the closest distance (and matching aim point) at
-   * which the whole field incl. block tops is on screen, leaving the bottom
-   * strip mostly to the touch controls.
-   */
-  const fitCamera = () => {
-    aspect = kit.camera.aspect;
-    const corners = [-1, 1].flatMap(sx => [-1, 1].flatMap(sz => [0, WALL_H].map(y => new T.Vector3(sx * (COLS / 2 + .15), y, sz * (ROWS / 2 + .15)))));
-    const place = (d: number, aim: number) => { kit.camera.position.set(0, Math.sin(TILT) * d, Math.cos(TILT) * d + aim); kit.camera.lookAt(0, 0, aim); kit.camera.updateMatrixWorld(); };
-    for (let d = 12; d < 140; d += .25) for (let aim = -1; aim <= 3; aim += .25) {
-      place(d, aim);
-      if (corners.every(c => { const p = c.clone().project(kit.camera); return Math.abs(p.x) < .97 && p.y < .95 && p.y > -.72; })) return;
-    }
-  };
+  const fitCamera = () => { aspect = kit.camera.aspect; fitTiltedCamera(kit, COLS / 2 + .15, ROWS / 2 + .15, WALL_H, TILT); };
 
   const rebuildCells = (next: string, time: number, reduced: boolean) => {
     let w = 0, c = 0, k = 0;
@@ -96,10 +81,7 @@ export function createBombWorld(host: HTMLElement, read: () => MatchWorldFrame, 
       else if (now === "2") { dummy.position.set(x, CRATE_H / 2, z); dummy.scale.set(.86, CRATE_H, .86); dummy.rotation.set(0, 0, 0); dummy.updateMatrix(); crates.setMatrixAt(c++, dummy.matrix); }
       else if (now === "3") { k++; if (before !== "3" && !appeared.has(i)) appeared.set(i, cells ? time : -1e9); }
       // A crate turned into floor: it bursts into a few splinters.
-      if (before === "2" && now !== "2" && cells && !reduced) for (let n = 0; n < 6 && particles.length < MAX_DEBRIS; n++) {
-        const a = n / 6 * Math.PI * 2 + i;
-        particles.push({ x, y: .4, z, vx: Math.cos(a) * 2.2, vy: 3 + (n % 3), vz: Math.sin(a) * 2.2, born: time, spin: n + 1 });
-      }
+      if (before === "2" && now !== "2" && cells && !reduced) debris.burst(x, .4, z, time);
     }
     walls.count = w; crates.count = c; closing.count = k;
     walls.instanceMatrix.needsUpdate = true; crates.instanceMatrix.needsUpdate = true;
@@ -110,11 +92,7 @@ export function createBombWorld(host: HTMLElement, read: () => MatchWorldFrame, 
   const figureFor = (id: string, style: number, selected: string | undefined, viewer: string): Figure => {
     let f = figures.get(id);
     if (f) return f;
-    const fig = character(kit, world, style, undefined, selected), body = fig.group.children[0];
-    const size = new T.Box3().setFromObject(body, true).getSize(new T.Vector3());
-    const fit = Math.min(1.6, .5 / Math.max(.01, Math.hypot(size.x, size.z) / 2), 1.55 / Math.max(.01, size.y));
-    body.scale.multiplyScalar(fit);
-    const top = size.y * fit;
+    const { fig, top } = fittedFigure(kit, world, style, selected, .5, 1.55);
     const lives = [0, 1, 2].map(i => kit.ball(fig.group, COLOR.life, (i - 1) * .17, top + .18, 0, .07));
     const marker = id === viewer ? kit.cone(fig.group, COLOR.own, 0, top + .5, 0, .22, .42) : undefined;
     if (marker) marker.rotation.x = Math.PI;
@@ -157,24 +135,13 @@ export function createBombWorld(host: HTMLElement, read: () => MatchWorldFrame, 
       dummy.position.set(x, height * .55, z); dummy.scale.set(.55, height * 1.12, .55); dummy.updateMatrix(); cores.setMatrixAt(n, dummy.matrix);
       n++;
       if (fl.center && !seenGroups.has(fl.group)) {
-        seenGroups.add(fl.group); flashAt = time; flash.position.set(x, 1.2, z);
-        if (!reduced) shakeUntil = time + 260;
+        seenGroups.add(fl.group); impact.hit(x, z, time, reduced);
       }
     }
     flames.count = n; cores.count = n; flames.instanceMatrix.needsUpdate = true; cores.instanceMatrix.needsUpdate = true;
-    flash.intensity = reduced ? 0 : Math.max(0, 1 - (time - flashAt) / 260) * 9;
     if (seenGroups.size > 200) seenGroups.clear();
 
-    // Debris.
-    let d = 0;
-    for (let i = particles.length - 1; i >= 0; i--) {
-      const p = particles[i], age = (time - p.born) / 1000;
-      if (age > .7) { particles.splice(i, 1); continue; }
-      dummy.position.set(p.x + p.vx * age, Math.max(.06, p.y + p.vy * age - 9 * age * age), p.z + p.vz * age);
-      dummy.rotation.set(age * p.spin * 6, age * p.spin * 4, 0); dummy.scale.setScalar(.18 * (1 - age / .9)); dummy.updateMatrix();
-      debris.setMatrixAt(d++, dummy.matrix);
-    }
-    debris.count = d; debris.instanceMatrix.needsUpdate = true;
+    debris.update(time);
 
     // Bombs: pulse faster and turn red shortly before they go off; kicked bombs glide.
     const liveBombs = new Set<number>();
@@ -232,7 +199,7 @@ export function createBombWorld(host: HTMLElement, read: () => MatchWorldFrame, 
     }
 
     // Short shake on explosions (not with reduced motion).
-    if (time < shakeUntil) { const k2 = (shakeUntil - time) / 260 * .08; kit.camera.position.x = Math.sin(time * .09) * k2; } else if (kit.camera.position.x !== 0) kit.camera.position.x = 0;
+    impact.update(time, reduced);
     kit.render();
     host.dataset.figures = JSON.stringify(Object.fromEntries([...figures].map(([id, fg]) => [id, fg.fig.group.userData.characterId])));
     frame = requestAnimationFrame(animate);

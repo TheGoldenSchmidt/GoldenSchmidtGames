@@ -1,4 +1,4 @@
-# Plan: Bomb Arena in 2.5D
+# Plan: Bomb Arena und Tank Trouble in 2.5D
 
 Stand: Nov. 2026 · Status: **umgesetzt** bis auf den Gerätetest (siehe „Umsetzungsstand“ am Ende).
 Ziel: Bomb Arena bekommt eine echte 3D-Darstellung mit schräg geneigter Kamera
@@ -137,3 +137,31 @@ weitere 2.5D-Fassungen wiederverwendbar.
 | 3 Leistung | in Chromium-Emulation mit sechs Figuren 174 Zeichenaufrufe, ≈ 225 000 Dreiecke; Szene als eigenes Modul (≈ 8 KB) im PWA-Cache. **FPS auf echten Handys nicht gemessen** |
 | 4 Tests | Playwright `phone`: 3D-Feld mit den gewählten Figuren, Laufen, Bombe und Explosion mit und ohne reduzierte Bewegung, sechs Figuren mit Grenze für Zeichenaufrufe, Rückfall ohne WebGL bis zum Ergebnis. Regeltests unverändert |
 | 5 Abnahme | offen: Gerätetest (Android und iOS), Lesbarkeit der hinteren Reihen, Erwärmung |
+
+## Tank Trouble (zweites Spiel, umgesetzt)
+
+Übernimmt das Gerüst aus Bomb Arena; gemeinsame Bausteine liegen in
+`src/three/matchScene.ts` (Kameraeinpassung, Figurengröße, Splitter, Blitz und
+Wackeln) und werden von beiden Szenen genutzt.
+
+- **Szene** `src/three/tankWorld.ts`: Sandboden im 2D-Schachbrett, Wände genau so
+  dick wie in den Regeln (lesbare Abpraller), Oberkante je Wandart gefärbt
+  (fest hell, Ziegel orange, angeknackst dunkel). Panzer aus Wanne, Ketten, Turm
+  und Rohr in Spielerfarbe; die gewählte Figur schaut aus der Luke und dreht mit
+  dem Turm. Rückstoß beim Schuss, Schild als Kuppel, Trefferpunkte darüber.
+- **Lesbarkeit:** dunkle Geschosse mit oranger Leuchtspur; roter Ziellaser nur
+  beim eigenen Zielen bis zur ersten Wand (Richtung, keine Abprallvorhersage –
+  reine Anzeige, kein Regelvorteil); eigener Panzer mit gelbem Bodenring und
+  Pfeil; zerstörte Panzer bleiben als Wrack, Banner „Zerstört! Zurück in n s“.
+- **Effekte:** Splitter in Spielerfarbe, Blitz und Wackeln bei Abschüssen,
+  Funken bei Treffern, zerberstende Ziegelwände.
+- **UI-Review** (Skill `ui-design-review:ui-review`, gerendert bei 360 × 640 und
+  430 × 932): behoben wurden Feld unter dem Stick auf kleinen Handys (jetzt feste
+  Reserve von 132 px für die Steuerung), schwer auffindbarer eigener Panzer,
+  Ladehinweis über dem Countdown, Trennlinie der Zielhälfte quer durchs Feld,
+  umbrechende Status- und Hinweistexte. Offen: Erkennbarkeit der kleinen
+  Fahrerfiguren auf echten Geräten.
+- **Tests:** Playwright `phone` mit beiden Bewegungseinstellungen (Figuren,
+  Fahren, Laser nur beim Zielen, Schuss), sechs Panzer (247 Zeichenaufrufe,
+  ≈ 214 000 Dreiecke), Rückfall ohne WebGL bis zum Ergebnis.
+- **Offen:** Gerätetest wie bei Bomb Arena.
