@@ -10,7 +10,7 @@ function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
   // Castle silhouette and tournament ground.
   ctx.fillStyle = "#9aa7c7"; for (let x = 0; x < AM.width; x += 2.5) ctx.fillRect(X(x), Y(5 + (x % 5 === 0 ? 1.5 : .8)), scale * 1.6, (5 + (x % 5 === 0 ? 1.5 : .8)) * scale);
   ctx.fillStyle = "#6fa84a"; ctx.fillRect(0, Y(0), w, h - Y(0));
-  ctx.fillStyle = "#7b5a3a"; for (const [x, y] of SLOTS) if (y > 0) ctx.fillRect(X(x - .9), Y(y), 1.8 * scale, .3 * scale);
+  ctx.fillStyle = "#7b5a3a"; for (const [x, y] of SLOTS) ctx.fillRect(X(x - .9), Y(y), 1.8 * scale, .3 * scale);
   ctx.fillStyle = "#6b6f80"; for (const o of g.obstacles) ctx.fillRect(X(o.x0), Y(o.y1), (o.x1 - o.x0) * scale, (o.y1 - o.y0) * scale);
   for (const t of g.targets) for (const [r, c] of [[AM.targetR, "#e3263b"], [AM.targetR * .66, "#fff9ed"], [AM.targetR * .33, "#e3263b"]] as const) { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(X(t.x), Y(t.y), r * scale, 0, Math.PI * 2); ctx.fill(); }
   // Wind flag.
@@ -26,7 +26,16 @@ function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
     ctx.fillStyle = "#f4c9a0"; ctx.beginPath(); ctx.arc(x, Y(a.y + AM.bodyH * .95), AM.bodyW * .32 * scale, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = "#7b5a3a"; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(x + (a.x < AM.width / 2 ? 1 : -1) * scale * .25, Y(a.y + AM.bodyH * .55), scale * .45, a.x < AM.width / 2 ? -1.2 : Math.PI - 1.2, a.x < AM.width / 2 ? 1.2 : Math.PI + 1.2); ctx.stroke();
     ctx.globalAlpha = 1;
-    if (p.id === f.viewer) { ctx.strokeStyle = "#ffe44e"; ctx.lineWidth = 2; ctx.strokeRect(x - AM.bodyW * scale / 2 - 3, Y(a.y + AM.bodyH) - 3, AM.bodyW * scale + 6, AM.bodyH * scale + 6); }
+    if (p.id === f.viewer) {
+      ctx.strokeStyle = "#ffe44e"; ctx.lineWidth = 2; ctx.strokeRect(x - AM.bodyW * scale / 2 - 3, Y(a.y + AM.bodyH) - 3, AM.bodyW * scale + 6, AM.bodyH * scale + 6);
+      // Positions change every round: point at the own archer at the start of aiming.
+      if (g.phase === "aim" && f.simTime - g.phaseStart < 2500) {
+        const bob = f.reduced ? 0 : Math.sin(f.t / 140) * 4, tip = Y(a.y + AM.bodyH) - 20 + bob;
+        ctx.fillStyle = "#ffe44e"; ctx.strokeStyle = "#24133f"; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(x, tip); ctx.lineTo(x - 9, tip - 12); ctx.lineTo(x + 9, tip - 12); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.font = "900 12px 'Trebuchet MS', sans-serif"; ctx.textAlign = "center"; ctx.lineWidth = 3; ctx.strokeText("DU", x, tip - 20); ctx.fillText("DU", x, tip - 20);
+      }
+    }
     for (let i = 0; i < a.hp; i++) { ctx.fillStyle = "#e3263b"; ctx.beginPath(); ctx.arc(x - 8 + i * 8, Y(a.y + AM.bodyH) - 8, 3, 0, Math.PI * 2); ctx.fill(); }
   }
   // Own aim: short preview of the launch arc (without wind).

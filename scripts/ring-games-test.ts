@@ -75,7 +75,7 @@ for (const id of ["sumo", "bumpercars"] as const) {
   { const s = make(id, 3); removeMatchPlayer(s, "p1"); assert.equal(s.game.fighters.p1.alive, false); }
 }
 
-// Sumo: Stoß nach vorn, Rückstoß beim Gegner, Abklingzeit 3 s, Schutz nach Respawn.
+// Sumo: Stoß nach vorn, Rückstoß beim Gegner, Abklingzeit 2,5 s, Schutz nach Respawn.
 {
   const s = make("sumo", 2);
   put(s, "p0", -1.2, 0, 0); put(s, "p1", 0, 0);
@@ -93,7 +93,7 @@ for (const id of ["sumo", "bumpercars"] as const) {
   assert.ok(Math.abs(t.game.fighters.p1.vx) < 1, "Geschützte Figur wird nicht weggestoßen");
 }
 
-// Bumper: Turbo erhöht das Tempo, Rammwirkung wächst mit der Geschwindigkeit, Pfosten werfen zurück, Abklingzeit 5 s.
+// Bumper: Turbo erhöht das Tempo, Rammwirkung wächst mit der Geschwindigkeit, Pfosten werfen zurück, Abklingzeit 4 s.
 {
   const drive = (turbo: boolean) => {
     const s = make("bumpercars", 2); s.game.obstacles = [];
@@ -119,6 +119,27 @@ for (const id of ["sumo", "bumpercars"] as const) {
   assert.ok(car.vx < 0, "Bewegliches Hindernis wirft zurück");
 }
 
+// Wurfweite: ein Treffer muss weit tragen, auch wenn das Opfer dagegenhält (Spielgefühl).
+{
+  const throwFrom = (id: "sumo" | "bumpercars", victimStick: Partial<MatchInput>, victimHeading: number) => {
+    const s = make(id, 2); s.game.obstacles = []; s.game.radius = 99;
+    put(s, "p0", id === "sumo" ? -1.2 : -4, 0, 0); put(s, "p1", 0, 0, victimHeading);
+    let far = 0;
+    for (let i = 0; i < 60; i++) {
+      if (i === 0) act(s, "p0", { x: 1 }); else send(s, "p0", { x: far > .3 ? -1 : 1 });
+      send(s, "p1", victimStick); step(s, 50); far = Math.max(far, s.game.fighters.p1.x);
+    }
+    return far;
+  };
+  const sumo = throwFrom("sumo", { x: -1 }, Math.PI);
+  assert.ok(sumo > 4.5, `Sumo-Stoß wirft trotz Gegenhalten weit (${sumo.toFixed(2)})`);
+  const side = throwFrom("bumpercars", {}, Math.PI / 2);
+  assert.ok(side > 5, `Seitlicher Rammstoß schleudert weit (${side.toFixed(2)})`);
+  const s = make("sumo", 2); put(s, "p0", -1.2, 0, 0); put(s, "p1", 0, 0);
+  act(s, "p0", { x: 1 }); step(s, 100);
+  assert.ok(s.game.fighters.p1.stunUntil > s.time, "Getroffene sind kurz ohne Kontrolle");
+}
+
 // Komplette Partien mit Bots über die Party (2, 4, 6), Neustart, Determinismus.
 for (const id of ["sumo", "bumpercars"] as const) {
   for (const count of [2, 4, 6]) {
@@ -133,4 +154,4 @@ for (const id of ["sumo", "bumpercars"] as const) {
   const a = play(), b = play();
   assert.deepEqual(a.game.fighters, b.game.fighters); assert.equal(a.time, b.time);
 }
-console.log("Sumo Smash und Bumper Mayhem erfolgreich: Startplätze, Ring-Out mit Gutschrift und Verfall, Respawnschutz, gleichzeitige Ring-Outs, letzter Überlebender, Schrumpfen, 75-s-Entscheid, Sudden Death, Stoß mit Rückstoß, Abklingzeiten, Turbo-Rammwirkung, Hindernisse, Aufgeben, Bots und Determinismus.");
+console.log("Sumo Smash und Bumper Mayhem erfolgreich: Startplätze, Ring-Out mit Gutschrift und Verfall, Respawnschutz, gleichzeitige Ring-Outs, letzter Überlebender, Schrumpfen, 75-s-Entscheid, Sudden Death, Stoß mit Rückstoß, Abklingzeiten, Turbo-Rammwirkung, Wurfweite, Hindernisse, Aufgeben, Bots und Determinismus.");

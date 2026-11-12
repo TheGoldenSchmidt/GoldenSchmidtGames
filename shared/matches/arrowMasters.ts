@@ -1,5 +1,5 @@
 import { pointInRect, type Rect } from "./geometry";
-import { emit, hash, presence, rank, random, type MatchModule, type MatchPlayer, type MatchState } from "./types";
+import { emit, hash, presence, rank, random, shuffled, type MatchModule, type MatchPlayer, type MatchState } from "./types";
 
 /**
  * Arrow Masters – everyone aims for 10 s (the aim stays private), then all
@@ -30,7 +30,8 @@ export interface ArrowGame {
   log: { round: number; hits: { from: string; to: string }[] }[];
 }
 const BOT_AIMS = new Map<string, { ax: number; ay: number }>();
-export const SLOTS = [[1.6, 2.5], [18.4, 2.5], [1.6, 7.2], [18.4, 7.2], [5.2, 11], [14.8, 11]] as const;
+/** Standing spots; every round the archers are dealt a new random set of them. */
+export const SLOTS = [[1.6, 2.5], [18.4, 2.5], [1.6, 7.2], [18.4, 7.2], [5.2, 11], [14.8, 11], [6, 1.2], [14, 1.2], [10, 12.6]] as const;
 const OBSTACLES: Rect[] = [{ x0: 9.4, x1: 10.6, y0: 0, y1: 4.6 }, { x0: 6.2, x1: 7.4, y0: 6.6, y1: 7.3 }, { x0: 12.6, x1: 13.8, y0: 6.6, y1: 7.3 }];
 const bodyRect = (a: Archer): Rect => ({ x0: a.x - AM.bodyW / 2, x1: a.x + AM.bodyW / 2, y0: a.y, y1: a.y + AM.bodyH });
 export const launch = (a: Archer) => ({ x: a.x, y: a.y + AM.bodyH * .7 });
@@ -41,8 +42,11 @@ function startRound(s: MatchState<ArrowGame>, tiebreak?: string[]) {
   g.wind = Math.round((random(s) * 2 - 1) * AM.wind * 10) / 10;
   if (tiebreak) { g.tiebreak = tiebreak; g.targets = [{ x: 10, y: 9.2 }]; g.wind = 0; }
   else g.targets = [{ x: 7 + random(s) * 6, y: 8.5 + random(s) * 3 }, { x: 4 + random(s) * 12, y: 4.8 + random(s) * 1.4 }];
+  // New positions after every shot: a fresh deterministic deal of the spots.
+  const spots = shuffled(s, SLOTS.map((_, i) => i));
+  s.players.forEach((p, i) => { const a = g.archers[p.id], [x, y] = SLOTS[spots[i]]; Object.assign(a, { x, y }); });
   for (const a of Object.values(g.archers)) { a.aim = undefined; a.down = false; a.hp = AM.hp; }
-  emit(s, "round", tiebreak ? "Präzisions-Stechen!" : `Runde ${g.round} von ${AM.rounds}: zielen!`, []);
+  emit(s, "round", tiebreak ? "Präzisions-Stechen!" : `Runde ${g.round} von ${AM.rounds}: neue Plätze, zielen!`, []);
 }
 
 function fire(s: MatchState<ArrowGame>) {
@@ -115,7 +119,7 @@ export const arrowMasters: MatchModule<ArrowGame> = {
   id: "arrows",
   meta: {
     name: "Arrow Masters", seconds: (AM.rounds + 1) * (AM.aimMs + AM.flightMs + AM.resultMs) / 1000 + 2, players: [2, 3, 4, 5, 6], hz: 10,
-    instruction: "Ziehe auf der Zielfläche wie an einer Bogensehne: Richtung und Länge bestimmen Winkel und Stärke. Nach 10 Sekunden fliegen alle Pfeile gleichzeitig, der Wind wechselt jede Runde. Gegnertreffer +2, Besiegen +1, Zielscheiben +1. Jeder hat 3 Trefferpunkte pro Runde. Fünf Runden; bei Gleichstand entscheidet ein Präzisionsschuss auf die Scheibe.",
+    instruction: "Ziehe auf der Zielfläche wie an einer Bogensehne: Richtung und Länge bestimmen Winkel und Stärke. Nach 10 Sekunden fliegen alle Pfeile gleichzeitig, der Wind wechselt jede Runde. Gegnertreffer +2, Besiegen +1, Zielscheiben +1. Jeder hat 3 Trefferpunkte pro Runde und steht jede Runde an einem neuen Platz. Fünf Runden; bei Gleichstand entscheidet ein Präzisionsschuss auf die Scheibe.",
     controls: "Ziehen = spannen und zielen · der Schuss löst automatisch aus.",
     look: { icon: "➶", action: "Spannen, zielen, treffen", hint: "Ziehen zum Zielen · Schuss nach 10 s", goal: "Die meisten Punkte nach 5 Runden" }
   },

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { advanceMatch, botMatchInput, createMatch, matchStandings, publicMatch, setMatchControl } from "../shared/matches/framework";
-import { AM, launch, trajectory, type ArrowGame } from "../shared/matches/arrowMasters";
+import { AM, SLOTS, launch, trajectory, type ArrowGame } from "../shared/matches/arrowMasters";
 import { NEUTRAL_MATCH_INPUT, type MatchState } from "../shared/matches/types";
 import { createPartyGame, partyMiniResults, tickParty } from "../shared/party";
 import { PartyBotDriver } from "../shared/partyBots";
@@ -80,9 +80,25 @@ function solve(s: AS, id: string, gx: number, gy: number) {
   assert.equal(s.game.arrows[0].hit, "target"); assert.equal(s.game.points.p0, AM.targetPoints);
   const o = make(2, 6);
   o.game.wind = 0; o.game.targets = [];
+  Object.assign(o.game.archers.p0, { x: 1.6, y: 2.5 });
   aim(o, "p0", .02, .9); // flach gegen den Mittelpfeiler
   toFlight(o); toEnd(o);
   assert.ok(o.game.arrows[0].done && !o.game.arrows[0].hit && o.game.arrows[0].x < 10.7, "Pfeiler stoppt den Pfeil");
+}
+
+// Nach jedem Schuss neue Plätze: alle verschieden, gültig und wechselnd.
+{
+  const s = make(6, 4), seen = new Set<string>();
+  for (let r = 0; r < AM.rounds; r++) {
+    const spots = Object.values(s.game.archers).map(a => `${a.x}:${a.y}`);
+    assert.equal(new Set(spots).size, 6, "Keine zwei Schützen am selben Platz");
+    assert.ok(spots.every(k => SLOTS.some(([x, y]) => `${x}:${y}` === k)));
+    seen.add(`${s.game.archers.p0.x}:${s.game.archers.p0.y}`);
+    toFlight(s); toEnd(s); advanceMatch(s, s.game.phaseStart + AM.resultMs + 50);
+  }
+  assert.ok(seen.size >= 3, "Der eigene Platz wechselt über die Runden");
+  const again = make(6, 4);
+  assert.deepEqual(Object.values(again.game.archers).map(a => [a.x, a.y]), Object.values(make(6, 4).game.archers).map(a => [a.x, a.y]), "Gleicher Startwert → gleiche Plätze");
 }
 
 // Wind wechselt zwischen den Runden, gleicher Startwert → gleicher Wind.

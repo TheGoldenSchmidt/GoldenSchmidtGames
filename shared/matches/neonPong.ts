@@ -8,7 +8,7 @@ import { emit, hash, inputOfPlayer, presence, rank, random, type MatchModule, ty
  */
 export const NP = {
   halfW: 4.5, halfH: 8, paddleY: 7, paddleT: .32, ball: .22,
-  paddleSolo: 2.1, paddleDuo: 1.7, wide: 1.6, paddleSpeed: 16,
+  paddleSolo: 2.1, paddleDuo: 1.7, wide: 1.6, paddleSpeed: 42,
   startSpeed: 6.5, speedUp: .45, maxSpeed: 15, maxAngle: Math.PI / 3,
   serveDelay: 1200, goalsToWin: 7, regular: 90000, goldenMax: 30000,
   powerEvery: [10000, 15000] as const, powerRadius: .5,

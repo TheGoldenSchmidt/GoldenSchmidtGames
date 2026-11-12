@@ -127,6 +127,19 @@ geprüft; echte Funknetze nicht.
 - **Browsertests nach Änderungen in `shared/`:** Der Testserver nutzt den
   Quellcode, der Client `dist/`; vorher `npm run build`.
 
+## Rückmeldung aus der ersten Spielrunde (Nov. 2026)
+
+| Spiel | Rückmeldung | Stand |
+| --- | --- | --- |
+| Sumo Smash, Bumper Mayhem | Rückstoß viel zu klein | **umgesetzt**: Kontrollverlust nach Treffern, stärkerer Stoß; Wurfweite im Regeltest abgesichert (Sumo ≈ 5 statt 0,8 Einheiten, seitlicher Rammstoß ≈ 6 statt 3,5) |
+| Neon Pong | Schläger zu langsam | **umgesetzt**: 42 statt 16 Feldeinheiten/s, eigene Anzeige läuft weiter voraus |
+| Arrow Masters | Nach jedem Schuss andere Startplätze | **umgesetzt**: neun Plätze, jede Runde neu verteilt |
+| Tower Tumble | Mechanik und Physik nicht schön | **offen**: Neubau mit echter 2D-Starrkörperphysik und Drehen geplant (eigenständiges Spiel im Genre, keine Kopie) |
+| Hook Wars | Prinzip unverständlich | **offen**: Neuentwurf oder Ersatz, Entscheidung ausstehend |
+| Floor is Lava | Lieber als 3D-Hindernislauf mit Figuren | **offen**: Aufwandsschätzung abgegeben |
+
+Gefühl auf echten Handys ist für die umgesetzten Punkte weiter ungeprüft.
+
 ## Nächste Schritte
 
 1. Gerätetest aller zwölf Spiele auf mindestens zwei echten Handys

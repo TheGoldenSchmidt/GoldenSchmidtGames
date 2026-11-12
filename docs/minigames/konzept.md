@@ -112,7 +112,7 @@ im Modul ausgespielt; bleibt danach ein Gleichstand, wird der Platz geteilt.
 | Spiel | Abweichung | Grund |
 | --- | --- | --- |
 | Alle | Steuerung nur per Touch | Auftrag: nur Smartphones |
-| Neon Pong | Hochformat, eigenes Tor unten, Schläger per waagrechtem Ziehen | Handy im Hochformat; der Daumen deckt die Breite natürlich ab. Jedes Gerät sieht das eigene Team unten. |
+| Neon Pong | Hochformat, eigenes Tor unten, Schläger per waagrechtem Ziehen; Schläger folgt dem Finger mit bis zu 42 Feldeinheiten/s (ganze Breite in gut 0,2 s), die eigene Anzeige läuft bis 250 ms voraus | Handy im Hochformat; der Daumen deckt die Breite natürlich ab. Jedes Gerät sieht das eigene Team unten. Spielrückmeldung: 16/s wirkte zu träge. |
 | Neon Pong | Nur 2 oder 4 Spieler zulässig | 1v1/2v2 laut Spezifikation; bei 3, 5 oder 6 Spielern steht es nicht im Zufallspool |
 | Neon Pong | Golden Goal höchstens 30 s, danach geteilter Sieg | Partys dürfen nicht endlos laufen |
 | Quick Draw | Duell höchstens 9 Runden; danach entscheidet der Rundenstand | Wiederholte Doppel-Fehlstarts dürfen nicht endlos laufen |
@@ -137,13 +137,13 @@ im Modul ausgespielt; bleibt danach ein Gleichstand, wird der Platz geteilt.
 | Sumo Smash / Bumper Mayhem | Gemeinsamer Kern `ringCore.ts`; Ring-Out wird der Person gutgeschrieben, die in den letzten 3 s am stärksten geschoben hat | „Verursacher“ eindeutig und für beide Spiele gleich |
 | Sumo Smash / Bumper Mayhem | Spielpunkte = 2 × Ring-Outs; Rangfolge: Sieger, Ausscheidezeitpunkt, Leben, Ring-Outs | Punkte laut Spezifikation, Platzierung nach Überleben |
 | Sumo Smash / Bumper Mayhem | Sudden Death nur für die nach 75 s Gleichauf-Liegenden, 1 Leben, kleiner Ring, höchstens 20 s, danach geteilter Platz | Begrenzte Dauer |
-| Sumo Smash | Stoß: 0,22 s Vorwärtsschub; Rückstoß nur bei Treffer während des Stoßes; Ring schrumpft ab 40 s bis 75 s von 5,5 auf 3,2 | Konkrete Werte |
-| Bumper Mayhem | Lenkung in Stickrichtung mit begrenzter Drehrate, automatisches Gas; Turbo 0,8 s; zwei kreisende Pfosten als bewegliche Hindernisse; Arena schrumpft ab 45 s | Einfache Ein-Daumen-Steuerung |
+| Sumo Smash | Stoß: 0,24 s Vorwärtsschub, Abklingzeit 2,5 s; Treffer im Stoß wirft mit 12,5/s und 0,52 s ohne Kontrolle (rund 5 Einheiten Wurfweite, auch gegen Gegenhalten); normaler Körperkontakt prallt elastisch ab; Ring schrumpft ab 40 s bis 75 s von 5,5 auf 3,2 | Spielrückmeldung: vorher trug ein Treffer nur knapp 1 Einheit |
+| Bumper Mayhem | Lenkung in Stickrichtung mit begrenzter Drehrate, automatisches Gas; Turbo 0,8 s alle 4 s mit 1,5-fachem Rammstoß; harter Rammstoß gibt dem Opfer Zusatzschub und lässt es bis 0,9 s ohne Haftung schleudern; zwei kreisende Pfosten; Arena schrumpft ab 45 s | Einfache Ein-Daumen-Steuerung; Spielrückmeldung: Seitenhaftung schluckte den Rückstoß |
 | Chaos Run | Brücken stürzen je Läufer ein (0,6 s nach dem Betreten); keine gegenseitige Beeinflussung | Version 1 ohne Spielerinteraktion, faire Bedingungen |
 | Chaos Run | Strecke aus 8 Modulen à 24 m, jeder der 6 Typen mindestens einmal; Checkpoint an jedem Modulbeginn; Wand 1,7 hoch (nur mit gehaltenem Sprung), Balken nur rutschend passierbar | „Halten für höhere Sprünge“ bekommt eine Aufgabe |
 | Chaos Run | Wischen nach unten in der Luft lässt schnell fallen und startet das Rutschen | Tippen und Wischen auf einer Fläche ohne Verzögerung |
 | Arrow Masters | Zielen wie an einer Bogensehne (entgegen der Schussrichtung ziehen); Vorschau nur der ersten 0,35 s ohne Wind; Zielen bleibt bis zum Abschuss für andere verdeckt | Bedienbar mit einem Finger, Wind bleibt Herausforderung, kein Abschauen |
-| Arrow Masters | Arena 20 × 14 mit festen Plätzen, Mittelpfeiler und zwei Simsen; zwei Zielscheiben je Runde an neuen Stellen; Wind bis ±3 | Konkrete Werte |
+| Arrow Masters | Arena 20 × 14 mit neun Standplätzen, jede Runde zufällig (deterministisch) neu verteilt, Hinweis „DU“ zu Beginn des Zielens; Mittelpfeiler und zwei Simsen; zwei Zielscheiben je Runde an neuen Stellen; Wind bis ±3 | Konkrete Werte |
 | Arrow Masters | Besiegte stehen bis zur nächsten Runde nicht mehr als Ziel bereit; Eigentreffer kosten Trefferpunkte, bringen aber keine Punkte | Spezifikation sagt nichts zu Eigentreffern |
 | Arrow Masters | Stechen: nur die Punktgleichen, eine Scheibe ohne Wind; der kleinste Abstand der Flugbahn zur Mitte gewinnt | „Präzisions-Stechen“ messbar umsetzen |
 | Tower Tumble | **Statisches Gleichgewicht statt kontinuierlicher Starrkörpersimulation:** Steine fallen senkrecht mit Schwerkraft und landen auf der höchsten Fläche. Danach wird von oben nach unten geprüft, ob die Resultierende aus Eigengewicht und aufliegenden Lasten (an den Kontaktflächen, bei zwei Auflagen nach dem Hebelgesetz) innerhalb der eigenen Auflage liegt. Der tiefste instabile Stein kippt mit allem, was er trägt; das wiederholt sich bis zur Ruhe. | Die Spezifikation verlangt „eindeutige physikalische Kriterien“. Das Modell ist eindeutig, für alle Geräte gleich, testbar und auf dem Handy-Host billig. Drehbewegung beim Kippen ist reine Darstellung. |

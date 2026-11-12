@@ -11,6 +11,8 @@ export interface Fighter {
   lives: number; alive: boolean; out: boolean; respawnAt: number; shieldUntil: number;
   actionAt: number; actionUntil: number; lastHitBy?: string; lastHitAt: number;
   ringOuts: number; outAt?: number;
+  /** After a hard hit the fighter slides without control until this time. */
+  stunUntil: number;
 }
 export interface Obstacle { id: number; x: number; y: number; r: number; angle: number }
 export interface RingGame {
@@ -48,7 +50,7 @@ function respawn(s: MatchState<RingGame>, rules: RingRules, f: Fighter) {
     const p = spawnPoint(i, 8, Math.min(1.6, g.radius * .4)), d = others.length ? Math.min(...others.map(o => dist(o.x, o.y, p.x, p.y))) : 9;
     if (d > score + 1e-9) { best = p; score = d; }
   }
-  Object.assign(f, { x: best.x, y: best.y, heading: best.heading, vx: 0, vy: 0, out: false, shieldUntil: s.time + rules.shield, lastHitBy: undefined, lastHitAt: -9999 });
+  Object.assign(f, { x: best.x, y: best.y, heading: best.heading, vx: 0, vy: 0, out: false, stunUntil: 0, shieldUntil: s.time + rules.shield, lastHitBy: undefined, lastHitAt: -9999 });
 }
 
 function ringOut(s: MatchState<RingGame>, rules: RingRules, f: Fighter) {
@@ -72,7 +74,7 @@ function decide(s: MatchState<RingGame>) {
   if (g.sudden) { g.decided = true; s.done = true; return; }
   g.sudden = { ids: top.map(f => f.id), start: s.time };
   for (const f of Object.values(g.fighters)) if (!top.includes(f)) { f.alive = false; f.outAt ??= s.time; f.out = true; }
-  top.forEach((f, i) => { f.lives = 1; Object.assign(f, spawnPoint(i, top.length, 1.4), { vx: 0, vy: 0, out: false, shieldUntil: s.time + 800 }); });
+  top.forEach((f, i) => { f.lives = 1; Object.assign(f, spawnPoint(i, top.length, 1.4), { vx: 0, vy: 0, out: false, stunUntil: 0, shieldUntil: s.time + 800 }); });
   emit(s, "sudden", "Sudden Death!", top.map(f => f.id));
 }
 
@@ -85,7 +87,7 @@ export function ringModule(rules: RingRules): MatchModule<RingGame> {
       s.game = { fighters: {}, radius: rules.radius, obstacles: [], decided: false };
       s.players.forEach((p, i) => {
         const point = spawnPoint(i, count, rules.radius * .55);
-        s.game.fighters[p.id] = { id: p.id, ...point, vx: 0, vy: 0, lives: rules.lives, alive: true, out: false, respawnAt: 0, shieldUntil: 600, actionAt: -99999, actionUntil: 0, lastHitAt: -9999, ringOuts: 0 };
+        s.game.fighters[p.id] = { id: p.id, ...point, vx: 0, vy: 0, lives: rules.lives, alive: true, out: false, respawnAt: 0, shieldUntil: 600, actionAt: -99999, actionUntil: 0, lastHitAt: -9999, ringOuts: 0, stunUntil: 0 };
       });
       s.game.obstacles = rules.obstacles?.(s) ?? [];
       return s.game;

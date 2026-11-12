@@ -38,7 +38,8 @@ function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
     let x = before ? lerp(before.x, paddle.x, f.alpha) : paddle.x;
     if (paddle.id === f.viewer && !f.reduced) {
       const screen = (f.input.x + 1) / 2, target = paddle.team === 0 ? paddle.min + screen * (paddle.max - paddle.min) : paddle.max - screen * (paddle.max - paddle.min);
-      const reach = NP.paddleSpeed * Math.min(.15, (f.simTime - s.time) / 1000);
+      // Up to 250 ms ahead of the authority, which covers the usual round trip.
+      const reach = NP.paddleSpeed * Math.min(.25, Math.max(.1, (f.simTime - s.time) / 1000 + .1));
       x = paddle.x + Math.max(-reach, Math.min(reach, target - paddle.x));
     }
     const wide = g.effects[paddle.team]?.kind === "wide", half = (g.paddles.filter(q => q.team === paddle.team).length > 1 ? NP.paddleDuo : NP.paddleSolo) * (wide ? NP.wide : 1) / 2;

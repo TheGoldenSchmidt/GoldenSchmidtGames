@@ -57,6 +57,12 @@ function render(skin: Skin) {
       }
       ctx.restore();
       if (p.id === f.viewer) { ctx.strokeStyle = "#ffe44e"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(X(x), Y(y), (body + .28) * scale, 0, Math.PI * 2); ctx.stroke(); }
+      // Knocked back: spinning stars show that this fighter has no control right now.
+      if (s.time < fi.stunUntil) {
+        const spin = f.reduced ? 0 : f.t / 160;
+        ctx.fillStyle = "#ffe44e"; ctx.font = `900 ${Math.round(body * scale * .9)}px 'Trebuchet MS', sans-serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        for (let k = 0; k < 3; k++) { const a = spin + k * Math.PI * 2 / 3; ctx.fillText("✦", X(x) + Math.cos(a) * body * scale * .9, Y(y) - body * scale * .2 + Math.sin(a) * body * scale * .35); }
+      }
       for (let i = 0; i < fi.lives; i++) { ctx.fillStyle = "#ff86c8"; ctx.beginPath(); ctx.arc(X(x) - 10 + i * 10, Y(y) - (body + .45) * scale, 4, 0, Math.PI * 2); ctx.fill(); }
     }
     const me = g.fighters[f.viewer];
