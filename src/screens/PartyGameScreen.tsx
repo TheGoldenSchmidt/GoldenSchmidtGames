@@ -37,7 +37,7 @@ export function PartyGameScreen({profile,initialRoom,onExit,onLobby}:{profile:Gu
   const [replace,setReplace]=useState(0),[target,setTarget]=useState(""),[destination,setDestination]=useState(6),[selectedItem,setSelectedItem]=useState<number>();
   const [sound,setSound]=useState(false),[haptics,setHaptics]=useState(true),[rolling,setRolling]=useState(false),[travelling,setTravelling]=useState(false);
   const [panel,setPanel]=useState<"inventory"|"collection"|"menu"|"journal">();
-  const lock=useRef(false),offset=useRef((initialRoom.partyGame?.serverTime ?? Date.now()) - Date.now()),controlSeq=useRef(0),game=room.partyGame;
+  const lock=useRef(false),offset=useRef((initialRoom.partyGame?.serverTime ?? Date.now()) - Date.now()),controlSeq=useRef(0),controlAt=useRef(0),controlTimer=useRef<number|undefined>(undefined),latestControl=useRef<(input:ArenaInput|MatchInput,reliable?:boolean)=>void>(()=>{}),game=room.partyGame;
   const diceKey=game?.dice.length?`${game.round}:${game.turn}:${game.dice.join()}`:"",lastDice=useRef(diceKey);
   const turnStart=useRef({key:"",coins:0,trophies:0});
 
@@ -61,7 +61,9 @@ export function PartyGameScreen({profile,initialRoom,onExit,onLobby}:{profile:Gu
   },[diceKey]);
   const boardPhase=Boolean(game&&BOARD_PHASES.includes(game.phase));
   useEffect(()=>{if(!boardPhase)window.scrollTo({top:0,behavior:"instant"});},[boardPhase]);
-  useEffect(()=>{if(panel&&game?.phase==="mini-play"&&!game.mini?.match)control(NEUTRAL_INPUT);},[panel]);
+  // A stop must not get lost: it is sent reliably and (see control) never inside the authority's 25-ms window.
+  useEffect(()=>{if(panel&&game?.phase==="mini-play"&&!game.mini?.match)control(NEUTRAL_INPUT,true);},[panel]);
+  useEffect(()=>()=>window.clearTimeout(controlTimer.current),[]);
 
   useEffect(()=>{
     if(!game)return;
@@ -92,7 +94,14 @@ export function PartyGameScreen({profile,initialRoom,onExit,onLobby}:{profile:Gu
     lock.current=true;setPending(true);socket.timeout(8000).emit("party:action",{seq:(g.seq[profile.id]??0)+1,phaseId:g.phaseId,token:room.partyToken,action},(err:Error|null,response:{ok:boolean;data?:RoomState;error?:string})=>{lock.current=false;setPending(false);if(err||!response.ok||!response.data)setError(response?.error??"Der Server antwortet nicht. Die Verbindung wird wiederhergestellt.");else{if(response.data.partyGame?.serverTime)offset.current=response.data.partyGame.serverTime-Date.now();setRoom(response.data);}});
   }
   // Stick values may be dropped (volatile); taps and commands use the reliable channel.
-  function control(input:ArenaInput|MatchInput,reliable=false) {if(!socket.connected||g.pausedAt||g.phase!=="mini-play")return;controlSeq.current=Math.max(controlSeq.current,g.mini?.arena?.actors.find(a=>a.id===viewer)?.inputSeq??g.mini?.match?.players.find(p=>p.id===viewer)?.inputSeq??0)+1;(reliable?socket:socket.volatile).emit("party:control",{phaseId:g.phaseId,token:room.partyToken,seq:controlSeq.current,input});}
+  // The authority ignores control packets that arrive less than 25 ms after the previous one.
+  // Keep 30 ms between packets and always deliver the latest one, so a stop (menu, blur) is never swallowed.
+  function control(input:ArenaInput|MatchInput,reliable=false) {if(!socket.connected||g.pausedAt||g.phase!=="mini-play")return;
+    window.clearTimeout(controlTimer.current);
+    const wait=30-(performance.now()-controlAt.current);
+    if(wait>0){controlTimer.current=window.setTimeout(()=>latestControl.current(input,reliable),wait);return;}
+    controlAt.current=performance.now();controlSeq.current=Math.max(controlSeq.current,g.mini?.arena?.actors.find(a=>a.id===viewer)?.inputSeq??g.mini?.match?.players.find(p=>p.id===viewer)?.inputSeq??0)+1;(reliable?socket:socket.volatile).emit("party:control",{phaseId:g.phaseId,token:room.partyToken,seq:controlSeq.current,input});}
+  latestControl.current=control;
   const replaceControl=<label>Welches Item möchtest du ersetzen?<select value={replace} onChange={e=>setReplace(Number(e.target.value))}>{p.items.map((item,i)=><option value={i} key={i}>{ITEMS[item].name}</option>)}</select></label>;
   const roster=<div className={`party-standings ${boardPhase?"party-board-roster":""}`} aria-label={boardPhase?"Feste Zugreihenfolge und Punktestand":"Punktestand"}>{(boardPhase?g.order.map(id=>g.players.find(player=>player.id===id)!):standings).map((player,rank)=>{
     const index=g.players.indexOf(player);

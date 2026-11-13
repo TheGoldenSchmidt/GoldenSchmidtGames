@@ -6,7 +6,7 @@ import type { PartyGame } from "../../shared/party";
 import type { ArenaFrame } from "../three/arenaWorld";
 import { usePartyTilt } from "./usePartyTilt";
 
-export function PartyArena({game,id,now,control,busy=false}:{game:PartyGame;id:string;now:number;control:(input:ArenaInput)=>void;busy?:boolean}) {
+export function PartyArena({game,id,now,control,busy=false}:{game:PartyGame;id:string;now:number;control:(input:ArenaInput,reliable?:boolean)=>void;busy?:boolean}) {
   const arena=game.mini!.arena!,meta=ARENA_META[arena.id],own=arena.actors.find(a=>a.id===id),run=game.mini!.runs[id];
   const active=game.phase==="mini-play"&&now>=game.mini!.startAt&&now<game.deadline&&!busy&&!run.done&&!own?.finished&&!game.pausedAt;
   const [error,setError]=useState(false),[ready,setReady]=useState(false),[axes,setAxes]=useState({...NEUTRAL_INPUT});
@@ -27,7 +27,7 @@ export function PartyArena({game,id,now,control,busy=false}:{game:PartyGame;id:s
     return()=>{cancelled=true;world?.dispose();};
   },[arena.id,game.mini!.startAt,id,error]);
   useEffect(()=>{
-    const reset=()=>{keys.current.clear();manual.current={...NEUTRAL_INPUT};pulse.current={jump:0,punch:0};pointer.current=undefined;sensor.axes.current={x:0,z:0};setAxes({...NEUTRAL_INPUT});if(activeRef.current)controlRef.current({...NEUTRAL_INPUT});};
+    const reset=()=>{keys.current.clear();manual.current={...NEUTRAL_INPUT};pulse.current={jump:0,punch:0};pointer.current=undefined;sensor.axes.current={x:0,z:0};setAxes({...NEUTRAL_INPUT});if(activeRef.current)controlRef.current({...NEUTRAL_INPUT},true);};
     const down=(e:KeyboardEvent)=>{if(!activeRef.current||(e.target instanceof HTMLElement&&(e.target.matches("input,select,textarea")||e.key===" "&&Boolean(e.target.closest("button")))))return;const key=e.key.length===1?e.key.toLowerCase():e.key;if(!["w","a","s","d","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," ","e","j"].includes(key))return;e.preventDefault();keys.current.add(key);if(!e.repeat&&key===" ")pulse.current.jump=Date.now()+110;if(!e.repeat&&["e","j"].includes(key))pulse.current.punch=Date.now()+110;controlRef.current(reader.current());};
     const up=(e:KeyboardEvent)=>{keys.current.delete(e.key.length===1?e.key.toLowerCase():e.key);};
     const hidden=()=>{if(document.hidden)reset();};
