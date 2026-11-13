@@ -76,6 +76,19 @@ function RunControls({ io, active }: MatchControlsProps) {
 
 export const chaosRunClient: MatchClient = {
   render,
+  // 2.5D with rigged characters and a chase camera; the canvas above stays as fallback without WebGL.
+  world: async () => {
+    const [scene, rig] = await Promise.all([import("../../three/chaosWorld"), import("../../three/riggedFigure")]);
+    const chars = await rig.loadCharacterKit();
+    return (host, read, onError) => scene.createChaosWorld(host, read, onError, chars);
+  },
+  banner(view, viewer) {
+    const r = (view.game as RunGame).runners[viewer];
+    if (!r || view.done) return undefined;
+    if (r.finishAt !== undefined) return { title: "Im Ziel!", text: `${(r.finishAt / 1000).toFixed(1)} s` };
+    if (r.fallen) return { title: "Abgestürzt!", text: "Zurück zum Checkpoint …" };
+    return undefined;
+  },
   quiet: ["jump", "slide"],
   Controls: RunControls,
   status(view, viewer) {

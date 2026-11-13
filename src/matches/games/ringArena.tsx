@@ -105,11 +105,11 @@ function client(skin: Skin, actionLabel: string, icon: string, cooldown: number)
 
 export const sumoClient: MatchClient = {
   ...client("sumo", "Stoß", "✊", SUMO.cooldown),
-  // 2.5D with rigged, animated figures (Quaternius Mannequin, CC0); the canvas stays as fallback.
+  // 2.5D with rigged, animated characters (Quaternius, CC0); the canvas stays as fallback.
   world: async () => {
     const [scene, rig] = await Promise.all([import("../../three/sumoWorld"), import("../../three/riggedFigure")]);
-    const gltf = await rig.loadMannequin();
-    return (host, read, onError) => scene.createSumoWorld(host, read, onError, gltf);
+    const chars = await rig.loadCharacterKit();
+    return (host, read, onError) => scene.createSumoWorld(host, read, onError, chars);
   },
   banner(view, viewer) {
     const me = (view.game as RingGame).fighters[viewer];

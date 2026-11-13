@@ -19,7 +19,7 @@ export class SceneKit {
   constructor(readonly host:HTMLElement,onError:()=>void,options:{alpha?:boolean}={}) {
     this.renderer=new T.WebGLRenderer({antialias:true,alpha:options.alpha??false,powerPreference:"high-performance"});
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
-    this.renderer.shadowMap.enabled=true;this.renderer.shadowMap.type=T.PCFSoftShadowMap;
+    this.renderer.shadowMap.enabled=true;this.renderer.shadowMap.type=T.PCFShadowMap;
     this.renderer.outputColorSpace=T.SRGBColorSpace;this.renderer.toneMapping=T.ACESFilmicToneMapping;this.renderer.toneMappingExposure=.92;
     this.renderer.domElement.setAttribute("aria-hidden","true");
     host.appendChild(this.renderer.domElement);host.dataset.webgl="ready";

@@ -76,12 +76,19 @@ export class Impact {
     this.flashAt = time; this.light.position.set(x, 1.2, z); this.light.intensity = 9 * strength;
     this.shakeUntil = time + 260 * strength;
   }
-  /** Call once per frame after the camera is placed. */
+  private base = 0;
+  private written = Number.NaN;
+  /**
+   * Call once per frame after the camera is placed. The shake is an offset on
+   * top of wherever the scene put the camera: moving (chase, framing) cameras
+   * set a new position every frame, fixed ones keep theirs.
+   */
   update(time: number, reduced: boolean) {
     this.light.intensity = reduced ? 0 : Math.max(0, 1 - (time - this.flashAt) / 260) * 9;
     const camera = this.kit.camera;
-    if (time < this.shakeUntil) camera.position.x = Math.sin(time * .09) * (this.shakeUntil - time) / 260 * .08;
-    else if (camera.position.x !== 0) camera.position.x = 0;
+    if (camera.position.x !== this.written) this.base = camera.position.x;
+    const offset = !reduced && time < this.shakeUntil ? Math.sin(time * .09) * (this.shakeUntil - time) / 260 * .08 : 0;
+    camera.position.x = this.base + offset; this.written = camera.position.x;
   }
 }
 

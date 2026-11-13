@@ -1,10 +1,9 @@
 import * as T from "three";
-import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 import type { Fighter, RingGame } from "../../shared/matches/ringCore";
 import { SUMO } from "../../shared/matches/sumoSmash";
 import type { MatchWorld, MatchWorldFrame } from "../matches/client";
 import { Debris, frameBox, Impact } from "./matchScene";
-import { riggedFigure, type RiggedFigure } from "./riggedFigure";
+import { LOOKS, riggedFigure, type CharacterKit, type RiggedFigure } from "./riggedFigure";
 import { PLAYER_COLORS, SceneKit } from "./sceneKit";
 
 /**
@@ -13,14 +12,14 @@ import { PLAYER_COLORS, SceneKit } from "./sceneKit";
  * that walk, dash, get hit, fly off the platform and drop back in.
  * Pure presentation of the authoritative view (positions, ring, events).
  */
-const START_RADIUS = 5.5, TILT = 40 * Math.PI / 180, FIGURE_H = 2.5;
+const START_RADIUS = 5.5, TILT = 40 * Math.PI / 180, FIGURE_H = 2.3;
 const COLOR = { sky: 0x8fd3ff, cloud: 0xffffff, base: 0x6d4c41, clay: 0xe9d7a8, outside: 0xc9b48a, rope: 0xb23a48, line: 0xfff9ed, shield: 0x57e4cb, own: 0xffe44e, life: 0xff86c8, star: 0xffe44e } as const;
 /** 2D heading (x right, y down on screen = +z) → rotation of a figure facing +Z. */
 const yawOf = (heading: number) => Math.atan2(Math.cos(heading), Math.sin(heading));
 
 interface View { fig: RiggedFigure; lives: T.Mesh[]; marker?: T.Mesh; ring?: T.Mesh; shield: T.Mesh; stars: T.Mesh[]; wasOut: boolean; outAt: number; outFrom: T.Vector3; outVel: T.Vector3; backAt: number; cheered: boolean }
 
-export function createSumoWorld(host: HTMLElement, read: () => MatchWorldFrame, onError: () => void, gltf: GLTF): MatchWorld {
+export function createSumoWorld(host: HTMLElement, read: () => MatchWorldFrame, onError: () => void, chars: CharacterKit): MatchWorld {
   const kit = new SceneKit(host, onError), world = new T.Group();
   kit.scene.add(world);
   kit.scene.background = new T.Color(COLOR.sky); kit.scene.fog = new T.Fog(COLOR.sky, 30, 70);
@@ -46,12 +45,13 @@ export function createSumoWorld(host: HTMLElement, read: () => MatchWorldFrame, 
   const viewFor = (id: string, style: number, viewer: string): View => {
     let v = views.get(id);
     if (v) return v;
-    const fig = riggedFigure(gltf, PLAYER_COLORS[style % PLAYER_COLORS.length], FIGURE_H); world.add(fig.group);
+    const fig = riggedFigure(chars, style, PLAYER_COLORS[style % PLAYER_COLORS.length], FIGURE_H); world.add(fig.group);
     const lives = [0, 1, 2].map(i => kit.ball(fig.group, COLOR.life, (i - 1) * .17, FIGURE_H + .22, 0, .07));
     const marker = id === viewer ? kit.cone(fig.group, COLOR.own, 0, FIGURE_H + .55, 0, .17, .32) : undefined;
     if (marker) marker.rotation.x = Math.PI;
-    const ring = id === viewer ? kit.mesh(world, new T.TorusGeometry(SUMO.body + .08, .045, 6, 32), COLOR.own, 0, .04, 0) : undefined;
-    if (ring) { ring.rotation.x = Math.PI / 2; ring.castShadow = false; }
+    // Every fighter stands on a ring in the player colour; the own one is yellow and thicker.
+    const own = id === viewer, ring = kit.mesh(world, new T.TorusGeometry(SUMO.body + .08, own ? .06 : .04, 6, 32), own ? COLOR.own : PLAYER_COLORS[style % PLAYER_COLORS.length], 0, .04, 0);
+    ring.rotation.x = Math.PI / 2; ring.castShadow = false;
     const shield = new T.Mesh(new T.SphereGeometry(SUMO.body + .25, 20, 14), new T.MeshBasicMaterial({ color: COLOR.shield, transparent: true, opacity: .2, depthWrite: false }));
     shield.position.y = FIGURE_H / 2; fig.group.add(shield);
     const stars = [0, 1, 2].map(() => kit.mesh(fig.group, new T.OctahedronGeometry(.08), COLOR.star, 0, FIGURE_H + .05, 0));
@@ -91,7 +91,7 @@ export function createSumoWorld(host: HTMLElement, read: () => MatchWorldFrame, 
         v.wasOut = true; v.outAt = time;
         const from = before ?? fighter; v.outFrom.set(from.x, 0, from.y); v.outVel.set(from.vx, 0, from.vy);
         if (v.outVel.length() < 2) v.outVel.setLength(2);
-        v.fig.setLoop("fall");
+        v.fig.setLoop("air");
       } else if (!fighter.out && v.wasOut) { v.wasOut = false; v.backAt = time; v.fig.setLoop("idle"); v.fig.play("land"); }
       if (fighter.out) {
         const t = (time - v.outAt) / 1000;
@@ -104,7 +104,9 @@ export function createSumoWorld(host: HTMLElement, read: () => MatchWorldFrame, 
         v.fig.group.position.set(x, height, y);
         v.fig.group.visible = fighter.alive;
         const speed = Math.hypot(fighter.vx, fighter.vy), stunned = s.time < fighter.stunUntil;
-        v.fig.setLoop(speed > .45 && !stunned ? "move" : "idle", speed / 2.4);
+        // Leaning into an opponent while moving: the push animation; otherwise jog or stand.
+        const pushing = !stunned && speed > .3 && Object.values(g.fighters).some(o => o.id !== fighter.id && o.alive && !o.out && Math.hypot(o.x - fighter.x, o.y - fighter.y) < SUMO.body * 2 + .2 && (o.x - fighter.x) * fighter.vx + (o.y - fighter.y) * fighter.vy > 0);
+        v.fig.setLoop(pushing ? "push" : speed > .45 && !stunned ? "jog" : "idle", speed / 2.6);
       }
       v.fig.group.rotation.y = yawOf(fighter.heading);
       v.fig.update(dt);
@@ -115,7 +117,7 @@ export function createSumoWorld(host: HTMLElement, read: () => MatchWorldFrame, 
       if (v.marker) v.marker.position.y = FIGURE_H + .55 + (reduced ? 0 : Math.abs(Math.sin(time / 220)) * .1);
       if (v.ring) { v.ring.visible = !fighter.out && fighter.alive; v.ring.position.set(x, .04 + height, y); }
       // The winner cheers once the match is decided.
-      if (s.done && g.winner === p.id && !v.cheered) { v.cheered = true; v.fig.play("cheer"); }
+      if (s.done && g.winner === p.id && !v.cheered) { v.cheered = true; v.fig.setLoop("dance"); }
     }
 
     // Fighting-game camera: frame every fighter still in the ring (plus margin), never wider than the ring.
@@ -133,7 +135,7 @@ export function createSumoWorld(host: HTMLElement, read: () => MatchWorldFrame, 
     dust.update(time);
     impact.update(time, reduced);
     kit.render();
-    host.dataset.figures = JSON.stringify(Object.fromEntries([...views.keys()].map(id => [id, "mannequin"])));
+    host.dataset.figures = JSON.stringify(Object.fromEntries(s.players.filter(p => views.has(p.id)).map(p => { const look = LOOKS[p.style % LOOKS.length]; return [p.id, `${look.body}-${look.skin}-${look.hair}`]; })));
     frame = requestAnimationFrame(animate);
   };
   frame = requestAnimationFrame(animate);
