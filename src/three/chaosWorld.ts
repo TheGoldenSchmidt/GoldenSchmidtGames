@@ -2,7 +2,7 @@ import * as T from "three";
 import { CR, courseLayout, hammerLow, platformY, wallClosed, type RunGame } from "../../shared/matches/chaosRun";
 import type { MatchWorld, MatchWorldFrame } from "../matches/client";
 import { Debris, Impact } from "./matchScene";
-import { LOOKS, riggedFigure, type CharacterKit, type RiggedFigure } from "./riggedFigure";
+import { riggedFigure, riggedIdFor, type CharacterKit, type RiggedFigure } from "./riggedFigure";
 import { PLAYER_COLORS, SceneKit } from "./sceneKit";
 
 /**
@@ -67,10 +67,10 @@ export function createChaosWorld(host: HTMLElement, read: () => MatchWorldFrame,
   const views = new Map<string, View>();
   let lastSeq = 0, frame = 0, last = performance.now(), camX: number | undefined;
 
-  const viewFor = (id: string, style: number, viewer: string): View => {
+  const viewFor = (id: string, style: number, viewer: string, chosen: string | undefined): View => {
     let v = views.get(id);
     if (v) return v;
-    const lane = Math.max(0, g0.order.indexOf(id)), fig = riggedFigure(chars, style, PLAYER_COLORS[style % PLAYER_COLORS.length], FIGURE_H);
+    const lane = Math.max(0, g0.order.indexOf(id)), fig = riggedFigure(chars, chosen, style, PLAYER_COLORS[style % PLAYER_COLORS.length], FIGURE_H);
     world.add(fig.group);
     const own = id === viewer, ring = kit.mesh(world, new T.TorusGeometry(.42, own ? .06 : .04, 6, 28), own ? COLOR.own : PLAYER_COLORS[style % PLAYER_COLORS.length], 0, .02, laneZ(lane));
     ring.rotation.x = Math.PI / 2; ring.castShadow = false;
@@ -115,7 +115,7 @@ export function createChaosWorld(host: HTMLElement, read: () => MatchWorldFrame,
     for (const p of s.players) {
       const r = g.runners[p.id];
       if (!r) continue;
-      const v = viewFor(p.id, p.style, f.viewer), before = prev.runners?.[p.id], own = p.id === f.viewer;
+      const v = viewFor(p.id, p.style, f.viewer, f.characters[p.id]), before = prev.runners?.[p.id], own = p.id === f.viewer;
       // Own runner is extrapolated a little for smooth scrolling; the others are interpolated.
       const ahead = own && !r.fallen && r.finishAt === undefined && !reduced ? r.vx * Math.min(.12, (t - s.time) / 1000) : 0;
       const x = own ? r.x + ahead : before && !before.fallen ? before.x + (r.x - before.x) * f.alpha : r.x;
@@ -160,7 +160,7 @@ export function createChaosWorld(host: HTMLElement, read: () => MatchWorldFrame,
     dust.update(time);
     impact.update(time, reduced);
     kit.render();
-    host.dataset.figures = JSON.stringify(Object.fromEntries(s.players.filter(p => views.has(p.id)).map(p => { const look = LOOKS[p.style % LOOKS.length]; return [p.id, `${look.body}-${look.skin}-${look.hair}`]; })));
+    host.dataset.figures = JSON.stringify(Object.fromEntries(s.players.filter(p => views.has(p.id)).map(p => [p.id, riggedIdFor(f.characters[p.id], p.style)])));
     frame = requestAnimationFrame(animate);
   };
   frame = requestAnimationFrame(animate);

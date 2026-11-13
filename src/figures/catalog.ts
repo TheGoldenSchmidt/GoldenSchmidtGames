@@ -1,8 +1,8 @@
-import {characterId,type CharacterId} from "../../shared/characters";
+import {characterId,isRiggedCharacter,type CharacterId,type ClassicCharacterId} from "../../shared/characters";
 import type {Animations,FigureDef} from "./types";
 import {resolveFigure} from "./resolve";
 import defaults from "./data/animations.json";
-const loaders:Record<CharacterId,()=>Promise<{default:unknown}>>={
+const loaders:Record<ClassicCharacterId,()=>Promise<{default:unknown}>>={
   alpha_rick_prime:()=>import("./data/figures/alpha_rick_prime.json",{with:{type:"json"}}),
   alpha_morty_smith:()=>import("./data/figures/alpha_morty_smith.json",{with:{type:"json"}}),
   alpha_summer_smith:()=>import("./data/figures/alpha_summer_smith.json",{with:{type:"json"}}),
@@ -17,8 +17,10 @@ const loaders:Record<CharacterId,()=>Promise<{default:unknown}>>={
   alpha_pupa:()=>import("./data/figures/alpha_pupa.json",{with:{type:"json"}}),
   alpha_korvo:()=>import("./data/figures/alpha_korvo.json",{with:{type:"json"}})
 };
-const cache=new Map<CharacterId,FigureDef>(),pending=new Map<CharacterId,Promise<FigureDef>>();
-export function loadFigure(id:CharacterId):Promise<FigureDef>{
+const cache=new Map<ClassicCharacterId,FigureDef>(),pending=new Map<ClassicCharacterId,Promise<FigureDef>>();
+/** Lädt eine Figur: klassische Figurendaten oder (für animierte Figuren) das gemeinsame Figuren-Kit. */
+export function loadFigure(id:CharacterId):Promise<unknown>{
+  if(isRiggedCharacter(id))return import("../three/riggedFigure").then(m=>m.loadCharacterKit());
   const cached=cache.get(id);if(cached)return Promise.resolve(cached);
   const current=pending.get(id);if(current)return current;
   const loader=loaders[id];if(!loader)return Promise.reject(new Error(`Figur nicht verfügbar: ${id}`));
@@ -26,4 +28,4 @@ export function loadFigure(id:CharacterId):Promise<FigureDef>{
   pending.set(id,request);return request;
 }
 export const preloadFigures=(ids:readonly unknown[])=>Promise.all([...new Set(ids.map((id,index)=>characterId(id,index)))].map(loadFigure));
-export function getFigure(id:CharacterId):FigureDef{const figure=cache.get(id);if(!figure)throw new Error(`Figur wird noch geladen: ${id}`);return figure;}
+export function getFigure(id:ClassicCharacterId):FigureDef{const figure=cache.get(id);if(!figure)throw new Error(`Figur wird noch geladen: ${id}`);return figure;}

@@ -3,7 +3,7 @@ import type { Fighter, RingGame } from "../../shared/matches/ringCore";
 import { SUMO } from "../../shared/matches/sumoSmash";
 import type { MatchWorld, MatchWorldFrame } from "../matches/client";
 import { Debris, frameBox, Impact } from "./matchScene";
-import { LOOKS, riggedFigure, type CharacterKit, type RiggedFigure } from "./riggedFigure";
+import { riggedFigure, riggedIdFor, type CharacterKit, type RiggedFigure } from "./riggedFigure";
 import { PLAYER_COLORS, SceneKit } from "./sceneKit";
 
 /**
@@ -42,10 +42,10 @@ export function createSumoWorld(host: HTMLElement, read: () => MatchWorldFrame, 
   const views = new Map<string, View>();
   let lastSeq = 0, frame = 0, last = performance.now(), camPos: T.Vector3 | undefined, camTarget: T.Vector3 | undefined;
 
-  const viewFor = (id: string, style: number, viewer: string): View => {
+  const viewFor = (id: string, style: number, viewer: string, chosen: string | undefined): View => {
     let v = views.get(id);
     if (v) return v;
-    const fig = riggedFigure(chars, style, PLAYER_COLORS[style % PLAYER_COLORS.length], FIGURE_H); world.add(fig.group);
+    const fig = riggedFigure(chars, chosen, style, PLAYER_COLORS[style % PLAYER_COLORS.length], FIGURE_H); world.add(fig.group);
     const lives = [0, 1, 2].map(i => kit.ball(fig.group, COLOR.life, (i - 1) * .17, FIGURE_H + .22, 0, .07));
     const marker = id === viewer ? kit.cone(fig.group, COLOR.own, 0, FIGURE_H + .55, 0, .17, .32) : undefined;
     if (marker) marker.rotation.x = Math.PI;
@@ -83,7 +83,7 @@ export function createSumoWorld(host: HTMLElement, read: () => MatchWorldFrame, 
     for (const p of s.players) {
       const fighter = g.fighters[p.id];
       if (!fighter) continue;
-      const v = viewFor(p.id, p.style, frameData.viewer), before = prev.fighters?.[p.id];
+      const v = viewFor(p.id, p.style, frameData.viewer, frameData.characters[p.id]), before = prev.fighters?.[p.id];
       const [x, y] = lerpPos(fighter, before, frameData.alpha);
       let height = 0;
       // Ring-out: keep flying outwards and drop below the platform; then wait for the respawn.
@@ -135,7 +135,7 @@ export function createSumoWorld(host: HTMLElement, read: () => MatchWorldFrame, 
     dust.update(time);
     impact.update(time, reduced);
     kit.render();
-    host.dataset.figures = JSON.stringify(Object.fromEntries(s.players.filter(p => views.has(p.id)).map(p => { const look = LOOKS[p.style % LOOKS.length]; return [p.id, `${look.body}-${look.skin}-${look.hair}`]; })));
+    host.dataset.figures = JSON.stringify(Object.fromEntries(s.players.filter(p => views.has(p.id)).map(p => [p.id, riggedIdFor(frameData.characters[p.id], p.style)])));
     frame = requestAnimationFrame(animate);
   };
   frame = requestAnimationFrame(animate);

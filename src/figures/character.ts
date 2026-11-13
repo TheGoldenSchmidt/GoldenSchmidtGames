@@ -1,20 +1,41 @@
 import {RIG_JOINTS} from "./rigJoints";
 import * as T from "three";
-import { characterId } from "../../shared/characters";
+import { characterId, isRiggedCharacter, type ClassicCharacterId } from "../../shared/characters";
+import { characterKit, riggedFigure } from "../three/riggedFigure";
 import { createAnimationPlayer } from "./AnimationPlayer";
 import {buildOptimizedFigure} from "./optimizedFigure";
 import { getFigure } from "./catalog";
 
+type Clip="attack"|"hit"|"death";
+/**
+ * Animierte Figur (Skelett) hinter derselben Schnittstelle wie die klassischen Figuren, damit alle
+ * 3D-Szenen sie zeigen können. `group.children[0]` ist wie dort der skalierbare Körper.
+ */
+function riggedCharacter(parent:T.Object3D, selected:string, color:number) {
+  const fig=riggedFigure(characterKit(),selected,0,color,1.65), group=new T.Group(), body=new T.Group();
+  body.add(fig.group);group.add(body);group.userData.characterId=selected;parent.add(group);
+  let lastPunch=false,lastJump=false,lastTime=0;
+  return {group,act(clip:Clip,_time:number){fig.play(clip==="attack"?"punch":clip);},pose(heading:number,speed:number,time:number,jump:number,punch:boolean,_reduce:boolean){
+    group.rotation.y=heading;
+    const dt=lastTime?Math.max(0,Math.min(.1,(time-lastTime)/1000)):1/60;lastTime=time;
+    if(punch&&!lastPunch)fig.play("punch");
+    if(jump>0&&!lastJump)fig.play("jumpStart");
+    fig.setLoop(jump>0?"air":speed>3.4?"sprint":speed>.25?"jog":"idle",speed/2.6);
+    lastPunch=punch;lastJump=jump>0;fig.update(dt);
+  }};
+}
+
 /** Figurenanimationen bleiben innerhalb der Spielposition; Physik und Namensschild gehören zum äußeren Objekt. */
-export function figureCharacter(parent:T.Object3D, selected:string) {
-  const data=getFigure(characterId(selected)), built=buildOptimizedFigure(data);
+export function figureCharacter(parent:T.Object3D, selected:string, color=0x57e4cb) {
+  if(isRiggedCharacter(selected))return riggedCharacter(parent,selected,color);
+  const data=getFigure(characterId(selected) as ClassicCharacterId), built=buildOptimizedFigure(data);
   const group=new T.Group();group.userData.characterId=selected;parent.add(group);group.add(built.root);
   const options={reducedMotion:false,idleWeight:1,extraParts:Object.values(RIG_JOINTS).flat()},player=createAnimationPlayer(built.parts,data.animations??{},options);
   const part=(...ids:string[])=>ids.map(id=>built.parts.get(id)).find(Boolean);
   const legs=[part(...RIG_JOINTS.leftLeg),part(...RIG_JOINTS.rightLeg)],arms=[part(...RIG_JOINTS.leftArm),part(...RIG_JOINTS.rightArm)];
   const feet=[part(...RIG_JOINTS.leftFoot),part(...RIG_JOINTS.rightFoot)].map((foot,index)=>foot&&!legs[index]?.getObjectById(foot.id)?foot:undefined);
   let lastPunch=false,lastJump=false,lastTime=0,walk=0,hit=0,wheel=0,air=0;
-  return {group,act(clip:"attack"|"hit"|"death",time:number){if(!options.reducedMotion&&data.animations?.[clip])player.play(clip,time);},pose(heading:number,speed:number,time:number,jump:number,punch:boolean,reduce:boolean){
+  return {group,act(clip:Clip,time:number){if(!options.reducedMotion&&data.animations?.[clip])player.play(clip,time);},pose(heading:number,speed:number,time:number,jump:number,punch:boolean,reduce:boolean){
     group.rotation.y=heading;options.reducedMotion=reduce;
     const dt=lastTime?Math.max(0,Math.min(.1,(time-lastTime)/1000)):1/60;lastTime=time;
     walk+=((reduce?0:Math.min(1,speed/4.8))-walk)*(1-Math.exp(-dt*12));

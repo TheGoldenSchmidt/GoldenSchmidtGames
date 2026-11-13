@@ -34,7 +34,8 @@ export const CLIPS = {
   Idle_Loop: "idle", Jog_Fwd_Loop: "jog", Sprint_Loop: "sprint", Push_Loop: "push",
   Jump_Start: "jumpStart", Jump_Loop: "air", Jump_Land: "land",
   Hit_Chest: "hitLight", Hit_Knockback: "hit", Shield_Dash: "dash",
-  Slide_Start: "slideStart", Slide_Loop: "slide", Dance_Loop: "dance", Yes: "cheer", Roll: "roll"
+  Slide_Start: "slideStart", Slide_Loop: "slide", Dance_Loop: "dance", Yes: "cheer", Roll: "roll",
+  Punch_Jab: "punch", Death01: "death"
 };
 const HAIRSTYLES = ["Hair_Buzzed", "Hair_BuzzedFemale", "Hair_SimpleParted", "Hair_Long", "Hair_Buns", "Hair_Beard"];
 
@@ -48,11 +49,35 @@ async function loadGltf(path) {
 }
 async function loadGlb(path) { const b = readFileSync(path); return new Promise((res, rej) => new GLTFLoader().parse(b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength), "", res, rej)); }
 
+/**
+ * Garment regions per vertex from the skin weights, so outfits can be painted and
+ * widened at runtime without new textures:
+ *   ga = (shirt: torso + upper arms, sleeves: forearms, shorts: hips + thighs, legs: shins)
+ *   gb = (shoes: feet, gloves: hands)
+ */
+const REGION = [
+  [/^(spine_0[1-3]|clavicle_[lr]|upperarm_[lr])$/, 0], [/^lowerarm_[lr]$/, 1], [/^(pelvis|thigh_[lr])$/, 2], [/^calf_[lr]$/, 3],
+  [/^(foot|ball)_[lr]$|^ball_leaf_[lr]$/, 4], [/^hand_[lr]$|^(index|middle|ring|pinky|thumb)_/, 5]
+];
+function garments(mesh) {
+  const g = mesh.geometry, index = g.attributes.skinIndex, weight = g.attributes.skinWeight;
+  if (!mesh.isSkinnedMesh || !index || !weight) return;
+  const region = mesh.skeleton.bones.map(b => REGION.find(([re]) => re.test(b.name))?.[1] ?? -1);
+  const ga = new Float32Array(index.count * 4), gb = new Float32Array(index.count * 2);
+  for (let v = 0; v < index.count; v++) for (let k = 0; k < 4; k++) {
+    const r = region[index.getComponent(v, k)], w = weight.getComponent(v, k);
+    if (r < 0 || !w) continue;
+    if (r < 4) ga[v * 4 + r] += w; else gb[v * 2 + r - 4] += w;
+  }
+  g.setAttribute("ga", new T.BufferAttribute(ga, 4)); g.setAttribute("gb", new T.BufferAttribute(gb, 2));
+}
+
 /** Shared vertices and only the attributes the game uses; materials keep their names. */
 function slim(scene) {
   scene.traverse(o => {
     if (!o.isMesh) return;
     for (const name of Object.keys(o.geometry.attributes)) if (!["position", "normal", "uv", "skinIndex", "skinWeight"].includes(name)) o.geometry.deleteAttribute(name);
+    if (/^MI_Superhero/.test(o.material.name)) garments(o);
     o.geometry = mergeVertices(o.geometry, 1e-5);
     const name = o.material.name; o.material = new T.MeshStandardMaterial({ name }); o.castShadow = true;
   });

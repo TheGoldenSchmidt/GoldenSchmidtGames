@@ -1,7 +1,7 @@
 # Animierte Figuren (Rigged Characters)
 
-Stand: Nov. 2026 · Status: **umgesetzt** in Sumo Smash und Chaos Run,
-Gerätetest offen. Alternative zu Unity (Aufwandsschätzung im Chat, Nov. 2026):
+Stand: Nov. 2026 · Status: **umgesetzt**: zehn wählbare Figuren, eigene Szenen in
+Sumo Smash und Chaos Run, Adapter für alle übrigen 3D-Szenen. Gerätetest offen. Alternative zu Unity (Aufwandsschätzung im Chat, Nov. 2026):
 echte Figuren mit Skelett und Animationen in der bestehenden Web-Technik.
 
 ## Quellen (alle CC0, Quaternius)
@@ -22,15 +22,16 @@ Alle teilen dasselbe 65-Knochen-Skelett; jede Animation passt auf jede Figur.
 ```bash
 python3 scripts/assets/build-character-textures.py
 node scripts/assets/build-characters.mjs
+npm run build && node scripts/assets/render-rigged-portraits.mjs   # Vorschaubilder public/characters/rig_*.png
 ```
 
-Ergebnis in `public/models/` (im PWA-Cache, zusammen ≈ 2,4 MB):
+Ergebnis in `public/models/` (im PWA-Cache, zusammen ≈ 2,8 MB):
 
 | Datei | Inhalt |
 | --- | --- |
-| `body_m.glb`, `body_f.glb` | gehäutete Körper ohne Texturen (≈ 550 KB je Körper) |
+| `body_m.glb`, `body_f.glb` | gehäutete Körper ohne Texturen, mit Kleidungsbereichen je Eckpunkt (≈ 720 KB je Körper) |
 | `hair_*.glb` | sechs Frisuren/Bart am selben Skelett (55–224 KB) |
-| `anims.glb` | 15 Animationen auf einem nackten Skelett (≈ 530 KB) |
+| `anims.glb` | 17 Animationen auf einem nackten Skelett (≈ 600 KB); das Skelett trägt auch Bolt und Glubschi |
 | `tex/body_<m|f>_<light|dark>.jpg` | Haut/Kleidung 512 px |
 | `tex/outfit_<m|f>.png` | Maske der Kleidung (grau, ungesättigt) |
 | `tex/hair_1.jpg`, `hair_2.jpg`, `eye.jpg` | Haar (graustufig) und Augen |
@@ -43,20 +44,39 @@ Knochennamen eindeutig.
 
 ## Laufzeit (`src/three/riggedFigure.ts`)
 
-- `loadCharacterKit()` lädt alles einmal; `riggedFigure(kit, slot, farbe, höhe)`
-  klont Skelett und Materialien je Spieler.
-- **Sechs Looks** je Farbslot (Körper, Hautton, Frisur, Haarfarbe; das Haar
-  ist graustufig und wird wie in den Quell-Engines eingefärbt).
-- **Spielerfarbe** auf Hose/Oberteil: Shader-Erweiterung mischt die Farbe
-  über die Kleidungsmaske, Falten und Schatten bleiben.
-- Frisuren werden über die Knochennamen an das Körperskelett gebunden.
+- `loadCharacterKit()` lädt alles einmal; `riggedFigure(kit, gewählt, platz, farbe, höhe)`
+  baut die gewählte Figur (`RIGGED_SPECS`) oder – bei klassischer Wahl – einen
+  der sechs Menschen nach Farbplatz.
+- **Menschen:** Körper, Hautton, Frisur und Haarfarbe (das Haar ist graustufig
+  und wird wie in den Quell-Engines eingefärbt). Ohne Outfit nimmt die Unterwäsche
+  die Spielerfarbe an (Maskentextur).
+- **Outfits ohne neue Texturen:** Der Build schreibt je Eckpunkt Kleidungsbereiche
+  aus den Knochengewichten (`_ga`: Shirt, Ärmel, Shorts, Hosenbeine; `_gb`: Schuhe,
+  Handschuhe). Der Shader färbt sie ein (fest oder Spielerfarbe), kann sie weiten
+  und den Hautschatten ausblenden.
+- **Weite Kleidung und Zubehör** sind eigene Teile, im Ruhezustand platziert und
+  je an einen Knochen gehängt: Hoodie mit Kapuze und Bauchtasche, Baggy-Hose, Cap,
+  Sonnenbrille, Goldkette mit Medaillon, Stern-Emblem, Heldenmaske.
+- **Comic-Look:** gestufte Schattierung (`MeshToonMaterial`), dunkle Kontur als
+  umgestülpte Hülle, Knochen-Skalierung für großen Kopf, Hände und Füße (die
+  Animationen enthalten keine Skalierung, sie bleibt erhalten).
+- **Eigene Entwürfe (Bolt, Glubschi):** Grundformen auf dem nackten Skelett.
+  Kürzere Beine und Arme entstehen durch skalierte Ruheabstände der Knochen; die
+  Hüfthöhe der Animationen wird im selben Verhältnis skaliert.
+- **Zeichenaufwand:** starre Teile mit gleichem Material am selben Knochen werden
+  zu einem Netz zusammengefasst (gemischte Sechsergruppe in der klassischen Arena:
+  257 statt 393 Zeichenaufrufe).
 - `AnimationMixer` mit weichen Übergängen: Dauerzustände (stehen, joggen,
   sprinten, schieben, Luft, rutschen, tanzen) und Einmal-Aktionen (Dash,
-  Treffer, Absprung, Landung, Rutschbeginn, Jubel). Körperanimationen laufen
-  auch bei reduzierter Bewegung, weil sie Aktionen erklären; Wackeln,
-  Funken und Wippen entfallen dort.
-- Größe aus den gehäuteten Eckpunkten; Figuren blicken entlang +Z
-  (über die Zehenknochen geprüft).
+  Treffer, Schlag, Absprung, Landung, Rutschbeginn, Jubel, Niederlage).
+  Körperanimationen laufen auch bei reduzierter Bewegung, weil sie Aktionen
+  erklären; Wackeln, Funken und Wippen entfallen dort.
+- Größe aus der Stehpose (ohne Antennen, Hörner, Kontur); Figuren blicken
+  entlang +Z (über die Zehenknochen geprüft).
+- **Alle übrigen 3D-Szenen** (Insel, Intros, klassische Arenen, Bomb Arena, Tank
+  Trouble, Floor is Lava, Vorschau-Bühne) erhalten animierte Figuren über einen
+  Adapter in `src/figures/character.ts` hinter derselben Schnittstelle wie die
+  klassischen Figuren; `loadFigure`/`preloadFigures` laden dafür das Kit.
 
 ## Sumo Smash
 
@@ -88,5 +108,7 @@ Produktionsprüfung: Figurendateien im PWA-Cache und ausgeliefert.
 
 - Gerätetest: Bildrate mit sechs gehäuteten Figuren, Ladezeit (≈ 2,4 MB beim
   ersten Mal), Lesbarkeit der Hindernisse in Chaos Run.
-- Die übrigen 2.5D-Spiele (Bomb Arena, Tank Trouble, Floor is Lava) nutzen
-  weiter die 13 freigegebenen Figuren; Umstellung nur nach Entscheidung.
+- Die sechs Basis-Menschen tragen nur Unterwäsche in Spielerfarbe; Outfits
+  wären mit den Kleidungsbereichen schnell ergänzt.
+- Umstellung der übrigen Minispiele auf eigene Skelett-Szenen (Animationen
+  über den Adapter laufen dort bereits).

@@ -331,6 +331,25 @@ for (const motion of ["no-preference", "reduce"] as const) test(`Sumo Smash 2.5D
   } finally { session.close(); }
 });
 
+for (const [miniId, name] of [["sumo", "Sumo Smash"], ["bombs", "Bomb Arena"]] as const) test(`${name}: gewählte animierte Figuren (Rapper, Roboter) stehen im Spiel`, async ({ page }, testInfo) => {
+  const errors: string[] = []; page.on("pageerror", e => errors.push(e.message));
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const session = await onlineSession(page, false, ["rig_mc_goldie", "rig_bolt"], false, "free-minigame", { miniId });
+  try {
+    await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
+    await session.action({ type: "ready" }, session.ids[1]);
+    await matchStarted(page);
+    const world = page.locator(".match-world");
+    await expect(world).toHaveAttribute("data-webgl", "ready", { timeout: 20000 });
+    await expect.poll(async () => JSON.parse(await world.getAttribute("data-figures") ?? "{}"), { timeout: 20000 }).toEqual({ [session.ids[0]]: "rig_mc_goldie", [session.ids[1]]: "rig_bolt" });
+    await expect.poll(async () => Number(await world.getAttribute("data-frames")), { timeout: 5000 }).toBeGreaterThan(20);
+    await page.screenshot({ path: testInfo.outputPath(`${miniId}-rigged-choice.png`) });
+    expect(errors).toEqual([]);
+    await session.action({ type: "finish" }, session.ids[1]);
+    await expect(page.getByRole("heading", { name: "Euer Ergebnis", exact: true })).toBeVisible();
+  } finally { session.close(); }
+});
+
 for (const [miniId, button] of [["sumo", "Stoß"], ["bumpercars", "Turbo"]] as const) test(`${miniId === "sumo" ? "Sumo Smash" : "Bumper Mayhem"}: Stick bewegt, ${button}-Knopf löst die Aktion aus`, async ({ page }, testInfo) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId });
