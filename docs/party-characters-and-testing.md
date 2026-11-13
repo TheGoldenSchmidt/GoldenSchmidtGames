@@ -107,17 +107,16 @@ fünf Bots, Figurenwahl, echte Bewegung über Socket.IO, Neustart, Wiederbeitrit
 und die Sperre der Testwerkzeuge in normalen Räumen.
 
 `npm run test:browser` prüft den Solo-Ablauf inklusive echter WebGL-Vorschau,
-mehrfacher Figurenwechsel, Figurenrotation und gemeinsamen Minispiels auf
-Handy- und PC-Größe. Diese Befehle laufen bereits im GitHub-CI-Workflow; die
-neuen Prüfungen sind darin enthalten. Jedes Modell wird als separates Modul nachgeladen. Modelle und Portraits
+mehrfacher Figurenwechsel, Figurenrotation und gemeinsamen Minispiels in
+Handygröße. Jedes Modell wird als separates Modul nachgeladen. Modelle und Portraits
 liegen im PWA-Cache, sodass die Auswahl auch offline nutzbar bleibt.
 
-Die Browserprüfungen laufen für Handy und PC in jeweils drei parallelen
-Teilläufen nach den Regel- und Serverprüfungen. Beide Projekte werden vollständig ausgeführt;
-ein fehlgeschlagenes Projekt bricht das andere nicht ab. Fortschritte stehen
-einzeln im Protokoll. Screenshots und Fehler-Traces bleiben sieben Tage als
-`browser-phone-1` bis `browser-phone-3` und
-`browser-desktop-1` bis `browser-desktop-3` abrufbar.
+Der GitHub-CI-Workflow führt die Regel- und Serverprüfungen automatisch aus
+(Push auf `main`, Pull Requests). Die Browserprüfungen laufen nur im Projekt
+`phone` und nur in der von Hand gestarteten ausführlichen Prüfung, im selben Job
+nach den Regel- und Serverprüfungen. Fortschritte stehen einzeln im Protokoll.
+Bei einem Fehlschlag bleiben Screenshots und Fehler-Traces drei Tage als
+`browser-phone` abrufbar.
 
 Die Figurenprüfungen vergleichen die Originaldateien mit ihren Herkunfts-Hashes
 und prüfen alle 13 Hierarchien. Für jeden Animationsclip werden Gelenkmatrizen

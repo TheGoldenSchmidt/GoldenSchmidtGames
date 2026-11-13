@@ -19,7 +19,8 @@
     "test:production": "tsx scripts/production-smoke-test.ts",
     "test:screens": "tsx --tsconfig tsconfig.json scripts/game-screens-test.tsx",
     "test:pwa": "tsx scripts/pwa-update-test.ts",
-    "test:browser": "playwright test",
+    "test:browser": "playwright test --project=phone",
+    "test:browser:desktop": "playwright test --project=desktop",
     "preview": "vite preview --host 0.0.0.0",
     "start": "tsx server/index.ts"
   },

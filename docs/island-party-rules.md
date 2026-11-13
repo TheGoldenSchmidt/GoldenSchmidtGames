@@ -141,11 +141,9 @@ und alle 12 Match-Spiele (je ein eigener Regeltest in `scripts/`).
 `test:online` spielt eine vollständige Partie und prüft die Rückkehr in die Lobby nach Spielende,
 Host-Rechte, Status-Beobachter und ungültige Tokens. Browserfälle decken alle
 14 Arenen, Neigung, Touch-/Tastatursteuerung, sechs Modelle, Kartenansichten,
-Auftakt und Wiederbeitritt ab. Die gesamte bestehende CI führt diese Befehle aus.
-
-Die Browser-CI verteilt Handy und PC auf jeweils drei Teilläufe. Die voneinander
-unabhängigen Arena-Fälle lassen sich einzeln verteilen, damit die erweiterte
-Palette die Prüflaufzeit nicht auf einen einzelnen Job konzentriert.
+Auftakt und Wiederbeitritt ab. Die CI führt `test:rules` und `test:online`
+automatisch aus; die Browserfälle (Projekt `phone`) laufen nur in der von Hand
+gestarteten ausführlichen Prüfung, siehe [README](../README.md#automatische-prüfungen).
 
 Die eigenständigen Modi haben zusätzliche Regel- und Socketfälle in
 `scripts/minigame-modes-test.ts` und `scripts/minigame-modes-online-test.ts`.
