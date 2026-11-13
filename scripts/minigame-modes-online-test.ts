@@ -70,7 +70,11 @@ try {
     }
     assert.equal(room.partyGame!.phase,"finished");
     assert.ok(room.partyGame!.winners.length > 0);
-    await assert.rejects(request(host,"room:join",{code:room.code,playerId:ids[0],sessionToken:tokens[0]}));
+    // Rooms stay open after the game: the member comes back to the end screen (wrong key refused), then all return to the lobby.
+    assert.equal((await request(host,"room:join",{code:room.code,playerId:ids[0],sessionToken:tokens[0]})).partyGame!.phase,"finished");
+    await assert.rejects(request(host,"room:join",{code:room.code,playerId:ids[0],sessionToken:tokens[1]}));
+    const lobby = await request(host,"room:lobby");
+    assert.equal(lobby.phase,"lobby"); assert.equal(lobby.partyGame,undefined);
   }
-  console.log("Minispielmodi online erfolgreich: Konfiguration, beide Spielstarts, verdeckte und doppelte Einsätze, Sitzungsschutz, Wiederbeitritt, Host-Wechsel der Runde und Raumabschluss.");
+  console.log("Minispielmodi online erfolgreich: Konfiguration, beide Spielstarts, verdeckte und doppelte Einsätze, Sitzungsschutz, Wiederbeitritt, Host-Wechsel der Runde und Rückkehr in die Lobby.");
 } finally { sockets.forEach(s=>s.disconnect()); await server.close(); }

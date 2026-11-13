@@ -80,8 +80,9 @@ for (const reducedMotion of ["reduce", "no-preference"] as const) {
       await page.getByText("Gespielte Minispiele und Einsätze", { exact: true }).click();
       await page.screenshot({ path: testInfo.outputPath(`results-${reducedMotion}.png`), fullPage: true });
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-      await page.getByRole("button", { name: "Zurück zu GSG", exact: true }).click();
-      await expect(page.getByRole("button", { name: /Online spielen/ })).toBeVisible();
+      // Online rooms return to their lobby after the competition.
+      await page.getByRole("button", { name: "Zurück zur Lobby", exact: true }).click();
+      await expect(page.getByRole("heading", { name: "Mitspieler", exact: true })).toBeVisible();
     } finally { session.close(); }
   });
 }

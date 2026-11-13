@@ -107,8 +107,12 @@ try {
   assert.equal((own.arena?.actors ?? own.match!.players).find(actor => actor.id === "ada")?.inputSeq, 10);
   await reply(p2.a, "party:action", { token: p.host, seq: 2, phaseId: restored.phaseId, action: { type: "abort" } });
   await server.crash(); await server.start();
-  await assert.rejects(reply(await connect(url), "room:join", { code: p.code, playerId: "ada", sessionToken: p.host }), /geschlossen/);
-  console.log("Prozessabbruch: sechs Spiele fortgesetzt, verdeckte Einsätze erhalten, Karten geschützt, Zugwiederholung, Arenauhr und dauerhafte Raumschließung geprüft.");
+  // Rooms stay open after an abort, also across a restart: the member returns to the end screen, then to the lobby.
+  const back = await connect(url), after = await reply(back, "room:join", { code: p.code, playerId: "ada", sessionToken: p.host });
+  assert.equal(after.partyGame?.phase, "aborted");
+  await assert.rejects(reply(await connect(url), "room:join", { code: p.code, playerId: "ada", sessionToken: m.host }), /ursprüngliche Sitzung/);
+  assert.equal((await reply(back, "room:lobby")).phase, "lobby");
+  console.log("Prozessabbruch: sechs Spiele fortgesetzt, verdeckte Einsätze erhalten, Karten geschützt, Zugwiederholung, Arenauhr und Rückkehr in die Lobby nach Abbruch geprüft.");
 } finally {
   sockets.forEach(s => s.disconnect());
   await server.close();

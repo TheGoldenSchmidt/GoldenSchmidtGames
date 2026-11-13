@@ -150,7 +150,7 @@ export function PartyGameScreen({profile,initialRoom,onExit,onLobby}:{profile:Gu
 
         {competition&&g.mode==="goldenschmidt"&&["mini-bet","mini-intro"].includes(g.phase)&&<MinigameScoreboard game={g}/>}
         {g.phase==="mini-bet"&&<MinigameBetting key={g.phaseId} game={g} viewer={viewer} busy={busy||Boolean(g.pausedAt)} send={send}/>}
-        {competition&&["mini-result","finished"].includes(g.phase)&&<MinigameResults game={g} viewer={viewer} host={host} busy={busy||Boolean(g.pausedAt)} send={send} onExit={onLobby??onExit}/>}
+        {competition&&["mini-result","finished"].includes(g.phase)&&<MinigameResults game={g} viewer={viewer} host={host} busy={busy||Boolean(g.pausedAt)} send={send} onExit={onLobby??onExit} exitLabel={onLobby?"Zurück zur Lobby":"Zurück zu GSG"}/>}
         {g.phase==="mini-intro"&&m&&<div className="party-mini-intro">
           <MiniPreview id={m.id}/><p className="party-mini-round">{g.opening?"Auftakt: Bestimmt eure Zugreihenfolge":`Minispiel der Runde ${g.round}`}</p><h1>{MINIS[m.id].name}</h1><p className="party-mini-tagline">{MINI_LOOK[m.id].action}</p><p>{MINIS[m.id].instruction}</p><div className="party-mini-facts"><span>{MINI_LOOK[m.id].goal}</span><span>{competition?(g.mode==="goldenschmidt"?`Dein Einsatz: ${competition.bets[viewer]??"–"} Punkte`:"Ein Spiel · ein Ergebnis"):g.opening?"Ergebnis bestimmt euren Startplatz":"Platz 1: 10 · Platz 2: 4 · Platz 3: 2 Münzen"}</span></div>
           <button className="button button--secondary button--wide" onClick={()=>setPractice(m.id)}>Erst kurz üben</button>

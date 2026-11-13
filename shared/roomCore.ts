@@ -296,7 +296,8 @@ hub.onPeer((socket) => {
   let lastPartyControl=0;
   withPayload("party:session-status",(payload:{code?:string;playerId?:string;partyToken?:string},callback:(ack:Ack<{available:boolean}>)=>void)=>{
     const room=rooms.get(cleanName(payload?.code,"").toUpperCase()),id=cleanPlayerId(payload?.playerId);
-    const available=Boolean(id&&room?.partyGame&&!['finished','aborted'].includes(room.partyGame.phase)&&payload?.partyToken&&roomTokens.get(room.code)?.get(id)===payload.partyToken&&room.players.some(p=>p.id===id&&!p.bot));
+    // Also after the end (finished/aborted) until the room is back in its lobby: members return to the end screen.
+    const available=Boolean(id&&room?.partyGame&&payload?.partyToken&&roomTokens.get(room.code)?.get(id)===payload.partyToken&&room.players.some(p=>p.id===id&&!p.bot));
     if(available)socket.join(`party-status:${room!.code}`);
     callback({ok:true,data:{available}});
   });
@@ -429,7 +430,9 @@ hub.onPeer((socket) => {
     ) => {
       const code = cleanName(payload?.code, "").toUpperCase();
       const room = rooms.get(code);
-      if (!room||room.partyGame&&["finished","aborted"].includes(room.partyGame.phase)) return callback({ ok: false, error: "Dieser Raum ist geschlossen oder wurde nicht gefunden." });
+      // Rooms stay open after a game: members (valid key, checked below) may come back to the
+      // end screen and on to the lobby; newcomers are refused below until the room is a lobby again.
+      if (!room) return callback({ ok: false, error: "Dieser Raum ist geschlossen oder wurde nicht gefunden." });
       const playerId = cleanPlayerId(payload?.playerId);
       if (!playerId) return callback({ ok: false, error: "Ungültige Spieler-ID." });
       let player = room.players.find(entry => entry.id === playerId);

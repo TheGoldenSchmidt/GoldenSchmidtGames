@@ -106,7 +106,14 @@ try{
     }else throw new Error(`Unerwartete Phase ${g.phase}`);
   }
   assert.equal(room.partyGame!.phase,"finished");assert.ok(room.partyGame!.winners.length>0);
-  await assert.rejects(request(host,"room:join",{code:room.code,playerId:a,partyToken:hostToken}));
+  // Rooms stay open after the game: members with their key come back to the end screen,
+  // strangers and wrong keys are refused; after "Zurück zur Lobby" the old game session is gone.
+  assert.equal((await request<{available:boolean}>(host,"party:session-status",{code:room.code,playerId:a,partyToken:hostToken})).available,true);
+  assert.equal((await request(host,"room:join",{code:room.code,playerId:a,partyToken:hostToken,resumeOnly:true})).partyGame!.phase,"finished");
+  await assert.rejects(request(host,"room:join",{code:room.code,playerId:a,partyToken:guestToken}),/ursprüngliche Sitzung/);
+  const stranger=await connect();
+  await assert.rejects(request(stranger,"room:join",{code:room.code,playerId:"cccccccc-cccc-4ccc-8ccc-cccccccccccc",name:"Fremd",characterId:"alpha_rick_prime"}),/läuft bereits/);
+  assert.equal((await request(host,"room:lobby")).phase,"lobby");
   assert.equal((await request<{available:boolean}>(host,"party:session-status",{code:room.code,playerId:a,partyToken:hostToken})).available,false);
   console.log("Inselparty online erfolgreich: vollständige Partie, gemeinsame Echtzeit-Arena, getrennte Figurensteuerung, Eingabe-/Sitzungsschutz, doppelte/veraltete Aktionen, Pause und Wiederbeitritt");
 }finally{sockets.forEach(s=>s.disconnect());await server.close();}

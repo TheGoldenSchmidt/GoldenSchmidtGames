@@ -74,8 +74,9 @@ for (const reducedMotion of ["reduce", "no-preference"] as const) {
       await expect(page.getByRole("list", { name: "Minispielergebnis", exact: true })).toContainText("Bestzeit");
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       await page.screenshot({ path: testInfo.outputPath(`result-${reducedMotion}.png`), fullPage: true });
-      await page.getByRole("button", { name: "Zurück zu GSG", exact: true }).tap();
-      await expect(page.getByRole("button", { name: /Online spielen/ })).toBeVisible();
+      // Online rooms return to their lobby after the game.
+      await page.getByRole("button", { name: "Zurück zur Lobby", exact: true }).tap();
+      await expect(page.getByRole("heading", { name: "Mitspieler", exact: true })).toBeVisible();
       expect(errors).toEqual([]);
     } finally { session.close(); }
   });
