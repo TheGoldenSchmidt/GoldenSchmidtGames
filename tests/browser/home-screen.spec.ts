@@ -23,7 +23,7 @@ for (const reducedMotion of ["no-preference", "reduce"] as const) {
       .filter(animation => animation.playState === "running").length), { timeout: 5000 }).toBe(0);
     // One fixed screen: nothing scrolls, the sky and corner layers are decoration only.
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
-    await expect(page.locator(".home-world__corner").first()).toBeVisible();
+    await expect(page.locator(".iw-world__corner").first()).toBeVisible();
     await page.screenshot({ path: info.outputPath(`start-${reducedMotion}.png`), fullPage: true });
 
     // Both modes remain immediately accessible, including from the keyboard.

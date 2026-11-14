@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import type { GuestProfile, RoomState } from "../../shared/types";
 import { ScreenHeader } from "../components/ScreenHeader";
+import { IslandWorld } from "../components/IslandWorld";
 import { displayName } from "../lib/profile";
 import { nearby } from "../nearby/nearbySocket";
 import { GuestPair } from "../nearby/Pairing";
@@ -102,17 +103,17 @@ export function OnlineEntryScreen({
   }
 
   return (
-    <main className="page party-menu screen-enter">
+    <main className="page iw-menu screen-enter">
+      <IslandWorld />
       <ScreenHeader title="Online spielen" onBack={onBack} />
       <section className="page__content online-entry">
 
-        <div className="section-heading section-heading--center">
-          <h2>Zusammen an einen Tisch</h2>
-          <p>Jede Person spielt auf ihrem eigenen Gerät.</p>
-        </div>
+        <p className="iw-note">Zusammen an einen Tisch: Jede Person spielt auf ihrem eigenen Gerät.</p>
 
         <PartyCharacterPicker value={selected} disabled={loading} onChange={onCharacterChange}/>
 
+        <section className="iw-card">
+          <h2 className="iw-plank iw-card__title">Neuer Raum</h2>
         <fieldset className="hosting-choice" disabled={loading||pairing}>
           <legend>Wo soll der Raum laufen?</legend>
           <label><input type="radio" name="hosting" checked={!nearbyMode} onChange={()=>setNearbyMode(false)}/><span><strong>Node-Server</strong><small>Alle brauchen Internet. Beitritt mit Raumcode.</small></span></label>
@@ -121,9 +122,10 @@ export function OnlineEntryScreen({
         <button className="button button--primary button--wide" onClick={createRoom} disabled={loading||pairing||!selected}>
           {loading ? "Verbindung wird hergestellt …" : "Neuen Raum erstellen"}
         </button>
+        </section>
 
-        <div className="or-divider"><span>oder</span></div>
-
+        <section className="iw-card">
+          <h2 className="iw-plank iw-card__title">Raum beitreten</h2>
 
         <label className="field field--code">
           <span>Raumcode</span>
@@ -139,6 +141,7 @@ export function OnlineEntryScreen({
         <button className="button button--secondary button--wide" onClick={joinRoom} disabled={loading || !selected || code.length < 5}>
           Raum beitreten
         </button>
+        </section>
         {selected && <details className="nearby-join" onToggle={event=>{
           const open=event.currentTarget.open;setJoinOpen(open);
           if(!open && pairing){nearby.disconnect();setPairing(false);invitationCode.current="";}

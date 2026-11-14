@@ -30,7 +30,8 @@ wichtigste nächste Aktion.
 | Bereich | Stand |
 | --- | --- |
 | Startbildschirm | Inselwelt als gerenderte 3D-Szene umgesetzt und geprüft ([Renderpipeline](docs/startscreen-render.md)) |
-| Lokales Setup, Online-Menü, Lobby, Gastprofil, QR-Dialog | Noch im früheren Party-Stil (`.party-menu`, `--menu-*`); Umstellung geplant |
+| Lokales Setup, Online-Menü, Lobby, Wiederverbindung, Gastprofil, QR-Dialog | Inselwelt umgesetzt und auf dem Handy geprüft (`.iw-menu`, `.iw-dialog`, [menus.css](src/styles/menus.css)) |
+| Menüs laufender Minispiel-Wettbewerbe (Einsatz, Ergebnis) | Noch im früheren Party-Stil (`.party-menu`, `--menu-*` in [partyMenus.css](src/styles/partyMenus.css)) |
 | Spielflächen, Live-HUDs, Minispiele | Eigene Gestaltung; Umstellung geplant, nur auf ausdrücklichen Auftrag |
 
 Wer eine noch nicht umgestellte Ansicht bearbeitet, stellt sie entweder ganz auf die
@@ -104,17 +105,20 @@ Qwixx-Reihen, Würfelfarben und Kartenfarben bleiben semantisch unverändert.
 | --- | --- | --- |
 | Tafel | `.iw-slab` mit `.iw-slab__face`, Varianten `--gold`, `--violet`, `--stone` | Jede Aktion. Gold und Amethyst für große Zugänge, Stein kompakt für Nebenaktionen. Gerendertes Sprite als 9-Slice |
 | Chip | `.iw-chip`, tippbar als `.iw-chip--light` | Status (dunkles Glas) und Profil (hell mit Tintenrand) |
-| Gerenderte Ebenen | `src/assets/home/*.webp`, Quelle `scripts/home-render/` | Insel mit Logo, Himmel hoch und quer, Vordergrund-Ecken |
+| Holzschild | `.iw-plank` | Bildschirmtitel und Kartentitel. Gerendertes Brett als 9-Slice, dunkle Lilita-Schrift |
+| Pergamentkarte | `.iw-card` mit Titel `.iw-plank.iw-card__title` und `.iw-card__lead` | Listen, Formulare, Einstellungen. Der Titel sitzt als Holzschild auf der Oberkante |
+| Glashinweis | `.iw-note` | Kurze Hinweise direkt auf dem Himmel |
+| Welt | `IslandWorld` | Gerenderter Himmel mit Vordergrund-Ecken hinter Startbildschirm und Menüs |
+| Gerenderte Ebenen | `src/assets/home/*.webp`, Quelle `scripts/home-render/` | Insel mit Logo, Himmel hoch und quer, Vordergrund-Ecken, Tafeln, Holzschild |
 
-Holzschild und Papierfläche gibt es bisher nur innerhalb des Startbildschirms (Motto
-in der Inselgrafik, Installationshilfe). Als eigene Bausteine entstehen sie mit der
-Umstellung der Menüs und werden dann hier eingetragen.
-
-- Eine Tafel ist ein gerendertes Sprite: abgefaste Fläche mit Farbverlauf und heller
-  Oberkante, darunter eine dunklere Seitenwand, außen eine Tintenkontur, darunter ein
-  weicher Schlagschatten. Die Ecken sind abgeschlagen, je eine kleine Kerbe sitzt in
-  Ober- und Unterkante. Form und Farbe nur in `sprites.ts` ändern und neu rendern,
+- Eine Tafel ist ein gerenderter Steinblock: ebene Fläche mit Farbverlauf und feinen
+  Haarrissen, ringsum eine unregelmäßig abgeschlagene Fase (oben hell, unten dunkel),
+  darunter ein dunklerer Sockel als sichtbare Dicke, außen eine dunkle Kante und ein
+  weicher Schlagschatten. Form und Farbe nur in `sprites.ts` ändern und neu rendern,
   nicht per CSS nachbauen; keine runden Ecken an Tafeln.
+- In Inselwelt-Menüs und -Dialogen werden die vorhandenen `.button`-Klassen
+  automatisch zu Tafeln: `--primary` Gold, `--secondary` Amethyst, `--ghost` Stein.
+  Die Geräte-Kopplung ist eine Nebenaufgabe und nutzt Stein.
 - Gedrückt wechselt das Sprite zu einer in die Seitenwand gesunkenen Fläche, der Inhalt
   sinkt mit. Hover hellt leicht auf; Bedienung und Information dürfen nicht davon abhängen. Der Fokusring ist 3 px Papier mit
   3 px Abstand und bleibt auf Himmel und Material sichtbar.
@@ -191,7 +195,7 @@ Vorlage ist die [Referenz](docs/design/startscreen-referenz.webp).
 - Ebenen von hinten nach vorn: gerenderter Himmel mit Landschaft (eigenes Bild für Hoch-
   und Querformat), Vordergrund-Büsche in den unteren Ecken, die Insel mit Steinlogo, Krone,
   Fahne, Schwert im Stein, Würfel, leuchtender Schatztruhe, Wasserfall und dem Holzschild
-  „Minispiele • Party • Gemeinsam“, darüber die Bedienelemente. Auf dem Handy ragt die
+  „Play like The GoldenSchmidt – Be like The GoldenSchmidt“ (zweizeilig), darüber die Bedienelemente. Auf dem Handy ragt die
   Insel über beide Seitenränder; die Tafeln überlappen ihre Felsspitzen.
 - Auftritt in etwa zwei Sekunden: Zuerst fliegt der Steinrahmen ein, dann erscheint die Insel,
   danach fliegen „Golden“, „Schmidt“ und „Games“ nacheinander ein. Danach ruht die Seite.
@@ -237,10 +241,11 @@ Spielinformation. Gestaltung und Regeln stehen in [docs/minigames](docs/minigame
 ## Umsetzung und Prüfung
 
 Inselwelt-Ansichten bauen auf den Bausteinen aus `inselwelt.css` auf; Regeln, die
-nur eine Ansicht betreffen, stehen in deren eigener CSS-Datei. Bis zur Umstellung
-gilt für die übrigen Menüs: `.party-menu` mit den `--menu-*`-Variablen in
-[partyMenus.css](src/styles/partyMenus.css), das Gastprofil über `.party-dialog`,
-QR-Dialoge über `.pair-dialog`. Globale Selektoren und `!important` nicht als
+nur eine Ansicht betreffen, stehen in deren eigener CSS-Datei. Menüs vor dem Spiel
+tragen `.iw-menu`, setzen `IslandWorld` und `ScreenHeader` ein und gruppieren Inhalte
+in Pergamentkarten ([menus.css](src/styles/menus.css)); Dialoge tragen `.iw-dialog`.
+Die Menüs laufender Minispiel-Wettbewerbe nutzen bis zu ihrer Umstellung weiter
+`.party-menu` mit den `--menu-*`-Variablen in [partyMenus.css](src/styles/partyMenus.css). Globale Selektoren und `!important` nicht als
 Ersatz für klare Zuständigkeiten einsetzen. Spielregeln, Sitzungen und Transport
 bleiben außerhalb der Gestaltung.
 

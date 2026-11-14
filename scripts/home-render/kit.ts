@@ -73,6 +73,8 @@ export interface SurfaceOptions {
   albedo?: number;
   /** Strength of the grain as surface relief. */
   bump?: number;
+  /** Fine dark cracks along noise ridges (0 to 1). */
+  cracks?: number;
   flat?: boolean;
   color?: string;
   vertexColors?: boolean;
@@ -87,6 +89,7 @@ varying vec3 vSurfacePos;
 uniform vec3 uGrain;
 uniform float uAlbedo;
 uniform float uBump;
+uniform float uCracks;
 float surfaceHash(vec3 p) { p = fract(p * .3183099 + .1); p *= 17.; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
 float surfaceNoise(vec3 x) {
   vec3 i = floor(x), f = fract(x);
@@ -114,18 +117,27 @@ export function surface(options: SurfaceOptions = {}) {
     emissiveIntensity: options.emissiveIntensity ?? 1
   });
   const grain = new THREE.Vector3(...(options.grain ?? [6, 6, 6]));
-  const albedo = options.albedo ?? .14, bump = options.bump ?? .6;
+  const albedo = options.albedo ?? .14, bump = options.bump ?? .6, cracks = options.cracks ?? 0;
   material.onBeforeCompile = shader => {
     shader.uniforms.uGrain = { value: grain };
     shader.uniforms.uAlbedo = { value: albedo };
     shader.uniforms.uBump = { value: bump };
+    shader.uniforms.uCracks = { value: cracks };
     shader.vertexShader = "varying vec3 vSurfacePos;\n" + shader.vertexShader.replace("#include <begin_vertex>",
       "#include <begin_vertex>\nvSurfacePos = (modelMatrix * vec4(transformed, 1.)).xyz;");
     shader.fragmentShader = shader.fragmentShader
       .replace("#include <common>", "#include <common>\n" + NOISE)
       .replace("#include <color_fragment>", `#include <color_fragment>
         float surfaceH = surfaceGrain(vSurfacePos * uGrain);
-        diffuseColor.rgb *= 1. + (surfaceH - .5) * 2. * uAlbedo;`)
+        diffuseColor.rgb *= 1. + (surfaceH - .5) * 2. * uAlbedo;
+        if (uCracks > 0.) {
+          // Thin lines where a second noise crosses its middle, only in some patches: hairline cracks.
+          float ridge = abs(surfaceNoise(vSurfacePos * uGrain * 1.3 + 13.1) - .5);
+          float crackArea = smoothstep(.58, .74, surfaceNoise(vSurfacePos * uGrain * .22 + 4.2));
+          float crack = (1. - smoothstep(.004, .014, ridge)) * crackArea;
+          diffuseColor.rgb *= 1. - crack * uCracks;
+          surfaceH -= crack * .35;
+        }`)
       .replace("#include <normal_fragment_maps>", `#include <normal_fragment_maps>
         {
           vec2 dHdxy = vec2(dFdx(surfaceH), dFdy(surfaceH)) * uBump;
@@ -135,7 +147,7 @@ export function surface(options: SurfaceOptions = {}) {
           normal = normalize(abs(det) * normal - sign(det) * (dHdxy.x * r1 + dHdxy.y * r2));
         }`);
   };
-  material.customProgramCacheKey = () => `surface-${grain.toArray().join()}-${albedo}-${bump}`;
+  material.customProgramCacheKey = () => `surface-${grain.toArray().join()}-${albedo}-${bump}-${cracks}`;
   return material;
 }
 

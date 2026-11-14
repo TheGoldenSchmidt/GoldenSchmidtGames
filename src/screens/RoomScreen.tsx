@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { GAMES, getGame } from "../../shared/games";
 import type { GameId, GuestProfile, RoomState } from "../../shared/types";
 import { ScreenHeader } from "../components/ScreenHeader";
+import { IslandWorld } from "../components/IslandWorld";
 import { HostInvite } from "../nearby/Pairing";
 import { socket } from "../lib/socket";
 import { PartySettings } from "../components/PartySettings";
@@ -74,7 +75,8 @@ export function RoomScreen({
   }
 
   return (
-    <main className="page party-menu screen-enter">
+    <main className="page iw-menu screen-enter">
+      <IslandWorld />
       <ScreenHeader title="Lobby" onBack={onBack} />
       <section className="page__content room">
         {socket.tableRoute?.role==="host" && !room.partyTest && <HostInvite code={room.code}/>}
@@ -86,11 +88,10 @@ export function RoomScreen({
         <button className="lobby-character-button" onClick={()=>setChooseFigure(value=>!value)} aria-expanded={chooseFigure}><CharacterAvatar id={room.players.find(p=>p.id===profile.id)?.characterId}/><span><small>Deine Spielfigur</small><strong>{CHARACTERS.find(c=>c.id===room.players.find(p=>p.id===profile.id)?.characterId)?.name}</strong></span><b>{chooseFigure?"Figurenwahl schließen":"Spielfigur ändern"}</b></button>
         {chooseFigure&&<PartyCharacterPicker value={room.players.find(p=>p.id===profile.id)?.characterId} index={Math.max(0,room.players.findIndex(p=>p.id===profile.id))} onChange={chooseCharacter}/>}
 
+        <section className="iw-card">
+          <h2 className="iw-plank iw-card__title">Mitspieler</h2>
         <div className="section-heading section-heading--row">
-          <div>
-            <h2>Mitspieler</h2>
-            <p>{connectedCount} von {room.config.playerCount} Plätzen besetzt</p>
-          </div>
+          <p className="iw-card__lead">{connectedCount} von {room.config.playerCount} Plätzen besetzt</p>
           <span className="live-badge"><i /> Live</span>
         </div>
 
@@ -112,7 +113,10 @@ export function RoomScreen({
             </div>
           ))}
         </div>
+        </section>
 
+        <section className="iw-card">
+          <h2 className="iw-plank iw-card__title">Spiel</h2>
         <div className="lobby-config">
           <label className="lobby-config__game">
             <span>Ausgewähltes Spiel</span>
@@ -151,6 +155,7 @@ export function RoomScreen({
             />
           </label>
         )}
+        </section>
 
         <button
           className={`button button--wide ${currentPlayerReady ? "button--secondary" : "button--primary"}`}
@@ -163,7 +168,7 @@ export function RoomScreen({
               ? `Bereit (${readyCount}/${room.config.playerCount})`
               : "Ich bin bereit"}
         </button>
-        <p className="lobby-status">
+        <p className="lobby-status iw-note">
           {connectedCount === room.config.playerCount
             ? `Das Spiel startet automatisch, sobald alle ${room.config.playerCount} Spieler bereit sind.`
             : "Sobald alle Plätze besetzt sind, können sich alle Spieler bereit melden."}

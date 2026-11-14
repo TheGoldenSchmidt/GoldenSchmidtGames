@@ -28,12 +28,12 @@ mit den vorhandenen Werkzeugen (Node, Vite, Playwright-Chromium).
 | `scripts/home-render/kit.ts` | Zufall mit Startwert, Facetten-Geometrie, Palette, Material `surface()` mit prozeduraler Oberflächenstruktur |
 | `scripts/home-render/hero.ts` | Insel, Steinschild, extrudierte Logo-Schrift, Krone, Fahne, Schwert, Würfel, Truhe, Holzschild, Wasserfall |
 | `scripts/home-render/backdrop.ts` | Himmel, Wolken, Berge und Tannen für Hoch- und Querformat; Vordergrund-Ecken |
-| `scripts/home-render/sprites.ts` | Tafeln (Gold, Violett, Stein, je normal und gedrückt) und Pfeil-Fassungen; Slice-Maße in `SLAB_SPRITES` |
+| `scripts/home-render/sprites.ts` | Tafeln als Steinblöcke (Gold, Violett, Stein, je normal und gedrückt), Holzbrett und Pfeil-Fassungen; Slice-Maße in `SLAB_SPRITES` und `PLANK_SPRITE` |
 | `scripts/home-render/layers.ts` | Alle Ebenen mit Größe, Kamera, Licht, Durchgängen und Farbkorrektur |
 | `scripts/home-render/render.ts`, `index.html` | Browserseite: Rendern, Nachbearbeitung, WebP-Export; Live-Vorschau |
 | `scripts/home-render/bake.ts` | Startet Vite und Chromium, rendert Ebenen, schreibt `src/assets/home/<id>.webp` |
 | `scripts/home-render/compare.ts` | Stellt Startbildschirm und Referenz gegenüber |
-| `scripts/home-render/logoPaths.ts` | Umrisse von „GOLDEN“, „SCHMIDT“, „GAMES“ und des Mottos aus Lilita One |
+| `scripts/home-render/logoPaths.ts` | Umrisse von „GOLDEN“, „SCHMIDT“, „GAMES“ und der beiden Mottozeilen aus Lilita One |
 | `src/assets/home/*.webp`, `hero-layers.json` | Gerenderte Ebenen (eingecheckt, zusammen etwa 400 KB) und die Lage der zugeschnittenen Insel-Ebenen |
 | `docs/design/startscreen-referenz.webp` | Gestaltungsvorlage |
 
@@ -44,7 +44,8 @@ mit den vorhandenen Werkzeugen (Node, Vite, Playwright-Chromium).
 | `hero-plaque`, `hero-island`, `hero-golden`, `hero-schmidt`, `hero-games` | Bildfeld 1000 × 1195, transparent, auf den Inhalt zugeschnitten | Steinrahmen (mit Krone, Ranken, Fahne), Insel mit Requisiten, die drei Wörter des Logos. `hero-layers.json` hält die Lage jedes Ausschnitts im Bildfeld fest; die Seite legt sie deckungsgleich übereinander. Zusammen bilden sie das Bild in der Überschrift `h1` (zugänglicher Name „GoldenSchmidtGames“) |
 | `backdrop-portrait`, `backdrop-landscape` | 900 × 1950, 1920 × 1080 | Himmel und Landschaft; `<picture>` wählt nach Seitenverhältnis, `object-fit: cover` |
 | `corner-left`, `corner-right` | 520 × 600, transparent | Büsche und Fels unten links und rechts |
-| `slab-gold`, `slab-violet`, `slab-stone` und `-pressed` | 720 × 172, 360 × 104 | 9-Slice-Hintergrund der Tafeln, gedrückt mit eingesunkener Fläche |
+| `slab-gold`, `slab-violet`, `slab-stone` und `-pressed` | 720 × 184, 360 × 112 | Steinblöcke als 9-Slice-Hintergrund der Tafeln (auch Raumcode-Feld der Lobby), gedrückt mit eingesunkener Fläche |
+| `plank` | 480 × 112 | Holzbrett als 9-Slice hinter Bildschirm- und Kartentiteln der Menüs |
 | `socket-gold`, `socket-violet` | 96 × 96 | Achteck hinter dem Pfeil |
 
 ## Szenenaufbau
@@ -56,7 +57,8 @@ mit den vorhandenen Werkzeugen (Node, Vite, Playwright-Chromium).
 - **Insel:** Ringe aus Grasfläche mit Sandweg, Grasrand, Erdschicht und Fels; hängende Felskegel,
   Grasvorsprünge, Kiesel und Grasbüschel. Requisiten: Schwert im Stein, Würfel (abgerundet,
   Augen auf drei Seiten), offene Truhe mit leuchtendem Münzhaufen, Edelsteinen und Funkeln,
-  Fahne mit Kronenwappen, gebogenes Holzschild mit eingeschnittenem Motto, Wasserfall.
+  Fahne mit Kronenwappen, gebogenes Holzschild mit dem zweizeiligen Motto „Play like The GoldenSchmidt“ /
+  „Be like The GoldenSchmidt“, Wasserfall.
 - **Hintergrund:** Die Komposition steht in `PORTRAIT` und `LANDSCAPE` als Bildschirmanteile
   mit Tiefe; jedes Element wird über die Kamera an diese Stelle projiziert. So lässt es sich
   direkt an der Referenz ausrichten. Nebel blendet ferne Berge in den Dunst.
@@ -68,7 +70,7 @@ mit den vorhandenen Werkzeugen (Node, Vite, Playwright-Chromium).
 
 ## Materialien und Licht
 
-- `surface()` erweitert `MeshStandardMaterial` um eine Körnung aus 3D-Rauschen. Sie verändert
+- `surface()` erweitert `MeshStandardMaterial` um eine Körnung aus 3D-Rauschen, optional mit feinen Haarrissen (`cracks`). Sie verändert
   Albedo und Normale (wie eine Bump-Map, ohne Textur). Gestreckte Körnung ergibt Holzmaserung.
 - Facetten erhalten pro Dreieck leicht abweichende Töne aus der Palette in `kit.ts`; Moos sitzt
   auf nach oben gerichteten Steinflächen.
@@ -106,7 +108,11 @@ Live-Vorschau zum Bearbeiten: `npx vite` starten und
 Szene in Echtzeit mit vereinfachtem Licht; maßgeblich ist der gerenderte Stand.
 
 Nach Änderungen an Tafel-Sprites die Slice-Maße in `SLAB_SPRITES` (`sprites.ts`) und
-`--slab-slice`, `--slab-edge`, `--slab-face-*` (`inselwelt.css`) gemeinsam anpassen.
+`--slab-slice`, `--slab-edge`, `--slab-face-*` (`inselwelt.css`, dazu das Raumcode-Feld in
+`menus.css`) gemeinsam anpassen; beim Holzbrett `PLANK_SPRITE` und `.iw-plank`.
+
+Der Renderlauf bricht ab, sobald die Renderseite einen Konsolenfehler meldet, etwa einen
+Shader, der nicht kompiliert. Sonst fehlten die betroffenen Objekte unbemerkt im Bild.
 
 ## Anbindung an die App
 

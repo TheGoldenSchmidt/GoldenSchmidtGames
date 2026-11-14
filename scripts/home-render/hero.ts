@@ -6,7 +6,7 @@ import {
   at, C, CHEST_WOOD, chamferedRect, extrudeText, facet, GOLD, GRASS, GRASS_LIP, jitter, mesh, polygonShape,
   type Paint, type Rand, rockPaint, seeded, stonePaint, surface, tone, WOOD
 } from "./kit";
-import { LOGO_GAMES, LOGO_GOLDEN, LOGO_SCHMIDT, MOTTO } from "./logoPaths";
+import { LOGO_GAMES, LOGO_GOLDEN, LOGO_SCHMIDT, MOTTO_BE, MOTTO_PLAY } from "./logoPaths";
 
 /* Materials of this layer. `reflective` marks metals that receive the warm studio reflection. */
 const stoneMat = surface({ grain: [7, 7, 7], albedo: .14, bump: .9, roughness: .82 });
@@ -417,9 +417,9 @@ function sign(rand: Rand) {
     }
     return geo;
   };
-  // Plank outline with ragged, cut ends.
+  // Plank outline with ragged, cut ends; tall enough for the motto in two lines.
   const outline: Array<[number, number]> = [
-    [-L, -.18], [-L - .05, .02], [-L + .02, .22], [-L + .2, .32], [L - .2, .32], [L - .03, .23], [L + .06, .04], [L - .02, -.2], [L - .22, -.31], [-L + .2, -.31]
+    [-L, -.28], [-L - .05, .02], [-L + .02, .34], [-L + .2, .46], [L - .2, .46], [L - .03, .35], [L + .06, .04], [L - .02, -.3], [L - .22, -.45], [-L + .2, -.45]
   ];
   const plankShape = polygonShape(outline);
   const plank = new THREE.ExtrudeGeometry(plankShape, { depth: .1, bevelEnabled: true, bevelThickness: .035, bevelSize: .03, bevelSegments: 2, curveSegments: 2, steps: 1 });
@@ -431,13 +431,15 @@ function sign(rand: Rand) {
   const back = new THREE.ExtrudeGeometry(plankShape, { depth: .06, bevelEnabled: true, bevelThickness: .01, bevelSize: .045, bevelOffset: .02, bevelSegments: 1 });
   back.translate(0, -.015, -.05);
   g.add(mesh(bend(tessellateX(back, 40)), plain("#4a2a17", .9)));
-  // Engraved motto.
-  const text = extrudeText(MOTTO, { depth: 4, bevelEnabled: true, bevelThickness: .6, bevelSize: .5, bevelSegments: 1, curveSegments: 4 });
-  text.scale(.00215, .00215, .00215);
-  text.translate(0, -.075, .136);
-  bend(tessellateX(text, 0));
-  text.computeVertexNormals();
-  g.add(mesh(text, plain("#43240f", .85)));
+  // Engraved motto: „Play like The GoldenSchmidt“ above „Be like The GoldenSchmidt“.
+  for (const [line, baseline] of [[MOTTO_PLAY, .07], [MOTTO_BE, -.26]] as const) {
+    const text = extrudeText(line, { depth: 4, bevelEnabled: true, bevelThickness: .6, bevelSize: .5, bevelSegments: 1, curveSegments: 4 });
+    text.scale(.0026, .0026, .0026);
+    text.translate(0, baseline, .136);
+    bend(tessellateX(text, 0));
+    text.computeVertexNormals();
+    g.add(mesh(text, plain("#43240f", .85)));
+  }
   return g;
 }
 
@@ -523,7 +525,7 @@ export function buildHero(part: HeroPart) {
   const stone = mesh(facet(jitter(new THREE.IcosahedronGeometry(.36, 1), .08, 600), stonePaint, rand), stoneMat);
   stone.scale.set(1.2, .55, .95);
   ground.push(at(stone, -1.42, .1, .52), at(sword(rand), -1.4, .1, .52), at(die(), -.74, .3, .66), at(chest(rand), 1.5, .04, .38),
-    at(sign(rand), 0, -.47, 1.74), at(waterfall(), .64, -.22, 1.62));
+    at(sign(rand), 0, -.58, 1.74), at(waterfall(), .64, -.22, 1.62));
   if (part === "island") scene.add(...ground);
 
   const words = HERO_WORDS.map(name => logo.getObjectByName(name)!);

@@ -13,6 +13,7 @@ import "./styles/gameIntro.css";
 import "./styles/kribbelnCup.css";
 import "./styles/qwixxCup.css";
 import "./styles/partyMenus.css";
+import "./styles/menus.css";
 import "./styles/matches.css";
 
 createRoot(document.getElementById("root")!).render(
