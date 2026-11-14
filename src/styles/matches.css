@@ -47,6 +47,10 @@
 .match-action:disabled { opacity:.45; }
 .match-action:focus-visible { outline:3px solid #fff9ed; outline-offset:3px; }
 .match-swipe-zone,.match-aim-pad { position:absolute; inset:0; touch-action:none; }
+/* Per-device camera toggle (chase camera ⇄ overview), top right of the stage. */
+.match-controls .match-camera { position:absolute; top:10px; right:10px; min-height:44px; padding:0 14px; border-radius:999px; border:2px solid #fff9ed66; background:#24133fd9; color:#fff9ed; font-weight:800; font-size:.8rem; touch-action:manipulation; }
+.match-controls .match-camera[aria-pressed="true"] { background:#ffe44e; color:#24133f; border-color:#24133f; }
+.match-controls .match-camera:focus-visible { outline:3px solid #fff9ed; outline-offset:3px; }
 .match-slider { position:absolute; left:0; right:0; bottom:0; height:46%; touch-action:none; }
 
 /* Quick Draw: the whole street is the trigger. */
@@ -92,6 +96,7 @@ body:has(.party-screen--playing .match-game) { padding-block:0; }
 .tank-aim-half { position:absolute; top:0; right:0; bottom:0; width:50%; pointer-events:auto; }
 .tank-aim-hint { position:absolute; right:12px; bottom:18px; padding:4px 10px; border-radius:999px; background:#24133fcc; color:#ffe44e; font-size:.72rem; font-weight:800; white-space:nowrap; pointer-events:none; }
 .match-preview--tanks { background:repeating-linear-gradient(45deg, #c9b98a 0 12px, #d3c597 12px 24px); color:#3b3550; }
+.match-preview--tankview { background:radial-gradient(circle at 50% 60%, #c9b98a 18%, #3b3550 60%); color:#ffe44e; }
 .match-preview--bombs { background:radial-gradient(circle at 50% 45%, #ff7a28, #4b4766 70%); color:#16121f; }
 .match-preview--lava { background:radial-gradient(circle at 50% 50%, #ffb03c, #8a1d12 75%); color:#2a1a10; }
 .match-preview--sumo { background:radial-gradient(circle at 50% 50%, #e9d7a8 40%, #7fc8f8 42%); color:#b23a48; }

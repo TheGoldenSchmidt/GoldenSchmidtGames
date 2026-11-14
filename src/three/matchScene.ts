@@ -117,3 +117,37 @@ export function frameBox(kit: SceneKit, x0: number, x1: number, z0: number, z1: 
   place(d);
   return { position: pos.clone(), target: target.clone() };
 }
+
+/** Shortest signed difference between two angles. */
+export const angleDelta = (from: number, to: number) => Math.atan2(Math.sin(to - from), Math.cos(to - from));
+
+/**
+ * Third-person camera behind the own figure. `yaw` is the heading the camera
+ * looks along (0 = towards −z, which is "up" on the overview fields). Position
+ * and heading glide with time-based damping, so 60 Hz and 120 Hz screens feel
+ * the same; with reduced motion the camera follows without lag.
+ */
+export class ChaseCamera {
+  yaw = 0;
+  private ready = false;
+  private eye = new T.Vector3();
+  private aim = new T.Vector3();
+  constructor(private kit: SceneKit, public distance = 4.4, public height = 3, public lookAhead = 1.6, public lookHeight = .7) {}
+  /** Forget the previous position (e.g. after switching camera modes). */
+  reset() { this.ready = false; }
+  /**
+   * Moves the camera behind `target`. `wantedYaw` (if given) is the heading to
+   * turn towards at `turnRate` per second; `snap` jumps there at once.
+   */
+  update(target: T.Vector3, wantedYaw: number | undefined, dt: number, reduced: boolean, turnRate = 1.6) {
+    if (!this.ready && wantedYaw !== undefined) this.yaw = wantedYaw;
+    else if (wantedYaw !== undefined) this.yaw += angleDelta(this.yaw, wantedYaw) * (reduced ? 1 : 1 - Math.exp(-dt * turnRate));
+    const fx = Math.sin(this.yaw), fz = -Math.cos(this.yaw);
+    const eye = new T.Vector3(target.x - fx * this.distance, target.y + this.height, target.z - fz * this.distance);
+    const aim = new T.Vector3(target.x + fx * this.lookAhead, target.y + this.lookHeight, target.z + fz * this.lookAhead);
+    const k = !this.ready || reduced ? 1 : 1 - Math.exp(-dt * 9);
+    this.eye.lerp(eye, k); this.aim.lerp(aim, k);
+    if (!this.ready) { this.eye.copy(eye); this.aim.copy(aim); this.ready = true; }
+    this.kit.camera.position.copy(this.eye); this.kit.camera.lookAt(this.aim);
+  }
+}

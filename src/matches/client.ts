@@ -38,7 +38,7 @@ export interface MatchIO {
   command(value: number): void;
 }
 
-export interface MatchControlsProps { io: MatchIO; view: MatchState; viewer: string; active: boolean }
+export interface MatchControlsProps { io: MatchIO; view: MatchState; viewer: string; active: boolean; /** True while the 3D world (not the canvas fallback) is shown. */ world?: boolean }
 
 export interface MatchClient {
   /** Draws one frame into a canvas already scaled to CSS pixels. */
@@ -61,3 +61,59 @@ export interface MatchClient {
 }
 
 export const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+
+/**
+ * Stick to field direction for a camera that looks along `yaw` (0 = towards
+ * the top of the field): pushing the stick up always moves away from the
+ * camera. Field x is right, field y is down on the overview (= world +z).
+ */
+export function cameraRelative(x: number, y: number, yaw: number): [number, number] {
+  const fx = Math.sin(yaw), fy = -Math.cos(yaw);
+  return [x * -fy + -y * fx, x * fx + -y * fy];
+}
+/** Heading (camera yaw) of a field direction. */
+export const headingOf = (x: number, y: number) => Math.atan2(x, -y);
+
+/** Keys in `MatchIO.local` shared between the touch controls and a 3D world with a chase camera. */
+export interface ChaseLocal {
+  /** Current camera heading while a chase camera is active; undefined otherwise. */
+  camYaw?: number;
+  /** Raw stick values as the finger holds them (screen directions). */
+  stickX?: number; stickY?: number;
+  /** Raw aim drag (screen directions) while the finger holds it. */
+  aimX?: number; aimY?: number;
+  /** 1 = overview chosen on this device. */
+  overview?: number;
+}
+
+/**
+ * Called by a 3D world with a chase camera once per frame: publishes the
+ * camera heading for the controls and keeps a held stick meaning "away from
+ * the camera" while the camera turns (the next periodic packet carries it).
+ */
+export function followCamera(local: ChaseLocal, input: MatchInput, yaw: number) {
+  local.camYaw = yaw;
+  const sx = local.stickX ?? 0, sy = local.stickY ?? 0, ax = local.aimX ?? 0, ay = local.aimY ?? 0;
+  if (Math.hypot(sx, sy) > .05) {
+    const [ix, iy] = cameraRelative(sx, sy, yaw);
+    if (Math.abs(ix - input.x) + Math.abs(iy - input.y) > .04) { input.x = ix; input.y = iy; }
+  }
+  if (Math.hypot(ax, ay) > .05) {
+    const [ix, iy] = cameraRelative(ax, ay, yaw);
+    if (Math.abs(ix - input.ax) + Math.abs(iy - input.ay) > .04) { input.ax = ix; input.ay = iy; }
+  }
+}
+/** Aim handler for chase-camera games: remembers the raw drag and sends the field direction. */
+export function chaseAim(io: MatchIO, x: number, y: number, now = true) {
+  const local = io.local as ChaseLocal;
+  local.aimX = x; local.aimY = y;
+  const [ax, ay] = local.camYaw === undefined ? [x, y] : cameraRelative(x, y, local.camYaw);
+  io.set({ ax, ay }, now);
+}
+/** Stick handler for chase-camera games: remembers the raw stick and sends the field direction. */
+export function chaseStick(io: MatchIO, x: number, y: number) {
+  const local = io.local as ChaseLocal;
+  local.stickX = x; local.stickY = y;
+  const [fx, fy] = local.camYaw === undefined ? [x, y] : cameraRelative(x, y, local.camYaw);
+  io.set({ x: fx, y: fy }, true);
+}

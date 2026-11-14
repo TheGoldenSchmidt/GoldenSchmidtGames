@@ -1,6 +1,6 @@
 import { TANK_FIELD, TT, wallRects, type TankGame } from "../../../shared/matches/tankTrouble";
 import { AimPad, Stick } from "../controls";
-import { lerp, playerColor, type MatchClient, type MatchFrame } from "../client";
+import { chaseAim, chaseStick, lerp, playerColor, type ChaseLocal, type MatchClient, type MatchFrame } from "../client";
 
 const POWER_ICON = { rapid: "⚡", triple: "⋔", shield: "⛨" } as const;
 interface Boom { x: number; y: number; t: number; color: string }
@@ -108,5 +108,26 @@ export const tankTroubleClient: MatchClient = {
     if (event.kind === "break" || event.kind === "crack") return "boom";
     if (event.kind === "overtime") return "tick";
     return undefined;
+  }
+};
+
+/**
+ * Tank Trouble – Turmsicht: same presentation, but a chase camera behind the
+ * own tank, tall walls and fog; the authority only sends what the tank can see.
+ * Stick and aim are relative to the camera.
+ */
+export const tankViewClient: MatchClient = {
+  ...tankTroubleClient,
+  world: () => import("../../three/tankWorld").then(m => (host: HTMLElement, read: Parameters<typeof m.createTankWorld>[1], onError: () => void) => m.createTankWorld(host, read, onError, { chase: true })),
+  Controls({ io, active }) {
+    const local = io.local as ChaseLocal;
+    return <>
+      <div className="tank-aim-half"><AimPad label="Zielen und schießen" radius={70}
+        onAim={(x, y) => { if (active) chaseAim(io, x, y); }}
+        onRelease={(x, y) => { if (!active) return; chaseAim(io, x, y, false); io.press("a"); local.aimX = local.aimY = 0; io.set({ ax: 0, ay: 0 }); }}>
+        <span className="tank-aim-hint" aria-hidden="true">Ziehen · loslassen = Feuer</span>
+      </AimPad></div>
+      <Stick disabled={!active} onMove={(x, y) => chaseStick(io, x, y)} />
+    </>;
   }
 };

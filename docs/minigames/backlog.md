@@ -35,6 +35,7 @@ Ergebnis, automatisch getestet) · **blockiert**.
 | 10 | Arrow Masters | `arrows` | 2–6 | P4 | fertig | Regeln (`arrow-masters-test`), Browser `phone` |
 | 11 | Tower Tumble | `tower` | 2–6 | P4 | fertig | Regeln (`tower-tumble-test`), Browser `phone` |
 | 12 | Hook Wars | `hooks` | 2–6 | P4 | fertig, seit Nov. 2026 bei den 1st Generation Minigames | Regeln (`hook-wars-test`), Browser `phone` |
+| 13 | Tank Trouble – Turmsicht | `tankview` | 2–6 | P2 | fertig (Nov. 2026, Gerätetest offen) | Regeln (`tank-view-test`), Browser `phone` |
 
 „Fertig“ heißt: in Lobby, Zufallspool, Übung (gegen Bots), Bot-Testraum,
 Wettbewerb und Inselparty spielbar; Ergebnis fließt in die bestehende Wertung.
@@ -148,6 +149,8 @@ geprüft; echte Funknetze nicht.
 | --- | --- | --- |
 | Tower Tumble | Hängt und ruckelt am Handy | **umgesetzt**: Ursache war vor allem Rechenzeit der Raumautorität (Übung und Handy-Host rechnen auf dem Handy, Render Free hat wenig CPU): zusammengefasste Kollisionsboxen, schlanker Solver, Warmstart als Zahlenliste, Sicht ohne Kopie der Physikdaten (`publicGame`); auf dem Gerät Zellen als vorgezeichnete Bilder und zeitbasierte Kamera. Werte in [konzept.md](konzept.md#architekturentscheidungen); echtes Handy offen |
 | Tower Tumble | Lieber links/rechts-Pfeile statt Schieben | **umgesetzt**: ⇦ ⇨ links unten (halbe Zelle je Tipp, Halten wiederholt), ⟳ und ⇩ rechts unten; Regeltest und Playwright `phone` |
+| Alle | Ego- oder 3rd-Person-Perspektive statt alles sehen | **in Arbeit** nach [plan-perspektiven-und-parcours.md](plan-perspektiven-und-parcours.md): Floor is Lava mit Verfolgerkamera (Übersicht per Knopf) und Tank Trouble – Turmsicht (nur Sichtlinie) umgesetzt |
+| Chaos Run | Alternative: selbst gelaufener Hindernis-Parcours mit Laufen, Springen, Hechten, Festhalten, Ducken | **in Arbeit**, Plan in [plan-perspektiven-und-parcours.md](plan-perspektiven-und-parcours.md) |
 | Floor is Lava | Über mehrere Etagen spielen | **umgesetzt**: drei Etagen, Durchfallen statt Lava bis zur untersten Etage; Regeltest, Playwright `phone` (beide Bewegungseinstellungen, sechs Figuren, 2D-Rückfall); Gerätetest offen |
 
 Gefühl auf echten Handys ist für die umgesetzten Punkte weiter ungeprüft.

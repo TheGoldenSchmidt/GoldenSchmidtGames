@@ -1,6 +1,7 @@
 import { FL, FLOOR_TILES, dropping, grounded, type LavaGame } from "../../../shared/matches/floorIsLava";
 import { ActionButton, Stick } from "../controls";
-import { lerp, playerColor, type MatchClient, type MatchFrame } from "../client";
+import { useEffect, useState } from "react";
+import { chaseStick, lerp, playerColor, type ChaseLocal, type MatchClient, type MatchControlsProps, type MatchFrame } from "../client";
 
 function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
   const s = f.cur, g = s.game as LavaGame, prev = f.prev.game as LavaGame, { w, h } = f;
@@ -63,6 +64,28 @@ function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
   }
 }
 
+/** The camera choice is a per-device convenience: remembered locally, never sent. */
+const CAMERA_KEY = "gsg-lava-overview";
+function storedOverview() { try { return localStorage.getItem(CAMERA_KEY) === "1"; } catch { return false; } }
+
+function LavaControls({ io, view, viewer, active, world }: MatchControlsProps) {
+  const g = view.game as LavaGame, me = g.runners[viewer], local = io.local as ChaseLocal;
+  const [overview, setOverview] = useState(storedOverview);
+  useEffect(() => { local.overview = overview ? 1 : 0; try { localStorage.setItem(CAMERA_KEY, overview ? "1" : "0"); } catch { /* private mode */ } }, [overview]);
+  const charge = (ready: number, cooldown: number) => me ? Math.max(0, Math.min(1, 1 - (ready - view.time) / cooldown)) : 0;
+  const off = !active || !me?.alive || g.phase !== "play";
+  // With the chase camera the stick is relative to the camera: up runs away from it.
+  const move = (x: number, y: number) => chaseStick(io, x, y);
+  return <>
+    {world && <button type="button" className="match-camera" aria-pressed={overview} onClick={() => setOverview(v => !v)}>Übersicht</button>}
+    <Stick disabled={!active} onMove={move} />
+    <div className="lava-buttons">
+      <ActionButton icon="⇉" label="Schubsen" tone="pink" charge={charge(me?.shoveReady ?? 0, FL.shoveCooldown)} disabled={off} onPress={() => io.press("b")} />
+      <ActionButton icon="⤒" label="Springen" tone="gold" charge={charge(me?.jumpReady ?? 0, FL.jumpCooldown)} disabled={off} onPress={() => io.press("a")} />
+    </div>
+  </>;
+}
+
 export const floorIsLavaClient: MatchClient = {
   render,
   // 2.5D presentation; the canvas above stays as fallback without WebGL.
@@ -73,18 +96,7 @@ export const floorIsLavaClient: MatchClient = {
     return { title: last?.tiebreak ? "Stechrunde vorbei" : `Durchgang ${g.round} vorbei`, text: last?.winners.includes(viewer) ? "Du stehst am längsten!" : `+${last?.points[viewer] ?? 0} Punkte für dich` };
   },
   quiet: ["jump", "dash", "drop"],
-  Controls({ io, view, viewer, active }) {
-    const g = view.game as LavaGame, me = g.runners[viewer];
-    const charge = (ready: number, cooldown: number) => me ? Math.max(0, Math.min(1, 1 - (ready - view.time) / cooldown)) : 0;
-    const off = !active || !me?.alive || g.phase !== "play";
-    return <>
-      <Stick disabled={!active} onMove={(x, y) => io.set({ x, y }, true)} />
-      <div className="lava-buttons">
-        <ActionButton icon="⇉" label="Schubsen" tone="pink" charge={charge(me?.shoveReady ?? 0, FL.shoveCooldown)} disabled={off} onPress={() => io.press("b")} />
-        <ActionButton icon="⤒" label="Springen" tone="gold" charge={charge(me?.jumpReady ?? 0, FL.jumpCooldown)} disabled={off} onPress={() => io.press("a")} />
-      </div>
-    </>;
-  },
+  Controls: LavaControls,
   status(view, viewer) {
     const g = view.game as LavaGame, me = g.runners[viewer];
     const left = Math.max(0, Math.ceil(((g.tiebreak ? FL.tiebreakMax : FL.roundMax) - (view.time - g.roundStart)) / 1000));

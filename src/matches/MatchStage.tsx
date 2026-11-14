@@ -161,7 +161,7 @@ export function MatchStage({ game, id, now, control, busy = false }: Props) {
         : <div ref={worldHost} className="match-world" role="img" aria-label={`3D-Spielfeld: ${meta.name}`} />}
       {world === "loading" && <div className="match-world-loading" role="status">Arena wird gebaut …</div>}
       {world !== "off" && (() => { const banner = client.banner?.(match, id); return banner && <div className="match-banner" role="status"><b>{banner.title}</b><span>{banner.text}</span></div>; })()}
-      <div className="match-controls"><Controls io={io} view={match} viewer={id} active={active} /></div>
+      <div className="match-controls"><Controls io={io} view={match} viewer={id} active={active} world={world === "ready"} /></div>
       {count > 0 && <div className="match-countdown" role="status"><b key={count}>{count}</b><span>{meta.controls}</span></div>}
       {match.done && <div className="match-countdown match-done" role="status"><b>✓</b><span>Das Ergebnis steht fest!</span></div>}
       {!own && <div className="match-countdown" role="status"><span>Du schaust zu.</span></div>}

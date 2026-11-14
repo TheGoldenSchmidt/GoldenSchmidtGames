@@ -187,6 +187,44 @@ for (const motion of ["no-preference", "reduce"] as const) test(`Tank Trouble 2.
   } finally { session.close(); }
 });
 
+for (const motion of ["no-preference", "reduce"] as const) test(`Tank Trouble – Turmsicht (${motion}): Kamera hinter dem Panzer, Stick und Zielen relativ zur Kamera, Schuss`, async ({ page }, testInfo) => {
+  await page.emulateMedia({ reducedMotion: motion });
+  const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "tankview" });
+  try {
+    await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
+    await session.action({ type: "ready" }, session.ids[1]);
+    await matchStarted(page);
+    const world = page.locator(".match-world");
+    await expect(world).toHaveAttribute("data-webgl", "ready");
+    await expect(world).toHaveAttribute("data-camera", "chase");
+    const match = async () => (await session.state()).partyGame!.mini!.match as MatchState<TankGame>;
+    const own = async () => (await match()).players.find(p => p.id === session.ids[0])!.input;
+    /** Cosine between a field direction and the camera's view direction. */
+    const forward = async (x: number, y: number) => { const yaw = Number(await world.getAttribute("data-yaw")); return (x * Math.sin(yaw) - y * Math.cos(yaw)) / (Math.hypot(x, y) || 1); };
+    // Stick up = drive where the camera looks.
+    const stick = (await page.getByRole("group", { name: "Bewegungsstick" }).boundingBox())!;
+    await page.mouse.move(stick.x + stick.width / 2, stick.y + stick.height / 2); await page.mouse.down();
+    await page.mouse.move(stick.x + stick.width / 2, stick.y + stick.height / 2 - 45, { steps: 3 });
+    await expect.poll(async () => { const input = await own(); return forward(input.x, input.y); }, { timeout: 3000 }).toBeGreaterThan(.9);
+    await page.mouse.up();
+    // Drag up on the right half = aim ahead; release fires.
+    const aim = (await page.getByRole("group", { name: "Zielen und schießen" }).boundingBox())!;
+    await page.mouse.move(aim.x + aim.width / 2, aim.y + aim.height / 2); await page.mouse.down();
+    await page.mouse.move(aim.x + aim.width / 2, aim.y + aim.height / 2 - 60, { steps: 3 });
+    await expect(world).toHaveAttribute("data-laser", "on");
+    await expect.poll(async () => { const input = await own(); return forward(input.ax, input.ay); }, { timeout: 3000 }).toBeGreaterThan(.9);
+    await page.screenshot({ path: testInfo.outputPath(`tankview-aim-${motion}.png`) });
+    await page.mouse.up();
+    await expect.poll(async () => (await match()).game.tanks[session.ids[0]].lastShot, { timeout: 4000 }).toBeGreaterThan(0);
+    // This device only receives what the own tank sees: the opponent is there only with a free line of sight.
+    const view = await match(), mine = view.game.tanks[session.ids[0]], other = view.game.tanks[session.ids[1]];
+    if (other) expect(Math.hypot(other.x - mine.x, other.y - mine.y)).toBeLessThanOrEqual(6.01);
+    expect(Number(await world.getAttribute("data-draw-calls"))).toBeLessThan(300);
+    await session.action({ type: "finish" }, session.ids[1]);
+    await expect(page.getByRole("heading", { name: "Euer Ergebnis", exact: true })).toBeVisible();
+  } finally { session.close(); }
+});
+
 for (const motion of ["no-preference", "reduce"] as const) test(`Bomb Arena 2.5D (${motion}): Figuren im 3D-Feld, Stick läuft, Bombe zerstört Kisten`, async ({ page }, testInfo) => {
   await page.emulateMedia({ reducedMotion: motion });
   const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "bombs" });
@@ -279,6 +317,22 @@ for (const motion of ["no-preference", "reduce"] as const) test(`Floor is Lava 2
     await expect.poll(async () => JSON.parse(await world.getAttribute("data-figures") ?? "{}")).toEqual(chosen);
     const game = async () => ((await session.state()).partyGame!.mini!.match as MatchState<LavaGame>).game;
     const me = async () => (await game()).runners[session.ids[0]];
+    // Chase camera by default; the stick is relative to it: up runs where the camera looks.
+    await expect(world).toHaveAttribute("data-camera", "chase");
+    const own = async () => ((await session.state()).partyGame!.mini!.match as MatchState<LavaGame>).players.find(p => p.id === session.ids[0])!.input;
+    {
+      const pad = (await page.getByRole("group", { name: "Bewegungsstick" }).boundingBox())!;
+      await page.mouse.move(pad.x + pad.width / 2, pad.y + pad.height / 2); await page.mouse.down();
+      await page.mouse.move(pad.x + pad.width / 2, pad.y + pad.height / 2 - 45, { steps: 3 });
+      await expect.poll(async () => { const yaw = Number(await world.getAttribute("data-yaw")), input = await own(); return input.x * Math.sin(yaw) - input.y * Math.cos(yaw); }, { timeout: 3000 }).toBeGreaterThan(.9);
+      await page.mouse.up();
+    }
+    await page.screenshot({ path: testInfo.outputPath(`lava-3d-chase-${motion}.png`) });
+    await page.getByRole("button", { name: "Übersicht", exact: true }).tap();
+    await expect(world).toHaveAttribute("data-camera", "overview");
+    await expect(page.getByRole("button", { name: "Übersicht", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await page.getByRole("button", { name: "Übersicht", exact: true }).tap();
+    await expect(world).toHaveAttribute("data-camera", "chase");
     await expect.poll(async () => (await game()).tiles.includes("2")).toBe(true);
     const start = await me();
     const stick = page.getByRole("group", { name: "Bewegungsstick" }), box = (await stick.boundingBox())!;

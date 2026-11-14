@@ -1,7 +1,7 @@
 import * as T from "three";
 import { TANK_FIELD, TT, wallRects, type TankGame, type TankPower } from "../../shared/matches/tankTrouble";
-import type { MatchWorld, MatchWorldFrame } from "../matches/client";
-import { Debris, fittedFigure, fitTiltedCamera, Impact } from "./matchScene";
+import { followCamera, headingOf, type ChaseLocal, type MatchWorld, type MatchWorldFrame } from "../matches/client";
+import { ChaseCamera, Debris, fittedFigure, fitTiltedCamera, Impact } from "./matchScene";
 import { PLAYER_COLORS, SceneKit, type Character } from "./sceneKit";
 
 /**
@@ -9,10 +9,14 @@ import { PLAYER_COLORS, SceneKit, type Character } from "./sceneKit";
  * tanks with the players' figures in the hatch, glowing bullets with tracer
  * trails and an aiming laser up to the first wall while the own tank aims.
  * Pure presentation of the authoritative view.
+ *
+ * With `chase` (Tank Trouble – Turmsicht) the camera follows behind and above
+ * the own tank, walls stand taller and fog fades out what lies beyond the
+ * sight range; tanks missing from the view are simply not shown.
  */
 const W = TANK_FIELD.width, H = TANK_FIELD.height;
 const wx = (x: number) => x - W / 2, wz = (y: number) => y - H / 2;
-const WALL_H = .5, TILT = 62 * Math.PI / 180, BULLET_Y = .32, TRAIL = 7;
+const WALL_LOW = .5, TILT = 62 * Math.PI / 180, BULLET_Y = .32, TRAIL = 7;
 const COLOR = { night: 0x2c2a1e, base: 0x3b3524, sandA: 0xd3c597, sandB: 0xc9b98a, wall: 0x3b3550, brick: 0xb4553a, cracked: 0x7d3b2a, tread: 0x24133f, bullet: 0x24133f, tracer: 0xffb52e, laser: 0xe3263b, shield: 0x57e4cb, pad: 0x6544e8, own: 0xffe44e, hp: 0xffe44e, wreck: 0x3a3330 } as const;
 const POWER_ICON: Record<TankPower, string> = { rapid: "⚡", triple: "⋔", shield: "⛨" };
 /** 2D field angle (x right, y down) → rotation about the vertical axis (x right, z towards the camera). */
@@ -20,11 +24,15 @@ const yaw = (a: number) => -a;
 
 interface TankView { body: T.Group; turret: T.Group; hud: T.Group; shield: T.Mesh; pips: T.Mesh[]; marker?: T.Mesh; wreck: T.Mesh; driver: Character; color: number; recoilAt: number }
 
-export function createTankWorld(host: HTMLElement, read: () => MatchWorldFrame, onError: () => void): MatchWorld {
-  const kit = new SceneKit(host, onError), world = new T.Group();
+export function createTankWorld(host: HTMLElement, read: () => MatchWorldFrame, onError: () => void, options: { chase?: boolean } = {}): MatchWorld {
+  const kit = new SceneKit(host, onError), world = new T.Group(), chase = !!options.chase;
   kit.scene.add(world);
-  kit.scene.background = new T.Color(COLOR.night); kit.scene.fog = null;
-  kit.camera.fov = 26; kit.camera.updateProjectionMatrix();
+  // In the chase view walls hide what lies behind them, and fog ends the view at the sight range.
+  const WALL_H = chase ? 1.15 : WALL_LOW;
+  kit.scene.background = new T.Color(COLOR.night); kit.scene.fog = chase ? new T.Fog(COLOR.night, 5.5, 11) : null;
+  kit.camera.fov = chase ? 58 : 26; kit.camera.near = chase ? .05 : kit.camera.near; kit.camera.updateProjectionMatrix();
+  // Behind and above the own tank, high enough to look over the walls into the own corridor.
+  const chaseCam = new ChaseCamera(kit, 2.6, 3.6, 1.7, 0), target = new T.Vector3();
   const box = new T.BoxGeometry(1, 1, 1), dummy = new T.Object3D();
 
   // Sand floor in the 2D checker and a dark plinth.
@@ -59,7 +67,7 @@ export function createTankWorld(host: HTMLElement, read: () => MatchWorldFrame, 
   const impact = new Impact(world, kit);
   const debris = new Debris(world, 120, new T.MeshStandardMaterial({ roughness: .8 }));
   const tanks = new Map<string, TankView>(), powers = new Map<number, T.Group>();
-  let edges = "", lastSeq = 0, frame = 0, aspect = 0;
+  let edges = "", lastSeq = 0, frame = 0, aspect = 0, lastFrame = performance.now();
 
   const rebuildWalls = (g: TankGame, time: number, reduced: boolean) => {
     const before = edges ? new Map(wallRects(JSON.parse(edges) as Pick<TankGame, "h" | "v">).map(r => [`${r.axis}${r.index}`, r])) : undefined;
@@ -122,7 +130,7 @@ export function createTankWorld(host: HTMLElement, read: () => MatchWorldFrame, 
 
   const animate = (time: number) => {
     const f = read(), s = f.cur, g = s.game as TankGame, prev = f.prev.game as TankGame, reduced = f.reduced;
-    if (kit.camera.aspect !== aspect) { aspect = kit.camera.aspect; fitTiltedCamera(kit, W / 2 + .1, H / 2 + .1, WALL_H, TILT); }
+    if (!chase && kit.camera.aspect !== aspect) { aspect = kit.camera.aspect; fitTiltedCamera(kit, W / 2 + .1, H / 2 + .1, WALL_H, TILT); }
     if (JSON.stringify({ h: g.h, v: g.v }) !== edges) rebuildWalls(g, time, reduced);
 
     // Events: shots (recoil, figure animation), hits (sparks), destroyed tanks (burst, flash, shake).
@@ -142,7 +150,8 @@ export function createTankWorld(host: HTMLElement, read: () => MatchWorldFrame, 
     const aiming = Math.hypot(f.input.ax, f.input.ay) > .25;
     for (const p of s.players) {
       const tank = g.tanks[p.id];
-      if (!tank) continue;
+      // Out of sight (Turmsicht): the authority left this tank out of the view.
+      if (!tank) { const hidden = tanks.get(p.id); if (hidden) hidden.body.visible = hidden.hud.visible = hidden.wreck.visible = false; continue; }
       const t = tankFor(p.id, p.style, f.characters[p.id], f.viewer), before = prev.tanks?.[p.id];
       const smooth = before && before.alive && tank.alive ? f.alpha : 1;
       const x = before ? before.x + (tank.x - before.x) * smooth : tank.x, y = before ? before.y + (tank.y - before.y) * smooth : tank.y;
@@ -159,6 +168,8 @@ export function createTankWorld(host: HTMLElement, read: () => MatchWorldFrame, 
       t.shield.visible = s.time < tank.shieldUntil || tank.power?.kind === "shield" && tank.power.until > s.time;
       t.pips.forEach((pip, i) => { pip.visible = i < tank.hp; });
       if (t.marker) t.marker.position.y = 1.35 + (reduced ? 0 : Math.abs(Math.sin(time / 220)) * .1);
+      // The own tank needs no marker when the camera sits right behind it.
+      if (chase && p.id === f.viewer) t.hud.visible = false;
     }
 
     // Aiming laser up to the first wall (direction only, no bounce preview).
@@ -201,6 +212,16 @@ export function createTankWorld(host: HTMLElement, read: () => MatchWorldFrame, 
     for (const [id, group] of powers) if (!livePowers.has(id)) { world.remove(group); powers.delete(id); }
 
     debris.update(time);
+    if (chase && me) {
+      const before = prev.tanks?.[f.viewer], smooth = before && before.alive && me.alive ? f.alpha : 1;
+      target.set(wx(before ? before.x + (me.x - before.x) * smooth : me.x), 0, wz(before ? before.y + (me.y - before.y) * smooth : me.y));
+      // The camera swings behind the hull, which turns with the driving direction.
+      chaseCam.update(target, headingOf(Math.cos(me.angle), Math.sin(me.angle)), Math.min(.05, (time - lastFrame) / 1000), reduced, 2.2);
+      followCamera(f.local as ChaseLocal, f.input, chaseCam.yaw);
+    }
+    lastFrame = time;
+    host.dataset.camera = chase ? "chase" : "overview";
+    if (chase) host.dataset.yaw = chaseCam.yaw.toFixed(3);
     impact.update(time, reduced);
     kit.render();
     host.dataset.figures = JSON.stringify(Object.fromEntries([...tanks].map(([id, t]) => [id, t.driver.group.userData.characterId])));

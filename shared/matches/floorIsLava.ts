@@ -109,7 +109,7 @@ export const floorIsLava: MatchModule<LavaGame> = {
   meta: {
     name: "Floor is Lava", seconds: (FL.rounds * (FL.roundMax + FL.pause) + FL.tiebreakMax + FL.pause) / 1000 + 2, players: [2, 3, 4, 5, 6], hz: 20,
     instruction: "Drei Etagen über der Lava: Jede Platte, die du betrittst, zerbröselt nach 0,8 Sekunden. Stehst du über einem Loch, fällst du eine Etage tiefer – erst ein Loch in der untersten Etage führt in die Lava. Mit dem Schubser rempelst du andere auf bröselnde Platten (alle 2,5 Sekunden; wer springt, weicht aus). Platten mit leuchtender Rune kommen nach 2,5 Sekunden zurück. Mit dem Sprungknopf überspringst du kleine Lücken (alle 3 Sekunden). Lava kostet ein Leben, du hast 2 pro Durchgang. Ab Sekunde 16 verschwindet auf allen Etagen der Rand. +1 für jede Person, die vor dir fällt, +3 für den Durchgangssieg. Drei Durchgänge.",
-    controls: "Stick: laufen · Knöpfe: springen und schubsen.",
+    controls: "Stick: laufen (oben = von der Kamera weg) · Knöpfe: springen und schubsen · oben rechts: Übersicht.",
     look: { icon: "♨", action: "Bleib in Bewegung, Etage für Etage", hint: "Stick laufen · springen · schubsen", goal: "Am längsten über der Lava bleiben" }
   },
   create(s) {

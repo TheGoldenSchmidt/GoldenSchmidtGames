@@ -231,27 +231,33 @@ export const tankTrouble: MatchModule<TankGame> = {
     if (!enemies.length) return {};
     const target = enemies.sort((a, b) => dist(a.x, a.y, me.x, me.y) - dist(b.x, b.y, me.x, me.y))[0];
     const clear = !walls.some(w => segmentHitsRect(me.x, me.y, target.x, target.y, w, TT.bullet));
-    // Path through the maze by breadth-first search over open cell edges.
-    const cell = (x: number, y: number) => [clamp(Math.floor(x / TT.cell), 0, TT.cols - 1), clamp(Math.floor(y / TT.cell), 0, TT.rows - 1)] as const;
-    const [sc, sr] = cell(me.x, me.y), [tc, tr] = cell(target.x, target.y), from = new Map<number, number>([[sc + sr * TT.cols, -1]]), queue = [[sc, sr]];
-    while (queue.length) {
-      const [c, r] = queue.shift()!;
-      if (c === tc && r === tr) break;
-      for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-        const nc = c + dc, nr = r + dr, k = nc + nr * TT.cols;
-        if (nc < 0 || nr < 0 || nc >= TT.cols || nr >= TT.rows || from.has(k)) continue;
-        const edge = dc ? g.v[vIndex(Math.max(c, nc), r)] : g.h[hIndex(c, Math.max(r, nr))];
-        if (edge !== "0") continue;
-        from.set(k, c + r * TT.cols); queue.push([nc, nr]);
-      }
-    }
-    let step = tc + tr * TT.cols;
-    while (from.has(step) && from.get(step)! !== sc + sr * TT.cols && from.get(step)! >= 0) step = from.get(step)!;
-    const wx = from.has(step) ? (step % TT.cols + .5) * TT.cell : target.x, wy = from.has(step) ? (Math.floor(step / TT.cols) + .5) * TT.cell : target.y;
-    const dx = wx - me.x, dy = wy - me.y, d = Math.hypot(dx, dy) || 1;
+    const { x: mx, y: my } = driveTowards(g, me, target.x, target.y);
     const jitter = ((hash(`${id}:${Math.floor(s.time / 700)}`) % 100) / 100 - .5) * .3;
     const aim = Math.atan2(target.y - me.y, target.x - me.x) + jitter;
     const ready = s.time - me.lastShot >= TT.cooldown;
-    return { x: clear && dist(me.x, me.y, target.x, target.y) < 4 ? 0 : dx / d, y: clear && dist(me.x, me.y, target.x, target.y) < 4 ? 0 : dy / d, ax: Math.cos(aim), ay: Math.sin(aim), pressA: clear && ready };
+    return { x: clear && dist(me.x, me.y, target.x, target.y) < 4 ? 0 : mx, y: clear && dist(me.x, me.y, target.x, target.y) < 4 ? 0 : my, ax: Math.cos(aim), ay: Math.sin(aim), pressA: clear && ready };
   }
 };
+
+/** Direction (unit vector) towards the next maze cell on the shortest open path to (tx, ty), for bots. */
+export function driveTowards(g: Pick<TankGame, "h" | "v">, me: { x: number; y: number }, tx: number, ty: number) {
+  // Path through the maze by breadth-first search over open cell edges.
+  const cell = (x: number, y: number) => [clamp(Math.floor(x / TT.cell), 0, TT.cols - 1), clamp(Math.floor(y / TT.cell), 0, TT.rows - 1)] as const;
+  const [sc, sr] = cell(me.x, me.y), [tc, tr] = cell(tx, ty), from = new Map<number, number>([[sc + sr * TT.cols, -1]]), queue = [[sc, sr]];
+  while (queue.length) {
+    const [c, r] = queue.shift()!;
+    if (c === tc && r === tr) break;
+    for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nc = c + dc, nr = r + dr, k = nc + nr * TT.cols;
+      if (nc < 0 || nr < 0 || nc >= TT.cols || nr >= TT.rows || from.has(k)) continue;
+      const edge = dc ? g.v[vIndex(Math.max(c, nc), r)] : g.h[hIndex(c, Math.max(r, nr))];
+      if (edge !== "0") continue;
+      from.set(k, c + r * TT.cols); queue.push([nc, nr]);
+    }
+  }
+  let step = tc + tr * TT.cols;
+  while (from.has(step) && from.get(step)! !== sc + sr * TT.cols && from.get(step)! >= 0) step = from.get(step)!;
+  const wx = from.has(step) ? (step % TT.cols + .5) * TT.cell : tx, wy = from.has(step) ? (Math.floor(step / TT.cols) + .5) * TT.cell : ty;
+  const dx = wx - me.x, dy = wy - me.y, d = Math.hypot(dx, dy) || 1;
+  return { x: dx / d, y: dy / d };
+}

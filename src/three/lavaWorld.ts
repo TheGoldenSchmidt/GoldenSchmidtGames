@@ -1,16 +1,18 @@
 import * as T from "three";
 import { FL, FLOOR_TILES, ring, type LavaGame, type Runner } from "../../shared/matches/floorIsLava";
-import type { MatchWorld, MatchWorldFrame } from "../matches/client";
-import { Debris, fittedFigure, fitTiltedCamera, Impact } from "./matchScene";
+import { followCamera, headingOf, type ChaseLocal, type MatchWorld, type MatchWorldFrame } from "../matches/client";
+import { ChaseCamera, Debris, fittedFigure, fitTiltedCamera, Impact } from "./matchScene";
 import { SceneKit, type Character } from "./sceneKit";
 
 /**
  * Floor is Lava in 2.5D: three floors of temple slabs stacked over glowing,
  * slowly rolling lava. Slabs tremble and heat up while they crumble, tip over
  * and sink; slabs with a rune rise again. Figures run, jump with a real arc,
- * shove, drop through holes to the floor below and sink into the lava. The
- * camera glides down with the viewer's own floor; floors above it are hidden
- * so they never cover the action (figures up there stay visible). Pure presentation of the
+ * shove, drop through holes to the floor below and sink into the lava.
+ * Default view: a chase camera behind the own figure (stick relative to the
+ * camera); the overview can be chosen per device and is used by spectators.
+ * The camera glides down with the viewer's own floor; floors above it are
+ * hidden so they never cover the action (figures up there stay visible). Pure presentation of the
  * authoritative view.
  */
 const COLS = FL.cols, ROWS = FL.rows, TILES = FLOOR_TILES, FLOORS = FL.floors;
@@ -74,7 +76,9 @@ export function createLavaWorld(host: HTMLElement, read: () => MatchWorldFrame, 
   const runes = new T.InstancedMesh(new T.TorusGeometry(.13, .025, 6, 24), new T.MeshBasicMaterial({ color: COLOR.rune }), TILES * FLOORS); runes.count = 0; world.add(runes);
   const ghosts = new T.InstancedMesh(new T.BoxGeometry(1, 1, 1), new T.MeshBasicMaterial({ color: COLOR.rune, transparent: true, opacity: .28, depthWrite: false }), TILES * FLOORS); ghosts.count = 0; world.add(ghosts);
   const state: Slab[] = Array.from({ length: TILES * FLOORS }, () => ({ state: "1", changedAt: -1e9, from: 0 }));
-  let camY: number | undefined;
+  let camY: number | undefined, chasing = false, fresh = true;
+  // Behind and above the own figure, steep enough to read the slabs around it.
+  const chaseCam = new ChaseCamera(kit, 3.8, 4.3, 2.2, 0), target = new T.Vector3();
   /** Floors above the viewer are hidden: seen from above they would cover the viewer's own floor. */
   const showFrom = (own: number) => floors.forEach((mesh, floor) => { mesh.visible = floor >= own; });
 
@@ -111,14 +115,24 @@ export function createLavaWorld(host: HTMLElement, read: () => MatchWorldFrame, 
   const animate = (time: number) => {
     const f = read(), s = f.cur, g = s.game as LavaGame, prev = f.prev.game as LavaGame, reduced = f.reduced, dt = Math.min(.05, (time - last) / 1000);
     last = time;
-    if (kit.camera.aspect !== aspect) { aspect = kit.camera.aspect; fitTiltedCamera(kit, COLS / 2 + .1, ROWS / 2 + .1, .2, TILT); }
     if (!reduced) { lavaMap.offset.x += dt * .012; lavaMap.offset.y += dt * .007; }
-    // Camera follows the viewer's floor (also during a fall); spectators watch the top floor.
-    const mine = g.runners[f.viewer], own = mine?.floor ?? 0;
+    const local = f.local as ChaseLocal, mine = g.runners[f.viewer], own = mine?.floor ?? 0;
+    // Chase camera for the own living figure unless this device chose the overview.
+    const chase = !local.overview && !!mine?.alive;
+    if (chase !== chasing) {
+      chasing = chase; aspect = 0; fresh = true; chaseCam.reset(); camY = undefined;
+      kit.camera.fov = chase ? 55 : 26; kit.camera.updateProjectionMatrix();
+      if (!chase) delete local.camYaw;
+    }
     showFrom(own);
-    const wanted = mine ? -feetY(mine, f.simTime, reduced) : 0;
-    camY = reduced || camY === undefined ? wanted : camY + (wanted - camY) * (1 - Math.exp(-dt * 7));
-    world.position.y = camY;
+    if (chase) world.position.y = 0;
+    else {
+      if (kit.camera.aspect !== aspect) { aspect = kit.camera.aspect; fitTiltedCamera(kit, COLS / 2 + .1, ROWS / 2 + .1, .2, TILT); }
+      // Overview follows the viewer's floor (also during a fall); spectators watch the top floor.
+      const wanted = mine ? -feetY(mine, f.simTime, reduced) : 0;
+      camY = reduced || camY === undefined ? wanted : camY + (wanted - camY) * (1 - Math.exp(-dt * 7));
+      world.position.y = camY;
+    }
     heat.intensity = reduced ? 3 : 3 + Math.sin(time / 600) * .6;
 
     // Slabs: tremble and heat while crumbling, tip and sink when gone, rise when they return.
@@ -202,10 +216,19 @@ export function createLavaWorld(host: HTMLElement, read: () => MatchWorldFrame, 
       fg.fig.group.rotation.z = sliding && !reduced ? Math.sin(time / 40) * .15 : 0;
       fg.shadow.visible = runner.alive; fg.shadow.position.set(wx(x), floorY(runner.floor) + .01, wz(y)); fg.shadow.scale.setScalar(1 - lift * .4);
       fg.lives.forEach((m, i) => { m.visible = runner.alive && i < runner.lives; });
-      if (fg.marker) fg.marker.position.y = fg.top + .5 + (reduced ? 0 : Math.abs(Math.sin(time / 220)) * .1);
+      if (fg.marker) { fg.marker.visible = !chase; fg.marker.position.y = fg.top + .5 + (reduced ? 0 : Math.abs(Math.sin(time / 220)) * .1); }
       if (fg.ring) { fg.ring.visible = runner.alive; fg.ring.position.set(wx(x), ground + .02, wz(y)); }
     }
 
+    if (chase && mine) {
+      const [x, y] = runnerPos(mine, prev.runners?.[f.viewer], f.alpha), moving = Math.hypot(mine.vx, mine.vy) > .6;
+      target.set(wx(x), feetY(mine, f.simTime, reduced), wz(y));
+      // The camera swings slowly behind the running direction; standing still keeps it where it is.
+      chaseCam.update(target, moving || fresh ? headingOf(mine.fx, mine.fy) : undefined, dt, reduced, 1.3);
+      fresh = false; followCamera(local, f.input, chaseCam.yaw);
+    }
+    host.dataset.camera = chase ? "chase" : "overview";
+    if (chase) host.dataset.yaw = chaseCam.yaw.toFixed(3); else delete host.dataset.yaw;
     splash.update(time);
     impact.update(time, reduced);
     kit.render();
