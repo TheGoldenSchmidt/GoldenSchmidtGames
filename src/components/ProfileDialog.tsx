@@ -21,14 +21,14 @@ export function ProfileDialog({
   return (
     <div className="dialog-backdrop" role="presentation" onMouseDown={onClose}>
       <section
-        className="dialog party-dialog"
+        className="dialog iw-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby="profile-title"
         onMouseDown={(event) => event.stopPropagation()}
       >
         <div className="dialog__handle" aria-hidden="true" />
-        <h2 id="profile-title">Dein Gastprofil</h2>
+        <h2 id="profile-title" className="iw-plank">Dein Gastprofil</h2>
         <p className="muted">
           Der Name ist optional und wird nur auf diesem Gerät gespeichert. Ein Konto für Statistiken folgt später.
         </p>

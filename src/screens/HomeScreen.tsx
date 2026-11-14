@@ -2,6 +2,7 @@ import type { GuestProfile } from "../../shared/types";
 import { InstallPrompt } from "../components/InstallPrompt";
 import { AppUpdate } from "../components/AppUpdate";
 import { displayName } from "../lib/profile";
+import { IslandWorld } from "../components/IslandWorld";
 // Rendered from the 3D scene in scripts/home-render (npm run render:home).
 import heroLayers from "../assets/home/hero-layers.json";
 import heroIsland from "../assets/home/hero-island.webp";
@@ -9,10 +10,6 @@ import heroPlaque from "../assets/home/hero-plaque.webp";
 import heroGolden from "../assets/home/hero-golden.webp";
 import heroSchmidt from "../assets/home/hero-schmidt.webp";
 import heroGames from "../assets/home/hero-games.webp";
-import skyPortrait from "../assets/home/backdrop-portrait.webp";
-import skyLandscape from "../assets/home/backdrop-landscape.webp";
-import cornerLeft from "../assets/home/corner-left.webp";
-import cornerRight from "../assets/home/corner-right.webp";
 
 /** Back to front. Each image is cropped to its content; hero-layers.json says where it sits in the frame. */
 const HERO_LAYERS = [
@@ -56,14 +53,7 @@ export function HomeScreen({
 }) {
   return (
     <main className="home">
-      <div className="home-world" aria-hidden="true">
-        <picture>
-          <source media="(min-aspect-ratio: 1/1)" srcSet={skyLandscape} width={1920} height={1080} />
-          <img className="home-world__sky" src={skyPortrait} width={900} height={1950} alt="" decoding="async" />
-        </picture>
-        <img className="home-world__corner home-world__corner--left" src={cornerLeft} width={520} height={600} alt="" decoding="async" />
-        <img className="home-world__corner home-world__corner--right" src={cornerRight} width={520} height={600} alt="" decoding="async" />
-      </div>
+      <IslandWorld />
 
       <div className="home__topbar">
         <span className={`iw-chip home__status ${online ? "is-online" : ""}`}>

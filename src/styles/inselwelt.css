@@ -31,6 +31,12 @@
   --iw-ink-gold: #3d2412;
   --iw-ink-violet: #170834;
   --iw-paper: #fff8ea;
+  /* Parchment for cards and dialogs: face, lower edge, line, ink and muted ink */
+  --iw-parchment: #fff7e4;
+  --iw-parchment-low: #f3e1bb;
+  --iw-parchment-line: #a07446;
+  --iw-paper-ink: #3a2414;
+  --iw-paper-muted: #6b4a2e;
   --iw-glass: rgb(31 28 84 / .74);
   --iw-shadow: rgb(26 16 60 / .4);
 
@@ -44,15 +50,15 @@
    9-slice in ::before, so the content box stays free for padding. Slice insets are sprite pixels;
    the sprites are twice the CSS size. Pressing swaps to a sprite whose face has sunk into the side wall.
    Markup: <button class="iw-slab iw-slab--gold"><span class="iw-slab__face">…</span></button> */
-.iw-slab {
+.iw-slab, :is(.iw-menu, .iw-dialog) .button {
   --slab-image: url("../assets/home/slab-gold.webp");
   --slab-image-pressed: url("../assets/home/slab-gold-pressed.webp");
-  --slab-slice: 36 44 50 44;
-  --slab-edge: 18px 22px 25px 22px;
+  --slab-slice: 44 48 66 48;
+  --slab-edge: 22px 24px 33px 24px;
   /* Face area inside the sprite, measured from the button edges in CSS pixels. */
   --slab-face-top: 3px;
-  --slab-face-bottom: 13px;
-  --slab-sink: 6px;
+  --slab-face-bottom: 21px;
+  --slab-sink: 8px;
   --slab-ink: var(--iw-ink-gold);
   position: relative;
   isolation: isolate;
@@ -69,7 +75,7 @@
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-.iw-slab::before {
+.iw-slab::before, :is(.iw-menu, .iw-dialog) .button::before {
   content: "";
   position: absolute;
   z-index: -1;
@@ -85,29 +91,49 @@
   align-items: center;
   min-width: 0;
 }
-.iw-slab:active:not(:disabled)::before { border-image-source: var(--slab-image-pressed); filter: drop-shadow(0 3px 3px rgb(28 18 70 / .42)); }
+.iw-slab:active:not(:disabled)::before, :is(.iw-menu, .iw-dialog) .button:active:not(:disabled)::before { border-image-source: var(--slab-image-pressed); filter: drop-shadow(0 3px 3px rgb(28 18 70 / .42)); }
 .iw-slab:active:not(:disabled) .iw-slab__face { transform: translateY(var(--slab-sink)); }
-.iw-slab:focus-visible { outline: 3px solid var(--iw-paper); outline-offset: 3px; }
-.iw-slab:disabled { cursor: not-allowed; }
-.iw-slab:disabled::before { filter: grayscale(.8) brightness(.9) opacity(.7); }
+.iw-slab:focus-visible, :is(.iw-menu, .iw-dialog) .button:focus-visible { outline: 3px solid var(--iw-paper); outline-offset: 3px; box-shadow: 0 0 0 6px var(--iw-ink); }
+.iw-slab:disabled, :is(.iw-menu, .iw-dialog) .button:disabled { cursor: not-allowed; }
+.iw-slab:disabled::before, :is(.iw-menu, .iw-dialog) .button:disabled::before { filter: grayscale(.8) brightness(.9) opacity(.7); }
 .iw-slab:disabled .iw-slab__face { opacity: .6; }
 
-.iw-slab--violet {
+/* Plain text buttons of the menus (.button--primary, --secondary, --ghost) become gold, violet and stone slabs. */
+:is(.iw-menu, .iw-dialog) .button {
+  place-items: center;
+  min-height: 66px;
+  padding-inline: 24px;
+  font-family: var(--iw-font-display);
+  font-size: 1.15rem;
+  font-weight: 400;
+  letter-spacing: .02em;
+  line-height: 1.1;
+  text-align: center;
+  text-shadow: 0 1px 0 rgb(255 255 255 / .28);
+  transform: none;
+  box-shadow: none;
+  opacity: 1;
+}
+:is(.iw-menu, .iw-dialog) .button:active:not(:disabled) { transform: none; padding-top: calc(var(--slab-face-top) + var(--slab-sink)); padding-bottom: calc(var(--slab-face-bottom) - var(--slab-sink)); }
+:is(.iw-menu, .iw-dialog) .button:disabled { background: none; color: var(--slab-ink); opacity: .7; }
+
+.iw-slab--violet, :is(.iw-menu, .iw-dialog) .button--secondary {
   --slab-image: url("../assets/home/slab-violet.webp");
   --slab-image-pressed: url("../assets/home/slab-violet-pressed.webp");
   --slab-ink: var(--iw-ink-violet);
 }
-.iw-slab--stone {
+.iw-slab--stone, :is(.iw-menu, .iw-dialog) :is(.button--ghost, .button--danger) {
   --slab-image: url("../assets/home/slab-stone.webp");
   --slab-image-pressed: url("../assets/home/slab-stone-pressed.webp");
-  --slab-slice: 26 30 38 30;
-  --slab-edge: 13px 15px 19px 15px;
+  --slab-slice: 30 32 46 32;
+  --slab-edge: 15px 16px 23px 16px;
   --slab-face-top: 3px;
-  --slab-face-bottom: 9px;
-  --slab-sink: 4px;
+  --slab-face-bottom: 13px;
+  --slab-sink: 5px;
   --slab-ink: var(--iw-paper);
   border-radius: 10px;
 }
+:is(.iw-menu, .iw-dialog) :is(.button--ghost, .button--danger) { min-height: 52px; font-size: 1.02rem; text-shadow: 0 1px 0 rgb(0 0 0 / .35); }
 
 /* Chips: a dark glass pill for status, a light one for tappable identity. */
 .iw-chip {
@@ -137,6 +163,63 @@ button.iw-chip { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 button.iw-chip:active { transform: translateY(2px); box-shadow: 0 0 0 1.5px rgb(255 255 255 / .6), 0 2px 0 1px var(--iw-shadow); }
 button.iw-chip:focus-visible { outline: 3px solid var(--iw-paper); outline-offset: 3px; }
 
+/* World: the rendered sky with the leafy corners (IslandWorld). The start screen pins it to its box,
+   menus pin it to the viewport while their content scrolls. */
+.iw-world { position: absolute; z-index: -1; inset: 0; overflow: hidden; pointer-events: none; }
+.iw-world picture { display: contents; }
+.iw-world__sky { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 0; }
+.iw-world__corner { position: absolute; bottom: 0; width: clamp(120px, min(36vw, 26dvh), 300px); height: auto; }
+.iw-world__corner--left { left: 0; }
+.iw-world__corner--right { right: 0; }
+
+/* Holzschild: a rendered wooden plank (sprites.ts, PLANK_SPRITE) behind titles and section labels. */
+.iw-plank {
+  position: relative;
+  isolation: isolate;
+  display: inline-grid;
+  place-items: center;
+  min-height: 52px;
+  margin: 0;
+  padding: 7px 30px 9px;
+  color: #2e1606;
+  font-family: var(--iw-font-display);
+  font-size: 1.25rem;
+  font-weight: 400;
+  letter-spacing: .01em;
+  line-height: 1.05;
+  text-align: center;
+  text-shadow: 0 1px 0 rgb(255 236 200 / .45);
+}
+.iw-plank::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  border-style: solid;
+  border-width: 15px 28px 17px;
+  border-image: url("../assets/home/plank.webp") 30 56 34 fill / 15px 28px 17px stretch;
+  filter: drop-shadow(0 4px 3px rgb(28 18 70 / .38));
+}
+
+/* Pergament: the surface for lists, forms and longer text. Its title is a plank on the top edge. */
+.iw-card {
+  position: relative;
+  margin: 34px 0 18px;
+  padding: 34px 16px 16px;
+  border: 2px solid var(--iw-parchment-line);
+  border-radius: 18px;
+  color: var(--iw-paper-ink);
+  background:
+    radial-gradient(120% 70% at 20% 0%, rgb(255 255 255 / .55), transparent 60%),
+    linear-gradient(180deg, var(--iw-parchment) 0%, var(--iw-parchment-low) 100%);
+  box-shadow: inset 0 0 0 3px rgb(255 250 235 / .6), inset 0 -12px 24px rgb(166 112 52 / .16), 0 10px 22px rgb(20 12 52 / .35);
+}
+.iw-card__title { position: absolute; top: 0; left: 50%; max-width: calc(100% - 24px); translate: -50% -58%; font-size: 1.15rem; white-space: nowrap; }
+.iw-card__lead { margin: 0 0 14px; color: var(--iw-paper-muted); font-size: .86rem; line-height: 1.45; text-align: center; }
+
+/* Glass: short notes that sit directly on the sky. */
+.iw-note { width: fit-content; max-width: 100%; margin: 12px auto; padding: 6px 14px; border: 1.5px solid rgb(255 255 255 / .28); border-radius: 12px; background: var(--iw-glass); color: var(--iw-paper); font-size: .82rem; line-height: 1.4; text-align: center; }
+
 @media (hover: hover) {
-  .iw-slab:hover:not(:disabled):not(:active)::before { filter: drop-shadow(0 7px 6px rgb(28 18 70 / .42)) brightness(1.06); }
+  .iw-slab:hover:not(:disabled):not(:active)::before, :is(.iw-menu, .iw-dialog) .button:hover:not(:disabled):not(:active)::before { filter: drop-shadow(0 7px 6px rgb(28 18 70 / .42)) brightness(1.06); }
 }

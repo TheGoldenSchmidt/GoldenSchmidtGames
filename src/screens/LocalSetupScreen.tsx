@@ -5,6 +5,7 @@ import type { GameId } from "../../shared/types";
 import {CHARACTERS,isCharacterId,type CharacterId} from "../../shared/characters";
 import {CharacterAvatar} from "../components/CharacterAvatar";
 import { ScreenHeader } from "../components/ScreenHeader";
+import { IslandWorld } from "../components/IslandWorld";
 
 export function LocalSetupScreen({
   onBack,
@@ -31,13 +32,13 @@ export function LocalSetupScreen({
   }
 
   return (
-    <main className="page party-menu local-setup screen-enter">
+    <main className="page iw-menu local-setup screen-enter">
+      <IslandWorld />
       <ScreenHeader title="Lokal spielen" onBack={onBack} />
-      <section className="page__content">
-        <div className="section-heading">
-          <h2>Spiel auswählen</h2>
-          <p>Weitere Spiele kommen als eigene Module hinzu.</p>
-        </div>
+      <div className="page__content">
+        <section className="iw-card local-setup__games">
+          <h2 className="iw-plank iw-card__title">Spiel auswählen</h2>
+          <p className="iw-card__lead">Weitere Spiele kommen als eigene Module hinzu.</p>
 
         <div className="game-choices">
           {GAMES.filter(entry=>!isPartyMode(entry.id)).map((entry) => (
@@ -62,11 +63,12 @@ export function LocalSetupScreen({
           ))}
         </div>
 
+        </section>
+
+        <section className="iw-card local-setup__players">
+          <h2 className="iw-plank iw-card__title">Spieler</h2>
         <div className="section-heading section-heading--row">
-          <div>
-            <h2>Spieler</h2>
-            <p>Alle spielen an diesem Gerät.</p>
-          </div>
+          <p className="iw-card__lead">Alle spielen an diesem Gerät.</p>
           <div className="stepper" aria-label="Spielerzahl">
             <button onClick={() => changeCount(Math.max(game.minPlayers, count - 1))} disabled={count <= game.minPlayers}>−</button>
             <strong>{count}</strong>
@@ -98,7 +100,8 @@ export function LocalSetupScreen({
             <input type="checkbox" checked={durakCheatMode} onChange={(event) => setDurakCheatMode(event.target.checked)} />
           </label>
         )}
-      </section>
+        </section>
+      </div>
       <div className="sticky-action">
         <button className="button button--primary button--wide" disabled={visibleNames.some((_,i)=>!isCharacterId(characters[i]))} onClick={() => onStart(gameId, visibleNames.map((name, index) => name.trim() || `Spieler ${index + 1}`), { durakCheatMode, characters:characters.slice(0,count) as CharacterId[] })}>
           {game.name} starten

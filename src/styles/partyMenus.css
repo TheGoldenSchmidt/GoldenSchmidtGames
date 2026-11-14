@@ -1,4 +1,5 @@
-/* Menu-only party theme. Game boards, dice colours and live HUDs keep their own theme. */
+/* Earlier party theme, now only for the menus inside running minigame competitions (betting, results).
+   The menus before a game use the Inselwelt style (menus.css). Game boards and live HUDs keep their own theme. */
 .minigame-settings.party-settings { grid-template-columns: minmax(0, 1fr); }
 .minigame-mode.party-menu { --deep: var(--menu-ink); padding-bottom: 24px; }
 .minigame-mode.party-menu .party-header { background: var(--menu-violet); color: var(--menu-paper); flex-wrap: wrap; border-bottom: 2px solid var(--menu-ink); }
@@ -40,7 +41,7 @@
 .minigame-history ol > li { margin: 16px 0; }
 .minigame-history ul { padding-left: 16px; overflow-wrap: anywhere; }
 
-.party-menu, .party-dialog, .pair-dialog {
+.party-menu {
   --menu-violet: #6544e8;
   --menu-yellow: #ffe44e;
   --menu-pink: #ff86c8;
@@ -54,151 +55,40 @@
   color: var(--menu-ink);
 }
 .party-menu { background: var(--menu-lilac); padding-bottom: 115px; }
-.party-menu .screen-header {
-  height: auto;
-  min-height: calc(88px + env(safe-area-inset-top));
-  padding: max(16px, env(safe-area-inset-top)) 20px 16px;
-  grid-template-columns: 44px minmax(0, 1fr) 57px;
-  gap: 12px;
-  border-bottom: 3px solid var(--menu-ink);
-  background: radial-gradient(circle, #fff9ed24 1px, transparent 1.6px) right top / 12px 12px, var(--menu-violet);
-}
-.party-menu .screen-header h1 { font-size: clamp(1.3rem, 5.5vw, 1.85rem); font-weight: 900; font-style: italic; letter-spacing: -.055em; paint-order: stroke fill; -webkit-text-stroke: 2px var(--menu-ink); text-shadow: 2px 3px 0 var(--menu-ink); }
-.party-menu .icon-button { width: 44px; height: 44px; border: 2px solid var(--menu-ink); background: var(--menu-paper); color: var(--menu-ink); box-shadow: 0 3px 0 var(--menu-ink); cursor: pointer; }
-.menu-brand { position: relative; display: block; color: #ffe44e; font-size: 1.2rem; font-weight: 900; font-style: italic; letter-spacing: -.1em; transform: rotate(-7deg); paint-order: stroke fill; -webkit-text-stroke: 2px #24133f; text-shadow: 1px 2px 0 #24133f; }
-.menu-brand > span { position: absolute; top: -9px; right: -2px; font-size: .8rem; color: #ff86c8; -webkit-text-stroke: 1px #24133f; }
 .party-menu .page__content { padding: 28px 22px; }
-.party-menu .section-heading h2 { font-size: 1.5rem; font-weight: 900; letter-spacing: -.045em; }
-.party-menu .section-heading p { line-height: 1.5; }
-.party-menu .section-heading--center h2 { font-size: 1.85rem; line-height: 1.05; font-style: italic; }
-.party-menu .section-heading--row { gap: 12px; }
 
-/* Raised actions share the start screen's pressed state without moving form fields. */
-:is(.party-menu, .party-dialog, .pair-dialog) .button {
+/* Raised actions with a pressed state that does not move form fields. */
+.party-menu .button {
   min-height: 50px;
   border: 2px solid var(--menu-ink);
   border-radius: 14px;
   box-shadow: 0 4px 0 var(--menu-ink);
   transition: transform .12s, box-shadow .12s, background .12s;
 }
-:is(.party-menu, .party-dialog, .pair-dialog) .button--primary { background: var(--menu-yellow); color: var(--menu-ink); }
-:is(.party-menu, .party-dialog, .pair-dialog) .button--secondary { background: var(--menu-violet); color: var(--menu-paper); }
-:is(.party-menu, .party-dialog, .pair-dialog) .button--ghost { background: var(--menu-paper); color: var(--menu-ink); }
-:is(.party-menu, .party-dialog, .pair-dialog) .button:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 var(--menu-ink); }
-:is(.party-menu, .party-dialog, .pair-dialog) .button:disabled { opacity: 1; background: #ddd5e8; color: #655773; box-shadow: 0 2px 0 #887998; border-color: #887998; cursor: not-allowed; }
-:is(.party-menu, .party-dialog, .pair-dialog) :is(button, input, select, textarea, summary):focus-visible { outline: 3px solid var(--menu-violet); outline-offset: 4px; box-shadow: 0 0 0 2px var(--menu-paper); }
-.party-menu .screen-header button:focus-visible { outline-color: var(--menu-yellow); }
-:is(.party-menu, .party-dialog, .pair-dialog) :is(input:not([type="radio"]):not([type="checkbox"]), select, textarea) { min-width: 0; min-height: 46px; border: 2px solid var(--menu-ink); border-radius: 11px; background: var(--menu-paper); color: var(--menu-ink); padding: 10px 12px; }
-:is(.party-menu, .party-dialog) .field > span { color: var(--menu-ink); font-weight: 800; }
+.party-menu .button--primary { background: var(--menu-yellow); color: var(--menu-ink); }
+.party-menu .button--secondary { background: var(--menu-violet); color: var(--menu-paper); }
+.party-menu .button--ghost { background: var(--menu-paper); color: var(--menu-ink); }
+.party-menu .button:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 var(--menu-ink); }
+.party-menu .button:disabled { opacity: 1; background: #ddd5e8; color: #655773; box-shadow: 0 2px 0 #887998; border-color: #887998; cursor: not-allowed; }
+.party-menu :is(button, input, select, textarea, summary):focus-visible { outline: 3px solid var(--menu-violet); outline-offset: 4px; box-shadow: 0 0 0 2px var(--menu-paper); }
+.party-menu :is(input:not([type="radio"]):not([type="checkbox"]), select, textarea) { min-width: 0; min-height: 46px; border: 2px solid var(--menu-ink); border-radius: 11px; background: var(--menu-paper); color: var(--menu-ink); padding: 10px 12px; }
+.party-menu .field > span { color: var(--menu-ink); font-weight: 800; }
 .party-menu :is(input[type="radio"], input[type="checkbox"]) { accent-color: var(--menu-violet); }
 
-.party-menu .game-choices { gap: 13px; }
-.party-menu .game-choice { border: 2px solid var(--menu-ink); background: var(--menu-paper); box-shadow: 0 3px 0 #24133f26; padding: 15px 12px; gap: 10px; cursor: pointer; }
-.party-menu .game-choice.is-selected { background: var(--menu-yellow); box-shadow: 0 4px 0 var(--menu-ink); }
-.party-menu .game-choice:disabled { opacity: .65; box-shadow: none; cursor: not-allowed; }
-.party-menu .game-choice strong { font-size: 1.05rem; font-weight: 900; }
-.party-menu .game-choice small { color: var(--menu-ink); font-size: .76rem; }
-.party-menu .game-choice__tile { background: var(--menu-violet); color: var(--menu-paper); border: 2px solid var(--menu-ink); border-radius: 13px; box-shadow: 2px 2px 0 var(--menu-ink); transform: rotate(-5deg); }
-.party-menu .game-choice__tile--durak { background: var(--menu-pink); color: var(--menu-ink); }
-.party-menu .game-choice__tile--kribbeln { background: var(--menu-turquoise); color: var(--menu-ink); }
-.party-menu .check { background: var(--menu-ink); color: var(--menu-yellow); }
-.party-menu .stepper { flex-shrink: 0; border: 2px solid var(--menu-ink); border-radius: 13px; background: var(--menu-paper); }
-.party-menu .stepper button { width: 42px; height: 44px; background: var(--menu-yellow); color: var(--menu-ink); cursor: pointer; }
-.party-menu .stepper button:disabled { opacity: 1; color: var(--menu-muted); background: #e6deef; cursor: not-allowed; }
-.party-menu .stepper strong { min-width: 30px; }
-.party-menu .local-player-setup { border: 2px solid var(--menu-ink); border-radius: 18px; padding: 14px; margin: 0; background: var(--menu-paper); }
-.party-menu .player-fields { gap: 13px; }
-.party-menu .player-number { background: var(--menu-violet); border: 2px solid var(--menu-ink); }
-.party-menu .local-character-field { gap: 12px; }
-.party-menu .local-character-field > span { color: var(--menu-ink); font-size: .78rem; font-weight: 800; }
-.party-menu .local-character-field > .character-avatar { display: inline-flex; flex: 0 0 44px; width: 44px; height: 48px; }
-.party-menu .character-avatar { background: #e6dbff; border: 1.5px solid var(--menu-ink); }
-.party-menu .sticky-action { background: var(--menu-lilac); border-top: 2px solid var(--menu-ink); padding-top: 14px; }
-.party-menu .option-toggle { border: 2px solid var(--menu-ink); background: #ffe3f2; }
 .party-menu .error-message { color: #802631; background: #ffdfdf; border: 2px solid #802631; }
 
-/* A mint stage and paper roster make the approved figures part of the party. */
-.party-menu .party-character-picker { border: 2px solid var(--menu-ink); border-radius: 23px; background: var(--menu-paper); color: var(--menu-ink); box-shadow: 0 5px 0 var(--menu-ink); margin-bottom: 28px; }
-.party-menu .party-character-stage { background: var(--menu-turquoise); }
-.party-menu .party-character-choice { padding: 20px 15px; }
-.party-menu .party-character-choice h2 { font-weight: 900; font-size: 1.55rem; }
-.party-menu .party-character-choice > p { font-size: .9rem; }
-.party-menu .party-character-grid { gap: 8px; }
-.party-menu .party-character-grid button { color: var(--menu-ink); background: #efe9ff; border: 2px solid transparent; border-radius: 12px; }
-.party-menu .party-character-grid button[aria-pressed="true"] { border-color: var(--menu-ink); background: var(--menu-yellow); box-shadow: 0 3px 0 var(--menu-ink); }
-.party-menu .party-character-grid button span { color: var(--menu-yellow); background: var(--menu-ink); }
-.party-menu .party-character-rotate { color: var(--menu-ink); background: var(--menu-paper); border: 2px solid var(--menu-ink); min-height: 44px; font-weight: 800; }
-.party-menu .character-invitation > span { background: var(--menu-violet); color: var(--menu-yellow); box-shadow: 0 6px 0 var(--menu-ink); border: 2px solid var(--menu-ink); }
-.party-menu .party-character-loading { color: var(--menu-ink); background: var(--menu-paper); border: 2px solid var(--menu-ink); }
-.party-menu .hosting-choice { margin-block: 24px; gap: 12px; min-width: 0; }
-.party-menu .hosting-choice legend { margin-bottom: 12px; font-size: 1.05rem; letter-spacing: -.03em; }
-.party-menu .hosting-choice label { border: 2px solid var(--menu-ink); border-radius: 15px; background: var(--menu-paper); color: var(--menu-ink); }
-.party-menu .hosting-choice label:has(input:checked) { background: #caf8ed; box-shadow: 0 3px 0 var(--menu-ink); }
-.party-menu .hosting-choice small { font-size: .78rem; line-height: 1.5; }
-.party-menu .hosting-choice input { width: 22px; height: 22px; }
-.party-menu .or-divider { color: var(--menu-muted); }
-.party-menu .or-divider::before, .party-menu .or-divider::after { background: #b7a6d3; }
-.party-menu :is(.nearby-join, .party-test-entry, .party-training) { color: var(--menu-ink); background: var(--menu-paper); border: 2px solid var(--menu-ink); border-radius: 15px; padding: 14px; margin: 22px 0; }
-.party-menu :is(.nearby-join, .party-test-entry, .party-training) > summary { color: var(--menu-ink); padding: 5px 0; min-height: 44px; font-size: .9rem; font-weight: 800; cursor: pointer; }
-.party-menu :is(.party-test-entry, .party-training) p { color: var(--menu-muted); font-size: .82rem; line-height: 1.5; }
-.party-menu :is(.party-test-entry, .party-training) label { color: var(--menu-ink); }
+.party-menu .party-training { color: var(--menu-ink); background: var(--menu-paper); border: 2px solid var(--menu-ink); border-radius: 15px; padding: 14px; margin: 22px 0; }
+.party-menu .party-training > summary { color: var(--menu-ink); padding: 5px 0; min-height: 44px; font-size: .9rem; font-weight: 800; cursor: pointer; }
+.party-menu .party-training p { color: var(--menu-muted); font-size: .82rem; line-height: 1.5; }
+.party-menu .party-training label { color: var(--menu-ink); }
 .party-menu .party-training > div > button { border: 1.5px solid var(--menu-ink); background: var(--menu-lilac); color: var(--menu-ink); }
 
-.party-menu .room { max-width: 740px; margin: auto; }
-.party-menu .room-code { border: 2px solid var(--menu-ink); border-radius: 18px; background: var(--menu-violet); box-shadow: 0 5px 0 var(--menu-ink); padding: 21px 16px; }
-.party-menu .room-code small { color: var(--menu-paper); font-size: .78rem; }
-.party-menu .room-code strong { color: var(--menu-yellow); font-size: 2.5rem; font-weight: 900; letter-spacing: .15em; }
-.party-menu .lobby-character-button { background: var(--menu-paper); color: var(--menu-ink); border: 2px solid var(--menu-ink); padding: 13px; border-radius: 16px; margin-top: 22px; }
-.party-menu .lobby-character-button b { color: var(--menu-violet); }
-.party-menu .player-row { border: 2px solid var(--menu-ink); background: var(--menu-paper); border-radius: 15px; gap: 9px; }
-.party-menu .player-row--empty { background: transparent; border: 2px dashed #a895c1; }
-.party-menu .player-row--empty .player-avatar { background: #e3d8f7; color: var(--menu-muted); }
-.party-menu .live-badge { color: var(--menu-ink); background: var(--menu-turquoise); border: 1.5px solid var(--menu-ink); }
-.party-menu .live-badge i { background: var(--menu-ink); }
-.party-menu .ready-mark { color: var(--menu-muted); }
-.party-menu .ready-mark.is-ready { color: var(--menu-ink); background: var(--menu-turquoise); border-radius: 99px; padding: 6px 8px; }
-.party-menu .lobby-config { border: 2px solid var(--menu-ink); background: #e1d6ff; padding: 14px; gap: 12px; }
-.party-menu .lobby-config label { min-width: 0; }
-.party-menu .lobby-config label > span { color: var(--menu-ink); font-weight: 800; }
-.party-menu .party-settings { border: 2px solid var(--menu-ink); background: var(--menu-paper); color: var(--menu-ink); }
-.party-menu .party-settings p { color: var(--menu-muted); }
-.party-menu .party-test-notice { background: var(--menu-yellow); color: var(--menu-ink); border: 2px solid var(--menu-ink); }
-
-.party-dialog, .pair-dialog { border: 2px solid var(--menu-ink); background: var(--menu-paper); box-shadow: 0 7px 0 var(--menu-ink); }
-.party-dialog { max-height: 90dvh; overflow-y: auto; padding: 14px 22px max(25px, env(safe-area-inset-bottom)); }
-.party-dialog h2, .pair-dialog h2 { color: var(--menu-ink); font-size: 1.65rem; font-weight: 900; letter-spacing: -.045em; }
-.party-dialog .dialog__handle { background: var(--menu-violet); }
-.pair-dialog::backdrop { background: #24133fb3; }
-.pair-dialog textarea { font-size: .85rem; }
-.pair-dialog > .button:last-child { position: sticky; bottom: 0; z-index: 1; margin-top: 4px; }
 .party-menu .party-connection { max-width: 580px; margin: auto; }
 
 @media (min-width: 700px) {
   body:has(.party-menu) { background: #5033c4; }
   .app-shell:has(> .party-menu) { width: min(100%, 1100px); }
-  .party-menu .online-entry { max-width: 1000px; margin-inline: auto; }
-  .party-menu .hosting-choice { grid-template-columns: 1fr 1fr; }
-  .party-menu .party-character-picker { grid-template-columns: 36% 64%; }
-  .party-dialog { border-radius: 24px; margin-bottom: 28px; }
-}
-@media (min-width: 850px) {
-  .local-setup .page__content { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 30px; align-items: start; padding: 32px; }
-  .local-setup .section-heading { margin: 0; }
-  .local-setup .section-heading--row { grid-column: 2; grid-row: 1; }
-  .local-setup .game-choices { grid-column: 1; grid-row: 2 / span 3; }
-  .local-setup .player-fields { grid-column: 2; grid-row: 2; }
-  .local-setup .option-toggle { grid-column: 2; margin: 0; }
-  .local-setup .sticky-action { width: min(100%, 1100px); padding-inline: 32px; }
-  .local-setup .sticky-action .button { width: calc(50% - 15px); display: block; margin-left: auto; }
-}
-@media (max-width: 359px) {
-  .party-menu .page__content { padding-inline: 16px; }
-  .party-menu .screen-header { padding-inline: 16px; gap: 8px; }
-  .party-menu .party-character-choice { padding-inline: 10px; }
-  .party-menu .lobby-config { gap: 8px; padding-inline: 10px; }
-  .party-menu .lobby-config select { padding-inline: 6px; font-size: .8rem; }
-  .party-dialog .dialog__actions { grid-template-columns: 1fr; gap: 13px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  :is(.party-menu, .party-dialog, .pair-dialog) *, :is(.party-menu, .party-dialog, .pair-dialog) *::before, :is(.party-menu, .party-dialog, .pair-dialog) *::after { animation: none !important; transition: none !important; }
+  .party-menu *, .party-menu *::before, .party-menu *::after { animation: none !important; transition: none !important; }
 }
