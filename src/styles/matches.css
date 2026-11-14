@@ -114,6 +114,15 @@ body:has(.party-screen--playing .match-game) { padding-block:0; }
 .match-game--tower .match-controls .match-action { width:72px; height:72px; -webkit-touch-callout:none; }
 @media (max-width:360px) { .match-game--tower .match-controls { gap:6px; padding:10px; } .match-game--tower .match-controls .match-action { width:64px; height:64px; } }
 .lava-buttons { display:flex; flex-direction:column; gap:10px; }
+/* Hindernis-Parcours: stick left, four actions in a 2×2 block on the right (jump on the thumb's home position). */
+.parcours-buttons { display:grid; grid-template-columns:repeat(2, 68px); gap:8px; }
+.match-controls .parcours-buttons .match-action { width:68px; height:68px; -webkit-touch-callout:none; }
+.match-controls .parcours-buttons .match-action span { font-size:.56rem; letter-spacing:-.01em; }
+.match-preview--tuerenlotto { background:repeating-linear-gradient(90deg, #ff86c8 0 18px, #6544e8 18px 24px); color:#ffe44e; }
+.match-preview--kreiselkurs { background:radial-gradient(circle at 50% 50%, #ffd166 30%, #1d2466 32%); color:#ff5f8f; }
+.match-preview--wippenwerk { background:linear-gradient(#1d2466 55%, #57e4cb 55%); color:#ffd166; }
+.match-preview--glibberflut { background:linear-gradient(#1d2466 50%, #8dff5a 50%); color:#ffe44e; }
+.match-preview--geisterpfad { background:repeating-conic-gradient(#bfe6ff 0 25%, #1d2466 0 50%) 50% / 28px 28px; color:#24133f; }
 /* Floor is Lava: banner in the temple theme (basalt with an ember edge). */
 .match-game--lava .match-banner { background:#2a0f0ae6; border-color:#ff6a1f; }
 .match-game--lava .match-banner b { color:#ffd166; }

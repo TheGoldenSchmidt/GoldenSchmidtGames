@@ -7,6 +7,7 @@ import type { PongGame } from "../../shared/matches/neonPong";
 import type { TankGame } from "../../shared/matches/tankTrouble";
 import type { BombGame } from "../../shared/matches/bombArena";
 import type { LavaGame } from "../../shared/matches/floorIsLava";
+import type { ParcoursGame } from "../../shared/matches/parcours";
 import type { RingGame } from "../../shared/matches/ringCore";
 import type { RunGame } from "../../shared/matches/chaosRun";
 import type { ArrowGame } from "../../shared/matches/arrowMasters";
@@ -546,6 +547,87 @@ test("Hook Wars: Stick läuft, rechts ziehen schießt den Haken, loslassen löst
     await page.screenshot({ path: testInfo.outputPath("hooks.png") });
     await page.mouse.up();
     await expect.poll(async () => (await me()).hook, { timeout: 3000 }).toBeUndefined();
+    await session.action({ type: "finish" }, session.ids[1]);
+    await expect(page.getByRole("heading", { name: "Euer Ergebnis", exact: true })).toBeVisible();
+  } finally { session.close(); }
+});
+
+for (const motion of ["no-preference", "reduce"] as const) test(`Hindernis-Parcours Türenlotto (${motion}): Verfolgerkamera, Laufen, Springen, Hechten, Ducken, Festhalten`, async ({ page }, testInfo) => {
+  await page.emulateMedia({ reducedMotion: motion });
+  const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "tuerenlotto" });
+  try {
+    await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
+    await session.action({ type: "ready" }, session.ids[1]);
+    await matchStarted(page);
+    const world = page.locator(".match-world");
+    await expect(world).toHaveAttribute("data-webgl", "ready", { timeout: 20000 });
+    await expect(world).toHaveAttribute("data-camera", "chase");
+    const match = async () => (await session.state()).partyGame!.mini!.match as MatchState<ParcoursGame>;
+    const me = async () => (await match()).game.racers[session.ids[0]];
+    const start = await me();
+    // Stick up runs forward along the course (the camera looks forward at the start).
+    const stick = (await page.getByRole("group", { name: "Bewegungsstick" }).boundingBox())!;
+    await page.mouse.move(stick.x + stick.width / 2, stick.y + stick.height / 2); await page.mouse.down();
+    await page.mouse.move(stick.x + stick.width / 2, stick.y + stick.height / 2 - 45, { steps: 3 });
+    await expect.poll(async () => (await me()).z - start.z, { timeout: 4000 }).toBeGreaterThan(1.5);
+    await page.mouse.up();
+    await page.getByRole("button", { name: "Springen", exact: true }).tap();
+    await expect.poll(async () => (await match()).players.find(p => p.id === session.ids[0])!.usedA, { timeout: 3000 }).toBeGreaterThan(0);
+    await page.screenshot({ path: testInfo.outputPath(`parcours-jump-${motion}.png`) });
+    await page.waitForTimeout(900);
+    await page.getByRole("button", { name: "Hechten", exact: true }).tap();
+    await expect.poll(async () => (await match()).players.find(p => p.id === session.ids[0])!.usedB, { timeout: 3000 }).toBeGreaterThan(0);
+    await page.waitForTimeout(900);
+    // Holding buttons: duck and hold on.
+    for (const [name, key] of [["Ducken", "hb"], ["Festhalten", "ha"]] as const) {
+      const b = (await page.getByRole("button", { name, exact: true }).boundingBox())!;
+      await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2); await page.mouse.down();
+      await expect.poll(async () => (await match()).players.find(p => p.id === session.ids[0])!.input[key], { timeout: 3000 }).toBe(true);
+      await page.mouse.up();
+      await expect.poll(async () => (await match()).players.find(p => p.id === session.ids[0])!.input[key], { timeout: 3000 }).toBe(false);
+    }
+    await page.screenshot({ path: testInfo.outputPath(`parcours-run-${motion}.png`) });
+    expect(Number(await world.getAttribute("data-draw-calls"))).toBeLessThan(300);
+    await session.action({ type: "finish" }, session.ids[1]);
+    await expect(page.getByRole("heading", { name: "Euer Ergebnis", exact: true })).toBeVisible();
+  } finally { session.close(); }
+});
+
+for (const [miniId, name] of [["tuerenlotto", "Türenlotto"], ["kreiselkurs", "Kreiselkurs"], ["wippenwerk", "Wippenwerk"], ["glibberflut", "Glibberflut"], ["geisterpfad", "Geisterpfad"]] as const) test(`${name} mit sechs Figuren: Strecke und Figuren stehen, Zeichenaufwand begrenzt`, async ({ page }, testInfo) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  const six = ["alpha_rick_prime", "alpha_morty_smith", "alpha_summer_smith", "alpha_eric_cartman", "alpha_korvo", "alpha_mr_poopybutthole"] as const;
+  const session = await onlineSession(page, false, [...six], false, "free-minigame", { miniId });
+  try {
+    await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
+    for (const other of session.ids.slice(1)) await session.action({ type: "ready" }, other);
+    await matchStarted(page);
+    const world = page.locator(".match-world");
+    await expect.poll(async () => Object.keys(JSON.parse(await world.getAttribute("data-figures") ?? "{}")).length, { timeout: 20000 }).toBe(6);
+    await expect.poll(async () => Number(await world.getAttribute("data-draw-calls")), { timeout: 5000 }).toBeGreaterThan(20);
+    const calls = Number(await world.getAttribute("data-draw-calls")), triangles = Number(await world.getAttribute("data-triangles"));
+    console.log(`${name}, six figures:`, { calls, triangles });
+    expect(calls).toBeLessThan(300);
+    await page.screenshot({ path: testInfo.outputPath(`${miniId}-six.png`) });
+    for (const other of session.ids.slice(1)) await session.action({ type: "finish" }, other);
+    await expect(page.getByRole("heading", { name: "Euer Ergebnis", exact: true })).toBeVisible();
+  } finally { session.close(); }
+});
+
+test("Hindernis-Parcours ohne WebGL: die 2D-Draufsicht übernimmt, das Spiel läuft bis zum Ergebnis", async ({ page }) => {
+  await page.addInitScript(() => {
+    const original = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, kind: string, ...rest: unknown[]) {
+      return kind.startsWith("webgl") ? null : (original as (...a: unknown[]) => RenderingContext | null).call(this, kind, ...rest);
+    } as typeof original;
+  });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "kreiselkurs" });
+  try {
+    await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
+    await session.action({ type: "ready" }, session.ids[1]);
+    await matchStarted(page);
+    await expect(page.locator(".match-canvas")).toBeVisible();
+    await expect(page.locator(".match-world")).toHaveCount(0);
     await session.action({ type: "finish" }, session.ids[1]);
     await expect(page.getByRole("heading", { name: "Euer Ergebnis", exact: true })).toBeVisible();
   } finally { session.close(); }

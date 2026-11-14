@@ -12,9 +12,10 @@ import { chaosRunClient } from "./games/chaosRun";
 import { arrowMastersClient } from "./games/arrowMasters";
 import { towerTumbleClient } from "./games/towerTumble";
 import { hookWarsClient } from "./games/hookWars";
+import { parcoursClient } from "./games/parcours";
 
 /** Rendering and touch controls per match game; rules live in `shared/matches/`. */
-export const MATCH_CLIENTS: Record<MatchId, MatchClient> = { quickdraw: quickDrawClient, trails: lightTrailsClient, pong: neonPongClient, tanks: tankTroubleClient, tankview: tankViewClient, bombs: bombArenaClient, lava: floorIsLavaClient, sumo: sumoClient, bumpercars: bumperClient, chaosrun: chaosRunClient, arrows: arrowMastersClient, tower: towerTumbleClient, hooks: hookWarsClient };
+export const MATCH_CLIENTS: Record<MatchId, MatchClient> = { quickdraw: quickDrawClient, trails: lightTrailsClient, pong: neonPongClient, tanks: tankTroubleClient, tankview: tankViewClient, bombs: bombArenaClient, lava: floorIsLavaClient, sumo: sumoClient, bumpercars: bumperClient, chaosrun: chaosRunClient, arrows: arrowMastersClient, tower: towerTumbleClient, hooks: hookWarsClient, tuerenlotto: parcoursClient, kreiselkurs: parcoursClient, wippenwerk: parcoursClient, glibberflut: parcoursClient, geisterpfad: parcoursClient };
 
 /** Loads a 3D match world and its figures ahead of time (during the minigame intro). */
 export function preloadMatchWorld(id: string, characters: readonly unknown[]) {
