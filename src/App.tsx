@@ -8,6 +8,7 @@ import { GuestPair, HostInvite } from "./nearby/Pairing";
 import { socket, useTableTransport } from "./lib/socket";
 import { clearActiveSession, loadActiveSession, loadLastHost, storeActiveSession, type ActiveSession } from "./lib/roomSession";
 import { HomeScreen } from "./screens/HomeScreen";
+import { IslandWorld } from "./components/IslandWorld";
 import { LocalSetupScreen } from "./screens/LocalSetupScreen";
 import { OnlineEntryScreen } from "./screens/OnlineEntryScreen";
 import { QwixxGameScreen } from "./screens/QwixxGameScreen";
@@ -193,8 +194,8 @@ export default function App() {
     socket.connect();socket.timeout(8000).emit("room:join",{code:saved.code,playerId:profile.id,name:profile.username,partyToken:saved.partyToken},(err:Error|null,response:{ok:boolean;data?:RoomState;error?:string})=>{if(err||!response.ok||!response.data){setCanResumeParty(false);if(!err)localStorage.removeItem(PARTY_ONLINE_SAVE);setResumeError(response?.error??"Der Raum ist nicht erreichbar. Versuche es erneut.");return;}keepSession(response.data);openOnlineGame(response.data, false);});
   }
 
-  if (session && reconnecting) return <main className="page party-menu"><section className="page__content party-connection">
-    <h2 role="status">Verbindung wird wiederhergestellt …</h2>
+  if (session && reconnecting) return <main className="page iw-menu"><IslandWorld /><section className="page__content party-connection iw-card">
+    <h2 className="iw-plank iw-card__title" role="status">Verbindung wird wiederhergestellt …</h2>
     {session.nearby?.role === "guest" && (needsPairing
       ? <GuestPair expectedTable={session.nearby.table} onOffer={()=>{}}/>
       : <p>Die Partie wartet auf das Host-Handy. Dort die App wieder öffnen.</p>)}

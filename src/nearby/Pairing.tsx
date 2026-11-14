@@ -89,8 +89,8 @@ export function HostInvite({code}:{code:string}) {
     return ()=>{active=false;nearby.off("paired",paired);nearby.cancelInvite();};
   },[open,code]);
   return <div className="pair-invite"><button className="button button--secondary" onClick={()=>{setOffer("");setError("");setAccepted(false);setOpen(true);}}>Gerät verbinden</button>
-    {open && <dialog ref={dialog} className="pair-dialog" onCancel={()=>setOpen(false)}>
-      <h2>Einladung für ein Gerät</h2>
+    {open && <dialog ref={dialog} className="pair-dialog iw-dialog" onCancel={()=>setOpen(false)}>
+      <h2 className="iw-plank">Einladung für ein Gerät</h2>
       {offer && !accepted && <><p>Dein Gast scannt diesen Code im selben WLAN oder Hotspot. Scanne danach seine Antwort.</p><DisplayCode value={offer}/>
         <ReadCode label="Antwort scannen" onRead={async value=>{await nearby.accept(value);setAccepted(true);}}/></>}
       {accepted && <p role="status">Verbindung wird aufgebaut. Falls kein Gerät beitritt, schließe die Einladung und versuche es erneut.</p>}

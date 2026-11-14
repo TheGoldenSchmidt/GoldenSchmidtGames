@@ -34,13 +34,17 @@ try {
   for (const layer of layers) {
     const started = Date.now();
     const page = await browser.newPage({ viewport: { width: 400, height: 300 } });
-    page.on("pageerror", error => console.error(error.message));
+    const problems: string[] = [];
+    page.on("pageerror", error => problems.push(error.message));
+    // A shader that fails to compile leaves its objects out silently; treat it as a failed render.
+    page.on("console", message => { if (message.type() === "error") problems.push(message.text().split("\n")[0]); });
     const passes = draft ? Math.max(8, Math.round(layer.passes / 4)) : layer.passes;
     await page.goto(`http://127.0.0.1:5198/scripts/home-render/index.html?layer=${layer.id}&n=${passes}`);
     await page.waitForFunction("window.__bake && window.__bake.done", undefined, { timeout: 900_000, polling: 250 });
     const state = await page.evaluate("({ error: window.__bake.error, image: window.__bake.image, box: window.__bake.box })") as { error: string; image: string; box: typeof manifest[string] | null };
     await page.close();
     if (state.error) throw new Error(`${layer.id}: ${state.error}`);
+    if (problems.length) throw new Error(`${layer.id}: ${[...new Set(problems)].join(" | ")}`);
     if (!state.image.startsWith("data:image/webp")) throw new Error(`${layer.id}: Browser lieferte kein WebP`);
     const file = path.join(outDir, `${layer.id}.webp`);
     const data = Buffer.from(state.image.split(",")[1], "base64");

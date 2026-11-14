@@ -3,7 +3,7 @@
 import * as THREE from "three";
 import { backdropCamera, buildBackdrop, buildCorner, cornerCamera } from "./backdrop";
 import { buildHero, HERO_WORDS } from "./hero";
-import { buildSlab, buildSocket, SLAB_SPRITES, spriteCamera } from "./sprites";
+import { buildPlank, buildSlab, buildSocket, PLANK_SPRITE, SLAB_SPRITES, spriteCamera } from "./sprites";
 
 export interface Grade {
   exposure: number;
@@ -56,7 +56,7 @@ const SPRITE: Lighting = {
 };
 const HERO_GRADE: Grade = { exposure: 1.12, saturation: 1.12, contrast: 1.06, bloom: .5, bloomThreshold: .95, vignette: 0 };
 const BACKDROP_GRADE: Grade = { exposure: 1.02, saturation: 1.08, contrast: 1.03, bloom: .25, bloomThreshold: 1, vignette: .22 };
-const SPRITE_GRADE: Grade = { exposure: 1.06, saturation: 1, contrast: 1.04, bloom: 0, bloomThreshold: 1, vignette: 0 };
+const SPRITE_GRADE: Grade = { exposure: 1.12, saturation: 1.02, contrast: 1.04, bloom: 0, bloomThreshold: 1, vignette: 0 };
 
 function heroCamera(width: number, height: number) {
   // Fits a fixed horizontal field so the island keeps its width whatever the image height.
@@ -109,6 +109,7 @@ export const LAYERS: Layer[] = [
       sprite(`slab-${kind}-pressed`, spec.width, spec.height, () => buildSlab(kind, size, true))
     ];
   }),
+  sprite("plank", PLANK_SPRITE.width, PLANK_SPRITE.height, buildPlank),
   sprite("socket-gold", 96, 96, () => buildSocket("gold")),
   sprite("socket-violet", 96, 96, () => buildSocket("violet"))
 ];
