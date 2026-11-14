@@ -242,9 +242,8 @@ QR-Dialoge über `.pair-dialog`. Globale Selektoren und `!important` nicht als
 Ersatz für klare Zuständigkeiten einsetzen. Spielregeln, Sitzungen und Transport
 bleiben außerhalb der Gestaltung.
 
-Vor dem Abschluss geänderte Ansichten auf Handy- und Desktopbreite visuell prüfen
-(Inselparty, Roll It Up! und Minispiele nur auf Handybreite),
-mit Touch beziehungsweise Maus und Tastatur bedienen sowie reduzierte Bewegung,
+Vor dem Abschluss geänderte Ansichten auf Handybreite visuell prüfen und mit
+Touch bedienen (PC-Prüfungen ruhen vorerst) sowie reduzierte Bewegung,
 lange Namen, Auswahl- und Fehlerzustände berücksichtigen. Die passenden Prüfungen
 gemäß [AGENTS.md](AGENTS.md#passende-prüfungen) ausführen. Für Startseite und Menüs
 existieren `home-screen.spec.ts` und `party-menus.spec.ts` unter `tests/browser/`.

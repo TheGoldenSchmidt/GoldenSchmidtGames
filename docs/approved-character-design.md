@@ -1,11 +1,33 @@
 # Freigegebene Charaktere
 
-Nur die 13 ausdrücklich ausgewählten alpha_-Figuren sind spielbar. The Coon
-wurde zweimal genannt und wird einmal angeboten. Die Originaldateien aus
-PC_Fighters bleiben unverändert; eigene Kopien enthalten Herkunfts-Hashes.
+Spielbar sind zwei Gruppen (Register in `shared/characters.ts`):
+
+- **Animierte Figuren** (seit Nov. 2026, elf Stück, Kennung `rig_…`): Figuren mit
+  Skelett und Animationen. Sechs Menschen aus den Quaternius-Basisfiguren (Jonas,
+  Amara, Malik, Lena, Erik, Zoe; sie bleiben in Unterwäsche in Spielerfarbe),
+  drei umgestaltete Menschen (MC Goldie: Rapper mit Oversize-Hoodie in
+  Spielerfarbe, weiter dunkler Jeans, Sneakern, Cap, Sonnenbrille und schwerer
+  Goldkette mit großem „G“; Lil Schmidt: zweiter Rapper mit hellem
+  Oversize-Hoodie, weiter Trainingshose in Spielerfarbe, Beanie, Sneakern und
+  feiner Goldkette mit großem „£“; beide tragen Kleidung als Stoffschicht; Kiki
+  Komet: Comic-Heldin mit Kontur, großen Proportionen, Stern und Maske) und zwei
+  eigene Entwürfe aus
+  Grundformen (Bolt: Roboter; Glubschi: einäugiges Monster). Quellen CC0 bzw.
+  eigene Gestaltung. Keine Nachbildungen geschützter Figuren.
+- **Klassische Figuren**: die 13 ausdrücklich ausgewählten alpha_-Figuren. The
+  Coon wurde zweimal genannt und wird einmal angeboten. Die Originaldateien aus
+  PC_Fighters bleiben unverändert; eigene Kopien enthalten Herkunfts-Hashes.
+
+**Richtung:** Langfristig bleiben nur animierte Figuren. Neue Figuren kommen
+hinzu, die sechs Basismenschen werden nicht ersetzt; die klassischen stehen
+bis zur Umstellung aller Spiele weiter zur Wahl. Beide Gruppen funktionieren in
+allen Spielen: Animierte Figuren erscheinen überall selbst. Wer eine klassische
+Figur wählt, sieht in Sumo Smash und Chaos Run (reine Skelett-Szenen) einen der
+sechs Menschen nach Farbplatz.
 
 Vor Raum, Beitritt oder Solo-Test wird eine Figur gewählt. Eine große Bühne
-zeigt die Wahl, darunter stehen 13 Bildschaltflächen. Ohne Wahl bleiben
+zeigt die Wahl, darunter stehen die Bildschaltflächen in zwei Gruppen
+(„Animierte Figuren“ zuerst, dann „Klassische Figuren“). Ohne Wahl bleiben
 Raumaktionen gesperrt. In der Lobby kann die Figur vor dem Start gewechselt
 werden. Lokale Spieler bekommen dieselbe Auswahl im Setup.
 
@@ -21,7 +43,9 @@ Handy: [ Bühne ] [ Bildauswahl in drei Spalten ] [ Raumaktionen ]
 Vorabkritik: Farbpunkte machen Serienfiguren schwer erkennbar. Daher echte
 Vorschaubilder und ein einziges aktives 3D-Modell. Listen und Punktestände
 verwenden dieselben Bilder, statt zusätzliche WebGL-Kontexte zu öffnen.
-Alle Spiele und Intros erhalten dieselbe Zuordnung. Bewegung respektiert
+Alle Spiele und Intros erhalten dieselbe Zuordnung (Besonderheit der
+Skelett-Szenen siehe oben). Technik und Erzeugung:
+[Animierte Figuren](minigames/figuren-rigged.md). Bewegung respektiert
 die Systemeinstellung und verändert keine Regeln.
 
 Für sechs Spieler werden Details innerhalb derselben beweglichen Gruppe

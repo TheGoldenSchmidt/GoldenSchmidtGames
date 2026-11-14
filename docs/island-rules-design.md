@@ -32,7 +32,7 @@ vergibt noch keine Münzen. Danach erhält Platz 1/2/3 genau 10/4/2 Münzen,
 weitere Plätze 0. Bei Punktgleichheit entscheiden weniger Stürze, dann die
 festgelegte Reihenfolge; beim Auftakt wird deren Losreihenfolge verwendet.
 Erster Sturz halbiert die aktuellen Punkte (abrunden), zweiter Sturz beendet
-den Versuch mit dem bestehenden Punktestand. Beendete Räume sind geschlossen.
+den Versuch mit dem bestehenden Punktestand. Beendete Räume kehren über „Zurück zur Lobby“ in die Lobby zurück.
 
 Neue eigene Spielvarianten: Lückenwände, Farbatoll, Fotogerangel, Kugelrempler,
 Kapitänskommando, Kistenregen, Inselgolf und Teamparcours. Sie verwenden

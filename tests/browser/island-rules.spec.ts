@@ -36,21 +36,30 @@ test("Ungültige gespeicherte Inselparty bietet keinen Wiederbeitritt",async({pa
  await expect(page.getByRole("button",{name:"Online-Inselparty wieder beitreten",exact:true})).toHaveCount(0);
 });
 
-test("Host beendet die Partie für alle und der Raum bleibt geschlossen",async({page})=>{
+test("Host beendet die Partie für alle, danach geht es in die Lobby desselben Raums",async({page})=>{
  await page.emulateMedia({reducedMotion:"reduce"});const session=await onlineSession(page);
  try{
+  const code=(await session.state()).code;
   await page.getByRole("button",{name:"Spielmenü öffnen",exact:true}).click();await page.getByRole("button",{name:"Partie für alle beenden",exact:true}).click();
   await expect(page.getByRole("heading",{name:"Partie beendet",exact:true})).toBeVisible();
-  await page.getByRole("button",{name:"Zum Startmenü",exact:true}).click();
-  await expect(page.getByRole("button",{name:"Online-Inselparty wieder beitreten",exact:true})).toHaveCount(0);
-  expect(await page.evaluate(()=>localStorage.getItem("spielraum.party.online.v1"))).toBeNull();await expect(session.state()).rejects.toThrow();
+  await page.getByRole("button",{name:"Zurück zur Lobby",exact:true}).click();
+  // Same room, back in its lobby, no game left (decision: rooms are not closed after a game).
+  await expect(page.getByRole("heading",{name:"Mitspieler",exact:true})).toBeVisible();
+  await expect(page.getByText(code,{exact:true})).toBeVisible();
+  const room=await session.state();expect(room.code).toBe(code);expect(room.phase).toBe("lobby");expect(room.partyGame).toBeUndefined();
  }finally{session.close();}
 });
 
-test("Geschlossener Raum entfernt einen bereits sichtbaren Wiederbeitritt sofort",async({page})=>{
+test("Abbruch während man draußen ist: der Wiederbeitritt führt über das Ende in die Lobby desselben Raums",async({page})=>{
  await page.emulateMedia({reducedMotion:"reduce"});const session=await onlineSession(page);
  try{
   await page.getByRole("button",{name:"Spielmenü öffnen",exact:true}).click();await page.getByRole("button",{name:"Verlassen",exact:true}).click();const resume=page.getByRole("button",{name:"Online-Inselparty wieder beitreten",exact:true});await expect(resume).toBeVisible();
-  const state=await session.state();await session.action({type:"abort"},state.hostId);await expect(resume).toHaveCount(0);expect(await page.evaluate(()=>localStorage.getItem("spielraum.party.online.v1"))).toBeNull();
+  const state=await session.state();await session.action({type:"abort"},state.hostId);
+  // The room stays open after an abort, so the rejoin remains valid and shows the end of the game.
+  await resume.click();
+  await expect(page.getByRole("heading",{name:"Partie beendet",exact:true})).toBeVisible();
+  await page.getByRole("button",{name:"Zurück zur Lobby",exact:true}).click();
+  await expect(page.getByRole("heading",{name:"Mitspieler",exact:true})).toBeVisible();
+  expect((await session.state()).phase).toBe("lobby");
  }finally{session.close();}
 });

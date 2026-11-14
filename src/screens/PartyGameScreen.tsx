@@ -30,14 +30,14 @@ function pathPreview(game:PartyGame,steps:number,destination:number) {
   return {fields,label:fieldName(game,fields.at(-1)!)};
 }
 
-export function PartyGameScreen({profile,initialRoom,onExit}:{profile:GuestProfile;initialRoom:RoomState;onExit:()=>void}) {
+export function PartyGameScreen({profile,initialRoom,onExit,onLobby}:{profile:GuestProfile;initialRoom:RoomState;onExit:()=>void;onLobby?:()=>void}) {
   const [room,setRoom]=useState(initialRoom);
   const [miniReward,setMiniReward]=useState<MiniReward>();
   const [now,setNow]=useState(Date.now()),[error,setError]=useState(""),[pending,setPending]=useState(false),[practice,setPractice]=useState<MiniId>();
   const [replace,setReplace]=useState(0),[target,setTarget]=useState(""),[destination,setDestination]=useState(6),[selectedItem,setSelectedItem]=useState<number>();
   const [sound,setSound]=useState(false),[haptics,setHaptics]=useState(true),[rolling,setRolling]=useState(false),[travelling,setTravelling]=useState(false);
   const [panel,setPanel]=useState<"inventory"|"collection"|"menu"|"journal">();
-  const lock=useRef(false),offset=useRef((initialRoom.partyGame?.serverTime ?? Date.now()) - Date.now()),controlSeq=useRef(0),game=room.partyGame;
+  const lock=useRef(false),offset=useRef((initialRoom.partyGame?.serverTime ?? Date.now()) - Date.now()),controlSeq=useRef(0),controlAt=useRef(0),controlTimer=useRef<number|undefined>(undefined),latestControl=useRef<(input:ArenaInput|MatchInput,reliable?:boolean)=>void>(()=>{}),game=room.partyGame;
   const diceKey=game?.dice.length?`${game.round}:${game.turn}:${game.dice.join()}`:"",lastDice=useRef(diceKey);
   const turnStart=useRef({key:"",coins:0,trophies:0});
 
@@ -61,7 +61,9 @@ export function PartyGameScreen({profile,initialRoom,onExit}:{profile:GuestProfi
   },[diceKey]);
   const boardPhase=Boolean(game&&BOARD_PHASES.includes(game.phase));
   useEffect(()=>{if(!boardPhase)window.scrollTo({top:0,behavior:"instant"});},[boardPhase]);
-  useEffect(()=>{if(panel&&game?.phase==="mini-play"&&!game.mini?.match)control(NEUTRAL_INPUT);},[panel]);
+  // A stop must not get lost: it is sent reliably and (see control) never inside the authority's 25-ms window.
+  useEffect(()=>{if(panel&&game?.phase==="mini-play"&&!game.mini?.match)control(NEUTRAL_INPUT,true);},[panel]);
+  useEffect(()=>()=>window.clearTimeout(controlTimer.current),[]);
 
   useEffect(()=>{
     if(!game)return;
@@ -92,7 +94,14 @@ export function PartyGameScreen({profile,initialRoom,onExit}:{profile:GuestProfi
     lock.current=true;setPending(true);socket.timeout(8000).emit("party:action",{seq:(g.seq[profile.id]??0)+1,phaseId:g.phaseId,token:room.partyToken,action},(err:Error|null,response:{ok:boolean;data?:RoomState;error?:string})=>{lock.current=false;setPending(false);if(err||!response.ok||!response.data)setError(response?.error??"Der Server antwortet nicht. Die Verbindung wird wiederhergestellt.");else{if(response.data.partyGame?.serverTime)offset.current=response.data.partyGame.serverTime-Date.now();setRoom(response.data);}});
   }
   // Stick values may be dropped (volatile); taps and commands use the reliable channel.
-  function control(input:ArenaInput|MatchInput,reliable=false) {if(!socket.connected||g.pausedAt||g.phase!=="mini-play")return;controlSeq.current=Math.max(controlSeq.current,g.mini?.arena?.actors.find(a=>a.id===viewer)?.inputSeq??g.mini?.match?.players.find(p=>p.id===viewer)?.inputSeq??0)+1;(reliable?socket:socket.volatile).emit("party:control",{phaseId:g.phaseId,token:room.partyToken,seq:controlSeq.current,input});}
+  // The authority ignores control packets that arrive less than 25 ms after the previous one.
+  // Keep 30 ms between packets and always deliver the latest one, so a stop (menu, blur) is never swallowed.
+  function control(input:ArenaInput|MatchInput,reliable=false) {if(!socket.connected||g.pausedAt||g.phase!=="mini-play")return;
+    window.clearTimeout(controlTimer.current);
+    const wait=30-(performance.now()-controlAt.current);
+    if(wait>0){controlTimer.current=window.setTimeout(()=>latestControl.current(input,reliable),wait);return;}
+    controlAt.current=performance.now();controlSeq.current=Math.max(controlSeq.current,g.mini?.arena?.actors.find(a=>a.id===viewer)?.inputSeq??g.mini?.match?.players.find(p=>p.id===viewer)?.inputSeq??0)+1;(reliable?socket:socket.volatile).emit("party:control",{phaseId:g.phaseId,token:room.partyToken,seq:controlSeq.current,input});}
+  latestControl.current=control;
   const replaceControl=<label>Welches Item möchtest du ersetzen?<select value={replace} onChange={e=>setReplace(Number(e.target.value))}>{p.items.map((item,i)=><option value={i} key={i}>{ITEMS[item].name}</option>)}</select></label>;
   const roster=<div className={`party-standings ${boardPhase?"party-board-roster":""}`} aria-label={boardPhase?"Feste Zugreihenfolge und Punktestand":"Punktestand"}>{(boardPhase?g.order.map(id=>g.players.find(player=>player.id===id)!):standings).map((player,rank)=>{
     const index=g.players.indexOf(player);
@@ -150,7 +159,7 @@ export function PartyGameScreen({profile,initialRoom,onExit}:{profile:GuestProfi
 
         {competition&&g.mode==="goldenschmidt"&&["mini-bet","mini-intro"].includes(g.phase)&&<MinigameScoreboard game={g}/>}
         {g.phase==="mini-bet"&&<MinigameBetting key={g.phaseId} game={g} viewer={viewer} busy={busy||Boolean(g.pausedAt)} send={send}/>}
-        {competition&&["mini-result","finished"].includes(g.phase)&&<MinigameResults game={g} viewer={viewer} host={host} busy={busy||Boolean(g.pausedAt)} send={send} onExit={onExit}/>}
+        {competition&&["mini-result","finished"].includes(g.phase)&&<MinigameResults game={g} viewer={viewer} host={host} busy={busy||Boolean(g.pausedAt)} send={send} onExit={onLobby??onExit} exitLabel={onLobby?"Zurück zur Lobby":"Zurück zu GSG"}/>}
         {g.phase==="mini-intro"&&m&&<div className="party-mini-intro">
           <MiniPreview id={m.id}/><p className="party-mini-round">{g.opening?"Auftakt: Bestimmt eure Zugreihenfolge":`Minispiel der Runde ${g.round}`}</p><h1>{MINIS[m.id].name}</h1><p className="party-mini-tagline">{MINI_LOOK[m.id].action}</p><p>{MINIS[m.id].instruction}</p><div className="party-mini-facts"><span>{MINI_LOOK[m.id].goal}</span><span>{competition?(g.mode==="goldenschmidt"?`Dein Einsatz: ${competition.bets[viewer]??"–"} Punkte`:"Ein Spiel · ein Ergebnis"):g.opening?"Ergebnis bestimmt euren Startplatz":"Platz 1: 10 · Platz 2: 4 · Platz 3: 2 Münzen"}</span></div>
           <button className="button button--secondary button--wide" onClick={()=>setPractice(m.id)}>Erst kurz üben</button>
@@ -162,10 +171,10 @@ export function PartyGameScreen({profile,initialRoom,onExit}:{profile:GuestProfi
         {g.phase==="finished"&&tray&&<section className="party-finale roll-finale">
           <JayspotFinish player={p}/><h1>Am Jayspot angekommen!</h1>
           <h2>{p.name} gewinnt Roll It Up!</h2><p>Das Set ist komplett. Zeit, auf der Bank zu entspannen.</p>
-          <button className="button button--primary button--wide" onClick={onExit}>Zurück zu GSG</button>
+          <button className="button button--primary button--wide" onClick={onLobby??onExit}>{onLobby?"Zurück zur Lobby":"Zurück zu GSG"}</button>
         </section>}
-        {g.phase==="finished"&&!tray&&!competition&&<section className="party-finale"><Celebration/><p>Alle {g.options.rounds} Runden gespielt</p>{miniReward&&<PartyCoinReward coins={miniReward.coins} total={miniReward.total}/>}<h1>Die Insel feiert euch!</h1><h2>{g.winners.map(id=>g.players.find(q=>q.id===id)!.name).join(" & ")}</h2><p>{g.winners.length>1?"Ihr teilt euch den Sieg!":"Du gewinnst die Inselparty!"}</p><ol>{standings.map((q,i)=><li key={q.id}><span>{i+1}.</span><CharacterAvatar id={q.characterId} className={`party-avatar party-player-color-${g.players.indexOf(q)}`}/><strong>{q.name}<small>★ {q.trophies} · ◉ {q.coins} · {q.wins} Minispielsiege</small></strong></li>)}</ol>{m&&<details className="party-final-awards"><summary>Letztes Minispiel: {MINIS[m.id].name}</summary><ul>{partyMiniResults(g).map(r=><li key={r.player.id}><strong>{r.player.name}</strong><span>{r.score} Punkte · +{r.coins} Münzen</span></li>)}</ul></details>}<button className="button button--primary button--wide" onClick={onExit}>Zurück zu GSG</button></section>}
-        {g.phase==="aborted"&&<><h2>Partie beendet</h2><button className="button button--primary" onClick={onExit}>Zum Startmenü</button></>}
+        {g.phase==="finished"&&!tray&&!competition&&<section className="party-finale"><Celebration/><p>Alle {g.options.rounds} Runden gespielt</p>{miniReward&&<PartyCoinReward coins={miniReward.coins} total={miniReward.total}/>}<h1>Die Insel feiert euch!</h1><h2>{g.winners.map(id=>g.players.find(q=>q.id===id)!.name).join(" & ")}</h2><p>{g.winners.length>1?"Ihr teilt euch den Sieg!":"Du gewinnst die Inselparty!"}</p><ol>{standings.map((q,i)=><li key={q.id}><span>{i+1}.</span><CharacterAvatar id={q.characterId} className={`party-avatar party-player-color-${g.players.indexOf(q)}`}/><strong>{q.name}<small>★ {q.trophies} · ◉ {q.coins} · {q.wins} Minispielsiege</small></strong></li>)}</ol>{m&&<details className="party-final-awards"><summary>Letztes Minispiel: {MINIS[m.id].name}</summary><ul>{partyMiniResults(g).map(r=><li key={r.player.id}><strong>{r.player.name}</strong><span>{r.score} Punkte · +{r.coins} Münzen</span></li>)}</ul></details>}<button className="button button--primary button--wide" onClick={onLobby??onExit}>{onLobby?"Zurück zur Lobby":"Zurück zu GSG"}</button></section>}
+        {g.phase==="aborted"&&<><h2>Partie beendet</h2><button className="button button--primary" onClick={onLobby??onExit}>{onLobby?"Zurück zur Lobby":"Zum Startmenü"}</button></>}
         {error&&!panel&&<p className="error-message" role="alert">{error}</p>}
       </section>
     </div>

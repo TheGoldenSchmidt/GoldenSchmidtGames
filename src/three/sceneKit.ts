@@ -19,7 +19,7 @@ export class SceneKit {
   constructor(readonly host:HTMLElement,onError:()=>void,options:{alpha?:boolean}={}) {
     this.renderer=new T.WebGLRenderer({antialias:true,alpha:options.alpha??false,powerPreference:"high-performance"});
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
-    this.renderer.shadowMap.enabled=true;this.renderer.shadowMap.type=T.PCFSoftShadowMap;
+    this.renderer.shadowMap.enabled=true;this.renderer.shadowMap.type=T.PCFShadowMap;
     this.renderer.outputColorSpace=T.SRGBColorSpace;this.renderer.toneMapping=T.ACESFilmicToneMapping;this.renderer.toneMappingExposure=.92;
     this.renderer.domElement.setAttribute("aria-hidden","true");
     host.appendChild(this.renderer.domElement);host.dataset.webgl="ready";
@@ -82,7 +82,7 @@ export class SceneKit {
 
 export interface Character {group:T.Group;act?:(clip:"attack"|"hit"|"death",time:number)=>void;pose:(heading:number,speed:number,time:number,jump:number,punch:boolean,reduce:boolean)=>void}
 export function character(kit:SceneKit,parent:T.Object3D,index:number,name?:string,selected?:string):Character {
-  const figure=figureCharacter(parent,characterId(selected,index));
+  const figure=figureCharacter(parent,characterId(selected,index),PLAYER_COLORS[index%6]);
   const ring=kit.mesh(figure.group,new T.TorusGeometry(.4,.045,6,24),PLAYER_COLORS[index%6],0,.045,0);ring.rotation.x=Math.PI/2;
   if(name){const label=kit.label(figure.group,name,"#10485b",2.1);label.position.set(0,1.9,0);}
   return figure;

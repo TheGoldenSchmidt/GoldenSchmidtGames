@@ -103,5 +103,18 @@ function client(skin: Skin, actionLabel: string, icon: string, cooldown: number)
   };
 }
 
-export const sumoClient = client("sumo", "Stoß", "✊", SUMO.cooldown);
+export const sumoClient: MatchClient = {
+  ...client("sumo", "Stoß", "✊", SUMO.cooldown),
+  // 2.5D with rigged, animated characters (Quaternius, CC0); the canvas stays as fallback.
+  world: async () => {
+    const [scene, rig] = await Promise.all([import("../../three/sumoWorld"), import("../../three/riggedFigure")]);
+    const chars = await rig.loadCharacterKit();
+    return (host, read, onError) => scene.createSumoWorld(host, read, onError, chars);
+  },
+  banner(view, viewer) {
+    const me = (view.game as RingGame).fighters[viewer];
+    if (!me?.alive || !me.out || view.done) return undefined;
+    return { title: "Ring-Out!", text: `Zurück in ${Math.max(0, Math.ceil((me.respawnAt - view.time) / 1000))} s` };
+  }
+};
 export const bumperClient = client("bumper", "Turbo", "⚡", BUMPER.cooldown);

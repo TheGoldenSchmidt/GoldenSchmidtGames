@@ -42,8 +42,10 @@ export function MinigameBetting({ game, viewer, busy, send }: {
   </section>;
 }
 
-export function MinigameResults({ game, viewer, host, busy, send, onExit }: {
+export function MinigameResults({ game, viewer, host, busy, send, onExit, exitLabel = "Zurück zu GSG" }: {
   game: PartyGame; viewer: string; host: boolean; busy: boolean; send: (action: PartyAction) => void; onExit: () => void;
+  /** Online rooms return to their lobby after the game; local play goes back to GSG. */
+  exitLabel?: string;
 }) {
   const c = game.competition!, finished = game.phase === "finished", free = game.mode === "free-minigame";
   const result = c.history.at(-1)!;
@@ -67,7 +69,7 @@ export function MinigameResults({ game, viewer, host, busy, send, onExit }: {
           <ul>{game.players.map(p => <li key={p.id}>{p.name}: Einsatz {round.bets[p.id] ?? "–"}, +{round.points[p.id]} Punkte</li>)}</ul>
         </li>)}</ol>
       </details></>}
-    {finished ? <button className="button button--primary button--wide" onClick={onExit}>Zurück zu GSG</button>
+    {finished ? <button className="button button--primary button--wide" onClick={onExit}>{exitLabel}</button>
       : host ? <button className="button button--primary button--wide" disabled={busy} onClick={() => send({ type: "next" })}>Nächstes Minispiel</button>
       : <p role="status">Der Host startet das nächste Minispiel.</p>}
   </section>;

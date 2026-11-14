@@ -1,13 +1,45 @@
 name: CI
+
+# Sparsam mit Actions-Minuten (privates Repo, Free-Plan):
+# - Automatisch läuft nur die schnelle Prüfung (rund 3 Minuten), und zwar bei
+#   Pushes auf main und bei Pull Requests. Pushes auf andere Branches und reine
+#   Dokumentationsänderungen starten nichts.
+# - Die ausführliche Prüfung (zusätzlich alle Browsertests im Projekt "phone",
+#   rund 35 Minuten) startet nur von Hand: Actions → CI → "Run workflow".
 on:
   push:
+    branches: [main]
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+      - ".agents/**"
   pull_request:
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+      - ".agents/**"
   workflow_dispatch:
+    inputs:
+      browser:
+        description: "Ausführlich: zusätzlich Browsertests (Handy)"
+        type: boolean
+        default: true
+      tests:
+        description: "Nur diese Spec-Dateien, z. B. tests/browser/party.spec.ts (leer = alle)"
+        type: string
+        default: ""
+
+# Ein neuerer Lauf desselben Branches ersetzt den älteren, noch laufenden.
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # Alles in einem Job: Installation und Build fallen nur einmal an, und
+    # GitHub rundet jede Jobdauer einzeln auf volle Minuten auf.
+    timeout-minutes: ${{ github.event_name == 'workflow_dispatch' && inputs.browser && 60 || 10 }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -22,29 +54,19 @@ jobs:
       - run: npm run test:online
       - run: npm run test:production
 
-  browser:
-    needs: test
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        project: [phone, desktop]
-        shard: [1, 2, 3]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm run build
-      - run: npx playwright install --with-deps chromium
-      - run: npm run test:browser -- --project=${{ matrix.project }} --shard=${{ matrix.shard }}/3 --reporter=list
+      # Ab hier nur die ausführliche Prüfung auf ausdrücklichen Start.
+      - name: Chromium installieren
+        if: github.event_name == 'workflow_dispatch' && inputs.browser
+        run: npx playwright install --with-deps chromium
+      - name: Browsertests (Handy)
+        if: github.event_name == 'workflow_dispatch' && inputs.browser
+        env:
+          SPECS: ${{ inputs.tests }}
+        run: npm run test:browser -- $SPECS --reporter=list
       - uses: actions/upload-artifact@v7
-        if: always()
+        if: failure() && github.event_name == 'workflow_dispatch' && inputs.browser
         with:
-          name: browser-${{ matrix.project }}-${{ matrix.shard }}
+          name: browser-phone
           path: test-results/
           if-no-files-found: ignore
-          retention-days: 7
+          retention-days: 3

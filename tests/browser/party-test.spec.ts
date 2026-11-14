@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { CHARACTERS } from "../../shared/characters";
 import { randomUUID } from "node:crypto";
 
 test("Solo-Test: eigene JSON-Figur wählen, drehen und mit echten Bots spielen",async({page},info)=>{
@@ -7,7 +8,7 @@ test("Solo-Test: eigene JSON-Figur wählen, drehen und mit echten Bots spielen",
   await page.addInitScript(profile=>localStorage.setItem("spielraum.profile.v1",JSON.stringify(profile)),{id:randomUUID(),username:"Anna"});
   await page.goto("/");await page.getByRole("button",{name:/Online spielen/}).click();
   await expect(page.getByRole("button",{name:"Neuen Raum erstellen",exact:true})).toBeDisabled();
-  await expect(page.locator(".party-character-grid button")).toHaveCount(13);
+  await expect(page.locator(".party-character-grid button")).toHaveCount(CHARACTERS.length);
   await page.getByRole("button",{name:"Prime Rick",exact:true}).click();
   await page.getByText("Inselparty alleine testen",{exact:true}).click();
   await page.getByLabel("Bot-Mitspieler").selectOption("2");
