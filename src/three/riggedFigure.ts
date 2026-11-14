@@ -3,11 +3,12 @@ import { GLTFLoader, type GLTF } from "three/examples/jsm/loaders/GLTFLoader.js"
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { isRiggedCharacter, RIGGED_CHARACTERS, type RiggedCharacterId } from "../../shared/characters";
+import { clothing, clothSurface, type Garment } from "./garments";
 
 /**
  * Rigged, animated characters. Humans are Quaternius Universal Base Characters
- * (CC0) with hairstyles, outfits painted by garment region, optional comic
- * shading and accessories; "Bolt" and "Glubschi" are own designs built from
+ * (CC0) with hairstyles, outfits painted by garment region, loose clothing as
+ * an own cloth layer (see garments.ts), optional comic shading and accessories; "Bolt" and "Glubschi" are own designs built from
  * primitives on the same 65-bone skeleton. All share the clips of the Universal
  * Animation Library 1 and 2 (built by scripts/assets/build-characters.mjs).
  */
@@ -35,7 +36,9 @@ interface Human {
   toon?: boolean;
   /** Bone scales for stylised proportions. */
   scale?: { head?: number; hands?: number; feet?: number };
-  accessories?: ("hoodie" | "baggy" | "cap" | "chain" | "shades" | "emblem" | "mask")[];
+  /** Loose clothing as a cloth layer over the body: hoodie (with `trim` for hem, cuffs and hood) and trousers with a side stripe. */
+  wear?: { hoodie?: Paint; trim?: Paint; pants?: Paint; stripe?: Paint };
+  accessories?: ("hoodie" | "baggy" | "cap" | "chain" | "shades" | "emblem" | "mask" | "beanie" | "pendant" | "sneakers")[];
 }
 interface Built { kind: "robot" | "monster" }
 type Spec = Human | Built;
@@ -53,6 +56,10 @@ export const RIGGED_SPECS: Record<RiggedCharacterId, Spec> = {
   // Comic heroine in the game's palette: big head and hands, stepped shading, outline.
   rig_kiki_komet: { kind: "human", body: "f", skin: "light", hair: "buns", hairColor: 0xff5fa8, toon: true, scale: { head: 1.3, hands: 1.35, feet: 1.25 },
     outfit: { shirt: "player", shorts: 0x6544e8, legs: 0xffe44e, shoes: 0xffe44e, gloves: 0xffe44e, wide: [.012, 0, .012, .02], flat: 1 }, accessories: ["emblem", "mask"] },
+  // Second rapper: oversized hoodie and wide trousers as cloth layers, beanie, gold chain with a star.
+  rig_lil_schmidt: { kind: "human", body: "m", skin: "light", hair: "buzzed", beard: true, hairColor: 0x7a4a24,
+    outfit: { shirt: 0xfff9ed, shorts: "player", legs: "player", shoes: 0xfff9ed, flat: 1 },
+    wear: { hoodie: 0xece6da, trim: "player", pants: "player", stripe: 0xfff9ed }, accessories: ["beanie", "pendant", "sneakers"] },
   rig_bolt: { kind: "robot" },
   rig_glubschi: { kind: "monster" }
 };
@@ -123,14 +130,17 @@ function bodyMaterial(spec: Human, map: T.Texture, mask: T.Texture, player: numb
     outfitMap: { value: mask }, outfitColor: { value: new T.Color(player) }, outfitOn: { value: o ? 0 : 1 },
     cShirt: { value: paint(o?.shirt) }, cSleeves: { value: paint(o?.sleeves) }, cShorts: { value: paint(o?.shorts) }, cLegs: { value: paint(o?.legs) }, cShoes: { value: paint(o?.shoes) }, cGloves: { value: paint(o?.gloves) },
     gaOn: { value: new T.Vector4(on(o?.shirt), on(o?.sleeves), on(o?.shorts), on(o?.legs)) }, gbOn: { value: new T.Vector2(on(o?.shoes), on(o?.gloves)) },
-    gWide: { value: new T.Vector4(...(o?.wide ?? [0, 0, 0, 0])) }, gFlat: { value: o?.flat ?? .5 }
+    gWide: { value: new T.Vector4(...(o?.wide ?? [0, 0, 0, 0])) }, gFlat: { value: o?.flat ?? .5 },
+    // Feet inside modelled shoes are not drawn.
+    gNoFeet: { value: spec.accessories?.includes("sneakers") ? 1 : 0 }
   };
   material.onBeforeCompile = shader => {
     Object.assign(shader.uniforms, uniforms);
     shader.vertexShader = "attribute vec4 _ga;\nattribute vec2 _gb;\nvarying vec4 vGa;\nvarying vec2 vGb;\nuniform vec4 gWide;\nuniform vec4 gaOn;\n" + shader.vertexShader.replace("#include <begin_vertex>", `#include <begin_vertex>
       vGa = _ga; vGb = _gb;
       transformed += normalize(objectNormal) * dot(_ga * gaOn, gWide);`);
-    shader.fragmentShader = "uniform sampler2D outfitMap;\nuniform vec3 outfitColor;\nuniform float outfitOn;\nuniform vec3 cShirt;\nuniform vec3 cSleeves;\nuniform vec3 cShorts;\nuniform vec3 cLegs;\nuniform vec3 cShoes;\nuniform vec3 cGloves;\nuniform vec4 gaOn;\nuniform vec2 gbOn;\nuniform float gFlat;\nvarying vec4 vGa;\nvarying vec2 vGb;\n" + shader.fragmentShader.replace("#include <map_fragment>", `#include <map_fragment>
+    shader.fragmentShader = "uniform sampler2D outfitMap;\nuniform vec3 outfitColor;\nuniform float outfitOn;\nuniform vec3 cShirt;\nuniform vec3 cSleeves;\nuniform vec3 cShorts;\nuniform vec3 cLegs;\nuniform vec3 cShoes;\nuniform vec3 cGloves;\nuniform vec4 gaOn;\nuniform vec2 gbOn;\nuniform float gFlat;\nuniform float gNoFeet;\nvarying vec4 vGa;\nvarying vec2 vGb;\n" + shader.fragmentShader.replace("#include <map_fragment>", `#include <map_fragment>
+      if (vGb.x * gNoFeet > .5) discard;
       float shade = dot(diffuseColor.rgb, vec3(.299, .587, .114));
       float fold = mix(.8 + .45 * shade, 1., gFlat);
       diffuseColor.rgb = mix(diffuseColor.rgb, outfitColor * (.55 + .9 * shade), texture2D(outfitMap, vMapUv).r * outfitOn);
@@ -192,17 +202,75 @@ function limbPart(model: T.Object3D, a: string, b: string, radius: number, mater
   return attach(model.getObjectByName(a)!, new T.CapsuleGeometry(radius, Math.max(.01, p.distanceTo(q) - radius), 6, 12), material, m => { m.position.copy(p).lerp(q, .5); m.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), q.clone().sub(p).normalize()); }, into);
 }
 
+/** Five-pointed star, tip up. */
+function starShape(outer: number, inner: number) {
+  const star = new T.Shape();
+  for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2 + Math.PI / 2, r = i % 2 ? inner : outer; if (i) star.lineTo(Math.cos(a) * r, Math.sin(a) * r); else star.moveTo(Math.cos(a) * r, Math.sin(a) * r); }
+  return star;
+}
+
 /** Clothing pieces and accessories, fitted to the rest pose of this body; each follows one bone. */
-function accessorize(spec: Human, model: T.Object3D, body: T.SkinnedMesh, player: number, materials: T.Material[]) {
+function accessorize(spec: Human, model: T.Object3D, body: T.SkinnedMesh, cloth: T.Mesh | undefined, player: number, materials: T.Material[]) {
   const bone = (n: string) => model.getObjectByName(n)!, at = (n: string) => bone(n).getWorldPosition(new T.Vector3());
   const head = boneBounds(body, /^Head$/), c = head.getCenter(new T.Vector3()), size = head.getSize(new T.Vector3()), radius = Math.max(size.x, size.z) / 2;
   const paint = (p: Paint | undefined, fallback: number) => p === undefined ? fallback : p === "player" ? player : p;
   const neck = at("neck_01"), chest = boneBounds(body, /^spine_0[23]$/), torso = at("spine_01").lerp(at("spine_03"), .55);
   // Half axes of the hoodie body; also the surface the chain and emblem rest on.
   const hoodie = spec.accessories?.includes("hoodie") ? new T.Vector3(.26, .33, .21) : undefined;
-  const frontAt = (x: number, y: number) => hoodie
+  const frontAt = (x: number, y: number) => cloth && spec.wear?.hoodie !== undefined ? clothSurface(cloth, x, y) : hoodie
     ? torso.z + hoodie.z * Math.sqrt(Math.max(.05, 1 - ((y - torso.y) / hoodie.y) ** 2 - (x / hoodie.x) ** 2))
     : chest.max.z + (spec.outfit?.wide?.[0] ?? 0);
+  /** Thin rod between two points (rest pose), following `to`. */
+  const rod = (to: string, from: T.Vector3, end: T.Vector3, radius: number, material: T.Material) => attach(bone(to), new T.CylinderGeometry(radius, radius, from.distanceTo(end), 8), material,
+    m => { m.position.copy(from).lerp(end, .5); m.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), end.clone().sub(from).normalize()); }, materials);
+  /** Gold chain on the chest: links from the collar down to a pendant; heavy straight strands or a fine hanging curve. */
+  const chain = (pendant: "disc" | "star", width: number, drop: number) => {
+    const heavy = pendant === "disc", gold = std(heavy ? 0xffc533 : 0xffcb3a, { roughness: heavy ? .25 : .32, metalness: heavy ? .85 : .5 }), low = new T.Vector3(neck.x, neck.y - drop, 0), size = heavy ? .032 : .02;
+    // The strand as points on the cloth, then links at even distances along it.
+    const strand = (side: number, k: number) => { const x = neck.x + side * width * (heavy ? 1 - k : Math.cos(k * Math.PI / 2)), y = neck.y - .05 - (drop - .05) * (heavy ? k : Math.sin(k * Math.PI / 2)); return new T.Vector3(x, y, frontAt(x, y) + size * .7); };
+    for (const side of [-1, 1]) {
+      const points = Array.from({ length: 49 }, (_, i) => strand(side, i / 48)), lengths = [0];
+      for (let i = 1; i < points.length; i++) lengths.push(lengths[i - 1] + points[i].distanceTo(points[i - 1]));
+      const total = lengths[lengths.length - 1], links = heavy ? 5 : Math.round(total / (size * 1.75));
+      for (let i = 0, at = 1; i <= links; i++) {
+        const want = total * i / links; while (at < points.length - 1 && lengths[at] < want) at++;
+        const position = points[at - 1].clone().lerp(points[at], (want - lengths[at - 1]) / Math.max(1e-6, lengths[at] - lengths[at - 1])), along = points[at].clone().sub(points[at - 1]).normalize();
+        // On a cloth layer the upper links follow the chest, the lower ones the belly, like the cloth below them.
+        attach(bone(cloth && position.y > neck.y - .17 ? "spine_03" : "spine_02"), new T.TorusGeometry(size, size * .38, 6, 12), gold, m => {
+          m.position.copy(position);
+          if (heavy) m.rotation.set(0, i % 2 ? Math.PI / 2 : 0, side * .45);
+          else { m.scale.y = 1.3; m.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), along); if (i % 2) m.rotateY(Math.PI / 2); }
+        }, materials);
+      }
+    }
+    if (pendant === "disc") {
+      const y = low.y - .1;
+      attach(bone("spine_02"), new T.CylinderGeometry(.1, .1, .03, 24), gold, m => { m.rotation.x = Math.PI / 2; m.position.set(low.x, y, frontAt(0, y) + .03); }, materials);
+      attach(bone("spine_02"), new T.CylinderGeometry(.055, .055, .04, 6), std(INK, { roughness: .2, metalness: .3 }), m => { m.rotation.x = Math.PI / 2; m.position.set(low.x, y, frontAt(0, y) + .034); }, materials);
+    } else {
+      const y = low.y - .085;
+      attach(bone("spine_02"), new T.ExtrudeGeometry(starShape(.1, .044), { depth: .022, bevelEnabled: true, bevelSize: .006, bevelThickness: .006, bevelSegments: 1 }), gold, m => m.position.set(low.x, y, frontAt(0, y) + .014), materials);
+    }
+  };
+  if (cloth && spec.wear?.hoodie !== undefined) {
+    // The hood lies down: a roll around the neck, thick at the back, thin towards the chest, and a pouch on the upper back.
+    const fabric = std(paint(spec.wear.hoodie, player), { roughness: .94 });
+    const span = Math.PI * .88, steps = 30, centreZ = neck.z + .012;
+    const along = (k: number) => new T.Vector3(neck.x + Math.sin(k * span) * .126, neck.y - .004 - .1 * k * k, centreZ - Math.cos(k * span) * (k * k > .5 ? .132 : .122));
+    const path = new T.CatmullRomCurve3(Array.from({ length: 15 }, (_, i) => along(i / 7 - 1))), roll = new T.TubeGeometry(path, steps, 1, 10, false), p = roll.attributes.position, v = new T.Vector3();
+    for (let i = 0; i <= steps; i++) {
+      const centre = path.getPointAt(i / steps), radius = .022 + .031 * (1 - Math.abs(i / steps * 2 - 1) ** 1.6);
+      for (let j = 0; j <= 10; j++) { const at = i * 11 + j; v.fromBufferAttribute(p, at).sub(centre).multiplyScalar(radius).add(centre); p.setXYZ(at, v.x, v.y, v.z); }
+    }
+    attach(bone("spine_03"), roll, fabric, () => undefined, materials);
+    const back = neck.y - .115;
+    // The hood hangs down the back: wide at the neck, running to a soft tip.
+    const pouch = new T.SphereGeometry(1, 18, 14), pp = pouch.attributes.position;
+    for (let i = 0; i < pp.count; i++) { const low = Math.max(0, -pp.getY(i)); pp.setXYZ(i, pp.getX(i) * (.15 - .07 * low ** 1.4), pp.getY(i) * (pp.getY(i) < 0 ? .16 : .08), pp.getZ(i) * (.042 - .016 * low)); }
+    pouch.computeVertexNormals();
+    attach(bone("spine_03"), pouch, fabric, m => { m.rotation.x = -.1; m.position.set(neck.x, back + .04, clothSurface(cloth, 0, back, true) + .018); }, materials);
+    for (const side of [-1, 1]) attach(bone("spine_03"), new T.SphereGeometry(.024, 10, 8), fabric, m => m.position.copy(along(side)), materials);
+  }
   for (const item of spec.accessories ?? []) {
     if (item === "hoodie") {
       // Wide hoodie: a roomy body, puffy sleeves, a hood on the back and a belly pocket.
@@ -231,25 +299,36 @@ function accessorize(spec: Human, model: T.Object3D, body: T.SkinnedMesh, player
       for (const side of [-1, 1]) attach(bone("Head"), new T.BoxGeometry(radius * .72, radius * .36, .03), glass, m => m.position.set(c.x + side * radius * .42, head.min.y + size.y * .56, head.max.z - .005), materials);
       attach(bone("Head"), new T.BoxGeometry(radius * 1.9, radius * .08, .025), glass, m => m.position.set(c.x, head.min.y + size.y * .62, head.max.z - .01), materials);
     } else if (item === "chain") {
-      // Big gold chain: two strands of links from the collar down to a heavy medallion.
-      // It follows the same bone as the hoodie body, so it stays on the cloth when the chest leans.
-      const gold = std(0xffc533, { roughness: .25, metalness: .85 }), low = new T.Vector3(neck.x, neck.y - .3, 0);
-      for (const side of [-1, 1]) {
-        const top = new T.Vector3(neck.x + side * .1, neck.y - .05, 0);
-        for (let i = 0; i <= 5; i++) attach(bone("spine_02"), new T.TorusGeometry(.032, .012, 6, 12), gold, m => {
-          const k = i / 5, x = top.x + (low.x - top.x) * k, y = top.y + (low.y - top.y) * k;
-          m.position.set(x, y, frontAt(x, y) + .02); m.rotation.set(0, i % 2 ? Math.PI / 2 : 0, side * .45);
-        }, materials);
+      // Big chain with a heavy medallion. It follows the same bone as the hoodie body, so it stays on the cloth.
+      chain("disc", .1, .3);
+    } else if (item === "pendant") {
+      chain("star", .058, .25);
+    } else if (item === "beanie") {
+      // Beanie in the player colour: crown over the skull, folded band above the eyes.
+      const knit = std(player, { roughness: .95 }), band = std(new T.Color(player).multiplyScalar(.74).getHex(), { roughness: .95 }), y = head.min.y + size.y * .66, r = radius * 1.07, z = c.z - radius * .04;
+      attach(bone("Head"), new T.SphereGeometry(r, 22, 12, 0, Math.PI * 2, 0, Math.PI * .5), knit, m => { m.scale.y = 1.22; m.position.set(c.x, y, z); }, materials);
+      attach(bone("Head"), new T.CylinderGeometry(r * 1.03, r * 1.04, size.y * .2, 22, 1, true), band, m => m.position.set(c.x, y + size.y * .08, z), materials);
+    } else if (item === "sneakers") {
+      // Chunky sneakers around the feet (the body's feet are hidden, see `bodyMaterial`).
+      const upper = std(paint(spec.outfit?.shoes, 0xfff9ed), { roughness: .7 }), sole = std(player, { roughness: .8 });
+      for (const s of ["l", "r"]) {
+        const foot = boneBounds(body, new RegExp(`^(foot|ball|ball_leaf)_${s}$`)), centre = foot.getCenter(new T.Vector3()), half = foot.getSize(new T.Vector3()).multiplyScalar(.5);
+        // A rounded box that is high at the ankle and flat at the toes.
+        const shape = (height: number, round: number) => {
+          const g = new T.SphereGeometry(1, 18, 12), p = g.attributes.position;
+          for (let i = 0; i < p.count; i++) {
+            const x = Math.sign(p.getX(i)) * Math.abs(p.getX(i)) ** round, y = Math.sign(p.getY(i)) * Math.abs(p.getY(i)) ** round, z = Math.sign(p.getZ(i)) * Math.abs(p.getZ(i)) ** round;
+            p.setXYZ(i, x * (half.x + .014), y * height * (y > 0 ? 1 - .5 * Math.max(0, z) ** 1.5 : 1), z * (half.z + .014));
+          }
+          g.computeVertexNormals(); return g;
+        };
+        attach(bone(`foot_${s}`), shape(.066, .6), upper, m => m.position.set(centre.x, foot.min.y + .06, centre.z), materials);
+        attach(bone(`foot_${s}`), shape(.02, .45), sole, m => { m.scale.set(1.06, 1, 1.04); m.position.set(centre.x, foot.min.y + .012, centre.z); }, materials);
       }
-      const y = low.y - .1;
-      attach(bone("spine_02"), new T.CylinderGeometry(.1, .1, .03, 24), gold, m => { m.rotation.x = Math.PI / 2; m.position.set(low.x, y, frontAt(0, y) + .03); }, materials);
-      attach(bone("spine_02"), new T.CylinderGeometry(.055, .055, .04, 6), std(INK, { roughness: .2, metalness: .3 }), m => { m.rotation.x = Math.PI / 2; m.position.set(low.x, y, frontAt(0, y) + .034); }, materials);
     } else if (item === "emblem") {
       // Five-pointed star on the chest.
-      const star = new T.Shape();
-      for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2 + Math.PI / 2, r = i % 2 ? .034 : .08; if (i) star.lineTo(Math.cos(a) * r, Math.sin(a) * r); else star.moveTo(Math.cos(a) * r, Math.sin(a) * r); }
       const y = neck.y - .2;
-      attach(bone("spine_02"), new T.ExtrudeGeometry(star, { depth: .012, bevelEnabled: false }), new T.MeshToonMaterial({ color: 0xffe44e, gradientMap: toonRamp() }), m => m.position.set(neck.x, y, frontAt(0, y) + .004), materials);
+      attach(bone("spine_02"), new T.ExtrudeGeometry(starShape(.08, .034), { depth: .012, bevelEnabled: false }), new T.MeshToonMaterial({ color: 0xffe44e, gradientMap: toonRamp() }), m => m.position.set(neck.x, y, frontAt(0, y) + .004), materials);
     } else if (item === "mask") {
       // Hero mask: a band around the eyes.
       attach(bone("Head"), new T.CylinderGeometry(radius * 1.03, radius * 1.03, size.y * .2, 24, 1, true, -Math.PI * .55, Math.PI * 1.1), new T.MeshToonMaterial({ color: 0x6544e8, gradientMap: toonRamp(), side: T.DoubleSide }), m => m.position.set(c.x, head.min.y + size.y * .57, c.z), materials);
@@ -289,7 +368,18 @@ function buildHuman(kit: CharacterKit, spec: Human, player: number, materials: T
     });
   }
   model.updateMatrixWorld(true);
-  if (body) accessorize(spec, model, body, player, materials);
+  const skin = body as T.SkinnedMesh | undefined;
+  let layer: T.Mesh | undefined;
+  if (skin && spec.wear) {
+    // Loose clothing: a cloth layer over the body, skinned with the body's weights.
+    const paint = (p: Paint | undefined, fallback: number) => p === undefined ? fallback : p === "player" ? player : p;
+    const garments: Garment[] = [...(spec.wear.hoodie !== undefined ? ["hoodie" as const] : []), ...(spec.wear.pants !== undefined ? ["pants" as const] : [])];
+    const hoodie = paint(spec.wear.hoodie, player), pants = paint(spec.wear.pants, 0x27335a);
+    const cloth = clothing(skin, `body_${spec.body}`, garments, { hoodie, trim: paint(spec.wear.trim, hoodie), pants, stripe: paint(spec.wear.stripe, pants) });
+    cloth.position.copy(skin.position); cloth.quaternion.copy(skin.quaternion); cloth.scale.copy(skin.scale);
+    skin.parent!.add(cloth); materials.push(cloth.material as T.Material); layer = cloth;
+  }
+  if (skin) accessorize(spec, model, skin, layer, player, materials);
   if (spec.toon) for (const mesh of hulls) materials.push(outline(mesh, mesh === body ? .011 : .008, mesh === body ? spec.outfit : undefined));
   // Stylised proportions: clips carry no scale tracks, so bone scales persist.
   const scale = (names: string[], k?: number) => { if (k) for (const n of names) model.getObjectByName(n)?.scale.multiplyScalar(k); };

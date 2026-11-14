@@ -13,7 +13,7 @@ import { chromium } from "playwright";
 const PORT = "4189", ORIGIN = `http://127.0.0.1:${PORT}`, TMP = "node_modules/.cache/rig-portraits";
 // Names as in shared/characters.ts (RIGGED_CHARACTERS).
 const CHARACTERS = [["rig_jonas", "Jonas"], ["rig_amara", "Amara"], ["rig_malik", "Malik"], ["rig_lena", "Lena"], ["rig_erik", "Erik"], ["rig_zoe", "Zoe"],
-  ["rig_mc_goldie", "MC Goldie"], ["rig_kiki_komet", "Kiki Komet"], ["rig_bolt", "Bolt"], ["rig_glubschi", "Glubschi"]];
+  ["rig_mc_goldie", "MC Goldie"], ["rig_lil_schmidt", "Lil Schmidt"], ["rig_kiki_komet", "Kiki Komet"], ["rig_bolt", "Bolt"], ["rig_glubschi", "Glubschi"]];
 
 const server = spawn("npm", ["start"], { env: { ...process.env, PORT, GSG_DATABASE_FILE: ":memory:", TURSO_DATABASE_URL: "", TURSO_AUTH_TOKEN: "", RENDER: "true" }, stdio: "ignore" });
 try {

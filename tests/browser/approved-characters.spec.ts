@@ -38,7 +38,7 @@ test("Animierte Figuren stehen in der Auswahl: zwei Gruppen, Vorschau auf der BÃ
   await expect(grid.getByRole("heading",{name:"Animierte Figuren",exact:true})).toBeVisible();
   await expect(grid.getByRole("heading",{name:"Klassische Figuren",exact:true})).toBeVisible();
   await expect(grid.getByRole("button")).toHaveCount(CHARACTERS.length);
-  for(const [name,id] of [["Bolt","rig_bolt"],["MC Goldie","rig_mc_goldie"],["Morty Smith","alpha_morty_smith"]] as const){
+  for(const [name,id] of [["Bolt","rig_bolt"],["MC Goldie","rig_mc_goldie"],["Lil Schmidt","rig_lil_schmidt"],["Morty Smith","alpha_morty_smith"]] as const){
     await grid.getByRole("button",{name,exact:true}).click();
     await expect(grid.getByRole("button",{name,exact:false}).first()).toHaveAttribute("aria-pressed","true");
     await expect(page.locator(".party-character-canvas")).toHaveAttribute("data-character",id,{timeout:20000});
@@ -52,7 +52,7 @@ test("Animierte und klassische Figuren gemischt: Insel und klassische Arena zeig
   test.skip(info.project.name==="desktop","Inselparty ist nur fÃ¼r Smartphones vorgesehen.");
   test.setTimeout(90000);
   const errors:string[]=[];page.on("pageerror",e=>errors.push(e.message));await page.emulateMedia({reducedMotion:"reduce"});
-  const characters:CharacterId[]=["rig_mc_goldie","rig_kiki_komet","rig_bolt","rig_glubschi","rig_lena","alpha_morty_smith"];
+  const characters:CharacterId[]=["rig_mc_goldie","rig_lil_schmidt","rig_kiki_komet","rig_bolt","rig_glubschi","alpha_morty_smith"];
   const session=await onlineSession(page,false,characters);
   try{
     const world=page.locator(".party-world");await expect(world).toHaveAttribute("data-webgl","ready",{timeout:20000});

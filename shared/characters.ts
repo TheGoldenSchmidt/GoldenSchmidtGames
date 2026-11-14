@@ -26,6 +26,7 @@ export const RIGGED_CHARACTERS = [
   {id:"rig_erik",name:"Erik",color:"#b4532a"},
   {id:"rig_zoe",name:"Zoe",color:"#e07a24"},
   {id:"rig_mc_goldie",name:"MC Goldie",color:"#ffd34d"},
+  {id:"rig_lil_schmidt",name:"Lil Schmidt",color:"#8a7dff"},
   {id:"rig_kiki_komet",name:"Kiki Komet",color:"#ff86c8"},
   {id:"rig_bolt",name:"Bolt",color:"#9fb3c8"},
   {id:"rig_glubschi",name:"Glubschi",color:"#57e4cb"}

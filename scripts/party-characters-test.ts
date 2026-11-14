@@ -24,14 +24,14 @@ for(const source of sources){const bytes=await readFile(new URL(`../src/figures/
 
 assert.equal(isCharacterId("kenny_mccormick"),false);
 // Animierte Figuren: eigenes Register hinter den klassischen, je ein Aussehen und ein Vorschaubild.
-assert.equal(RIGGED_CHARACTERS.length,10);assert.equal(ALL_CHARACTERS.length,23);
+assert.equal(RIGGED_CHARACTERS.length,11);assert.equal(ALL_CHARACTERS.length,24);
 assert.deepEqual(ALL_CHARACTERS.slice(0,13).map(c=>c.id),CHARACTERS.map(c=>c.id),"Klassische Figuren behalten ihre Reihenfolge (Standardfigur je Platz)");
 assert.deepEqual(Object.keys(RIGGED_SPECS).sort(),RIGGED_CHARACTERS.map(c=>c.id).sort());
 for(const entry of RIGGED_CHARACTERS){
   assert.match(entry.id,/^rig_[a-z_]+$/);assert.ok(isCharacterId(entry.id)&&isRiggedCharacter(entry.id));assert.ok(!isRiggedCharacter("alpha_morty_smith"));
   await access(new URL(`../public${characterPortrait(entry.id)}`,import.meta.url));
 }
-assert.equal(new Set(ALL_CHARACTERS.map(c=>c.name)).size,23,"Namen sind eindeutig");
+assert.equal(new Set(ALL_CHARACTERS.map(c=>c.name)).size,24,"Namen sind eindeutig");
 // Gewählte animierte Figur bleibt; klassische Wahl bekommt in Skelett-Szenen einen Menschen je Farbplatz.
 assert.equal(riggedIdFor("rig_bolt",3),"rig_bolt");assert.equal(riggedIdFor("alpha_morty_smith",1),"rig_amara");assert.equal(riggedIdFor(undefined,7),"rig_amara");
 for(const entry of CHARACTERS){

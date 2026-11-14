@@ -9,7 +9,7 @@ Eine installierbare Smartphone-PWA für lokale und Online-Spiele. Das aktuelle G
 - gemeinsame Spieldefinitionen für lokalen und Online-Modus
 - Qwixx-, Durak- und Kribbeln-Spielmodule für lokale und Online-Partien
 - Offline-Cache als installierbare PWA
-- 23 wählbare Figuren mit Pflichtauswahl vor Raumzugang und zufälliger Bot-Zuordnung: zehn animierte Figuren mit Skelett (darunter MC Goldie, Kiki Komet, Bolt und Glubschi) und die 13 klassischen alpha_-Charaktere; dieselbe Figur in allen Spielen
+- 24 wählbare Figuren mit Pflichtauswahl vor Raumzugang und zufälliger Bot-Zuordnung: elf animierte Figuren mit Skelett (darunter die Rapper MC Goldie und Lil Schmidt, Kiki Komet, Bolt und Glubschi) und die 13 klassischen alpha_-Charaktere; dieselbe Figur in allen Spielen
 - Inselparty für 2–6 Personen ausschließlich online: eine echte 3D-Insel, eigene steuerbare Figuren, 34 Felder, fünf Items, 14 klassische 3D-Minispiele und neue Match-Minispiele
 - Freies Minispiel und Schlag den GoldenSchmidt für 2–6 Personen auf getrennten Geräten, mit denselben Minispielen und beiden Hostingarten
 - Inselparty, Roll It Up! und alle Minispiele sind nur für Smartphones vorgesehen (Touch-Steuerung, keine PC-Tests)

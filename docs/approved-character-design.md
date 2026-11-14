@@ -2,18 +2,22 @@
 
 Spielbar sind zwei Gruppen (Register in `shared/characters.ts`):
 
-- **Animierte Figuren** (seit Nov. 2026, zehn Stück, Kennung `rig_…`): Figuren mit
+- **Animierte Figuren** (seit Nov. 2026, elf Stück, Kennung `rig_…`): Figuren mit
   Skelett und Animationen. Sechs Menschen aus den Quaternius-Basisfiguren (Jonas,
-  Amara, Malik, Lena, Erik, Zoe), zwei umgestaltete Menschen (MC Goldie: Rapper
-  mit weitem Hoodie, Baggy-Hose, Cap und Goldkette; Kiki Komet: Comic-Heldin mit
-  Kontur, großen Proportionen, Stern und Maske) und zwei eigene Entwürfe aus
+  Amara, Malik, Lena, Erik, Zoe; sie bleiben in Unterwäsche in Spielerfarbe),
+  drei umgestaltete Menschen (MC Goldie: Rapper mit weitem Hoodie, Baggy-Hose, Cap
+  und Goldkette; Lil Schmidt: zweiter Rapper mit Oversize-Hoodie und weiter
+  Trainingshose als echter Stoffschicht, Beanie, Sneakern und Sternkette; Kiki
+  Komet: Comic-Heldin mit Kontur, großen Proportionen, Stern und Maske) und zwei
+  eigene Entwürfe aus
   Grundformen (Bolt: Roboter; Glubschi: einäugiges Monster). Quellen CC0 bzw.
   eigene Gestaltung. Keine Nachbildungen geschützter Figuren.
 - **Klassische Figuren**: die 13 ausdrücklich ausgewählten alpha_-Figuren. The
   Coon wurde zweimal genannt und wird einmal angeboten. Die Originaldateien aus
   PC_Fighters bleiben unverändert; eigene Kopien enthalten Herkunfts-Hashes.
 
-**Richtung:** Langfristig bleiben nur animierte Figuren; die klassischen stehen
+**Richtung:** Langfristig bleiben nur animierte Figuren. Neue Figuren kommen
+hinzu, die sechs Basismenschen werden nicht ersetzt; die klassischen stehen
 bis zur Umstellung aller Spiele weiter zur Wahl. Beide Gruppen funktionieren in
 allen Spielen: Animierte Figuren erscheinen überall selbst. Wer eine klassische
 Figur wählt, sieht in Sumo Smash und Chaos Run (reine Skelett-Szenen) einen der
