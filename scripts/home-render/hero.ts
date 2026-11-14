@@ -86,7 +86,10 @@ function leaf(rand: Rand, dark: boolean) {
   g.setAttribute("position", new THREE.Float32BufferAttribute([...left, ...right].flat(2), 3));
   const lights = dark ? ["#4f9a2e", "#58a632"] : ["#a6dc46", "#98d23e"];
   const darks = dark ? ["#2c6a28", "#337529"] : ["#5fae34", "#67b538"];
-  return mesh(facet(g, (m, _n, r) => C((m.x < 0 ? lights : darks)[r < .5 ? 0 : 1]), rand), leafMat);
+  const result = mesh(facet(g, (m, _n, r) => C((m.x < 0 ? lights : darks)[r < .5 ? 0 : 1]), rand), leafMat);
+  // Thin and double-sided: a leaf would shadow itself. Leaves still cast shadows onto the stones.
+  result.receiveShadow = false;
+  return result;
 }
 
 function vine(rand: Rand, turns: Array<[number, number, boolean?]>) {
@@ -165,9 +168,11 @@ function plaque(rand: Rand) {
   }
 
   g.add(at(crown(rand), 0, .76, .02));
-  g.add(at(lettering(LOGO_GOLDEN, .0067, 10, ["#fff0a0", "#f2a92e"], "#a8521a", "#fff6c8", "#3b1d0f"), 0, .08, .02));
-  g.add(at(lettering(LOGO_SCHMIDT, .0066, 7, ["#fff0a0", "#f2a92e"], "#a8521a", "#fff6c8", "#3b1d0f"), 0, -.43, .05));
-  g.add(at(lettering(LOGO_GAMES, .0048, 3, ["#f6f6ff", "#a9a6c8"], "#6c6890", "#ffffff", "#262036"), 0, -.82, .08));
+  // The lettering stands in front of the stone ring (its front faces reach z ≈ .36), each word its own layer.
+  const word = (name: string, lettered: THREE.Group, y: number, z: number) => { lettered.name = name; g.add(at(lettered, 0, y, z)); };
+  word("golden", lettering(LOGO_GOLDEN, .0067, 10, ["#fff0a0", "#f2a92e"], "#a8521a", "#fff6c8", "#3b1d0f"), .08, .34);
+  word("schmidt", lettering(LOGO_SCHMIDT, .0066, 7, ["#fff0a0", "#f2a92e"], "#a8521a", "#fff6c8", "#3b1d0f"), -.43, .37);
+  word("games", lettering(LOGO_GAMES, .0048, 3, ["#f6f6ff", "#a9a6c8"], "#6c6890", "#ffffff", "#262036"), -.82, .4);
 
   // Vines climbing along the frame: small and dark leaves mixed, denser at the corners.
   const vines: Array<[number, number, Array<[number, number, boolean?]>]> = [
@@ -495,10 +500,19 @@ function waterfall() {
   return new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, side: THREE.DoubleSide }));
 }
 
-export function buildHero() {
+/** The hero is rendered as five layers that line up exactly, so the page can bring them in one by one. */
+export type HeroPart = "island" | "plaque" | "golden" | "schmidt" | "games";
+export const HERO_WORDS = ["golden", "schmidt", "games"] as const;
+
+/**
+ * island: ground, props, sign and waterfall; the plaque stays in the scene as a holdout, so it still casts
+ * its shadow and cuts out whatever lies behind it. plaque: the stone frame with crown, vines and flag.
+ * golden, schmidt, games: one word each.
+ */
+export function buildHero(part: HeroPart) {
   const rand = seeded(20261112);
   const scene = new THREE.Scene();
-  scene.add(island(rand));
+  const ground: THREE.Object3D[] = [island(rand)];
 
   const logo = plaque(rand);
   logo.scale.setScalar(.9);
@@ -508,11 +522,13 @@ export function buildHero() {
 
   const stone = mesh(facet(jitter(new THREE.IcosahedronGeometry(.36, 1), .08, 600), stonePaint, rand), stoneMat);
   stone.scale.set(1.2, .55, .95);
-  scene.add(at(stone, -1.42, .1, .52));
-  scene.add(at(sword(rand), -1.4, .1, .52));
-  scene.add(at(die(), -.74, .3, .66));
-  scene.add(at(chest(rand), 1.5, .04, .38));
-  scene.add(at(sign(rand), 0, -.47, 1.74));
-  scene.add(at(waterfall(), .64, -.22, 1.62));
+  ground.push(at(stone, -1.42, .1, .52), at(sword(rand), -1.4, .1, .52), at(die(), -.74, .3, .66), at(chest(rand), 1.5, .04, .38),
+    at(sign(rand), 0, -.47, 1.74), at(waterfall(), .64, -.22, 1.62));
+  if (part === "island") scene.add(...ground);
+
+  const words = HERO_WORDS.map(name => logo.getObjectByName(name)!);
+  if (part === "island" || part === "plaque") words.forEach(w => logo.remove(w));
+  else logo.children.filter(child => child.name !== part).forEach(child => logo.remove(child));
+  if (part === "island") logo.traverse(o => { o.userData.holdout = true; });
   return scene;
 }

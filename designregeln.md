@@ -193,7 +193,9 @@ Vorlage ist die [Referenz](docs/design/startscreen-referenz.webp).
   Fahne, Schwert im Stein, Würfel, leuchtender Schatztruhe, Wasserfall und dem Holzschild
   „Minispiele • Party • Gemeinsam“, darüber die Bedienelemente. Auf dem Handy ragt die
   Insel über beide Seitenränder; die Tafeln überlappen ihre Felsspitzen.
-- Auftritt: Die Insel steigt einmal in etwa 0,8 Sekunden auf. Danach ruht die Seite.
+- Auftritt in etwa zwei Sekunden: Zuerst fliegt der Steinrahmen ein, dann erscheint die Insel,
+  danach fliegen „Golden“, „Schmidt“ und „Games“ nacheinander ein. Danach ruht die Seite.
+  Die Schrift steht vor dem Steinrahmen und wird von ihm nicht verdeckt.
 - Der Startbildschirm ist genau eine Bildschirmhöhe groß und scrollt nicht. Fehlt
   Höhe, wird zuerst die Insel kleiner; Tafeln behalten ihre Mindestgröße. Die
   Installationshilfe öffnet sich als Papierfeld über der unteren Zeile, der

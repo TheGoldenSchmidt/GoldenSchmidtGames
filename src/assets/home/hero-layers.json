@@ -1,0 +1,32 @@
+{
+  "hero-games": {
+    "left": 0.347,
+    "top": 0.34142,
+    "width": 0.305,
+    "height": 0.08452
+  },
+  "hero-golden": {
+    "left": 0.273,
+    "top": 0.17573,
+    "width": 0.452,
+    "height": 0.1205
+  },
+  "hero-island": {
+    "left": 0,
+    "top": 0.38828,
+    "width": 1,
+    "height": 0.61172
+  },
+  "hero-plaque": {
+    "left": 0.116,
+    "top": 0.02594,
+    "width": 0.85,
+    "height": 0.60669
+  },
+  "hero-schmidt": {
+    "left": 0.231,
+    "top": 0.25523,
+    "width": 0.533,
+    "height": 0.11632
+  }
+}

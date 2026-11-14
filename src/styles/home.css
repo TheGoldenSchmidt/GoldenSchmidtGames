@@ -37,8 +37,18 @@
 /* Hero: the rendered island keeps its proportions and shrinks first when the screen is short. */
 .home__main { position: relative; z-index: 1; flex: 0 1 auto; min-height: 0; display: flex; flex-direction: column; }
 .home__hero { flex: 0 1 auto; min-height: 0; margin: 2px calc(var(--home-pad) * -1) 0; aspect-ratio: 1000 / 1195; display: flex; justify-content: center; }
-.home__title { flex: 1 1 auto; min-width: 0; min-height: 0; margin: 0; display: flex; }
-.home__island { display: block; flex: 1 1 auto; min-width: 0; min-height: 0; width: 100%; height: 100%; object-fit: contain; object-position: 50% 0; animation: home-island-rise .8s cubic-bezier(.2, .8, .3, 1) both; }
+.home__title { position: relative; flex: 1 1 auto; min-width: 0; min-height: 0; margin: 0; container-type: size; }
+/* The rendered frame (1000 × 1195) at the largest size that fits, top-aligned; its layers line up exactly. */
+.home-logo { position: absolute; inset: 0 0 auto; display: block; width: min(100cqw, 100cqh * 1000 / 1195); aspect-ratio: 1000 / 1195; margin: 0 auto; }
+.home-logo__layer { position: absolute; display: block; max-width: none; }
+
+/* Entrance: the stone frame flies in first; the island (which has a gap where the frame sits) rises as it lands;
+   then Golden, Schmidt and Games fly in one after another. */
+.home-logo__layer--plaque { transform-origin: 50% 100%; animation: home-plaque-fly .75s cubic-bezier(.3, .7, .4, 1) both; }
+.home-logo__layer--island { animation: home-island-rise .55s cubic-bezier(.2, .8, .3, 1) .42s both; }
+.home-logo__layer--golden { animation: home-word-left .5s cubic-bezier(.2, 1.3, .4, 1) .85s both; }
+.home-logo__layer--schmidt { animation: home-word-right .5s cubic-bezier(.2, 1.3, .4, 1) 1.15s both; }
+.home-logo__layer--games { animation: home-word-up .5s cubic-bezier(.2, 1.3, .4, 1) 1.45s both; }
 
 /* Game modes */
 .home__play { position: relative; z-index: 2; flex: 0 0 auto; display: grid; gap: clamp(6px, 1.2dvh, 12px); width: 100%; max-width: 480px; margin: clamp(-30px, -3.4dvh, -10px) auto 0; }
@@ -90,7 +100,29 @@
 .home__footer { width: fit-content; max-width: 100%; margin: 0 auto; padding: 3px 10px; border-radius: 9px; background: var(--iw-glass); font-size: .7rem; line-height: 1.3; text-align: center; }
 
 @keyframes home-island-rise {
-  from { opacity: 0; transform: translateY(28px) scale(.97); }
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes home-plaque-fly {
+  0% { opacity: 0; transform: translateY(-75%) rotate(-7deg) scale(.86); }
+  25% { opacity: 1; }
+  65% { transform: translateY(2%) rotate(1deg) scale(1.02, .96); }
+  82% { transform: translateY(-1.5%) rotate(-.4deg) scale(.995, 1.01); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes home-word-left {
+  from { opacity: 0; transform: translateX(-130%) rotate(-10deg); }
+  45% { opacity: 1; }
+  to { opacity: 1; transform: none; }
+}
+@keyframes home-word-right {
+  from { opacity: 0; transform: translateX(130%) rotate(10deg); }
+  45% { opacity: 1; }
+  to { opacity: 1; transform: none; }
+}
+@keyframes home-word-up {
+  from { opacity: 0; transform: translateY(260%) scale(.7); }
+  45% { opacity: 1; }
   to { opacity: 1; transform: none; }
 }
 
@@ -122,7 +154,7 @@
 @media (min-width: 700px) and (orientation: landscape) {
   .home__main { flex: 1 1 auto; max-width: 1080px; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(300px, 1fr); align-items: center; gap: clamp(24px, 5vw, 72px); }
   .home__hero { width: 100%; height: 100%; max-height: min(78dvh, 700px); margin: 0; aspect-ratio: auto; }
-  .home__island { object-position: 50% 50%; }
+  .home-logo { inset: 0; margin: auto; }
   .home__play { margin: 0; gap: clamp(8px, 2dvh, 18px); }
   .home-mode { min-height: clamp(70px, 12dvh, 100px); }
   .home-mode .iw-slab__face { gap: 10px; padding-inline: 16px 12px; }

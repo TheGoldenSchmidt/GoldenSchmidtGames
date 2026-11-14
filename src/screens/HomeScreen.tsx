@@ -3,11 +3,27 @@ import { InstallPrompt } from "../components/InstallPrompt";
 import { AppUpdate } from "../components/AppUpdate";
 import { displayName } from "../lib/profile";
 // Rendered from the 3D scene in scripts/home-render (npm run render:home).
-import heroImage from "../assets/home/hero.webp";
+import heroLayers from "../assets/home/hero-layers.json";
+import heroIsland from "../assets/home/hero-island.webp";
+import heroPlaque from "../assets/home/hero-plaque.webp";
+import heroGolden from "../assets/home/hero-golden.webp";
+import heroSchmidt from "../assets/home/hero-schmidt.webp";
+import heroGames from "../assets/home/hero-games.webp";
 import skyPortrait from "../assets/home/backdrop-portrait.webp";
 import skyLandscape from "../assets/home/backdrop-landscape.webp";
 import cornerLeft from "../assets/home/corner-left.webp";
 import cornerRight from "../assets/home/corner-right.webp";
+
+/** Back to front. Each image is cropped to its content; hero-layers.json says where it sits in the frame. */
+const HERO_LAYERS = [
+  ["plaque", heroPlaque, heroLayers["hero-plaque"]],
+  ["island", heroIsland, heroLayers["hero-island"]],
+  ["golden", heroGolden, heroLayers["hero-golden"]],
+  ["schmidt", heroSchmidt, heroLayers["hero-schmidt"]],
+  ["games", heroGames, heroLayers["hero-games"]]
+] as const;
+
+const percent = (value: number) => `${value * 100}%`;
 
 function ModeChevron() {
   return (
@@ -65,7 +81,12 @@ export function HomeScreen({
       <div className="home__main">
         <section className="home__hero" aria-label="Willkommen bei GoldenSchmidtGames">
           <h1 className="home__title">
-            <img className="home__island" src={heroImage} width={1000} height={1195} alt="GoldenSchmidtGames" fetchPriority="high" />
+            <span className="home-logo" role="img" aria-label="GoldenSchmidtGames">
+              {HERO_LAYERS.map(([part, src, box]) => (
+                <img key={part} className={`home-logo__layer home-logo__layer--${part}`} src={src} alt="" fetchPriority="high"
+                  style={{ left: percent(box.left), top: percent(box.top), width: percent(box.width), height: percent(box.height) }} />
+              ))}
+            </span>
           </h1>
         </section>
 
