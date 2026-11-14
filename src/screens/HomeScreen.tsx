@@ -1,8 +1,13 @@
 import type { GuestProfile } from "../../shared/types";
 import { InstallPrompt } from "../components/InstallPrompt";
 import { AppUpdate } from "../components/AppUpdate";
-import { HomeBackdrop, HomeIsland } from "../components/HomeScene";
 import { displayName } from "../lib/profile";
+// Rendered from the 3D scene in scripts/home-render (npm run render:home).
+import heroImage from "../assets/home/hero.webp";
+import skyPortrait from "../assets/home/backdrop-portrait.webp";
+import skyLandscape from "../assets/home/backdrop-landscape.webp";
+import cornerLeft from "../assets/home/corner-left.webp";
+import cornerRight from "../assets/home/corner-right.webp";
 
 function ModeChevron() {
   return (
@@ -35,7 +40,14 @@ export function HomeScreen({
 }) {
   return (
     <main className="home">
-      <HomeBackdrop />
+      <div className="home-world" aria-hidden="true">
+        <picture>
+          <source media="(min-aspect-ratio: 1/1)" srcSet={skyLandscape} width={1920} height={1080} />
+          <img className="home-world__sky" src={skyPortrait} width={900} height={1950} alt="" decoding="async" />
+        </picture>
+        <img className="home-world__corner home-world__corner--left" src={cornerLeft} width={520} height={600} alt="" decoding="async" />
+        <img className="home-world__corner home-world__corner--right" src={cornerRight} width={520} height={600} alt="" decoding="async" />
+      </div>
 
       <div className="home__topbar">
         <span className={`iw-chip home__status ${online ? "is-online" : ""}`}>
@@ -52,8 +64,8 @@ export function HomeScreen({
 
       <div className="home__main">
         <section className="home__hero" aria-label="Willkommen bei GoldenSchmidtGames">
-          <h1 className="home__title" aria-label="GoldenSchmidtGames">
-            <HomeIsland />
+          <h1 className="home__title">
+            <img className="home__island" src={heroImage} width={1000} height={1195} alt="GoldenSchmidtGames" fetchPriority="high" />
           </h1>
         </section>
 
@@ -64,9 +76,9 @@ export function HomeScreen({
                 <circle cx="24" cy="11" r="8.5" />
                 <path d="M9.5 40c0-9.4 6.2-15.5 14.5-15.5S38.5 30.6 38.5 40z" />
                 <circle cx="7.5" cy="16.5" r="5.5" />
-                <path d="M0 38c0-7 3.6-11 8-11 1.5 0 2.8.4 4 1.100C8.7 30.9 7 34.2 6.6 38z" />
+                <path d="M0 38c0-7 3.6-11 8-11 1.5 0 2.8.4 4 1.1C8.7 30.9 7 34.2 6.6 38z" />
                 <circle cx="40.5" cy="16.5" r="5.5" />
-                <path d="M48 38c0-7-3.6-11-8-11-1.5 0-2.8.4-4 1.1 3.3 2.8 5 6.1 5.4 9.900z" />
+                <path d="M48 38c0-7-3.6-11-8-11-1.5 0-2.8.4-4 1.1 3.3 2.8 5 6.1 5.4 9.9z" />
               </svg>
               <span className="home-mode__copy">
                 <strong>Lokal spielen</strong>

@@ -14,8 +14,10 @@ die Freundesrunde, bunt, plastisch und sofort bedienbar. Vier Merkmale tragen de
    Blattwerk rahmen die Ränder, die Mitte bleibt frei für Inhalt und Bedienung.
 2. **Material statt Farbe.** Jedes Bedienelement besteht aus einem Material mit
    fester Rolle: Gold, Amethyst, Stein, Holz, Glas oder Papier (siehe unten).
-3. **Facetten.** Illustrationen sind flache Vielecke mit zwei bis vier Tönen je
-   Material, Licht von links oben. Keine weichen Verläufe, keine Fotos, keine Emoji.
+3. **Beleuchtete Low-Poly-Körper.** Grafik ist echte 3D-Geometrie aus wenigen
+   Facetten, gerendert mit warmer Sonne von links vorn, kühlem Himmels- und Kantenlicht,
+   weichen Schatten und Umgebungsverdeckung. Oberflächen haben eine leichte Körnung.
+   Keine flachen Vektorflächen als Ersatz, keine Fotos, keine Emoji.
 4. **Geschnitzte Tiefe.** Aktionen sind Tafeln mit abgeschlagenen Ecken, heller
    Oberkante, sichtbarer Seitenwand und dunkler Kontur. Beim Drücken sinken sie ein.
 
@@ -27,7 +29,7 @@ wichtigste nächste Aktion.
 
 | Bereich | Stand |
 | --- | --- |
-| Startbildschirm | Inselwelt umgesetzt und geprüft |
+| Startbildschirm | Inselwelt als gerenderte 3D-Szene umgesetzt und geprüft ([Renderpipeline](docs/startscreen-render.md)) |
 | Lokales Setup, Online-Menü, Lobby, Gastprofil, QR-Dialog | Noch im früheren Party-Stil (`.party-menu`, `--menu-*`); Umstellung geplant |
 | Spielflächen, Live-HUDs, Minispiele | Eigene Gestaltung; Umstellung geplant, nur auf ausdrücklichen Auftrag |
 
@@ -40,15 +42,17 @@ verändern. Bei beauftragten Spielansichten gilt zusätzlich der Skill
 
 ## Farben und Materialien
 
-Alle Werte stehen als `--iw-*` in [inselwelt.css](src/styles/inselwelt.css). Diese
-Variablen verwenden; keine zusätzlichen, fast identischen Farbreihen anlegen.
+Farben der Oberfläche stehen als `--iw-*` in [inselwelt.css](src/styles/inselwelt.css),
+Materialfarben der gerenderten Grafik in `scripts/home-render/kit.ts` (Welt) und
+`sprites.ts` (Tafeln). Diese Werte verwenden; keine fast identischen Farbreihen anlegen.
+Die Tabelle nennt die Ausgangsfarben; Licht und Körnung verändern sie im Bild.
 
 | Material | Fläche oben → unten | Kante / Seitenwand | Text darauf | Rolle |
 | --- | --- | --- | --- | --- |
-| Gold | `#fdc955` → `#eda43e` | `#ffe58a` / `#b4651f` | `#3d2412` | Hauptaktion einer Ansicht |
-| Amethyst | `#c886f6` → `#a567e4` | `#ecb6fb` / `#5b2f9f` | `#1f0d45` | Gleichrangige zweite Wahl, Online |
-| Stein | `#5d5272` → `#4a405e` | `#a6a2c4` / `#2b253f` | `#fff8ea` | Nebenaktionen, Werkzeuge, Fortsetzen |
-| Holz | `#dfa468` | `#f4c88f` / `#9a5e34` | `#4a2a17` | Schilder: Motto, Abschnittstitel |
+| Gold | `#ffd777` → `#f1aa4c` | `#fff0b4` / `#a95a24` | `#3d2412` | Hauptaktion einer Ansicht |
+| Amethyst | `#dcaefc` → `#c18ef2` | `#f6d6ff` / `#55309a` | `#170834` | Gleichrangige zweite Wahl, Online |
+| Stein | `#7c7092` → `#605575` | `#c2bbd8` / `#2e2742` | `#fff8ea` | Nebenaktionen, Werkzeuge, Fortsetzen |
+| Holz | `#dea468` | Fase heller, Kontur `#4a2a17` | `#43240f` | Schilder: Motto, Abschnittstitel |
 | Glas | `#1f1c54` mit 74 % Deckkraft | heller Rand, 30 % Weiß | `#fff8ea` | Status und kurze Hinweise über dem Himmel |
 | Papier | `#fff8ea` | Kontur `#221b4f` | `#221b4f` | Formulare, Hilfetexte, lange Inhalte |
 
@@ -62,8 +66,9 @@ Variablen verwenden; keine zusätzlichen, fast identischen Farbreihen anlegen.
 | Pink | `#ff7fc6` | Profilbild, Offline-Punkt, spielerische Akzente |
 | Fehler | `#c8353e` | Fehlerrahmen und Fehlermeldungen |
 
-Die genannten Textfarben erreichen auf ihrem Material mindestens 4,5:1 (Amethyst
-unten 4,7:1, sonst 5,9:1 und mehr). Neue Kombinationen vor dem Einsatz prüfen.
+Die Textfarben erreichen auf den gerenderten Tafeln überall mindestens 4,5:1 (gemessen
+auf den Pixeln der Sprites: Gold 4,7–6,3:1, Amethyst 4,5–6,1:1). Nach jedem Neurendern
+und bei neuen Kombinationen erneut messen.
 Text steht nie direkt auf Himmel oder Landschaft, sondern auf einem Material.
 
 Farben unterstützen Bedeutung, ersetzen sie aber nicht: Auswahl mit Rahmen und
@@ -73,15 +78,16 @@ Qwixx-Reihen, Würfelfarben und Kartenfarben bleiben semantisch unverändert.
 
 ## Schrift und Sprache
 
-- **Lilita One** ist die Schauschrift: Logo, Holzschilder, Bildschirmtitel.
-  **Lexend** ist die Bedienschrift: Buttons, Chips, Formulare, Fließtext (400 für
-  Text, 600 für Bedienelemente, 900 für Tafel-Beschriftungen). Beide liegen als
+- **Lilita One** ist die Schauschrift: Logo, Holzschilder, Bildschirmtitel und
+  Hauptzeilen großer Tafeln. **Lexend** ist die Bedienschrift: Unterzeilen, kleine
+  Tafeln, Chips, Formulare, Fließtext (400–500 für Text, 600 für Bedienelemente). Beide liegen als
   npm-Pakete im Projekt, werden mit der App ausgeliefert und offline gespeichert.
   Keine weiteren Schriften und keine Schriften von fremden Servern laden.
 - Noch nicht umgestellte Ansichten behalten Trebuchet MS, bis sie umgestellt werden.
-- Das Logo besteht aus Umrissen (`homeLogoPaths.ts`), damit es nie auf eine Schrift
-  wartet: „Golden“ und „Schmidt“ in Gold, „Games“ in Silber, jeweils mit dunkler
-  Kontur, Seitenwand und heller Oberkante.
+- Das Logo ist extrudierte 3D-Schrift aus den Umrissen in
+  `scripts/home-render/logoPaths.ts`: „Golden“ und „Schmidt“ in Gold, „Games“ in Silber,
+  mit Fase, metallischem Glanz und dunkler Kontur. Es erscheint als Bild mit dem
+  Alternativtext „GoldenSchmidtGames“.
 - Großbuchstaben nur für die Hauptzeile einer Tafel und für Schildtexte, jeweils
   höchstens etwa 18 Zeichen. Unterzeilen, Hinweise und Formulare in normaler
   Schreibung. Der Quelltext bleibt normal geschrieben; die Großschreibung setzt CSS.
@@ -96,20 +102,21 @@ Qwixx-Reihen, Würfelfarben und Kartenfarben bleiben semantisch unverändert.
 
 | Baustein | Klasse | Verwendung |
 | --- | --- | --- |
-| Tafel | `.iw-slab` mit `.iw-slab__face`, Varianten `--gold`, `--violet`, `--stone` | Jede Aktion. Gold und Amethyst für große Zugänge, Stein kompakt für Nebenaktionen |
+| Tafel | `.iw-slab` mit `.iw-slab__face`, Varianten `--gold`, `--violet`, `--stone` | Jede Aktion. Gold und Amethyst für große Zugänge, Stein kompakt für Nebenaktionen. Gerendertes Sprite als 9-Slice |
 | Chip | `.iw-chip`, tippbar als `.iw-chip--light` | Status (dunkles Glas) und Profil (hell mit Tintenrand) |
-| Inselszene | `HomeIsland`, `HomeBackdrop` in [HomeScene.tsx](src/components/HomeScene.tsx) | Blickfang und Kulisse des Startbildschirms |
+| Gerenderte Ebenen | `src/assets/home/*.webp`, Quelle `scripts/home-render/` | Insel mit Logo, Himmel hoch und quer, Vordergrund-Ecken |
 
 Holzschild und Papierfläche gibt es bisher nur innerhalb des Startbildschirms (Motto
 in der Inselgrafik, Installationshilfe). Als eigene Bausteine entstehen sie mit der
 Umstellung der Menüs und werden dann hier eingetragen.
 
-- Eine Tafel besteht aus Kontur (3 px Tinte), Seitenwand (7 px, Stein 4 px) und
-  Fläche mit heller Oberkante. Die Ecken sind um 9–11 px abgeschlagen, je eine
-  kleine Kerbe sitzt in Ober- und Unterkante. Darunter liegt ein harter Schatten.
-  Die Form kommt aus `--slab-shape`; keine runden Ecken an Tafeln.
-- Gedrückt sinkt die Fläche in die Seitenwand. Hover hebt sie um 1 px; Bedienung
-  und Information dürfen nicht davon abhängen. Der Fokusring ist 3 px Papier mit
+- Eine Tafel ist ein gerendertes Sprite: abgefaste Fläche mit Farbverlauf und heller
+  Oberkante, darunter eine dunklere Seitenwand, außen eine Tintenkontur, darunter ein
+  weicher Schlagschatten. Die Ecken sind abgeschlagen, je eine kleine Kerbe sitzt in
+  Ober- und Unterkante. Form und Farbe nur in `sprites.ts` ändern und neu rendern,
+  nicht per CSS nachbauen; keine runden Ecken an Tafeln.
+- Gedrückt wechselt das Sprite zu einer in die Seitenwand gesunkenen Fläche, der Inhalt
+  sinkt mit. Hover hellt leicht auf; Bedienung und Information dürfen nicht davon abhängen. Der Fokusring ist 3 px Papier mit
   3 px Abstand und bleibt auf Himmel und Material sichtbar.
 - Pro Ansicht höchstens eine goldene Tafel. Amethyst steht nur neben Gold, wenn
   beide Wege gleichrangig sind (Startbildschirm: lokal und online). Alles Weitere
@@ -121,21 +128,25 @@ Umstellung der Menüs und werden dann hier eingetragen.
   haben 12–16 px Radius und eine Tintenkontur.
 - Eingaben haben sichtbare Labels. Fehlermeldungen benennen Problem und nächsten
   Schritt; normale Hinweise sehen nicht wie Fehler aus.
-- Touch-Ziele mindestens 44 × 44 CSS-Pixel, Stein-Tafeln mindestens 48 px, große
-  Tafeln mindestens 66 px hoch. Abstände verhindern versehentliche Nachbaraktionen.
+- Touch-Ziele mindestens 44 × 44 CSS-Pixel, Stein-Tafeln mindestens 52 px, große
+  Tafeln mindestens 70 px hoch. Abstände verhindern versehentliche Nachbaraktionen.
 
 ## Illustration
 
-- Landschaft und Requisiten sind Inline-SVG aus Vielecken ohne Kontur. Dunkle
+- Landschaft, Requisiten und Tafeln entstehen als three.js-Szene in
+  `scripts/home-render/` und werden mit `npm run render:home` zu WebP-Bildern gerendert
+  (Details in der [Renderpipeline](docs/startscreen-render.md)). Die App lädt nur die
+  Bilder, keine Live-3D-Szene.
+- Licht und Schatten entstehen beim Rendern, nicht durch gemalte Facetten. Dunkle
   Konturen tragen nur Tafeln, Chips, Logo und Holzschild.
-- Verläufe sind dem Himmel, Metallflächen der Schrift, Wasser und Lichtschein
-  vorbehalten. Schatten sind eigene, dunklere Facetten.
-- Material der Welt: Stein in warmem Grauviolett, Fels in Rotbraun mit violettem
-  Schatten, Gras gelbgrün mit dunkler Kante, Holz honigfarben, Gold für Krone,
-  Beschläge und Schatz. Requisiten stammen aus dem Spielabend: Würfel, Schwert,
-  Schatztruhe, Fahne, Krone.
-- Illustrationen sind Dekoration (`aria-hidden`), enthalten keine Information, die
-  nur dort steht, und verdecken weder Text noch Aktion.
+- Material der Welt: Stein braungrau mit Moos auf Oberseiten, Fels braun, Gras
+  gelbgrün mit dunkler Kante und Erdschicht, Holz honigfarben mit Maserung, Gold
+  metallisch für Schrift, Krone, Beschläge und Schatz. Requisiten stammen aus dem
+  Spielabend: Würfel, Schwert, Schatztruhe, Fahne, Krone.
+- Neue Grafik wird prozedural im Projekt modelliert. Fremde Modelle nur mit geprüfter
+  Lizenz und Eintrag in der Renderpipeline-Dokumentation.
+- Illustrationen sind Dekoration (`aria-hidden` oder leerer Alternativtext), enthalten
+  keine Information, die nur dort steht, und verdecken weder Text noch Aktion.
 - Figuren: nur die [freigegebenen Figuren](docs/approved-character-design.md) und
   vorhandenen Modell- und Portraitzuordnungen verwenden. Pro Figurenwahl eine
   gemeinsame 3D-Vorschau; Listen und Auswahlbilder verwenden statische Portraits.
@@ -168,27 +179,29 @@ fehlende Grafik blockiert keinen Zugang.
 
 ## Startbildschirm
 
-Umgesetzt in [HomeScreen.tsx](src/screens/HomeScreen.tsx) und
-[home.css](src/styles/home.css).
+Umgesetzt in [HomeScreen.tsx](src/screens/HomeScreen.tsx),
+[home.css](src/styles/home.css) und der [Renderpipeline](docs/startscreen-render.md);
+Vorlage ist die [Referenz](docs/design/startscreen-referenz.webp).
 
 - Aufbau von oben nach unten: Statuschip und Profilchip, die Insel, die goldene
   Tafel „Lokal spielen“, die Amethyst-Tafel „Online spielen“, darunter im freien
   Himmel die Stein-Tafeln „App installieren“ (nur solange nicht installiert) und
   „Updates prüfen“. Angebote zum Fortsetzen erscheinen als Stein-Tafeln unter den
   Spielmodi.
-- Die Insel trägt das Steinlogo mit Krone, Fahne, Schwert im Stein, Würfel,
-  Schatztruhe, Wasserfall und das Holzschild „Minispiele • Party • Gemeinsam“. Auf
-  dem Handy ragt sie leicht über beide Seitenränder; die Tafeln überlappen ihre
-  Felsspitzen.
-- Auftritt in etwa anderthalb Sekunden: Die Insel steigt auf, das Logo setzt sich,
-  Schwert, Würfel und Truhe erscheinen, zuletzt das Schild; die Truhe leuchtet einmal
-  auf. Danach ruht die Seite.
+- Ebenen von hinten nach vorn: gerenderter Himmel mit Landschaft (eigenes Bild für Hoch-
+  und Querformat), Vordergrund-Büsche in den unteren Ecken, die Insel mit Steinlogo, Krone,
+  Fahne, Schwert im Stein, Würfel, leuchtender Schatztruhe, Wasserfall und dem Holzschild
+  „Minispiele • Party • Gemeinsam“, darüber die Bedienelemente. Auf dem Handy ragt die
+  Insel über beide Seitenränder; die Tafeln überlappen ihre Felsspitzen.
+- Auftritt: Die Insel steigt einmal in etwa 0,8 Sekunden auf. Danach ruht die Seite.
 - Der Startbildschirm ist genau eine Bildschirmhöhe groß und scrollt nicht. Fehlt
   Höhe, wird zuerst die Insel kleiner; Tafeln behalten ihre Mindestgröße. Die
   Installationshilfe öffnet sich als Papierfeld über der unteren Zeile, der
   Update-Status als Glaszeile darunter.
 - Im Querformat ab 700 px steht die Insel links, die Spielmodi rechts.
-- Er zeigt keine Figuren und lädt keine 3D-Szene.
+- Er zeigt keine Figuren und lädt keine Live-3D-Szene. Bis die Bilder geladen sind,
+  steht ein CSS-Himmelsverlauf dahinter.
+- `npm run compare:home` stellt den Startbildschirm der Referenz gegenüber.
 
 ## Spielflächen und Minispiele
 
