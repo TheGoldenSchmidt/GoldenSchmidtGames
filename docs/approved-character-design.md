@@ -5,9 +5,11 @@ Spielbar sind zwei Gruppen (Register in `shared/characters.ts`):
 - **Animierte Figuren** (seit Nov. 2026, elf Stück, Kennung `rig_…`): Figuren mit
   Skelett und Animationen. Sechs Menschen aus den Quaternius-Basisfiguren (Jonas,
   Amara, Malik, Lena, Erik, Zoe; sie bleiben in Unterwäsche in Spielerfarbe),
-  drei umgestaltete Menschen (MC Goldie: Rapper mit weitem Hoodie, Baggy-Hose, Cap
-  und Goldkette; Lil Schmidt: zweiter Rapper mit Oversize-Hoodie und weiter
-  Trainingshose als echter Stoffschicht, Beanie, Sneakern und Sternkette; Kiki
+  drei umgestaltete Menschen (MC Goldie: Rapper mit Oversize-Hoodie in
+  Spielerfarbe, weiter dunkler Jeans, Sneakern, Cap, Sonnenbrille und schwerer
+  Goldkette mit großem „G“; Lil Schmidt: zweiter Rapper mit hellem
+  Oversize-Hoodie, weiter Trainingshose in Spielerfarbe, Beanie, Sneakern und
+  feiner Goldkette mit großem „£“; beide tragen Kleidung als Stoffschicht; Kiki
   Komet: Comic-Heldin mit Kontur, großen Proportionen, Stern und Maske) und zwei
   eigene Entwürfe aus
   Grundformen (Bolt: Roboter; Glubschi: einäugiges Monster). Quellen CC0 bzw.

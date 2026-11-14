@@ -54,21 +54,28 @@ Knochennamen eindeutig.
   aus den Knochengewichten (`_ga`: Shirt, Ärmel, Shorts, Hosenbeine; `_gb`: Schuhe,
   Handschuhe). Der Shader färbt sie ein (fest oder Spielerfarbe), kann sie weiten
   und den Hautschatten ausblenden.
-- **Stoffschicht (`src/three/garments.ts`, Lil Schmidt):** Hoodie und weite Hose
+- **Stoffschicht (`src/three/garments.ts`, MC Goldie und Lil Schmidt):** Hoodie und weite Hose
   entstehen aus dem Körpernetz selbst. Die bedeckten Dreiecke werden an geraden
   Kanten (Saum, Bündchen, Kragenring) abgeschnitten, auf eine weite, gerade
   Silhouette nach außen geschoben (Rumpf als Ellipse, Ärmel und Hosenbeine als
   Röhren um die Knochenachse), geglättet und mit den Körpergewichten an dasselbe
   Skelett gebunden. Der Hoodie-Saum hängt in der Mitte an der Hüfte und schwingt
   nicht mit einem Bein aus. Bauchtasche, Rippbündchen und Hosenstreifen zeichnet
-  der Shader aus der Ruheposition. Kette, Kapuzenrolle und Kapuze liegen auf der
+  der Shader aus der Ruheposition. Kapuzenrolle und Kapuze liegen auf der
   gemessenen Stoffoberfläche (`clothSurface`). Die Geometrie wird je Körpertyp
   einmal berechnet (~40 ms) und geteilt. Füße unter modellierten Sneakern
   zeichnet der Körper nicht.
-- **Starre Kleidung und Zubehör** (MC Goldie und andere) sind eigene Teile, im
-  Ruhezustand platziert und je an einen Knochen gehängt: Hoodie mit Kapuze und
-  Bauchtasche, Baggy-Hose, Cap, Sonnenbrille, Goldkette mit Medaillon,
-  Stern-Emblem, Heldenmaske; dazu Beanie, Sternkette und Sneaker.
+- **Goldketten (`chain` in der Figurenbeschreibung):** zwei Stränge
+  ineinandergreifender Glieder (jedes zweite um 90° gedreht) hängen in einem
+  weichen U auf der Stoffoberfläche und enden seitlich an einem Ring, der einen
+  großen Buchstaben trägt (MC Goldie: schwere Glieder und „G“, Lil Schmidt: feine
+  Glieder und „£“; Umrisse in `letterShapes`, extrudiert mit Fase). Die ganze
+  Kette ist ein Netz mit Skelettbindung: Jedes Glied übernimmt die Gewichte der
+  Stoffstelle darunter, so biegt sich der Strang mit der Brust, statt an
+  Knochengrenzen zu knicken.
+- **Starres Zubehör** ist je ein eigenes Teil, im Ruhezustand platziert und an
+  einen Knochen gehängt: Cap, Beanie, Sonnenbrille, Sneaker, Stern-Emblem,
+  Heldenmaske.
 - **Comic-Look:** gestufte Schattierung (`MeshToonMaterial`), dunkle Kontur als
   umgestülpte Hülle, Knochen-Skalierung für großen Kopf, Hände und Füße (die
   Animationen enthalten keine Skalierung, sie bleibt erhalten).
