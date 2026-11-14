@@ -1,28 +1,21 @@
-import type { CSSProperties } from "react";
 import type { GuestProfile } from "../../shared/types";
 import { InstallPrompt } from "../components/InstallPrompt";
 import { AppUpdate } from "../components/AppUpdate";
-import { HomeHeroProps, HomePlayProps, HomeSpread } from "../components/HomeTable";
 import { displayName } from "../lib/profile";
+// Rendered from the 3D scene in scripts/home-render (npm run render:home).
+import heroImage from "../assets/home/hero.webp";
+import skyPortrait from "../assets/home/backdrop-portrait.webp";
+import skyLandscape from "../assets/home/backdrop-landscape.webp";
+import cornerLeft from "../assets/home/corner-left.webp";
+import cornerRight from "../assets/home/corner-right.webp";
 
-// Same drawing as public/gsg-icon.svg, inlined so the emblem is ready for its entrance.
-function GsgEmblem() {
+function ModeChevron() {
   return (
-    <svg className="home__emblem-art" viewBox="0 0 512 512" aria-hidden="true" focusable="false">
-      <rect width="512" height="512" rx="112" fill="#12172f" />
-      <rect x="64" y="78" width="384" height="370" rx="94" fill="#b77a28" />
-      <rect x="64" y="64" width="384" height="370" rx="94" fill="#ffe2a0" />
-      <rect x="64" y="72" width="384" height="362" rx="94" fill="#f2c35b" />
-      <circle cx="144" cy="140" r="14" fill="#12172f" />
-      <circle cx="368" cy="372" r="14" fill="#12172f" />
-      <polygon points="196,215 174,193 126,193 104,215 104,307 126,329 196,329 196,259 151,259 151,284 171,284 171,304 137,304 129,296 129,226 137,218 171,218 171,235 196,235" fill="#12172f" />
-      <polygon points="302,193 232,193 210,215 210,251 232,273 277,273 277,304 210,304 210,329 280,329 302,307 302,270 280,248 235,248 235,226 243,218 302,218" fill="#12172f" />
-      <polygon points="408,215 386,193 338,193 316,215 316,307 338,329 408,329 408,259 363,259 363,284 383,284 383,304 349,304 341,296 341,226 349,218 383,218 383,235 408,235" fill="#12172f" />
-    </svg>
+    <span className="home-mode__go" aria-hidden="true">
+      <svg viewBox="0 0 16 16" focusable="false"><path d="M6 3.5 10.5 8 6 12.5" /></svg>
+    </span>
   );
 }
-
-const IMPACT_PIPS = [0, 1, 2, 3, 4, 5];
 
 export function HomeScreen({
   profile,
@@ -47,12 +40,21 @@ export function HomeScreen({
 }) {
   return (
     <main className="home">
+      <div className="home-world" aria-hidden="true">
+        <picture>
+          <source media="(min-aspect-ratio: 1/1)" srcSet={skyLandscape} width={1920} height={1080} />
+          <img className="home-world__sky" src={skyPortrait} width={900} height={1950} alt="" decoding="async" />
+        </picture>
+        <img className="home-world__corner home-world__corner--left" src={cornerLeft} width={520} height={600} alt="" decoding="async" />
+        <img className="home-world__corner home-world__corner--right" src={cornerRight} width={520} height={600} alt="" decoding="async" />
+      </div>
+
       <div className="home__topbar">
-        <span className={`home__status ${online ? "is-online" : ""}`}>
+        <span className={`iw-chip home__status ${online ? "is-online" : ""}`}>
           <span className="connection-dot" aria-hidden="true" />
-          {online ? "Online bereit" : "Offline"}
+          {online ? "Online" : "Offline"}
         </span>
-        <button className="profile-chip" onClick={onProfile} aria-label={`Gastprofil: ${displayName(profile)}`}>
+        <button className="iw-chip iw-chip--light profile-chip" onClick={onProfile} aria-label={`Gastprofil: ${displayName(profile)}`}>
           <span className="profile-chip__avatar" aria-hidden="true">
             {displayName(profile).slice(0, 1).toUpperCase()}
           </span>
@@ -62,77 +64,68 @@ export function HomeScreen({
 
       <div className="home__main">
         <section className="home__hero" aria-label="Willkommen bei GoldenSchmidtGames">
-          <div className="home__lockup">
-            <HomeHeroProps />
-            <div className="home__emblem">
-              <span className="home__emblem-toss"><GsgEmblem /></span>
-              {IMPACT_PIPS.map(index => (
-                <span key={index} className="home__pip" style={{ "--pip": index } as CSSProperties} aria-hidden="true" />
-              ))}
-            </div>
-            <h1 className="home__wordmark" aria-label="GoldenSchmidtGames">
-              <span className="home__word home__word--golden" aria-hidden="true">Golden</span>
-              <span className="home__word home__word--schmidt" aria-hidden="true">Schmidt</span>
-              <span className="home__word home__word--games" aria-hidden="true">Games</span>
-            </h1>
-          </div>
-          <p className="home__tagline">Die Spielesammlung für eure Runde</p>
+          <h1 className="home__title">
+            <img className="home__island" src={heroImage} width={1000} height={1195} alt="GoldenSchmidtGames" fetchPriority="high" />
+          </h1>
         </section>
 
-        <section className="home__play" aria-labelledby="home-play-title">
-          <HomePlayProps />
-          <h2 id="home-play-title" className="home__play-title">Wie spielt ihr heute?</h2>
-          <div className="mode-stack" aria-label="Spielmodus wählen">
-            <button className="mode-card mode-card--local" onClick={onLocal}>
-              <span className="mode-card__icon" aria-hidden="true">
-                <svg viewBox="0 0 32 32" focusable="false">
-                  <rect x="8.5" y="3" width="15" height="26" rx="3.5" />
-                  <circle cx="12.6" cy="10" r="1.9" className="is-filled" />
-                  <circle cx="16" cy="16" r="1.9" className="is-filled" />
-                  <circle cx="19.4" cy="22" r="1.9" className="is-filled" />
-                </svg>
-              </span>
-              <span className="mode-card__copy">
+        <section className="home__play" aria-label="Spielmodus wählen">
+          <button className="iw-slab iw-slab--gold home-mode" onClick={onLocal}>
+            <span className="iw-slab__face">
+              <svg className="home-mode__icon" viewBox="0 0 48 40" aria-hidden="true" focusable="false">
+                <circle cx="24" cy="11" r="8.5" />
+                <path d="M9.5 40c0-9.4 6.2-15.5 14.5-15.5S38.5 30.6 38.5 40z" />
+                <circle cx="7.5" cy="16.5" r="5.5" />
+                <path d="M0 38c0-7 3.6-11 8-11 1.5 0 2.8.4 4 1.1C8.7 30.9 7 34.2 6.6 38z" />
+                <circle cx="40.5" cy="16.5" r="5.5" />
+                <path d="M48 38c0-7-3.6-11-8-11-1.5 0-2.8.4-4 1.1 3.3 2.8 5 6.1 5.4 9.9z" />
+              </svg>
+              <span className="home-mode__copy">
                 <strong>Lokal spielen</strong>
-                <small>Gemeinsam an einem Gerät</small>
+                <small>Zusammen an einem Gerät</small>
               </span>
-              <span className="mode-card__chevron" aria-hidden="true">
-                <svg viewBox="0 0 16 16" focusable="false"><path d="M6 3.5 10.5 8 6 12.5" /></svg>
-              </span>
-            </button>
+              <ModeChevron />
+            </span>
+          </button>
 
-            <button className="mode-card mode-card--online" onClick={onOnline}>
-              <span className="mode-card__icon" aria-hidden="true">
-                <svg viewBox="0 0 32 32" focusable="false">
-                  <rect x="2.5" y="12" width="10" height="17" rx="2.5" />
-                  <rect x="19.5" y="12" width="10" height="17" rx="2.5" />
-                  <path d="M10.5 7.5a7.8 7.8 0 0 1 11 0" />
-                  <path d="M13.4 10.8a3.6 3.6 0 0 1 5.2 0" />
-                </svg>
-              </span>
-              <span className="mode-card__copy">
+          <button className="iw-slab iw-slab--violet home-mode" onClick={onOnline}>
+            <span className="iw-slab__face">
+              <svg className="home-mode__icon home-mode__icon--line" viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+                <circle cx="24" cy="24" r="19.5" />
+                <ellipse cx="24" cy="24" rx="8.5" ry="19.5" />
+                <path d="M4.5 24h39M7.5 14h33M7.5 34h33" />
+              </svg>
+              <span className="home-mode__copy">
                 <strong>Online spielen</strong>
-                <small>Alle am eigenen Gerät</small>
+                <small>Gemeinsam über das Internet</small>
               </span>
-              <span className="mode-card__chevron" aria-hidden="true">
-                <svg viewBox="0 0 16 16" focusable="false"><path d="M6 3.5 10.5 8 6 12.5" /></svg>
-              </span>
+              <ModeChevron />
+            </span>
+          </button>
+
+          {onResumeHost && (
+            <button className="iw-slab iw-slab--stone home__resume" onClick={onResumeHost}>
+              <span className="iw-slab__face">Handy-Tisch fortsetzen</span>
             </button>
-          </div>
-          {onResumeHost && <button className="button button--secondary button--wide home__resume" onClick={onResumeHost}>Handy-Tisch fortsetzen</button>}
-          {onResumeOnline && <section className="party-resume" aria-label={resumeGameName + " fortsetzen"}><button className="button button--secondary button--wide home__resume" onClick={onResumeOnline} disabled={!online}>{resumeGameName === "Inselparty" ? "Online-Inselparty" : resumeGameName} wieder beitreten</button></section>}
+          )}
+          {onResumeOnline && (
+            <section className="party-resume" aria-label={resumeGameName + " fortsetzen"}>
+              <button className="iw-slab iw-slab--stone home__resume" onClick={onResumeOnline} disabled={!online}>
+                <span className="iw-slab__face">{resumeGameName === "Inselparty" ? "Online-Inselparty" : resumeGameName} wieder beitreten</span>
+              </button>
+            </section>
+          )}
           {resumeError && <p className="home__error" role="alert">{resumeError}</p>}
         </section>
       </div>
 
-      <HomeSpread />
-
-      <div className="home__utilities">
-        <InstallPrompt />
-        <AppUpdate />
+      <div className="home__base">
+        <div className="home__utilities">
+          <InstallPrompt />
+          <AppUpdate />
+        </div>
+        {!online && <footer className="home__footer">Handy-Hosting im WLAN oder Hotspot ist weiterhin verfügbar.</footer>}
       </div>
-
-      {!online && <footer className="home__footer">Handy-Hosting im WLAN oder Hotspot ist weiterhin verfügbar.</footer>}
     </main>
   );
 }

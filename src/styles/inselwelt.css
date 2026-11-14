@@ -1,0 +1,142 @@
+/* Inselwelt: shared tokens and building blocks of the island style (see designregeln.md).
+   Screens opt in by using these classes; nothing here restyles a screen on its own. */
+@font-face {
+  font-family: "Lilita One";
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url("@fontsource/lilita-one/files/lilita-one-latin-400-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Lexend";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("@fontsource-variable/lexend/files/lexend-latin-wght-normal.woff2") format("woff2-variations");
+}
+
+:root {
+  --iw-font-display: "Lilita One", "Trebuchet MS", sans-serif;
+  --iw-font-ui: "Lexend", "Trebuchet MS", "Aptos", sans-serif;
+
+  /* Sky, from zenith to horizon */
+  --iw-sky-night: #272a6e;
+  --iw-sky-dusk: #4a47a6;
+  --iw-sky-day: #5f70d8;
+  --iw-sky-haze: #7f9be8;
+  --iw-sky-rose: #d9b8ee;
+
+  /* Text and outlines */
+  --iw-ink: #221b4f;
+  --iw-ink-gold: #3d2412;
+  --iw-ink-violet: #170834;
+  --iw-paper: #fff8ea;
+  --iw-glass: rgb(31 28 84 / .74);
+  --iw-shadow: rgb(26 16 60 / .4);
+
+  /* Signals */
+  --iw-ok: #3fe6a0;
+  --iw-pink: #ff7fc6;
+  --iw-danger: #c8353e;
+}
+
+/* Tafel: a carved slab rendered from the 3D scene (scripts/home-render/sprites.ts) and drawn as a
+   9-slice in ::before, so the content box stays free for padding. Slice insets are sprite pixels;
+   the sprites are twice the CSS size. Pressing swaps to a sprite whose face has sunk into the side wall.
+   Markup: <button class="iw-slab iw-slab--gold"><span class="iw-slab__face">…</span></button> */
+.iw-slab {
+  --slab-image: url("../assets/home/slab-gold.webp");
+  --slab-image-pressed: url("../assets/home/slab-gold-pressed.webp");
+  --slab-slice: 36 44 50 44;
+  --slab-edge: 18px 22px 25px 22px;
+  /* Face area inside the sprite, measured from the button edges in CSS pixels. */
+  --slab-face-top: 3px;
+  --slab-face-bottom: 13px;
+  --slab-sink: 6px;
+  --slab-ink: var(--iw-ink-gold);
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  min-width: 44px;
+  margin: 0;
+  padding: var(--slab-face-top) 0 var(--slab-face-bottom);
+  border: 0;
+  border-radius: 14px;
+  background: none;
+  color: var(--slab-ink);
+  font-family: var(--iw-font-ui);
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.iw-slab::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  border-style: solid;
+  border-width: var(--slab-edge);
+  border-image: var(--slab-image) var(--slab-slice) fill / var(--slab-edge) stretch;
+  filter: drop-shadow(0 7px 6px rgb(28 18 70 / .42));
+}
+.iw-slab__face {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.iw-slab:active:not(:disabled)::before { border-image-source: var(--slab-image-pressed); filter: drop-shadow(0 3px 3px rgb(28 18 70 / .42)); }
+.iw-slab:active:not(:disabled) .iw-slab__face { transform: translateY(var(--slab-sink)); }
+.iw-slab:focus-visible { outline: 3px solid var(--iw-paper); outline-offset: 3px; }
+.iw-slab:disabled { cursor: not-allowed; }
+.iw-slab:disabled::before { filter: grayscale(.8) brightness(.9) opacity(.7); }
+.iw-slab:disabled .iw-slab__face { opacity: .6; }
+
+.iw-slab--violet {
+  --slab-image: url("../assets/home/slab-violet.webp");
+  --slab-image-pressed: url("../assets/home/slab-violet-pressed.webp");
+  --slab-ink: var(--iw-ink-violet);
+}
+.iw-slab--stone {
+  --slab-image: url("../assets/home/slab-stone.webp");
+  --slab-image-pressed: url("../assets/home/slab-stone-pressed.webp");
+  --slab-slice: 26 30 38 30;
+  --slab-edge: 13px 15px 19px 15px;
+  --slab-face-top: 3px;
+  --slab-face-bottom: 9px;
+  --slab-sink: 4px;
+  --slab-ink: var(--iw-paper);
+  border-radius: 10px;
+}
+
+/* Chips: a dark glass pill for status, a light one for tappable identity. */
+.iw-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 6px 14px;
+  border: 1.5px solid rgb(255 255 255 / .3);
+  border-radius: 999px;
+  background: var(--iw-glass);
+  color: var(--iw-paper);
+  font-family: var(--iw-font-ui);
+  font-size: .8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.iw-chip--light {
+  min-height: 44px;
+  border: 3px solid var(--iw-ink);
+  background: #eee7fb;
+  box-shadow: 0 0 0 1.5px rgb(255 255 255 / .6), 0 4px 0 1px var(--iw-shadow);
+  color: var(--iw-ink);
+  font-weight: 700;
+}
+button.iw-chip { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+button.iw-chip:active { transform: translateY(2px); box-shadow: 0 0 0 1.5px rgb(255 255 255 / .6), 0 2px 0 1px var(--iw-shadow); }
+button.iw-chip:focus-visible { outline: 3px solid var(--iw-paper); outline-offset: 3px; }
+
+@media (hover: hover) {
+  .iw-slab:hover:not(:disabled):not(:active)::before { filter: drop-shadow(0 7px 6px rgb(28 18 70 / .42)) brightness(1.06); }
+}

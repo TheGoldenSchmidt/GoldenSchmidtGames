@@ -60,10 +60,11 @@ export function InstallPrompt() {
 
   return (
     <aside className="install-card" aria-label="App installieren">
-      <button onClick={install} aria-expanded={installEvent ? undefined : showHelp}>
-        <span className="install-card__icon" aria-hidden="true">↓</span>
-        <span><strong>Als App installieren</strong><small>{installEvent ? "Installationsdialog öffnen" : "So kommt GSG auf deinen Startbildschirm"}</small></span>
-        <span aria-hidden="true">{showHelp ? "−" : "+"}</span>
+      <button className="iw-slab iw-slab--stone home-utility" onClick={install} aria-expanded={installEvent ? undefined : showHelp}>
+        <span className="iw-slab__face">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 4v10.5M7.5 10.5 12 15l4.5-4.5M5 19.5h14" /></svg>
+          <span>App installieren</span>
+        </span>
       </button>
       {showHelp && (
         <div className="install-help">

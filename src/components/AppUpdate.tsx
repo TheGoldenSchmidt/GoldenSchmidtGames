@@ -52,8 +52,11 @@ export function AppUpdate() {
   }
 
   return <aside className="app-update" aria-label="App aktualisieren" data-status={status}>
-    <button className="button button--secondary button--wide" onClick={status === "ready" ? apply : check} disabled={["checking", "applying", "unsupported"].includes(status)}>
-      {status === "ready" ? "Neue Version laden" : status === "checking" ? "Suche nach Updates …" : status === "applying" ? "Update wird geladen …" : "Nach Updates suchen"}
+    <button className="iw-slab iw-slab--stone home-utility" onClick={status === "ready" ? apply : check} disabled={["checking", "applying", "unsupported"].includes(status)}>
+      <span className="iw-slab__face">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19.5 11a7.6 7.6 0 0 0-13.6-3.6M5.4 3.6v4.2h4.2M4.5 13a7.6 7.6 0 0 0 13.6 3.6M18.6 20.4v-4.2h-4.2" /></svg>
+        <span>{status === "ready" ? "Neue Version laden" : status === "checking" ? "Suche nach Updates …" : status === "applying" ? "Update wird geladen …" : "Updates prüfen"}</span>
+      </span>
     </button>
     <p role="status">{status === "ready" ? "Eine neue Version ist bereit. Beim Aktualisieren wird die App neu gestartet." : status === "current" ? "Diese Ansicht ist aktuell. Die Update-Prüfung installiert keine App." : status === "unsupported" ? "Updates sind in dieser Umgebung nicht verfügbar." : message || "Hier prüfst du auf neue Spielversionen. Installation und Updates sind unabhängig voneinander."}</p>
   </aside>;

@@ -11,15 +11,19 @@ for (const reducedMotion of ["no-preference", "reduce"] as const) {
     const online = page.getByRole("button", { name: /Online spielen/ });
     await expect(local).toBeInViewport();
     await expect(online).toBeInViewport();
-    // The emblem entrance plays once and then the start screen rests; no 3D scene is loaded.
-    await expect(page.locator(".home__emblem svg")).toBeVisible();
+    // The rendered island rises once and then the start screen rests; no live 3D scene is loaded.
+    const island = page.getByRole("img", { name: "GoldenSchmidtGames" });
+    await expect(island).toBeVisible();
+    // Every rendered layer and button sprite has loaded.
+    await expect.poll(() => page.evaluate(() => [...document.querySelectorAll<HTMLImageElement>(".home img")].every(img => img.complete && img.naturalWidth > 0))).toBe(true);
+    expect(await page.evaluate(() => [...document.querySelectorAll(".home .iw-slab")].every(slab => getComputedStyle(slab, "::before").borderImageSource.startsWith("url(")))).toBe(true);
     await expect(page.locator(".home canvas")).toHaveCount(0);
     await expect.poll(() => page.evaluate(() => document.getAnimations()
       .filter(animation => (animation.effect as KeyframeEffect | null)?.target?.closest(".home"))
       .filter(animation => animation.playState === "running").length), { timeout: 5000 }).toBe(0);
-    // One fixed screen: nothing scrolls, the table objects are decoration only.
+    // One fixed screen: nothing scrolls, the sky and corner layers are decoration only.
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
-    await expect(page.locator(".home-prop").first()).toBeVisible();
+    await expect(page.locator(".home-world__corner").first()).toBeVisible();
     await page.screenshot({ path: info.outputPath(`start-${reducedMotion}.png`), fullPage: true });
 
     // Both modes remain immediately accessible, including from the keyboard.
@@ -42,17 +46,18 @@ test("Startbildschirm: Profil, Installationshilfe und schmale Ansicht", async ({
   await page.getByRole("button", { name: "Speichern", exact: true }).click();
   await expect(page.getByRole("button", { name: "Gastprofil: Die wilde Spielerunde", exact: true })).toBeVisible();
   // The installation help opens above the utility row instead of growing the page.
-  await page.getByRole("button", { name: /Als App installieren/ }).click();
+  await page.getByRole("button", { name: "App installieren", exact: true }).click();
   await expect(page.locator(".install-help")).toBeInViewport({ ratio: 1 });
   expect(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight)).toBe(true);
   await page.getByRole("button", { name: "Installationshilfe schließen", exact: true }).click();
   await expect(page.locator(".install-help")).toHaveCount(0);
-  await expect(page.getByRole("complementary", { name: "App aktualisieren" }).getByRole("button", { name: /Nach Updates suchen|Neue Version laden/ })).toBeVisible();
+  await expect(page.getByRole("complementary", { name: "App aktualisieren" }).getByRole("button", { name: /Updates prüfen|Neue Version laden/ })).toBeVisible();
   for (const viewport of [{ width: 320, height: 550 }, { width: 320, height: 640 }, { width: 360, height: 660 }]) {
     await page.setViewportSize(viewport);
     await expect(page.getByRole("button", { name: /Lokal spielen/ })).toBeInViewport({ ratio: 1 });
     await expect(page.getByRole("button", { name: /Online spielen/ })).toBeInViewport({ ratio: 1 });
-    await expect(page.getByRole("button", { name: /Als App installieren/ })).toBeInViewport({ ratio: 1 });
+    await expect(page.getByRole("button", { name: "App installieren", exact: true })).toBeInViewport({ ratio: 1 });
+    await expect(page.getByRole("button", { name: /Updates prüfen|Neue Version laden/ })).toBeInViewport({ ratio: 1 });
     await expect(page.getByRole("button", { name: /^Gastprofil:/ })).toBeInViewport({ ratio: 1 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
     await page.screenshot({ path: info.outputPath(`start-${viewport.width}x${viewport.height}.png`) });
