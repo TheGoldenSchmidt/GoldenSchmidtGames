@@ -13,7 +13,8 @@ const scale = Number(query.get("scale") ?? 1);
 const W = Math.round(layer.width * scale), H = Math.round(layer.height * scale);
 const PASSES = Number(query.get("n") ?? layer.passes);
 
-const state = { done: false, progress: 0, error: "", image: "", layer: layer.id, width: W, height: H };
+/** `box` is where a cropped image sits in the full frame, as fractions of its width and height. */
+const state = { done: false, progress: 0, error: "", image: "", layer: layer.id, width: W, height: H, box: null as null | { left: number; top: number; width: number; height: number } };
 (window as unknown as { __bake: typeof state }).__bake = state;
 
 function halton(index: number, base: number) {
@@ -81,13 +82,21 @@ function bake(layer: Layer) {
 
   const { scene, camera } = layer.build();
   const environment = studioEnvironment(renderer);
+  // Holdouts stay in depth and shadows but leave the pixel transparent, so a layer behind shows through.
+  const holdout = new THREE.ShaderMaterial({
+    vertexShader: "void main() { gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }",
+    fragmentShader: "void main() { gl_FragColor = vec4(0.); }", blending: THREE.NoBlending, side: THREE.DoubleSide
+  });
   scene.traverse(o => {
+    if (o.userData.holdout && (o as THREE.Mesh).isMesh) (o as THREE.Mesh).material = holdout;
     const m = (o as THREE.Mesh).material as THREE.MeshStandardMaterial | undefined;
     if (m?.userData?.reflective) { m.envMap = environment; m.envMapIntensity = 1; m.needsUpdate = true; }
     if (o.userData.billboard) o.quaternion.copy(camera.quaternion).premultiply(o.parent!.getWorldQuaternion(new THREE.Quaternion()).invert());
   });
 
   // Shadow cameras cover the casting objects (the sky background is not part of the bounds).
+  // World matrices of nested groups must be current, or the bounds (and so the shadow frustum) miss parts.
+  scene.updateMatrixWorld(true);
   const box = new THREE.Box3();
   scene.traverse(o => { if ((o as THREE.Mesh).isMesh && (o as THREE.Mesh).castShadow) box.expandByObject(o); });
   const sphere = box.getBoundingSphere(new THREE.Sphere());
@@ -95,8 +104,10 @@ function bake(layer: Layer) {
     const light = new THREE.DirectionalLight(0xffffff, 1);
     light.castShadow = true;
     light.shadow.mapSize.set(size, size);
-    light.shadow.bias = -.0004;
-    light.shadow.normalBias = sphere.radius * .0025;
+    // The depth range is 4 × radius; keep at least about .0075 world units of bias so small scenes stay clean.
+    light.shadow.bias = -Math.max(.0004, .0075 / (4 * sphere.radius));
+    // At least the offset of the full island scene: thin double-sided leaves would otherwise shadow themselves.
+    light.shadow.normalBias = Math.max(sphere.radius * .0025, .011);
     scene.add(light, light.target);
     return light;
   };
@@ -227,11 +238,33 @@ function bake(layer: Layer) {
     renderer.setRenderTarget(null);
     renderer.clear();
     post.run(final, null);
-    state.image = renderer.domElement.toDataURL("image/webp", layer.quality);
+    state.image = layer.crop ? crop(renderer.domElement, layer.quality) : renderer.domElement.toDataURL("image/webp", layer.quality);
     state.done = true;
   };
 
   accumulate();
+}
+
+/** Cuts the image down to its visible pixels plus a small margin and records where it sat. */
+function crop(source: HTMLCanvasElement, quality: number) {
+  const full = document.createElement("canvas");
+  full.width = W; full.height = H;
+  const ctx = full.getContext("2d")!;
+  ctx.drawImage(source, 0, 0);
+  const alpha = ctx.getImageData(0, 0, W, H).data;
+  let minX = W, minY = H, maxX = -1, maxY = -1;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    if (alpha[(y * W + x) * 4 + 3] > 1) { if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y; }
+  }
+  if (maxX < 0) throw new Error("Ebene ist leer");
+  const pad = 4;
+  const x = Math.max(0, minX - pad), y = Math.max(0, minY - pad), w = Math.min(W, maxX + pad + 1) - x, h = Math.min(H, maxY + pad + 1) - y;
+  const out = document.createElement("canvas");
+  out.width = w; out.height = h;
+  out.getContext("2d")!.drawImage(full, x, y, w, h, 0, 0, w, h);
+  const round = (v: number) => Math.round(v * 1e5) / 1e5;
+  state.box = { left: round(x / W), top: round(y / H), width: round(w / W), height: round(h / H) };
+  return out.toDataURL("image/webp", quality);
 }
 
 /** Live view for editing the scene: one realtime pass with soft shadows, no accumulation. */

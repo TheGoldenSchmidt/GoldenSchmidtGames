@@ -4,7 +4,7 @@
 //   npm run render:home -- --draft --out=DIR  quick preview: a quarter of the passes, written to DIR
 // Re-running overwrites the same files; the scenes are seeded, so unchanged sources give the same images.
 // Set PLAYWRIGHT_CHROMIUM_PATH if the installed browser does not match the Playwright version.
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { chromium } from "@playwright/test";
 import { createServer } from "vite";
@@ -25,6 +25,10 @@ const browser = await chromium.launch({
   args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"],
   ...(process.env.PLAYWRIGHT_CHROMIUM_PATH ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH } : {})
 });
+// Where each cropped layer sits within its full frame; the start screen positions the images with it.
+const manifestFile = path.join(outDir, "hero-layers.json");
+const manifest: Record<string, { left: number; top: number; width: number; height: number }> =
+  JSON.parse(await readFile(manifestFile, "utf8").catch(() => "{}"));
 try {
   await mkdir(outDir, { recursive: true });
   for (const layer of layers) {
@@ -34,13 +38,18 @@ try {
     const passes = draft ? Math.max(8, Math.round(layer.passes / 4)) : layer.passes;
     await page.goto(`http://127.0.0.1:5198/scripts/home-render/index.html?layer=${layer.id}&n=${passes}`);
     await page.waitForFunction("window.__bake && window.__bake.done", undefined, { timeout: 900_000, polling: 250 });
-    const state = await page.evaluate("({ error: window.__bake.error, image: window.__bake.image })") as { error: string; image: string };
+    const state = await page.evaluate("({ error: window.__bake.error, image: window.__bake.image, box: window.__bake.box })") as { error: string; image: string; box: typeof manifest[string] | null };
     await page.close();
     if (state.error) throw new Error(`${layer.id}: ${state.error}`);
     if (!state.image.startsWith("data:image/webp")) throw new Error(`${layer.id}: Browser lieferte kein WebP`);
     const file = path.join(outDir, `${layer.id}.webp`);
     const data = Buffer.from(state.image.split(",")[1], "base64");
     await writeFile(file, data);
+    if (state.box) {
+      manifest[layer.id] = state.box;
+      const sorted = Object.fromEntries(Object.entries(manifest).filter(([id]) => LAYERS.some(l => l.id === id && l.crop)).sort(([a], [b]) => a.localeCompare(b)));
+      await writeFile(manifestFile, JSON.stringify(sorted, null, 2) + "\n");
+    }
     console.log(`${layer.id.padEnd(22)} ${layer.width} × ${layer.height}  ${passes} Durchgänge  ${(data.length / 1024).toFixed(0).padStart(4)} KB  ${((Date.now() - started) / 1000).toFixed(1)} s`);
   }
 } finally {

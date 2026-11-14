@@ -2,7 +2,7 @@
 // `npm run render:home` writes them to src/assets/home/<id>.webp.
 import * as THREE from "three";
 import { backdropCamera, buildBackdrop, buildCorner, cornerCamera } from "./backdrop";
-import { buildHero } from "./hero";
+import { buildHero, HERO_WORDS } from "./hero";
 import { buildSlab, buildSocket, SLAB_SPRITES, spriteCamera } from "./sprites";
 
 export interface Grade {
@@ -37,6 +37,8 @@ export interface Layer {
   passes: number;
   transparent: boolean;
   quality: number;
+  /** Crop the image to its visible content; the position within the full frame goes to hero-layers.json. */
+  crop?: boolean;
   build: () => { scene: THREE.Scene; camera: THREE.Camera };
   lighting: Lighting;
   grade: Grade;
@@ -67,16 +69,21 @@ function heroCamera(width: number, height: number) {
   return camera;
 }
 
+/** Full frame of the hero layers in pixels; the page keeps this aspect ratio. */
+export const HERO_FRAME = { width: 1000, height: 1195 };
+
 const sprite = (id: string, width: number, height: number, build: () => THREE.Scene): Layer => ({
   id, width, height, passes: 64, transparent: true, quality: .92,
   build: () => ({ scene: build(), camera: spriteCamera(width, height) }), lighting: SPRITE, grade: SPRITE_GRADE
 });
 
 export const LAYERS: Layer[] = [
-  {
-    id: "hero", width: 1000, height: 1195, passes: 160, transparent: true, quality: .9,
-    build: () => ({ scene: buildHero(), camera: heroCamera(1000, 1195) }), lighting: WORLD, grade: HERO_GRADE
-  },
+  // The hero in five layers of the same frame, cropped to their content (see HERO_FRAME and hero-layers.json).
+  ...(["island", "plaque", ...HERO_WORDS] as const).map((part): Layer => ({
+    id: `hero-${part}`, width: HERO_FRAME.width, height: HERO_FRAME.height, passes: part === "island" ? 160 : 128, transparent: true,
+    quality: .9, crop: true, build: () => ({ scene: buildHero(part), camera: heroCamera(HERO_FRAME.width, HERO_FRAME.height) }),
+    lighting: WORLD, grade: HERO_GRADE
+  })),
   {
     id: "backdrop-portrait", width: 900, height: 1950, passes: 96, transparent: false, quality: .86,
     build: () => { const camera = backdropCamera("portrait", 900 / 1950); return { scene: buildBackdrop("portrait", camera), camera }; },

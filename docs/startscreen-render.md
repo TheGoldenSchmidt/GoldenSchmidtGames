@@ -34,14 +34,14 @@ mit den vorhandenen Werkzeugen (Node, Vite, Playwright-Chromium).
 | `scripts/home-render/bake.ts` | Startet Vite und Chromium, rendert Ebenen, schreibt `src/assets/home/<id>.webp` |
 | `scripts/home-render/compare.ts` | Stellt Startbildschirm und Referenz gegenüber |
 | `scripts/home-render/logoPaths.ts` | Umrisse von „GOLDEN“, „SCHMIDT“, „GAMES“ und des Mottos aus Lilita One |
-| `src/assets/home/*.webp` | Gerenderte Ebenen (eingecheckt, zusammen etwa 370 KB) |
+| `src/assets/home/*.webp`, `hero-layers.json` | Gerenderte Ebenen (eingecheckt, zusammen etwa 400 KB) und die Lage der zugeschnittenen Insel-Ebenen |
 | `docs/design/startscreen-referenz.webp` | Gestaltungsvorlage |
 
 ## Ebenen
 
 | Ebene | Größe | Verwendung |
 | --- | --- | --- |
-| `hero` | 1000 × 1195, transparent | Insel mit Logo als Bild in der Überschrift `h1` (Alternativtext „GoldenSchmidtGames“) |
+| `hero-plaque`, `hero-island`, `hero-golden`, `hero-schmidt`, `hero-games` | Bildfeld 1000 × 1195, transparent, auf den Inhalt zugeschnitten | Steinrahmen (mit Krone, Ranken, Fahne), Insel mit Requisiten, die drei Wörter des Logos. `hero-layers.json` hält die Lage jedes Ausschnitts im Bildfeld fest; die Seite legt sie deckungsgleich übereinander. Zusammen bilden sie das Bild in der Überschrift `h1` (zugänglicher Name „GoldenSchmidtGames“) |
 | `backdrop-portrait`, `backdrop-landscape` | 900 × 1950, 1920 × 1080 | Himmel und Landschaft; `<picture>` wählt nach Seitenverhältnis, `object-fit: cover` |
 | `corner-left`, `corner-right` | 520 × 600, transparent | Büsche und Fels unten links und rechts |
 | `slab-gold`, `slab-violet`, `slab-stone` und `-pressed` | 720 × 172, 360 × 104 | 9-Slice-Hintergrund der Tafeln, gedrückt mit eingesunkener Fläche |
@@ -50,8 +50,8 @@ mit den vorhandenen Werkzeugen (Node, Vite, Playwright-Chromium).
 ## Szenenaufbau
 
 - **Steinschild:** dunkle Platte, Ring aus abgefasten Steinblöcken, Nieten an den Ecken,
-  Ranken mit runden Blättern, darunter hängende Felsen. Die Schrift ist echte extrudierte
-  Geometrie mit Fase, nach oben gewölbt, mit Farbverlauf und metallischem Glanz
+  Ranken mit runden Blättern, darunter hängende Felsen. Die Schrift steht vor dem Steinring und ist echte
+  extrudierte Geometrie mit Fase, nach oben gewölbt, mit Farbverlauf und metallischem Glanz
   (Gold für „GOLDEN“ und „SCHMIDT“, Silber für „GAMES“) und dunkler Rückwand als Kontur.
 - **Insel:** Ringe aus Grasfläche mit Sandweg, Grasrand, Erdschicht und Fels; hängende Felskegel,
   Grasvorsprünge, Kiesel und Grasbüschel. Requisiten: Schwert im Stein, Würfel (abgerundet,
@@ -60,6 +60,9 @@ mit den vorhandenen Werkzeugen (Node, Vite, Playwright-Chromium).
 - **Hintergrund:** Die Komposition steht in `PORTRAIT` und `LANDSCAPE` als Bildschirmanteile
   mit Tiefe; jedes Element wird über die Kamera an diese Stelle projiziert. So lässt es sich
   direkt an der Referenz ausrichten. Nebel blendet ferne Berge in den Dunst.
+- **Ebenen der Insel:** Alle fünf Teile rendern mit derselben Kamera. Im Insel-Layer bleibt der Rahmen als
+  Halteobjekt in der Szene: Er wirft Schatten und stanzt aus, was hinter ihm liegt, bleibt aber selbst
+  durchsichtig. So ergeben die Ebenen übereinander wieder das Gesamtbild.
 - **Kamera:** fest. Die Inselkamera hält ein festes horizontales Sichtfeld, Tafeln werden
   orthografisch und frontal gerendert.
 
@@ -114,6 +117,9 @@ Nach Änderungen an Tafel-Sprites die Slice-Maße in `SLAB_SPRITES` (`sprites.ts
 - Der Service Worker speichert die WebP-Dateien vorab (`globPatterns` in `vite.config.ts`);
   Sprites unter 4 KB bettet Vite direkt ins CSS ein.
 - Bis die Bilder geladen sind, zeigt der Startbildschirm einen passenden CSS-Himmelsverlauf.
+- Auftritt (nur ohne reduzierte Bewegung): Der Steinrahmen fliegt von oben ein, die Insel blendet ein, sobald er
+  fast gelandet ist, dann fliegen „Golden“ von links, „Schmidt“ von rechts und „Games“ von unten ein. Nach etwa
+  zwei Sekunden ruht die Seite.
 
 ## Lizenzen
 
@@ -135,7 +141,7 @@ Bekannte Abweichungen zur Referenz:
 
 - Die Referenz ist gemalt. Die Szene hat Low-Poly-Körper mit Licht und leichter Körnung,
   aber keine gemalten Details wie Risse, Moospolster oder Pinselstruktur.
-- Steinschild und Schrift sind gerade ausgerichtet; in der Referenz sind sie leicht perspektivisch
+- Schild und Schrift sind gerade ausgerichtet; in der Referenz sind sie leicht perspektivisch
   gekippt und die Schrift stärker geschwungen.
 - Der Truhendeckel steht weit offen nach hinten; die Referenz zeigt ihn halb geöffnet von außen.
 - Die Ecken haben große Büsche ohne einzelne Blätter.
