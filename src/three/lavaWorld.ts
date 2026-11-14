@@ -1,18 +1,24 @@
 import * as T from "three";
-import { FL, type LavaGame, type Runner } from "../../shared/matches/floorIsLava";
+import { FL, FLOOR_TILES, ring, type LavaGame, type Runner } from "../../shared/matches/floorIsLava";
 import type { MatchWorld, MatchWorldFrame } from "../matches/client";
 import { Debris, fittedFigure, fitTiltedCamera, Impact } from "./matchScene";
 import { SceneKit, type Character } from "./sceneKit";
 
 /**
- * Floor is Lava in 2.5D: temple slabs over glowing, slowly rolling lava. Slabs
- * tremble and heat up while they crumble, tip over and sink; slabs with a rune
- * rise again. Figures run, jump with a real arc, shove and sink when they fall.
- * Pure presentation of the authoritative view.
+ * Floor is Lava in 2.5D: three floors of temple slabs stacked over glowing,
+ * slowly rolling lava. Slabs tremble and heat up while they crumble, tip over
+ * and sink; slabs with a rune rise again. Figures run, jump with a real arc,
+ * shove, drop through holes to the floor below and sink into the lava. The
+ * camera glides down with the viewer's own floor; floors above it are hidden
+ * so they never cover the action (figures up there stay visible). Pure presentation of the
+ * authoritative view.
  */
-const COLS = FL.cols, ROWS = FL.rows, TILES = COLS * ROWS;
+const COLS = FL.cols, ROWS = FL.rows, TILES = FLOOR_TILES, FLOORS = FL.floors;
 const wx = (x: number) => x - COLS / 2, wz = (y: number) => y - ROWS / 2;
-const SLAB = .42, TILT = 62 * Math.PI / 180, EMBERS = 36;
+const SLAB = .42, TILT = 62 * Math.PI / 180, EMBERS = 36, GAP = 2.4;
+/** Height of a floor's walking surface (top floor at 0). */
+const floorY = (floor: number) => -floor * GAP;
+const LAVA_Y = floorY(FLOORS - 1) - .7;
 const COLOR = { night: 0x2a0f0a, stone: 0xfff3dc, hot: 0xff6a1f, rune: 0x57e4cb, lava: 0xff5a14, glow: 0xffb347, own: 0xffe44e, life: 0xfff9ed, shadow: 0x1a0a06 } as const;
 
 function texture(draw: (c: CanvasRenderingContext2D, n: number) => void, repeat = 1) {
@@ -53,16 +59,24 @@ export function createLavaWorld(host: HTMLElement, read: () => MatchWorldFrame, 
 
   // Lava sea: emissive, slowly flowing texture, warm light from below.
   const lavaMap = lavaTexture();
-  const lava = new T.Mesh(new T.PlaneGeometry(COLS + 8, ROWS + 8), new T.MeshStandardMaterial({ map: lavaMap, emissive: COLOR.lava, emissiveMap: lavaMap, emissiveIntensity: .9, roughness: 1 }));
-  lava.rotation.x = -Math.PI / 2; lava.position.y = -.7; lava.receiveShadow = true; world.add(lava);
-  const heat = new T.PointLight(COLOR.glow, 3, 22, 1.4); heat.position.set(0, .4, 0); world.add(heat);
+  const lava = new T.Mesh(new T.PlaneGeometry(COLS + 30, ROWS + 30), new T.MeshStandardMaterial({ map: lavaMap, emissive: COLOR.lava, emissiveMap: lavaMap, emissiveIntensity: .9, roughness: 1 }));
+  lava.rotation.x = -Math.PI / 2; lava.position.y = LAVA_Y; lava.receiveShadow = true; world.add(lava);
+  const heat = new T.PointLight(COLOR.glow, 3, 22, 1.4); heat.position.set(0, LAVA_Y + 1.1, 0); world.add(heat);
 
   // Slabs, runes on returning slabs, and a ghost outline where a slab will come back.
-  const slabs = new T.InstancedMesh(box, new T.MeshStandardMaterial({ map: slabTexture(), roughness: .85 }), TILES);
-  slabs.castShadow = true; slabs.receiveShadow = true; world.add(slabs);
-  const runes = new T.InstancedMesh(new T.TorusGeometry(.13, .025, 6, 24), new T.MeshBasicMaterial({ color: COLOR.rune }), TILES); runes.count = 0; world.add(runes);
-  const ghosts = new T.InstancedMesh(new T.BoxGeometry(1, 1, 1), new T.MeshBasicMaterial({ color: COLOR.rune, transparent: true, opacity: .28, depthWrite: false }), TILES); ghosts.count = 0; world.add(ghosts);
-  const state: Slab[] = Array.from({ length: TILES }, () => ({ state: "1", changedAt: -1e9, from: 0 }));
+  // One mesh per floor, so floors above the viewer can turn into faint glass on their own.
+  const slabMap = slabTexture();
+  const floors = Array.from({ length: FLOORS }, () => {
+    const mesh = new T.InstancedMesh(box, new T.MeshStandardMaterial({ map: slabMap, roughness: .85 }), TILES);
+    mesh.castShadow = true; mesh.receiveShadow = true; world.add(mesh);
+    return mesh;
+  });
+  const runes = new T.InstancedMesh(new T.TorusGeometry(.13, .025, 6, 24), new T.MeshBasicMaterial({ color: COLOR.rune }), TILES * FLOORS); runes.count = 0; world.add(runes);
+  const ghosts = new T.InstancedMesh(new T.BoxGeometry(1, 1, 1), new T.MeshBasicMaterial({ color: COLOR.rune, transparent: true, opacity: .28, depthWrite: false }), TILES * FLOORS); ghosts.count = 0; world.add(ghosts);
+  const state: Slab[] = Array.from({ length: TILES * FLOORS }, () => ({ state: "1", changedAt: -1e9, from: 0 }));
+  let camY: number | undefined;
+  /** Floors above the viewer are hidden: seen from above they would cover the viewer's own floor. */
+  const showFrom = (own: number) => floors.forEach((mesh, floor) => { mesh.visible = floor >= own; });
 
   // Embers rising from the lava (decoration only, off with reduced motion).
   const embers = new T.InstancedMesh(new T.SphereGeometry(1, 6, 4), new T.MeshBasicMaterial({ color: COLOR.glow }), EMBERS); embers.frustumCulled = false; world.add(embers);
@@ -87,12 +101,24 @@ export function createLavaWorld(host: HTMLElement, read: () => MatchWorldFrame, 
   };
 
   const runnerPos = (r: Runner, before: Runner | undefined, alpha: number) => before?.alive ? [before.x + (r.x - before.x) * alpha, before.y + (r.y - before.y) * alpha] as const : [r.x, r.y] as const;
+  /** Height of a runner's feet: its floor, or on the way down a fall that speeds up like a real one. */
+  const feetY = (r: Runner, simTime: number, reduced: boolean) => {
+    const left = Math.max(0, Math.min(1, (r.dropUntil - simTime) / FL.dropMs));
+    if (left <= 0 || reduced) return floorY(r.floor);
+    const k = 1 - left; return floorY(r.floor - 1) + (floorY(r.floor) - floorY(r.floor - 1)) * k * k;
+  };
 
   const animate = (time: number) => {
     const f = read(), s = f.cur, g = s.game as LavaGame, prev = f.prev.game as LavaGame, reduced = f.reduced, dt = Math.min(.05, (time - last) / 1000);
     last = time;
     if (kit.camera.aspect !== aspect) { aspect = kit.camera.aspect; fitTiltedCamera(kit, COLS / 2 + .1, ROWS / 2 + .1, .2, TILT); }
     if (!reduced) { lavaMap.offset.x += dt * .012; lavaMap.offset.y += dt * .007; }
+    // Camera follows the viewer's floor (also during a fall); spectators watch the top floor.
+    const mine = g.runners[f.viewer], own = mine?.floor ?? 0;
+    showFrom(own);
+    const wanted = mine ? -feetY(mine, f.simTime, reduced) : 0;
+    camY = reduced || camY === undefined ? wanted : camY + (wanted - camY) * (1 - Math.exp(-dt * 7));
+    world.position.y = camY;
     heat.intensity = reduced ? 3 : 3 + Math.sin(time / 600) * .6;
 
     // Slabs: tremble and heat while crumbling, tip and sink when gone, rise when they return.
@@ -100,38 +126,41 @@ export function createLavaWorld(host: HTMLElement, read: () => MatchWorldFrame, 
     const roundTime = f.simTime - g.roundStart, nextRing = FL.ringAt.findIndex(t => roundTime < t);
     const warnRing = g.phase === "play" && nextRing >= 0 && FL.ringAt[nextRing] - roundTime < 1500 ? nextRing : -1;
     let r = 0, gh = 0;
-    for (let i = 0; i < TILES; i++) {
-      const tile = g.tiles[i], slab = state[i], x = wx(i % COLS + .5), z = wz(Math.floor(i / COLS) + .5);
+    for (let i = 0; i < TILES * FLOORS; i++) {
+      const floor = Math.floor(i / TILES), j = i % TILES, mesh = floors[floor], base = floorY(floor);
+      const tile = g.tiles[i] ?? "0", slab = state[i], x = wx(j % COLS + .5), z = wz(Math.floor(j / COLS) + .5);
       if (tile !== slab.state) { slab.from = slab.state === "2" || slab.state === "1" ? 1 : 0; slab.state = tile; slab.changedAt = time; }
       const age = time - slab.changedAt;
       let y = -SLAB / 2, tilt = 0, shake = 0, heatK = 0, scale = 1;
-      const ringOf = Math.min(i % COLS, Math.floor(i / COLS), COLS - 1 - i % COLS, ROWS - 1 - Math.floor(i / COLS));
+      const ringOf = ring(i);
       if (tile === "2") {
         const left = Math.max(0, Math.min(1, ((g.timers[i] ?? s.time) - f.simTime) / FL.crackMs));
         heatK = 1 - left; shake = reduced ? 0 : Math.sin(time / 28 + i) * heatK * .05;
       }
       if ((tile === "1" || tile === "2") && ringOf === warnRing) heatK = Math.max(heatK, reduced ? .6 : .35 + Math.abs(Math.sin(time / 160)) * .5); else if (tile === "0" || tile === "3") {
-        // Falling: tip over and sink into the lava (instant with reduced motion).
+        // Falling: tip over and sink (instant with reduced motion).
         const k = reduced || !slab.from ? 1 : Math.min(1, age / 650);
         y = -SLAB / 2 - k * k * 1.4; tilt = k * .9 * ((i % 2) ? 1 : -1); heatK = 1; scale = k >= 1 ? 0 : 1;
       } else if (age < 320 && !reduced && slab.from === 0) {
-        // Returning slab rises out of the lava.
+        // Returning slab rises from below.
         const k = age / 320; y = -SLAB / 2 - (1 - k) * (1 - k) * 1.2;
       }
-      dummy.position.set(x + shake, y, z); dummy.rotation.set(tilt, 0, tilt * .4); dummy.scale.set(.94 * scale, SLAB * scale, .94 * scale); dummy.updateMatrix();
-      slabs.setMatrixAt(i, dummy.matrix);
-      color.set(COLOR.stone).lerp(hot, heatK * .75); slabs.setColorAt(i, color);
-      if (g.regen[i] === "1" && (tile === "1" || tile === "2")) { dummy.position.set(x + shake, y + SLAB / 2 + .01, z); dummy.rotation.set(-Math.PI / 2, 0, 0); dummy.scale.setScalar(1); dummy.updateMatrix(); runes.setMatrixAt(r++, dummy.matrix); }
-      if (tile === "3") { dummy.position.set(x, -.5, z); dummy.rotation.set(0, 0, 0); dummy.scale.set(.9, .06, .9); dummy.updateMatrix(); ghosts.setMatrixAt(gh++, dummy.matrix); }
+      dummy.position.set(x + shake, base + y, z); dummy.rotation.set(tilt, 0, tilt * .4); dummy.scale.set(.94 * scale, SLAB * scale, .94 * scale); dummy.updateMatrix();
+      mesh.setMatrixAt(j, dummy.matrix);
+      // Deeper floors sit in the shade of the ones above.
+      color.set(COLOR.stone).lerp(hot, heatK * .75).multiplyScalar(floor > own ? 1 - Math.min(.45, (floor - own) * .22) : 1); mesh.setColorAt(j, color);
+      if (floor < own) continue;
+      if (g.regen[i] === "1" && (tile === "1" || tile === "2")) { dummy.position.set(x + shake, base + y + SLAB / 2 + .01, z); dummy.rotation.set(-Math.PI / 2, 0, 0); dummy.scale.setScalar(1); dummy.updateMatrix(); runes.setMatrixAt(r++, dummy.matrix); }
+      if (tile === "3") { dummy.position.set(x, base - .5, z); dummy.rotation.set(0, 0, 0); dummy.scale.set(.9, .06, .9); dummy.updateMatrix(); ghosts.setMatrixAt(gh++, dummy.matrix); }
     }
-    slabs.instanceMatrix.needsUpdate = true; if (slabs.instanceColor) slabs.instanceColor.needsUpdate = true;
+    for (const mesh of floors) { mesh.instanceMatrix.needsUpdate = true; if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true; }
     runes.count = r; runes.instanceMatrix.needsUpdate = true; ghosts.count = gh; ghosts.instanceMatrix.needsUpdate = true;
 
     // Embers drift up from the lava in a fixed loop.
     embers.visible = !reduced;
     if (!reduced) for (let i = 0; i < EMBERS; i++) {
       const k = ((time / 2600 + i * .37) % 1);
-      dummy.position.set(((i * 7.3) % (COLS + 6)) - (COLS + 6) / 2, -.6 + k * 2.2, ((i * 5.9) % (ROWS + 6)) - (ROWS + 6) / 2);
+      dummy.position.set(((i * 7.3) % (COLS + 6)) - (COLS + 6) / 2, LAVA_Y + .1 + k * 2.2, ((i * 5.9) % (ROWS + 6)) - (ROWS + 6) / 2);
       dummy.rotation.set(0, 0, 0); dummy.scale.setScalar(.05 * (1 - k)); dummy.updateMatrix(); embers.setMatrixAt(i, dummy.matrix);
     }
     embers.instanceMatrix.needsUpdate = true;
@@ -144,8 +173,11 @@ export function createLavaWorld(host: HTMLElement, read: () => MatchWorldFrame, 
       else if (e.kind === "shove") target?.fig.act?.("hit", time);
       else if ((e.kind === "hit" || e.kind === "out") && target) {
         const at = prev.runners?.[e.ids[0]] ?? runner;
-        if (at) { if (!reduced) splash.burst(wx(at.x), -.5, wz(at.y), time, { count: 10, speed: 1.8, up: 4, size: .12, life: 650, color: COLOR.glow }); impact.hit(wx(at.x), wz(at.y), time, reduced, .8); }
+        if (at) { if (!reduced) splash.burst(wx(at.x), LAVA_Y + .2, wz(at.y), time, { count: 10, speed: 1.8, up: 4, size: .12, life: 650, color: COLOR.glow }); impact.hit(wx(at.x), wz(at.y), time, reduced, .8); }
         if (e.kind === "out") { target.fig.act?.("death", time); target.outAt = time; } else target.fig.act?.("hit", time);
+      } else if (e.kind === "drop" && runner && !reduced) {
+        // Crumbs follow the runner through the hole.
+        splash.burst(wx(runner.x), floorY(runner.floor - 1) - .1, wz(runner.y), time, { count: 6, speed: .8, up: .5, size: .09, life: 500, color: 0xc9b48a });
       } else if (e.kind === "shrink") impact.hit(0, 0, time, reduced, .6);
     }
     lastSeq = Math.max(lastSeq, s.eventSeq);
@@ -156,21 +188,22 @@ export function createLavaWorld(host: HTMLElement, read: () => MatchWorldFrame, 
       if (!runner) continue;
       const fg = figureFor(p.id, p.style, f.characters[p.id], f.viewer), before = prev.runners?.[p.id];
       const [x, y] = runnerPos(runner, before, f.alpha);
-      const air = Math.max(0, Math.min(1, (runner.airUntil - f.simTime) / FL.jumpMs)), lift = air > 0 ? Math.sin((1 - air) * Math.PI) * .9 : 0;
-      let height = lift;
+      const falling = runner.dropUntil > f.simTime, ground = feetY(runner, f.simTime, reduced);
+      const air = falling ? 0 : Math.max(0, Math.min(1, (runner.airUntil - f.simTime) / FL.jumpMs)), lift = air > 0 ? Math.sin((1 - air) * Math.PI) * .9 : 0;
+      let height = ground + lift;
       if (!runner.alive) {
         // Out: the figure sinks into the lava, then leaves.
         const sink = fg.outAt === undefined ? 1 : Math.min(1, (time - fg.outAt) / 900);
-        height = -sink * 1.6; fg.fig.group.visible = sink < 1 && fg.outAt !== undefined;
+        height = floorY(FLOORS - 1) - sink * 1.6; fg.fig.group.visible = sink < 1 && fg.outAt !== undefined;
       } else { fg.outAt = undefined; fg.fig.group.visible = !(f.simTime < runner.invulnUntil && !reduced && Math.floor(time / 110) % 2 === 0); }
       fg.fig.group.position.set(wx(x), height, wz(y));
       const speed = Math.hypot(runner.vx, runner.vy), sliding = s.time < runner.slideUntil;
-      fg.fig.pose(Math.atan2(runner.fx, runner.fy), sliding ? 0 : speed, time, lift, false, reduced);
+      fg.fig.pose(Math.atan2(runner.fx, runner.fy), sliding ? 0 : speed, time, falling ? .6 : lift, false, reduced);
       fg.fig.group.rotation.z = sliding && !reduced ? Math.sin(time / 40) * .15 : 0;
-      fg.shadow.visible = runner.alive; fg.shadow.position.set(wx(x), .01, wz(y)); fg.shadow.scale.setScalar(1 - lift * .4);
+      fg.shadow.visible = runner.alive; fg.shadow.position.set(wx(x), floorY(runner.floor) + .01, wz(y)); fg.shadow.scale.setScalar(1 - lift * .4);
       fg.lives.forEach((m, i) => { m.visible = runner.alive && i < runner.lives; });
       if (fg.marker) fg.marker.position.y = fg.top + .5 + (reduced ? 0 : Math.abs(Math.sin(time / 220)) * .1);
-      if (fg.ring) { fg.ring.visible = runner.alive; fg.ring.position.set(wx(x), .02, wz(y)); }
+      if (fg.ring) { fg.ring.visible = runner.alive; fg.ring.position.set(wx(x), ground + .02, wz(y)); }
     }
 
     splash.update(time);

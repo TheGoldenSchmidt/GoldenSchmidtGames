@@ -1,6 +1,6 @@
 # Plan: Floor is Lava – 2.5D und Schubsen
 
-Stand: Nov. 2026 · Status: **umgesetzt** bis auf den Gerätetest (siehe „Umsetzungsstand“).
+Stand: Nov. 2026 · Status: **umgesetzt** inkl. drei Etagen, bis auf den Gerätetest (siehe „Umsetzungsstand“).
 
 ## Warum dieses Spiel als nächstes
 
@@ -67,4 +67,5 @@ Nach der Umsetzung Überarbeitung mit dem Skill `frontend-design:frontend-design
 | Gestaltung mit `frontend-design` | Themenwelt „Vulkantempel bei Nacht“ (Basalt `#2a0f0a`, Sandstein, Glut `#ff6a1f`, Schmelzgold `#ffd166`, Runentürkis `#57e4cb`); Blickfang ist allein die Lava, alles andere ruhig. Nach Sichtprüfung: hellere Platten und schwächeres Glühlicht für Kontrast, feinere Runen, Emoji-Symbol ersetzt, Banner im Glutton, kürzere Statuszeile |
 | Leistung | sechs Figuren: 180 Zeichenaufrufe, ≈ 237 000 Dreiecke (Chromium-Emulation) |
 | Tests | Playwright `phone`: Figuren, Laufen, Springen, Schubsen in beiden Bewegungseinstellungen, sechs Figuren, Rückfall ohne WebGL |
-| Offen | Gerätetest (FPS, Lesbarkeit der Runen, Gefühl des Schubsers); Blinken während der Schutzzeit blendet Figuren kurz ganz aus – auf echten Geräten beurteilen |
+| Etagen (Nov. 2026) | umgesetzt: drei Etagen, Durchfallen ohne Lebensverlust, Lava nur unter der untersten Etage, Kamera gleitet mit der eigenen Etage, Etagen darüber ausgeblendet, tiefere abgedunkelt, Bröckelkrümel beim Durchfallen; Canvas-Rückfall zeigt die eigene Etage, darunter liegende Platten durch Löcher und ein Etagenschild; Statuszeile nennt die Etage. Regeltest: Durchfallen, Kette bis in die Lava, Respawn, getrennte Kontakte, Randeinsturz auf allen Etagen; Playwright `phone`: Durchfallen in beiden Bewegungseinstellungen, sechs Figuren 184 Zeichenaufrufe |
+| Offen | Gerätetest (FPS, Lesbarkeit der Runen, Gefühl des Schubsers, ob Figuren auf tieferen Etagen genug zu sehen sind, Balance der Durchgänge bis 30 s); Blinken während der Schutzzeit blendet Figuren kurz ganz aus – auf echten Geräten beurteilen |

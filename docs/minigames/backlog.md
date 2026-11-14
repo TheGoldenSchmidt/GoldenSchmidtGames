@@ -95,7 +95,7 @@ Siehe [konzept.md](konzept.md#architekturentscheidungen) und die Tabelle
 | `npm run test:online` inkl. `match-online-test` und Neustart mit laufendem Match | grün |
 | `npm run test:screens` | grün |
 | `npm run build`, `npm run test:pwa`, `npm run test:production` | grün |
-| Playwright `phone`, `match-games.spec.ts` (16 Fälle, alle zwölf Spiele) | grün |
+| Playwright `phone`, `match-games.spec.ts` (34 Fälle, alle zwölf Spiele; Stand Nov. 2026 nach Pfeilsteuerung und Etagen) | grün |
 | Playwright `phone`, gesamte Suite ohne Handy-Hosting-Fälle | 103 von 106 grün; die 3 roten (Testhelfer) korrigiert und danach 51 von 51 in dreifacher Wiederholung grün |
 | Playwright `desktop`, gesamte Suite ohne Handy-Hosting-Fälle (Party und Minispiele ausgenommen) | 35 grün, 2 übersprungen |
 | Handy-Hosting-Browserfälle (`nearby.spec.ts`, „Handy-Einladung“) | in dieser Cloud-Umgebung nicht lauffähig (WebRTC), auch nicht auf dem Ausgangsstand |
@@ -119,9 +119,12 @@ geprüft; echte Funknetze nicht.
 - **Bots** sind für Übung und Testräume gedacht, nicht als starke Gegner;
   besonders Hook Wars und Chaos Run spielen einfach.
 - **Neon Pong** steht nur bei 2 oder 4 aktiven Spielern im Pool.
-- **Tower Tumble** braucht als einziges Spiel spürbar Rechenzeit (≈ 40 ms je
-  Spielsekunde in Node); auf einem Handy-Host ungeprüft. Bots verlieren viele
+- **Tower Tumble** braucht als einziges Spiel spürbar Rechenzeit (≈ 12 ms je
+  Spielsekunde im Bot-Spiel, bis ≈ 50 ms bei sechs hohen wackelnden Türmen in
+  Node); auf Handy-Host und Render Free ungeprüft. Bots verlieren viele
   Steine und taugen nur zum Üben.
+- **Floor is Lava** sendet mit drei Etagen etwa 3,6 statt 2,4 KB je Sicht;
+  Figuren auf tieferen Etagen sind teils von den Platten darüber verdeckt.
 - **Zufallsziehung in Tests:** Tests, die ein bestimmtes Minispiel erwarten,
   müssen es wählen oder gezogene Match-Spiele durchspielen
   (`toArenaMini`, `participate` in `tests/browser/party-session.ts`).
@@ -138,6 +141,14 @@ geprüft; echte Funknetze nicht.
 | Tower Tumble | Mechanik und Physik nicht schön | **umgesetzt**: Neubau als Turmrennen mit echter 2D-Starrkörperphysik, Drehen, schnellem Fallen und Landehilfe (eigenständiges Spiel im Genre, keine Kopie); Gefühl auf echten Handys offen |
 | Hook Wars | Prinzip unverständlich | **umgesetzt**: vorerst zu den 1st Generation Minigames verschoben (nur mit Haken im Zufallspool, weiter direkt wählbar) |
 | Floor is Lava | Lieber als 3D-Hindernislauf mit Figuren | **umgesetzt** als 2.5D-Tempel über Lava mit Figuren und neuem Schubser (kein Hindernislauf); Plan und Stand in [plan-floor-is-lava.md](plan-floor-is-lava.md), Gerätetest offen |
+
+## Rückmeldung aus der zweiten Runde (Nov. 2026)
+
+| Spiel | Rückmeldung | Stand |
+| --- | --- | --- |
+| Tower Tumble | Hängt und ruckelt am Handy | **umgesetzt**: Ursache war vor allem Rechenzeit der Raumautorität (Übung und Handy-Host rechnen auf dem Handy, Render Free hat wenig CPU): zusammengefasste Kollisionsboxen, schlanker Solver, Warmstart als Zahlenliste, Sicht ohne Kopie der Physikdaten (`publicGame`); auf dem Gerät Zellen als vorgezeichnete Bilder und zeitbasierte Kamera. Werte in [konzept.md](konzept.md#architekturentscheidungen); echtes Handy offen |
+| Tower Tumble | Lieber links/rechts-Pfeile statt Schieben | **umgesetzt**: ⇦ ⇨ links unten (halbe Zelle je Tipp, Halten wiederholt), ⟳ und ⇩ rechts unten; Regeltest und Playwright `phone` |
+| Floor is Lava | Über mehrere Etagen spielen | **umgesetzt**: drei Etagen, Durchfallen statt Lava bis zur untersten Etage; Regeltest, Playwright `phone` (beide Bewegungseinstellungen, sechs Figuren, 2D-Rückfall); Gerätetest offen |
 
 Gefühl auf echten Handys ist für die umgesetzten Punkte weiter ungeprüft.
 

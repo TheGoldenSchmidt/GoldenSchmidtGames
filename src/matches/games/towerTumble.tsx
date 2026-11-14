@@ -1,21 +1,38 @@
+import { useEffect, useRef } from "react";
 import { PIECE_KINDS, TW, pieceCells, restingY, type PackedBody, type PieceKind, type TowerGame, type TowerView } from "../../../shared/matches/towerTumble";
-import { ActionButton, SliderPad } from "../controls";
-import { lerp, playerColor, type MatchClient, type MatchFrame } from "../client";
+import { ActionButton } from "../controls";
+import { lerp, playerColor, type MatchClient, type MatchFrame, type MatchIO } from "../client";
 
 type Towers = Record<string, TowerView>;
 const towersOf = (game: unknown) => (game as TowerGame).towers as unknown as Towers;
 
-function cell(ctx: CanvasRenderingContext2D, size: number, color: string, outline = true) {
-  ctx.fillStyle = color; ctx.fillRect(-size / 2, -size / 2, size, size);
-  if (!outline) return;
-  ctx.fillStyle = "#ffffff40"; ctx.fillRect(-size / 2, -size / 2, size, Math.max(2, size * .18));
-  ctx.strokeStyle = "#24133f"; ctx.lineWidth = Math.max(1, size * .08); ctx.strokeRect(-size / 2 + ctx.lineWidth / 2, -size / 2 + ctx.lineWidth / 2, size - ctx.lineWidth, size - ctx.lineWidth);
+/**
+ * One pre-drawn cell per colour and pixel size: a piece then costs four image
+ * copies instead of four fills, strokes and state changes per frame.
+ */
+const sprites = new Map<string, HTMLCanvasElement>();
+function cellSprite(color: string, px: number, outline: boolean) {
+  const key = `${color}|${px}|${outline}`;
+  let c = sprites.get(key);
+  if (c) return c;
+  if (sprites.size > 64) sprites.clear();
+  c = document.createElement("canvas"); c.width = c.height = px;
+  const g = c.getContext("2d")!;
+  g.fillStyle = color; g.fillRect(0, 0, px, px);
+  if (outline) {
+    g.fillStyle = "#ffffff40"; g.fillRect(0, 0, px, Math.max(2, px * .18));
+    const line = Math.max(1, px * .08);
+    g.strokeStyle = "#24133f"; g.lineWidth = line; g.strokeRect(line / 2, line / 2, px - line, px - line);
+  }
+  sprites.set(key, c);
+  return c;
 }
 
 /** Draws one piece: centre (x, y) in world units, rotated by `a` (counter-clockwise, y up). */
 function piece(ctx: CanvasRenderingContext2D, k: PieceKind, r: number, x: number, y: number, a: number, X: (x: number) => number, Y: (y: number) => number, scale: number, color: string, outline = true) {
-  ctx.save(); ctx.translate(X(x), Y(y)); ctx.rotate(-a);
-  for (const [cx, cy] of pieceCells(k, r)) { ctx.save(); ctx.translate(cx * scale, -cy * scale); cell(ctx, scale, color, outline); ctx.restore(); }
+  const sprite = cellSprite(color, Math.max(2, Math.round(scale * ctx.getTransform().a)), outline);
+  ctx.save(); ctx.translate(X(x), Y(y)); if (a) ctx.rotate(-a);
+  for (const [cx, cy] of pieceCells(k, r)) ctx.drawImage(sprite, cx * scale - scale / 2, -cy * scale - scale / 2, scale, scale);
   ctx.restore();
 }
 
@@ -35,15 +52,17 @@ function goalLine(ctx: CanvasRenderingContext2D, x0: number, x1: number, y: numb
 function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
   const s = f.cur, towers = towersOf(s.game), prevTowers = towersOf(f.prev.game), { w, h } = f;
   const me = towers[f.viewer], others = s.players.filter(p => p.id !== f.viewer && towers[p.id]);
-  const sky = ctx.createLinearGradient(0, 0, 0, h); sky.addColorStop(0, "#6b5bd6"); sky.addColorStop(.6, "#ff86c8"); sky.addColorStop(1, "#ffd166");
-  ctx.fillStyle = sky; ctx.fillRect(0, 0, w, h);
+  const local = f.local as { towerCam?: number; towerT?: number; sky?: CanvasGradient; skyH?: number };
+  if (!local.sky || local.skyH !== h) { local.sky = ctx.createLinearGradient(0, 0, 0, h); local.sky.addColorStop(0, "#6b5bd6"); local.sky.addColorStop(.6, "#ff86c8"); local.sky.addColorStop(1, "#ffd166"); local.skyH = h; }
+  ctx.fillStyle = local.sky; ctx.fillRect(0, 0, w, h);
   const side = others.length ? Math.min(118, Math.round(w * .26)) : 0, mainW = w - side;
   if (me) {
     const scale = mainW / (TW.laneHalf * 2 + 1), cx = mainW / 2;
     // Camera: keep the pedestal low on screen at first, then follow the tower top and the falling piece.
-    const local = f.local as { towerCam?: number }, focus = Math.max(me.height, me.piece ? me.piece.y - 1 : 0);
-    const wanted = Math.max(0, focus - (h / scale) * .45);
-    local.towerCam = f.reduced || local.towerCam === undefined ? wanted : lerp(local.towerCam, wanted, .08);
+    const focus = Math.max(me.height, me.piece ? me.piece.y - 1 : 0);
+    const wanted = Math.max(0, focus - (h / scale) * .45), dt = Math.min(.1, Math.max(0, (f.t - (local.towerT ?? f.t)) / 1000));
+    // Same glide on 60 Hz and 120 Hz screens: the follow speed depends on time, not on frames.
+    local.towerCam = f.reduced || local.towerCam === undefined ? wanted : lerp(local.towerCam, wanted, 1 - Math.exp(-dt * 5)); local.towerT = f.t;
     const floor = h * .72 / scale - local.towerCam;
     const X = (x: number) => cx + x * scale, Y = (y: number) => (floor - y) * scale;
     // Height marks every 2 m and the checkered finish line.
@@ -100,6 +119,19 @@ function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
   }
 }
 
+/** Delay before a held arrow repeats, then one half cell per interval (about six cells per second). */
+const REPEAT_DELAY = 240, REPEAT_EVERY = 80;
+/** Arrow button: a tap moves the piece one half cell, holding keeps moving it. */
+function Arrow({ io, dir, disabled }: { io: MatchIO; dir: -1 | 1; disabled: boolean }) {
+  const timer = useRef<number | undefined>(undefined);
+  const stop = () => { window.clearTimeout(timer.current); window.clearInterval(timer.current); timer.current = undefined; };
+  useEffect(() => { if (disabled) stop(); }, [disabled]);
+  useEffect(() => stop, []);
+  return <ActionButton icon={dir < 0 ? "⇦" : "⇨"} label={dir < 0 ? "Links" : "Rechts"} disabled={disabled}
+    onPress={() => { stop(); io.command(dir); timer.current = window.setTimeout(() => { timer.current = window.setInterval(() => io.command(dir), REPEAT_EVERY); }, REPEAT_DELAY); }}
+    onRelease={stop} />;
+}
+
 export const towerTumbleClient: MatchClient = {
   render,
   unit: "Meter",
@@ -107,12 +139,13 @@ export const towerTumbleClient: MatchClient = {
   Controls({ io, view, viewer, active }) {
     const mine = towersOf(view.game)[viewer], playing = active && !!mine && mine.finishedAt === undefined;
     return <>
-      <SliderPad className="tower-slider" label="Stein verschieben" onMove={x => { if (playing) io.set({ x, hb: true }, true); }} onRelease={() => io.set({ hb: false }, true)}>
-        <span className="tower-hint" aria-hidden="true">⟵ hier ziehen: Stein verschieben ⟶</span>
-      </SliderPad>
+      <div className="tower-arrows">
+        <Arrow io={io} dir={-1} disabled={!playing} />
+        <Arrow io={io} dir={1} disabled={!playing} />
+      </div>
       <div className="tower-buttons">
         <ActionButton icon="⟳" label="Drehen" tone="cyan" disabled={!playing} onPress={() => io.press("a")} />
-        <ActionButton icon="⇩" label="Fallen" disabled={!playing} onPress={() => io.set({ ha: true }, true)} onRelease={() => io.set({ ha: false }, true)} />
+        <ActionButton icon="⇩" label="Fallen" tone="pink" disabled={!playing} onPress={() => io.set({ ha: true }, true)} onRelease={() => io.set({ ha: false }, true)} />
       </div>
     </>;
   },

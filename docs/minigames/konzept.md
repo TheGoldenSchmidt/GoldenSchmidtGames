@@ -134,11 +134,12 @@ im Modul ausgespielt; bleibt danach ein Gleichstand, wird der Platz geteilt.
 | Sumo Smash, Chaos Run | **Animierte Figuren** (Nov. 2026): Quaternius-Figuren mit Skelett und Animationen (CC0) in sechs Looks, Kleidung in Spielerfarbe; Sumo mit Kampfspiel-Kamera, Chaos Run mit Verfolgerkamera und eigener Spur je Person; Canvas als Rückfall; Regeln unverändert | Wunsch nach „Profi-Niveau“ ohne Unity-Umstieg; Details in [figuren-rigged.md](figuren-rigged.md) |
 | Tank Trouble | **2.5D-Darstellung** (Nov. 2026): WebGL-Szene mit gewählter Figur in der Panzerluke; roter Ziellaser nur beim eigenen Zielen bis zur ersten Wand (keine Abprallvorhersage); Canvas als Rückfall; Regeln unverändert | Lesbarkeit der Abpraller bleibt Aufgabe der Spieler; der Laser zeigt nur die eigene Richtung |
 | Bomb Arena | **2.5D-Darstellung** (Nov. 2026): WebGL-Szene mit fester, geneigter Kamera und den gewählten Figuren; die Canvas-Fassung bleibt als Rückfall. Regeln, Sicht und Eingaben unverändert | Spielrückmeldung „cooleres Spielerlebnis“; Plan und Abwägung gegen Tank Trouble in [plan-2-5d.md](plan-2-5d.md) |
-| Floor is Lava | Quadratische Platten 9 × 13; Rand bricht bei 10 s und 15 s ein; Sprung 0,55 s mit 1,4-facher Geschwindigkeit (überwindet ein Feld) | Konkrete Werte für Handys |
+| Floor is Lava | Quadratische Platten 9 × 13; Rand bricht bei 16 s und 23 s ein (bis Nov. 2026 bei 10 s und 15 s); Sprung 0,55 s mit 1,4-facher Geschwindigkeit (überwindet ein Feld) | Konkrete Werte für Handys |
+| Floor is Lava | **Drei Etagen** (Nov. 2026): Plattenzustände je Etage, alle starten oben. Wer über einem Loch steht, fällt in 0,45 s eine Etage tiefer (in der Luft, kein Lebensverlust, Platte darunter beginnt beim Landen zu bröckeln); nur ein Loch der untersten Etage führt in die Lava. Schubser und Wegdrücken nur auf derselben Etage, nicht während des Falls. Randeinsturz auf allen Etagen. Respawn auf der untersten Etage mit intakter Innenplatte. Durchgänge bis 30 s, Stechrunde bis 25 s | Spielwunsch „über mehrere Etagen“; Wertung (Überleben) unverändert. Die Spezifikation (eine Ebene, 20 s) gilt insoweit nicht mehr |
 | Floor is Lava | Nach Lava sicherer Neustart auf der Platte mit größtem Abstand, 1,2 s Schutz; Überlebende bei Zeitablauf teilen +3 | Fairness; „teilen die beste Platzierung“ |
 | Floor is Lava | Stechrunde bei Gesamtgleichstand: nur die Punktgleichen, 1 Leben | Spezifikation verlangt Stechrunde |
 | Floor is Lava | **Schubser** (Nov. 2026, Erweiterung): 0,22 s Stoß in Blickrichtung, Abklingzeit 2,5 s; Getroffene rutschen 0,35 s ohne Kontrolle mit 6,5/s; Springende und Geschützte werden nicht getroffen; Lava-Sturz bis 1,5 s nach einem Stoß nennt die stoßende Person im Ereignis, Punkte bleiben bei der Überlebenswertung | Spielrückmeldung „wie Fall Guys“: Interaktion zwischen den Spielern; Wertung bewusst unverändert |
-| Floor is Lava | **2.5D-Darstellung** (Nov. 2026): Tempelplatten über glühender Lava, Platten erhitzen sich beim Bröckeln, kippen und versinken, Runenplatten steigen wieder auf; äußerer Ring glüht 1,5 s vor dem Einsturz; Figuren mit Sprungbogen und Schatten; Canvas als Rückfall | Plan in [plan-floor-is-lava.md](plan-floor-is-lava.md) |
+| Floor is Lava | **2.5D-Darstellung** (Nov. 2026): Tempelplatten auf drei Etagen über glühender Lava (Kamera folgt der eigenen Etage, Etagen darüber ausgeblendet, tiefere Etagen abgedunkelt), Platten erhitzen sich beim Bröckeln, kippen und versinken, Runenplatten steigen wieder auf; äußerer Ring glüht 1,5 s vor dem Einsturz; Figuren mit Sprungbogen und Schatten; Canvas als Rückfall | Plan in [plan-floor-is-lava.md](plan-floor-is-lava.md) |
 | Sumo Smash / Bumper Mayhem | Gemeinsamer Kern `ringCore.ts`; Ring-Out wird der Person gutgeschrieben, die in den letzten 3 s am stärksten geschoben hat | „Verursacher“ eindeutig und für beide Spiele gleich |
 | Sumo Smash / Bumper Mayhem | Spielpunkte = 2 × Ring-Outs; Rangfolge: Sieger, Ausscheidezeitpunkt, Leben, Ring-Outs | Punkte laut Spezifikation, Platzierung nach Überleben |
 | Sumo Smash / Bumper Mayhem | Sudden Death nur für die nach 75 s Gleichauf-Liegenden, 1 Leben, kleiner Ring, höchstens 20 s, danach geteilter Platz | Begrenzte Dauer |
@@ -153,6 +154,8 @@ im Modul ausgespielt; bleibt danach ein Gleichstand, wird der Platz geteilt.
 | Arrow Masters | Stechen: nur die Punktgleichen, eine Scheibe ohne Wind; der kleinste Abstand der Flugbahn zur Mitte gewinnt | „Präzisions-Stechen“ messbar umsetzen |
 | Tower Tumble | **Neubau nach Spielrückmeldung (Nov. 2026): Turmrennen statt reihum an einem gemeinsamen Turm.** Alle bauen gleichzeitig auf eigenem Sockel (5 Zellen breit), dieselbe Steinfolge aus 7er-Beuteln von Vier-Zellen-Steinen; erster Turm, der 2 s über 16 m steht, gewinnt; nach 120 s entscheidet die Höhe ruhender Steine, gleiche Höhe teilt den Platz | Rückmeldung „Mechanik und Physik nicht schön“; Genre wie Stapel-Rennspiele, eigene Gestaltung und kein Nachbau eines bestimmten Spiels. Die Spezifikation (reihum, Punkte je Stein) gilt für dieses Spiel nicht mehr |
 | Tower Tumble | **Eigene deterministische Starrkörperphysik** (`physics2d.ts`, nach Box2D-Lite): Quader mit Clipping-Kontakten, sequentielle Impulse mit Warmstart, Reibung 0,9, 3 Teilschritte je 50 ms, 12 Iterationen. Alle Zwischenwerte (auch Warmstart-Impulse) liegen als JSON im Zustand | Der Raumkern klont den Zustand je Takt; eine externe Physikbibliothek müsste ihre Welt jedes Mal neu aufbauen. So setzt ein Neustart die Physik exakt fort (Regeltest) |
+| Tower Tumble | **Leistung** (Nov. 2026, nach „hängt und ruckelt am Handy“): gerade Zellreihen eines Steins sind eine Kollisionsbox (O = 1, I = 1, übrige 2 statt je 4), Warmstart als flache Zahlenliste `[Schlüssel, Normal-, Tangentialimpuls, …]` statt Textschlüsseln, Solver ohne Objektanlagen in den Iterationen, öffentliche Sicht über den Modul-Hook `publicGame` ohne Kopie der Physikdaten. Masse und Trägheit weiter aus den vier Zellen | Sechs belebte 24-Stein-Türme in Node: Physik 209 → 49 ms, Sichten 65 → 12 ms je Spielsekunde. Übung auf dem Handy (Chromium, CPU 6× gedrosselt): Bildzeit Ø 28,8 → 20,7 ms, 95. Perzentil 50 → 33 ms |
+| Tower Tumble | **Pfeilsteuerung** (Nov. 2026) statt Schiebeleiste: ⇦/⇨ verschieben das Ziel des fallenden Steins um eine halbe Zelle (Befehl `n` mit Wert −1/+1), Halten wiederholt nach 240 ms alle 80 ms; Drehen behält das Ziel. Bots tippen wie Menschen einen Schritt je Takt | Spielwunsch; Tipps statt Fingerposition sind genauer und senden weniger Pakete |
 | Tower Tumble | Fallender Stein ist kinematisch (Halbzellenraster, Vierteldrehung mit seitlichem Ausweichen, 2,2 bzw. 12 Zellen/s); beim ersten Kontakt wird er zum Körper. Ein ruhender Turm schläft nach 0,4 s und wird beim nächsten Aufsetzen geweckt. Steine unter −6 m oder neben dem Sockel gelten als verloren | Steuerbarkeit wie in Fallblockspielen, danach echte Physik; Schlafen verhindert Kriechen hoher Türme und spart Rechenzeit |
 | Tower Tumble | Sicht: Körper gepackt `[id, Form, Drehung, x, y, Winkel]`, fremde Türme auf 1 cm gerundet, ohne Geschwindigkeiten und Warmstart; Steinfolge nur bis zum nächsten Stein | Datenmenge bei sechs Türmen |
 | Hook Wars | Haken als Strahl ohne Flugzeit (Reichweite 7,5); trifft den nächsten Anker in 0,7 Abstand zur Linie oder einen Gegner davor | Robust bei Netzlatenz, eindeutig entscheidbar |
@@ -177,12 +180,12 @@ Gemessen mit `publicMatch` je Gerät nach bis zu 30 s Bot-Spiel, sechs Spieler
 | Neon Pong | 20 | 1,0 | 79 | 0,3 |
 | Tank Trouble | 10 | 2,4 | 146 | 3,1 |
 | Bomb Arena | 20 | 2,5 | 303 | 0,3 |
-| Floor is Lava | 20 | 2,4 | 285 | 0,3 |
+| Floor is Lava (drei Etagen) | 20 | 3,6 | 434 | 1,0 |
 | Sumo Smash | 20 | 2,2 | 260 | 0,2 |
 | Bumper Mayhem | 20 | 2,2 | 266 | 0,3 |
 | Chaos Run | 20 | 2,4 | 293 | 0,6 |
 | Arrow Masters | 10 | 1,6 | 96 | 0,2 |
-| Tower Tumble (Neubau) | 20 | 2,6 | 313 | 39,5 |
+| Tower Tumble (nach Leistungsarbeit) | 20 | 2,3 | 281 | 12,5 |
 | Hook Wars | 20 | 2,3 | 274 | 0,2 |
 
 Echte Spieler-IDs (UUIDs) vergrößern jede Sicht um etwa 0,5–1 KB. Der Handy-Host
@@ -203,7 +206,8 @@ unkritisch, auf echten Handys aber **nicht gemessen**.
   ohne klassische Spiele für eine Spielerzahl leer, lehnt die Lobby die
   Einstellung mit einer Meldung ab.
 - **Physikintensive Spiele:** Tower Tumble rechnet mit echter Starrkörperphysik
-  etwa 40 ms je Spielsekunde (Node, sechs Türme, Spitzen bis 13 ms je Schritt),
-  ein Vielfaches der anderen Spiele. Auf einem Handy-Host mit sechs Geräten
-  ist das **nicht gemessen**; falls es ruckelt, zuerst Teilschritte oder
-  Iterationen senken.
+  etwa 12 ms je Spielsekunde im Bot-Spiel und bis etwa 50 ms bei sechs hohen,
+  gleichzeitig wackelnden Türmen (Node), ein Vielfaches der anderen Spiele.
+  Auf einem Handy-Host mit sechs Geräten und auf Render Free (0,1 CPU) ist das
+  **nicht gemessen**; falls es weiter ruckelt, als Nächstes Teilschritte
+  (3 → 2) senken oder ruhende Turmteile einfrieren.

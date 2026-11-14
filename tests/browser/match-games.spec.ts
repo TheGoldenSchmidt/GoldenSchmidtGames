@@ -291,10 +291,16 @@ for (const motion of ["no-preference", "reduce"] as const) test(`Floor is Lava 2
     await page.mouse.up();
     // After landing: the shove starts a dash and its cooldown.
     await page.waitForTimeout(700);
-    await page.getByRole("button", { name: "Schubsen", exact: true }).tap();
-    await expect.poll(async () => (await me()).shoveReady, { timeout: 3000 }).toBeGreaterThan(start.shoveReady);
+    // Tap again if the figure was just dropping a floor (shoves need solid ground).
+    await expect.poll(async () => { if ((await me()).shoveReady > start.shoveReady) return true; await page.getByRole("button", { name: "Schubsen", exact: true }).tap(); return false; }, { timeout: 6000, intervals: [300] }).toBe(true);
     await page.waitForTimeout(500);
     await page.screenshot({ path: testInfo.outputPath(`lava-3d-crumble-${motion}.png`) });
+    // Standing still: the slab crumbles and the figure drops to the floor below.
+    // (The idle opponent may end the round meanwhile; a new round starts on the top floor again.)
+    const match = async () => (await session.state()).partyGame!.mini!.match as MatchState<LavaGame>;
+    await expect.poll(async () => { const m = await match(); return m.game.runners[session.ids[0]].floor > 0 || m.events.some(e => e.kind === "drop" && e.ids[0] === session.ids[0]); }, { timeout: 8000 }).toBe(true);
+    await page.waitForTimeout(700);
+    await page.screenshot({ path: testInfo.outputPath(`lava-3d-floor-${motion}.png`) });
     expect(Number(await world.getAttribute("data-draw-calls"))).toBeLessThan(300);
     await session.action({ type: "finish" }, session.ids[1]);
     await expect(page.getByRole("heading", { name: "Euer Ergebnis", exact: true })).toBeVisible();
@@ -422,7 +428,7 @@ test("Arrow Masters: Ziehen spannt den Bogen, alle Pfeile fliegen nach der Zielp
   } finally { session.close(); }
 });
 
-test("Tower Tumble: alle bauen gleichzeitig, Leiste verschiebt, Drehen und Fallen setzen den Stein auf", async ({ page }, testInfo) => {
+test("Tower Tumble: alle bauen gleichzeitig, Pfeile verschieben, Drehen und Fallen setzen den Stein auf", async ({ page }, testInfo) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "tower" });
   try {
@@ -432,17 +438,27 @@ test("Tower Tumble: alle bauen gleichzeitig, Leiste verschiebt, Drehen und Falle
     const tower = async (id: string) => ((await session.state()).partyGame!.mini!.match as MatchState<TowerGame>).game.towers[id];
     await expect.poll(async () => (await tower(session.ids[0]))?.piece?.k, { timeout: 5000 }).toBeTruthy();
     expect((await tower(session.ids[1])).piece, "Beide bauen gleichzeitig").toBeTruthy();
-    const slider = page.getByRole("slider", { name: "Stein verschieben" }), box = (await slider.boundingBox())!;
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down();
-    await page.mouse.move(box.x + box.width * .1, box.y + box.height / 2, { steps: 4 });
-    await expect.poll(async () => (await tower(session.ids[0])).piece!.x, { timeout: 3000 }).toBeLessThan(-2);
+    const start = (await tower(session.ids[0])).piece!;
+    const commands = async () => ((await session.state()).partyGame!.mini!.match as MatchState<TowerGame>).players.find(p => p.id === session.ids[0])!.usedN;
+    const before = await commands();
+    // Three taps: one half cell each (rules test covers the exact positions; here the piece may land early on a slow machine).
+    for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "Links", exact: true }).tap();
+    await expect.poll(commands, { timeout: 3000 }).toBe(before + 3);
+    const moved = (await tower(session.ids[0])).piece;
+    if (moved?.n === start.n) expect(moved.tx).toBeCloseTo(start.tx - 1.5, 5);
+    // Holding repeats the step.
+    const right = (await page.getByRole("button", { name: "Rechts", exact: true }).boundingBox())!;
+    await page.mouse.move(right.x + right.width / 2, right.y + right.height / 2); await page.mouse.down();
+    await expect.poll(commands, { timeout: 3000 }).toBeGreaterThan(before + 6);
     await page.mouse.up();
+    await page.waitForTimeout(300); // a command sent just before release may still be on its way
+    const settled = await commands(); await page.waitForTimeout(400);
+    expect(await commands(), "Loslassen stoppt die Wiederholung").toBe(settled);
     const turned = (await tower(session.ids[0])).piece!.r;
     await page.getByRole("button", { name: "Drehen" }).tap();
     await expect.poll(async () => (await tower(session.ids[0])).piece!.r).toBe((turned + 1) % 4);
     await page.screenshot({ path: testInfo.outputPath("tower-aim.png") });
-    // Back to the middle, then hold the drop button until the piece has landed.
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down(); await page.mouse.up();
+    // Hold the drop button until the piece has landed.
     const drop = page.getByRole("button", { name: "Fallen" }), d = (await drop.boundingBox())!;
     await page.mouse.move(d.x + d.width / 2, d.y + d.height / 2); await page.mouse.down();
     await expect.poll(async () => (await tower(session.ids[0])).placed, { timeout: 5000 }).toBeGreaterThan(0);

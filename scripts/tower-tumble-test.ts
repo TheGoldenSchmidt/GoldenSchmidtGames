@@ -9,11 +9,13 @@ import { PartyBotDriver } from "../shared/partyBots";
 type TS = MatchState<TowerGame>;
 const make = (count = 2, seed = 2) => createMatch("tower", Array.from({ length: count }, (_, i) => ({ id: `p${i}`, style: i })), seed) as TS;
 const seqs = new WeakMap<TS, Map<string, number>>();
-function send(s: TS, id: string, values: Partial<MatchInput>, rotate = false) {
+function send(s: TS, id: string, values: Partial<MatchInput>, rotate = false, arrow?: -1 | 1, taps = 1) {
   const own = seqs.get(s) ?? new Map<string, number>(); seqs.set(s, own);
   const p = s.players.find(q => q.id === id)!, n = (own.get(id) ?? 0) + 1; own.set(id, n);
-  setMatchControl(s, id, { ...NEUTRAL_MATCH_INPUT, ...values, ca: p.usedA + (rotate ? 1 : 0) }, n, s.time);
+  setMatchControl(s, id, { ...NEUTRAL_MATCH_INPUT, ...values, ca: p.usedA + (rotate ? 1 : 0), cb: p.usedB, cn: p.usedN + (arrow ? taps : 0), n: arrow ?? 0 }, n, s.time);
 }
+/** Arrow taps, each in its own packet like the device's repeat timer. */
+const tap = (s: TS, id: string, dir: -1 | 1, times = 1, values: Partial<MatchInput> = {}) => { for (let i = 0; i < times; i++) { send(s, id, values, false, dir); advanceMatch(s, s.time + 50); } };
 const run = (s: TS, ms: number, each?: () => void) => { const end = s.time + ms; while (s.time < end && !s.done) { each?.(); advanceMatch(s, s.time + 50); } };
 const body = (id: number, k: TowerBody["k"], r: number, x: number, y: number): TowerBody => ({ id, k, r, x, y, a: 0, vx: 0, vy: 0, w: 0 });
 /** Lets a prepared tower settle without new pieces (the falling piece is parked far above). */
@@ -28,7 +30,7 @@ function settleTower(s: TS, id: string, ms = 3000) {
   const ground: RigidBody = { id: 0, x: 0, y: -.5, a: 0, vx: 0, vy: 0, w: 0, invMass: 0, invI: 0, fixtures: [{ x: 0, y: 0, hw: 5, hh: .5 }] };
   const box = (id: number, y: number): RigidBody => ({ id, x: 0, y, a: 0, vx: 0, vy: 0, w: 0, invMass: 1, invI: 6, fixtures: [{ x: 0, y: 0, hw: .5, hh: .5 }] });
   const stack = [ground, box(1, .5), box(2, 1.5), box(3, 2.5)];
-  let warm = {};
+  let warm: number[] = [];
   for (let i = 0; i < 300; i++) warm = stepBodies(stack, warm, 1 / 60, TW);
   assert.ok(stack.slice(1).every((b, i) => Math.abs(b.x) < .02 && Math.abs(b.y - (i + .5)) < .05 && Math.abs(b.a) < .02), "Dreierstapel bleibt stehen");
   assert.deepEqual(JSON.parse(JSON.stringify(warm)), warm);
@@ -59,25 +61,36 @@ function settleTower(s: TS, id: string, ms = 3000) {
   for (let i = 0; i + 7 <= s.game.sequence.length; i += 7) assert.equal(new Set(s.game.sequence.slice(i, i + 7)).size, 7, "Jeder Beutel enthält alle sieben Formen");
 }
 
-// Steuerung: Leiste verschiebt (nur während der Berührung), Drehen, schnelles Fallen, Landen wird zum Körper.
+// Steuerung: Pfeile verschieben um eine halbe Zelle, Drehen, schnelles Fallen, Landen wird zum Körper.
 {
   const s = make(2);
   run(s, 100);
-  const t = s.game.towers.p0, piece = t.piece!, y0 = piece.y;
-  send(s, "p0", { x: -1, hb: true }); run(s, 600);
-  assert.ok(Math.abs(piece.x - snapX(piece.k, piece.r, -TW.laneHalf)) < 1e-9, "Finger links außen = Stein links außen");
-  send(s, "p0", { x: 1, hb: false }); run(s, 300);
-  assert.ok(piece.x < 0, "Ohne Berührung bleibt der Stein, wo er ist");
+  const t = s.game.towers.p0, piece = t.piece!, y0 = piece.y, x0 = piece.x;
+  tap(s, "p0", -1); run(s, 100);
+  assert.ok(Math.abs(piece.x - (x0 - .5)) < 1e-9, `Ein Tipp links = halbe Zelle (${piece.x})`);
+  tap(s, "p0", 1, 3); run(s, 150);
+  assert.ok(Math.abs(piece.x - (x0 + 1)) < 1e-9, `Drei Tipps rechts = 1,5 Zellen (${piece.x})`);
+  piece.y = 40; // Fixture: genug Fallhöhe für die vielen Tipps
+  tap(s, "p0", 1, 40); run(s, 300);
+  assert.ok(Math.abs(piece.x - snapX(piece.k, piece.r, TW.laneHalf)) < 1e-9 && piece.x <= TW.laneHalf, "Rechts außen ist Schluss");
+  send(s, "p0", {}, false, -1, 3); advanceMatch(s, s.time + 50); run(s, 200);
+  assert.ok(Math.abs(piece.x - (snapX(piece.k, piece.r, TW.laneHalf) - 1.5)) < 1e-9, "Drei Tipps im selben Paket zählen alle");
+  const held = piece.x;
+  send(s, "p0", {}, false, 7 as 1); run(s, 200);
+  assert.equal(piece.x, held, "Unbekannte Richtungen werden ignoriert");
+  tap(s, "p0", -1, Math.round((piece.tx - x0) * 2)); run(s, 300);
+  assert.ok(Math.abs(piece.x - x0) < 1e-9 && t.piece === piece, "Zurück in der Mitte");
+  piece.y = y0;
   const r = piece.r; send(s, "p0", {}, true); advanceMatch(s, s.time + 50);
   assert.equal(piece.r, (r + 1) % 4, "Tippen dreht um 90°");
   const slow = y0 - piece.y, at = s.time;
   send(s, "p0", { ha: true }); run(s, 200);
   assert.ok(y0 - piece.y - slow > TW.fastFall * (s.time - at) / 1000 * .8, "Gedrückt halten lässt schnell fallen");
-  run(s, 3000, () => send(s, "p0", { x: 0, hb: true, ha: true }));
+  run(s, 3000, () => send(s, "p0", { ha: true }));
   assert.ok(t.placed >= 1 && t.bodies.length >= 1, "Gelandeter Stein wird Teil der Simulation");
   // Neben den Sockel gesteuert: der Stein fällt ins Leere, zählt als verloren, der nächste kommt.
   const lost = t.lost;
-  run(s, 6000, () => send(s, "p0", { x: 1, hb: true, ha: true }));
+  for (let i = 0; i < 8000 / 50 && t.lost === lost; i++) send(s, "p0", { ha: t.piece !== undefined && t.piece.x > 4 }, false, 1), advanceMatch(s, s.time + 50);
   assert.ok(t.lost > lost && t.piece, "Daneben gesteuerter Stein ist verloren, es geht weiter");
 }
 

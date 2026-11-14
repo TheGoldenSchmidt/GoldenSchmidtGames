@@ -19,16 +19,19 @@ export interface RigidBody {
   invMass: number; invI: number;
   fixtures: Fixture[];
 }
-/** Accumulated normal and tangent impulse per contact feature, for warm starting. */
-export type WarmStart = Record<string, [number, number]>;
+/**
+ * Accumulated normal and tangent impulse per contact feature, for warm
+ * starting: flat triples [key, normal, tangent, key, normal, tangent, …].
+ * Numbers instead of string keys keep copies and JSON cheap.
+ */
+export type WarmStart = number[];
 export interface SolverOptions { gravity: number; iterations: number; friction: number; bias: number; slop: number }
 
 interface ClipVertex { v: Vec; fp: number }
-interface Contact { p: Vec; n: Vec; sep: number; key: string; a: RigidBody; b: RigidBody; pn: number; pt: number; mn: number; mt: number; bias: number; r1: Vec; r2: Vec }
+interface Contact { a: RigidBody; b: RigidBody; nx: number; ny: number; key: number; pn: number; pt: number; mn: number; mt: number; bias: number; r1x: number; r1y: number; r2x: number; r2y: number }
 interface Box { pos: Vec; c: number; s: number; hw: number; hh: number }
 
 const dot = (a: Vec, b: Vec) => a.x * b.x + a.y * b.y;
-const cross = (a: Vec, b: Vec) => a.x * b.y - a.y * b.x;
 const rot = (c: number, s: number, v: Vec): Vec => ({ x: c * v.x - s * v.y, y: s * v.x + c * v.y });
 const rotT = (c: number, s: number, v: Vec): Vec => ({ x: c * v.x + s * v.y, y: -s * v.x + c * v.y });
 
@@ -125,55 +128,70 @@ export function bodiesOverlap(a: RigidBody, b: RigidBody, tolerance = 0) {
   return false;
 }
 
-const radius = (b: RigidBody) => b.fixtures.reduce((r, f) => Math.max(r, Math.hypot(f.x, f.y) + Math.hypot(f.hw, f.hh)), 0);
+/** Bounding radius of a fixture set around the centre of mass; fixture arrays are shared, so it is cached. */
+const radii = new WeakMap<Fixture[], number>();
+function radius(b: RigidBody) {
+  let r = radii.get(b.fixtures);
+  if (r === undefined) { r = b.fixtures.reduce((n, f) => Math.max(n, Math.hypot(f.x, f.y) + Math.hypot(f.hw, f.hh)), 0); radii.set(b.fixtures, r); }
+  return r;
+}
+/** Numeric warm-start key: body ids from -2 up to 4093, at most 8 fixtures per body, 12-bit feature id. */
+export const contactKey = (aId: number, ia: number, bId: number, ib: number, feature: number) => ((((aId + 2) * 8 + ia) * 4096 + (bId + 2)) * 8 + ib) * 4096 + feature;
 
 /**
  * One time step for a set of bodies (dynamic ones have invMass > 0). Returns
- * the new warm-start table, which the caller stores for the next step.
+ * the new warm-start table, which the caller stores for the next step. The
+ * solver loops work on plain numbers, so a step allocates almost nothing.
  */
 export function stepBodies(bodies: RigidBody[], warm: WarmStart, dt: number, o: SolverOptions): WarmStart {
-  const inv = 1 / dt, contacts: Contact[] = [], radii = bodies.map(radius);
+  const inv = 1 / dt, contacts: Contact[] = [], count = bodies.length;
+  const old = new Map<number, number>();
+  if (Array.isArray(warm)) for (let i = 0; i + 2 < warm.length; i += 3) old.set(warm[i], i);
+  // World boxes once per body, not once per pair.
+  const boxes = bodies.map(b => b.fixtures.map(f => fixtureBox(b, f))), reach = bodies.map(radius);
   // Narrow phase over all pairs that are not both static, with a circle prefilter.
-  for (let i = 0; i < bodies.length; i++) for (let j = i + 1; j < bodies.length; j++) {
+  for (let i = 0; i < count; i++) for (let j = i + 1; j < count; j++) {
     const a = bodies[i], b = bodies[j];
     if (!a.invMass && !b.invMass) continue;
-    if (Math.hypot(a.x - b.x, a.y - b.y) > radii[i] + radii[j]) continue;
-    a.fixtures.forEach((fa, ia) => b.fixtures.forEach((fb, ib) => {
-      for (const c of collideBoxes(fixtureBox(a, fa), fixtureBox(b, fb))) {
-        const key = `${a.id}.${ia}|${b.id}.${ib}|${c.feature}`, old = warm[key];
-        contacts.push({ p: c.p, n: c.n, sep: c.sep, key, a, b, pn: old?.[0] ?? 0, pt: old?.[1] ?? 0, mn: 0, mt: 0, bias: 0, r1: { x: 0, y: 0 }, r2: { x: 0, y: 0 } });
+    const dx = a.x - b.x, dy = a.y - b.y, r = reach[i] + reach[j];
+    if (dx * dx + dy * dy > r * r) continue;
+    const A = boxes[i], B = boxes[j];
+    for (let ia = 0; ia < A.length; ia++) for (let ib = 0; ib < B.length; ib++) {
+      const fa = A[ia], fb = B[ib], lim = fa.hw + fa.hh + fb.hw + fb.hh;
+      if (Math.abs(fa.pos.x - fb.pos.x) > lim || Math.abs(fa.pos.y - fb.pos.y) > lim) continue;
+      for (const c of collideBoxes(fa, fb)) {
+        const key = contactKey(a.id, ia, b.id, ib, c.feature), at = old.get(key);
+        const r1x = c.p.x - a.x, r1y = c.p.y - a.y, r2x = c.p.x - b.x, r2y = c.p.y - b.y, nx = c.n.x, ny = c.n.y;
+        const rn1 = r1x * nx + r1y * ny, rn2 = r2x * nx + r2y * ny, rt1 = r1x * ny - r1y * nx, rt2 = r2x * ny - r2y * nx;
+        const mn = 1 / (a.invMass + b.invMass + a.invI * (r1x * r1x + r1y * r1y - rn1 * rn1) + b.invI * (r2x * r2x + r2y * r2y - rn2 * rn2));
+        const mt = 1 / (a.invMass + b.invMass + a.invI * (r1x * r1x + r1y * r1y - rt1 * rt1) + b.invI * (r2x * r2x + r2y * r2y - rt2 * rt2));
+        contacts.push({ a, b, nx, ny, key, pn: at === undefined ? 0 : warm[at + 1], pt: at === undefined ? 0 : warm[at + 2], mn, mt,
+          bias: -o.bias * inv * Math.min(0, c.sep + o.slop), r1x, r1y, r2x, r2y });
       }
-    }));
+    }
   }
   for (const b of bodies) if (b.invMass) b.vy -= o.gravity * dt;
-  const apply = (c: Contact, P: Vec, sign: number) => {
-    const { a, b } = c;
-    a.vx -= sign * a.invMass * P.x; a.vy -= sign * a.invMass * P.y; a.w -= sign * a.invI * cross(c.r1, P);
-    b.vx += sign * b.invMass * P.x; b.vy += sign * b.invMass * P.y; b.w += sign * b.invI * cross(c.r2, P);
+  // Impulse P applied at the contact: A gets -P, B gets +P. Tangent t = (n.y, -n.x).
+  const apply = (c: Contact, px: number, py: number) => {
+    const a = c.a, b = c.b;
+    a.vx -= a.invMass * px; a.vy -= a.invMass * py; a.w -= a.invI * (c.r1x * py - c.r1y * px);
+    b.vx += b.invMass * px; b.vy += b.invMass * py; b.w += b.invI * (c.r2x * py - c.r2y * px);
   };
-  for (const c of contacts) {
-    const { a, b, n } = c;
-    c.r1 = { x: c.p.x - a.x, y: c.p.y - a.y }; c.r2 = { x: c.p.x - b.x, y: c.p.y - b.y };
-    const rn1 = dot(c.r1, n), rn2 = dot(c.r2, n), t = { x: n.y, y: -n.x }, rt1 = dot(c.r1, t), rt2 = dot(c.r2, t);
-    c.mn = 1 / (a.invMass + b.invMass + a.invI * (dot(c.r1, c.r1) - rn1 * rn1) + b.invI * (dot(c.r2, c.r2) - rn2 * rn2));
-    c.mt = 1 / (a.invMass + b.invMass + a.invI * (dot(c.r1, c.r1) - rt1 * rt1) + b.invI * (dot(c.r2, c.r2) - rt2 * rt2));
-    c.bias = -o.bias * inv * Math.min(0, c.sep + o.slop);
-    apply(c, { x: c.pn * n.x + c.pt * t.x, y: c.pn * n.y + c.pt * t.y }, 1);
-  }
-  const relative = (c: Contact) => ({ x: c.b.vx - c.b.w * c.r2.y - c.a.vx + c.a.w * c.r1.y, y: c.b.vy + c.b.w * c.r2.x - c.a.vy - c.a.w * c.r1.x });
+  for (const c of contacts) apply(c, c.pn * c.nx + c.pt * c.ny, c.pn * c.ny - c.pt * c.nx);
   for (let k = 0; k < o.iterations; k++) for (const c of contacts) {
-    const n = c.n, t = { x: n.y, y: -n.x };
-    let dv = relative(c);
-    let dPn = c.mn * (-dot(dv, n) + c.bias);
-    const pn0 = c.pn; c.pn = Math.max(pn0 + dPn, 0); dPn = c.pn - pn0;
-    apply(c, { x: dPn * n.x, y: dPn * n.y }, 1);
-    dv = relative(c);
-    let dPt = c.mt * -dot(dv, t);
-    const max = o.friction * c.pn, pt0 = c.pt; c.pt = Math.max(-max, Math.min(max, pt0 + dPt)); dPt = c.pt - pt0;
-    apply(c, { x: dPt * t.x, y: dPt * t.y }, 1);
+    const a = c.a, b = c.b, nx = c.nx, ny = c.ny;
+    let dvx = b.vx - b.w * c.r2y - a.vx + a.w * c.r1y, dvy = b.vy + b.w * c.r2x - a.vy - a.w * c.r1x;
+    const pn0 = c.pn; c.pn = Math.max(pn0 + c.mn * (-(dvx * nx + dvy * ny) + c.bias), 0);
+    const dPn = c.pn - pn0;
+    apply(c, dPn * nx, dPn * ny);
+    dvx = b.vx - b.w * c.r2y - a.vx + a.w * c.r1y; dvy = b.vy + b.w * c.r2x - a.vy - a.w * c.r1x;
+    const max = o.friction * c.pn, pt0 = c.pt;
+    c.pt = Math.max(-max, Math.min(max, pt0 + c.mt * -(dvx * ny - dvy * nx)));
+    const dPt = c.pt - pt0;
+    apply(c, dPt * ny, -dPt * nx);
   }
   for (const b of bodies) if (b.invMass) { b.x += b.vx * dt; b.y += b.vy * dt; b.a += b.w * dt; }
-  const next: WarmStart = {};
-  for (const c of contacts) next[c.key] = [c.pn, c.pt];
+  const next: WarmStart = new Array(contacts.length * 3);
+  contacts.forEach((c, i) => { next[i * 3] = c.key; next[i * 3 + 1] = c.pn; next[i * 3 + 2] = c.pt; });
   return next;
 }

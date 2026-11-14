@@ -1,4 +1,4 @@
-import { bodiesOverlap, stepBodies, type RigidBody, type WarmStart } from "./physics2d";
+import { bodiesOverlap, stepBodies, type Fixture, type RigidBody, type WarmStart } from "./physics2d";
 import { emit, hash, inputOfPlayer, presence, rank, shuffled, type MatchModule, type MatchState } from "./types";
 
 /**
@@ -17,19 +17,43 @@ export const TW = {
   sleepSpeed: .08, sleepMs: 400, settleSpeed: .5, regular: 120000
 } as const;
 
+const CELL = .5;
 export type PieceKind = "I" | "O" | "T" | "L" | "J" | "S" | "Z";
 export const PIECE_KINDS: readonly PieceKind[] = ["I", "O", "T", "L", "J", "S", "Z"];
 const GRID: Record<PieceKind, [number, number][]> = {
   I: [[0, 0], [1, 0], [2, 0], [3, 0]], O: [[0, 0], [1, 0], [0, 1], [1, 1]], T: [[0, 0], [1, 0], [2, 0], [1, 1]],
   L: [[0, 0], [1, 0], [2, 0], [2, 1]], J: [[0, 0], [1, 0], [2, 0], [0, 1]], S: [[0, 0], [1, 0], [1, 1], [2, 1]], Z: [[1, 0], [2, 0], [0, 1], [1, 1]]
 };
-/** Cell centres of a piece relative to its centre of mass, after `r` clockwise quarter turns. */
-export function pieceCells(kind: PieceKind, r: number): [number, number][] {
-  let cells = GRID[kind].map(([x, y]) => [x, y] as [number, number]);
-  for (let i = 0; i < ((r % 4) + 4) % 4; i++) cells = cells.map(([x, y]) => [y, -x]);
-  const mx = cells.reduce((n, c) => n + c[0], 0) / cells.length, my = cells.reduce((n, c) => n + c[1], 0) / cells.length;
-  return cells.map(([x, y]) => [x - mx, y - my]);
+/**
+ * Collision boxes per piece in grid cells (first cell, last cell): straight
+ * runs of cells become one box, so an O is a single 2×2 box and an L a bar
+ * plus one cell. Fewer boxes mean far fewer contacts for the solver.
+ */
+const RUNS: Record<PieceKind, [[number, number], [number, number]][]> = {
+  I: [[[0, 0], [3, 0]]], O: [[[0, 0], [1, 1]]], T: [[[0, 0], [2, 0]], [[1, 1], [1, 1]]], L: [[[0, 0], [2, 0]], [[2, 1], [2, 1]]],
+  J: [[[0, 0], [2, 0]], [[0, 1], [0, 1]]], S: [[[0, 0], [1, 0]], [[1, 1], [2, 1]]], Z: [[[1, 0], [2, 0]], [[0, 1], [1, 1]]]
+};
+const turn = (x: number, y: number, r: number): [number, number] => { for (let i = 0; i < r; i++) [x, y] = [y, -x]; return [x, y]; };
+const shapes = new Map<string, { cells: [number, number][]; fixtures: Fixture[] }>();
+/** Cells and merged collision boxes of a piece after `r` quarter turns, centred on the centre of mass (cached). */
+function shape(kind: PieceKind, r: number) {
+  const q = ((r % 4) + 4) % 4, key = kind + q;
+  let found = shapes.get(key);
+  if (found) return found;
+  const raw = GRID[kind].map(([x, y]) => turn(x, y, q));
+  const mx = raw.reduce((n, c) => n + c[0], 0) / raw.length, my = raw.reduce((n, c) => n + c[1], 0) / raw.length;
+  const cells = raw.map(([x, y]) => [x - mx, y - my] as [number, number]);
+  const fixtures = RUNS[kind].map(([from, to]) => {
+    const [x0, y0] = turn(from[0], from[1], q), [x1, y1] = turn(to[0], to[1], q);
+    return { x: (x0 + x1) / 2 - mx, y: (y0 + y1) / 2 - my, hw: Math.abs(x1 - x0) / 2 + CELL, hh: Math.abs(y1 - y0) / 2 + CELL };
+  });
+  found = { cells, fixtures }; shapes.set(key, found);
+  return found;
 }
+/** Cell centres of a piece relative to its centre of mass, after `r` clockwise quarter turns. */
+export function pieceCells(kind: PieceKind, r: number): [number, number][] { return shape(kind, r).cells; }
+/** Merged collision boxes of a piece (shared, do not modify). */
+export function pieceFixtures(kind: PieceKind, r: number): Fixture[] { return shape(kind, r).fixtures; }
 /** Snaps a centre-of-mass x so that cell edges sit on the half-cell grid. */
 export function snapX(kind: PieceKind, r: number, x: number) {
   const off = pieceCells(kind, r)[0][0] - .5;
@@ -61,13 +85,12 @@ export type PackedBody = [number, number, number, number, number, number];
 export interface TowerView extends Omit<Tower, "bodies" | "warm"> { packed: PackedBody[] }
 
 const PEDESTAL: RigidBody = { id: -1, x: 0, y: -TW.baseDepth / 2, a: 0, vx: 0, vy: 0, w: 0, invMass: 0, invI: 0, fixtures: [{ x: 0, y: 0, hw: TW.baseHalf, hh: TW.baseDepth / 2 }] };
-const CELL = .5;
 
 export function rigid(b: Pick<TowerBody, "id" | "k" | "r" | "x" | "y" | "a"> & Partial<TowerBody>, dynamic = true): RigidBody {
-  const cells = pieceCells(b.k, b.r);
+  const { cells, fixtures } = shape(b.k, b.r);
   // Unit squares: mass 1 each; inertia 1/6 per cell plus the parallel-axis term.
   const inertia = cells.reduce((n, [x, y]) => n + 1 / 6 + x * x + y * y, 0);
-  return { id: b.id, x: b.x, y: b.y, a: b.a, vx: b.vx ?? 0, vy: b.vy ?? 0, w: b.w ?? 0, invMass: dynamic ? 1 / cells.length : 0, invI: dynamic ? 1 / inertia : 0, fixtures: cells.map(([x, y]) => ({ x, y, hw: CELL, hh: CELL })) };
+  return { id: b.id, x: b.x, y: b.y, a: b.a, vx: b.vx ?? 0, vy: b.vy ?? 0, w: b.w ?? 0, invMass: dynamic ? 1 / cells.length : 0, invI: dynamic ? 1 / inertia : 0, fixtures };
 }
 const pieceBody = (p: FallingPiece, y = p.y, x = p.x, r = p.r) => rigid({ id: -2, k: p.k, r, x, y, a: 0 }, false);
 /** Rough reach of a piece from its centre of mass (I piece: 2 cells and a corner). */
@@ -123,10 +146,9 @@ function simulate(s: MatchState<TowerGame>, id: string, t: Tower, dt: number) {
   bodies.forEach((r, i) => { Object.assign(t.bodies[i], { x: r.x, y: r.y, a: r.a, vx: r.vx, vy: r.vy, w: r.w }); fastest = Math.max(fastest, Math.hypot(r.vx, r.vy), Math.abs(r.w)); });
   // Pieces that fell past the pedestal are gone.
   const kept = t.bodies.filter(b => b.y > TW.lostY);
+  // Their warm-start entries simply expire: the next step keeps only current contacts.
   if (kept.length < t.bodies.length) {
-    const ids = new Set(kept.map(b => b.id));
     t.lost += t.bodies.length - kept.length; t.bodies = kept;
-    for (const key of Object.keys(t.warm)) if (!key.split("|").slice(0, 2).every(part => Number(part.split(".")[0]) < 0 || ids.has(Number(part.split(".")[0])))) delete t.warm[key];
     emit(s, "lost", "Stein verloren!", [id]);
   }
   // A resting tower falls asleep: no more creeping, and no work for the solver.
@@ -149,13 +171,13 @@ export const towerTumble: MatchModule<TowerGame> = {
   id: "tower",
   meta: {
     name: "Tower Tumble", seconds: TW.regular / 1000 + 2, players: [2, 3, 4, 5, 6], hz: 20,
-    instruction: "Turmrennen: Alle bauen gleichzeitig auf einem eigenen, schmalen Sockel und bekommen dieselben Steine. Ziehe auf der Leiste, um den fallenden Stein zu verschieben, tippe ⟳ zum Drehen und halte ⇩ zum schnellen Fallen. Sobald ein Stein aufsetzt, gilt echte Physik: Steine kippen, rutschen und stürzen ab. Wer zuerst zwei Sekunden lang über der Ziellinie steht, gewinnt. Nach zwei Minuten entscheidet die Höhe.",
-    controls: "Leiste ziehen: verschieben · ⟳ drehen · ⇩ halten: schnell fallen.",
-    look: { icon: "▦", action: "Bau schneller als die anderen", hint: "Ziehen · ⟳ drehen · ⇩ fallen", goal: "Zuerst über der Ziellinie" }
+    instruction: "Turmrennen: Alle bauen gleichzeitig auf einem eigenen, schmalen Sockel und bekommen dieselben Steine. Mit ⇦ und ⇨ schiebst du den fallenden Stein um eine halbe Zelle (gedrückt halten: weiter), tippe ⟳ zum Drehen und halte ⇩ zum schnellen Fallen. Sobald ein Stein aufsetzt, gilt echte Physik: Steine kippen, rutschen und stürzen ab. Wer zuerst zwei Sekunden lang über der Ziellinie steht, gewinnt. Nach zwei Minuten entscheidet die Höhe.",
+    controls: "⇦ ⇨ verschieben · ⟳ drehen · ⇩ halten: schnell fallen.",
+    look: { icon: "▦", action: "Bau schneller als die anderen", hint: "⇦ ⇨ schieben · ⟳ drehen · ⇩ fallen", goal: "Zuerst über der Ziellinie" }
   },
   create(s) {
     s.game = { sequence: [], towers: {}, decided: false };
-    for (const p of s.players) s.game.towers[p.id] = { bodies: [], warm: {}, spawnAt: 0, next: 0, nextId: 1, asleep: true, calm: 0, height: 0, best: 0, placed: 0, lost: 0 };
+    for (const p of s.players) s.game.towers[p.id] = { bodies: [], warm: [], spawnAt: 0, next: 0, nextId: 1, asleep: true, calm: 0, height: 0, best: 0, placed: 0, lost: 0 };
     return s.game;
   },
   step(s, dt) {
@@ -165,7 +187,6 @@ export const towerTumble: MatchModule<TowerGame> = {
       if (p.gone) { t.piece = undefined; continue; }
       if (!t.piece && s.time >= t.spawnAt) spawn(s, t);
       const input = inputOfPlayer(s, p);
-      if (t.piece && input.hb) t.piece.tx = snapX(t.piece.k, t.piece.r, Math.max(-TW.laneHalf, Math.min(TW.laneHalf, input.x * TW.laneHalf)));
       for (let i = 0; i < TW.substeps && t.piece; i++) steer(s, p.id, t, input.ha, dt / TW.substeps);
     }
     for (const p of s.players) simulate(s, p.id, g.towers[p.id], dt);
@@ -176,14 +197,21 @@ export const towerTumble: MatchModule<TowerGame> = {
       emit(s, "finish", "Ziel erreicht!", finished.map(p => p.id));
     } else if (s.time >= TW.regular) { g.decided = true; s.done = true; }
   },
-  press(s, p, kind) {
+  press(s, p, kind, _at, value) {
     const t = s.game.towers[p.id], piece = t?.piece;
-    if (kind !== "a" || !piece || p.gone) return;
+    if (!piece || p.gone) return;
+    // Arrow taps: one half cell to the left (-1) or right (+1) of the current target.
+    if (kind === "n") {
+      if (value !== -1 && value !== 1) return;
+      piece.tx = snapX(piece.k, piece.r, Math.max(-TW.laneHalf, Math.min(TW.laneHalf, piece.tx + value * CELL)));
+      return;
+    }
+    if (kind !== "a") return;
     // Quarter turn clockwise; if blocked, try small sideways nudges.
     const r = (piece.r + 1) % 4;
     for (const dx of [0, .5, -.5, 1, -1]) {
       const x = snapX(piece.k, r, piece.x + dx);
-      if (!blocked(t, pieceBody(piece, piece.y, x, r))) { piece.r = r; piece.x = x; piece.tx = snapX(piece.k, r, piece.tx); return; }
+      if (!blocked(t, pieceBody(piece, piece.y, x, r))) { piece.r = r; piece.x = x; piece.tx = snapX(piece.k, r, piece.tx + dx); return; }
     }
   },
   remove(s, id) { const t = s.game.towers[id]; if (t) t.piece = undefined; },
@@ -196,15 +224,16 @@ export const towerTumble: MatchModule<TowerGame> = {
     }));
   },
   finish(s) { s.game.decided = true; },
-  view(s, viewer) {
+  publicGame(s, viewer) {
     // Velocities and the solver's warm-start data stay with the authority; bodies travel packed.
     // Foreign towers are only thumbnails on this device, so centimetres are enough there.
-    const coarse = (v: number) => Math.round(v * 100) / 100;
-    for (const [id, t] of Object.entries(s.game.towers)) {
-      const { bodies, warm, ...rest } = t, own = id === viewer; void warm;
-      (s.game.towers as unknown as Record<string, TowerView>)[id] = { ...rest, packed: bodies.map(b => own ? [b.id, PIECE_KINDS.indexOf(b.k), b.r, b.x, b.y, b.a] : [b.id, PIECE_KINDS.indexOf(b.k), b.r, coarse(b.x), coarse(b.y), coarse(b.a)]) };
+    const g = s.game, coarse = (v: number) => Math.round(v * 100) / 100, towers: Record<string, TowerView> = {};
+    for (const [id, t] of Object.entries(g.towers)) {
+      const { bodies, warm, piece, ...rest } = t, own = id === viewer; void warm;
+      towers[id] = { ...rest, ...(piece ? { piece: { ...piece } } : {}), packed: bodies.map(b => own ? [b.id, PIECE_KINDS.indexOf(b.k), b.r, b.x, b.y, b.a] : [b.id, PIECE_KINDS.indexOf(b.k), b.r, coarse(b.x), coarse(b.y), coarse(b.a)]) };
     }
-    s.game.sequence = s.game.sequence.slice(0, Math.max(...Object.values(s.game.towers).map(t => t.next)) + 1);
+    const upcoming = Math.max(...Object.values(g.towers).map(t => t.next)) + 1;
+    return { sequence: g.sequence.slice(0, upcoming), towers: towers as unknown as Record<string, Tower>, decided: g.decided, ...(g.winner !== undefined ? { winner: g.winner } : {}) };
   },
   bot(s, id) {
     const t = (s.game.towers as unknown as Record<string, TowerView>)[id], piece = t?.piece;
@@ -215,7 +244,9 @@ export const towerTumble: MatchModule<TowerGame> = {
     const turn = piece.r !== plan.r && hash(`${id}:${Math.floor(s.time / 300)}`) % 2 === 0;
     // Bots wait a moment before dropping fast, so practice rounds keep a human pace.
     const settled = aligned && piece.y < Math.max(0, t.height) + TW.spawnGap - 1.5;
-    return { x: plan.x / TW.laneHalf, hb: true, ha: settled, pressA: turn };
+    // Like a person: one arrow tap per step towards the planned column.
+    const step = Math.abs(piece.tx - plan.x) < .01 ? undefined : piece.tx < plan.x ? 1 : -1;
+    return { ha: settled, pressA: turn, ...(step !== undefined ? { command: step } : {}) };
   }
 };
 

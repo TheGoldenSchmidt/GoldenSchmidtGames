@@ -88,6 +88,12 @@ export interface MatchModule<G = unknown> {
   standings(s: MatchState<G>): MatchStanding[];
   /** End immediately at the hard time limit. */
   finish?(s: MatchState<G>): void;
+  /**
+   * Builds the public game object for `viewer` directly from the authority's
+   * state (must not share mutable objects with it). Saves the full copy for
+   * games with large hidden data; `view` still runs afterwards.
+   */
+  publicGame?(s: MatchState<G>, viewer: string): G;
   /** Hide secrets in the cloned state sent to `viewer`. */
   view?(s: MatchState<G>, viewer: string): void;
   /** Bot decision from the public view only. */

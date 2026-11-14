@@ -137,12 +137,14 @@ const EVENT_WINDOW = 1500;
  * secrets hidden, recent events only and rounded decimals. Bots see the same.
  */
 export function publicMatch(s: MatchState, viewer: string): MatchState {
-  const view = structuredClone(s);
+  const module = MATCH_MODULES[s.id as MatchId], { game, ...rest } = s;
+  const view = structuredClone(rest) as MatchState;
+  view.game = module.publicGame ? module.publicGame(s, viewer) : structuredClone(game);
   view.rng = 0;
   view.events = view.events.filter(e => e.at >= s.time - EVENT_WINDOW).slice(-6);
   // Other devices only need identity, colour, team and presence of a player.
   view.players = view.players.map(p => p.id === viewer ? p : { id: p.id, style: p.style, team: p.team, gone: p.gone, ...(p.left !== undefined ? { left: p.left } : {}) } as MatchPlayer);
-  MATCH_MODULES[s.id as MatchId].view?.(view, viewer);
+  module.view?.(view, viewer);
   return compact(view) as MatchState;
 }
 

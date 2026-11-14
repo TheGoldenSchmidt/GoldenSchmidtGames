@@ -1,4 +1,4 @@
-import { FL, grounded, type LavaGame } from "../../../shared/matches/floorIsLava";
+import { FL, FLOOR_TILES, dropping, grounded, type LavaGame } from "../../../shared/matches/floorIsLava";
 import { ActionButton, Stick } from "../controls";
 import { lerp, playerColor, type MatchClient, type MatchFrame } from "../client";
 
@@ -11,11 +11,19 @@ function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
   const lava = ctx.createRadialGradient(w / 2, h / 2, 10, w / 2, h / 2, Math.max(w, h) * .7);
   lava.addColorStop(0, `rgba(255,${Math.round(140 + glow * 60)},60,1)`); lava.addColorStop(1, "#8a1d12");
   ctx.fillStyle = lava; ctx.fillRect(0, 0, w, h);
-  for (let i = 0; i < g.tiles.length; i++) {
-    const tile = g.tiles[i], x = X(i % FL.cols), y = Y(Math.floor(i / FL.cols));
+  // Only the viewer's floor is drawn in full; through its holes the floor below shows dark and small.
+  const floor = g.runners[f.viewer]?.floor ?? 0, base = floor * FLOOR_TILES, below = floor + 1 < FL.floors ? base + FLOOR_TILES : -1;
+  for (let j = 0; j < FLOOR_TILES; j++) {
+    const top = g.tiles[base + j];
+    if (below < 0 || (top !== "0" && top !== "3") || g.tiles[below + j] === "0" || g.tiles[below + j] === "3") continue;
+    ctx.fillStyle = "#5a4630"; ctx.fillRect(X(j % FL.cols) + size * .18, Y(Math.floor(j / FL.cols)) + size * .18, size * .64, size * .64);
+  }
+  for (let j = 0; j < FLOOR_TILES; j++) {
+    const i = base + j, tile = g.tiles[i], x = X(j % FL.cols), y = Y(Math.floor(j / FL.cols));
     if (tile === "0") continue;
     if (tile === "3") { ctx.strokeStyle = "#57e4cb88"; ctx.lineWidth = 2; ctx.setLineDash([4, 4]); ctx.strokeRect(x + 4, y + 4, size - 8, size - 8); ctx.setLineDash([]); continue; }
     const left = tile === "2" ? Math.max(0, (g.timers[i] ?? s.time) - f.simTime) / FL.crackMs : 1;
+
     const shake = tile === "2" && !f.reduced ? Math.sin(f.t / 30 + i) * (1 - left) * 2 : 0;
     ctx.fillStyle = tile === "2" ? `rgb(${Math.round(120 + (1 - left) * 80)},${Math.round(100 - (1 - left) * 40)},80)` : "#a8946a";
     ctx.fillRect(x + 2 + shake, y + 2, size - 4, size - 4);
@@ -27,9 +35,12 @@ function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
     const r = g.runners[p.id], before = prev.runners?.[p.id];
     if (!r?.alive) continue;
     const x = before?.alive ? lerp(before.x, r.x, f.alpha) : r.x, y = before?.alive ? lerp(before.y, r.y, f.alpha) : r.y;
+    // Runners on other floors appear as faint ghosts; a falling runner shrinks into the floor below.
+    ctx.globalAlpha = r.floor === floor ? 1 : .3;
+    if (r.floor !== floor && dropping(s, r) && r.floor - 1 === floor) ctx.globalAlpha = .6;
     const air = !grounded(s, r), lift = air ? size * .25 : 0, blink = f.simTime < r.invulnUntil && !f.reduced && Math.floor(f.t / 110) % 2 === 0;
     ctx.fillStyle = "#00000055"; ctx.beginPath(); ctx.ellipse(X(x), Y(y) + size * .12, size * FL.radius, size * FL.radius * .5, 0, 0, Math.PI * 2); ctx.fill();
-    if (blink) continue;
+    if (blink) { ctx.globalAlpha = 1; continue; }
     // Shove: a white streak behind; facing shown as a small nose.
     if (s.time < r.shoveUntil && !f.reduced) { ctx.strokeStyle = "#fff9ed"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(X(x), Y(y) - lift); ctx.lineTo(X(x - r.fx * .6), Y(y - r.fy * .6) - lift); ctx.stroke(); }
     ctx.fillStyle = playerColor(p.style); ctx.beginPath(); ctx.arc(X(x), Y(y) - lift, size * FL.radius * (air ? 1.15 : 1), 0, Math.PI * 2); ctx.fill();
@@ -37,6 +48,10 @@ function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
     ctx.strokeStyle = p.id === f.viewer ? "#ffe44e" : "#2a1a10"; ctx.lineWidth = p.id === f.viewer ? 3 : 2; ctx.stroke();
     for (let i = 0; i < r.lives; i++) { ctx.fillStyle = "#fff9ed"; ctx.beginPath(); ctx.arc(X(x) - size * .12 + i * size * .24, Y(y) - lift - size * .5, size * .07, 0, Math.PI * 2); ctx.fill(); }
   }
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = "#2a0f0ae6"; ctx.beginPath(); ctx.roundRect(8, 8, 92, 26, 13); ctx.fill();
+  ctx.fillStyle = "#ffd166"; ctx.font = "800 13px 'Trebuchet MS', sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText(`Etage ${floor + 1} von ${FL.floors}`, 54, 21);
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
   if (g.phase !== "play") {
     const last = g.history.at(-1);
@@ -57,7 +72,7 @@ export const floorIsLavaClient: MatchClient = {
     if (g.phase === "play" || view.done) return undefined;
     return { title: last?.tiebreak ? "Stechrunde vorbei" : `Durchgang ${g.round} vorbei`, text: last?.winners.includes(viewer) ? "Du stehst am längsten!" : `+${last?.points[viewer] ?? 0} Punkte für dich` };
   },
-  quiet: ["jump", "dash"],
+  quiet: ["jump", "dash", "drop"],
   Controls({ io, view, viewer, active }) {
     const g = view.game as LavaGame, me = g.runners[viewer];
     const charge = (ready: number, cooldown: number) => me ? Math.max(0, Math.min(1, 1 - (ready - view.time) / cooldown)) : 0;
@@ -73,10 +88,10 @@ export const floorIsLavaClient: MatchClient = {
   status(view, viewer) {
     const g = view.game as LavaGame, me = g.runners[viewer];
     const left = Math.max(0, Math.ceil(((g.tiebreak ? FL.tiebreakMax : FL.roundMax) - (view.time - g.roundStart)) / 1000));
-    return `${g.tiebreak ? "Stechrunde" : `Runde ${g.round}/${FL.rounds}`} · ${g.phase === "play" ? `${left} s` : "Pause"} · ${me?.alive ? `${me.lives} Leben` : "raus"}`;
+    return `${g.tiebreak ? "Stechrunde" : `Runde ${g.round}/${FL.rounds}`} · ${g.phase === "play" ? `${left} s` : "Pause"} · ${me?.alive ? `Etage ${me.floor + 1}/${FL.floors}` : "raus"}`;
   },
   sound(event, viewer) {
-    if (event.kind === "jump") return event.ids.includes(viewer) ? "bounce" : undefined;
+    if (event.kind === "jump" || event.kind === "drop") return event.ids.includes(viewer) ? "bounce" : undefined;
     if (event.kind === "hit" || event.kind === "out") return event.ids[0] === viewer ? "fail" : event.ids[1] === viewer ? "win" : "hit";
     if (event.kind === "shove") return event.ids[0] === viewer ? "hit" : event.ids[1] === viewer ? "bounce" : undefined;
     if (event.kind === "result") return event.ids.includes(viewer) ? "win" : "score";

@@ -2,21 +2,25 @@ import { clamp, dist, separateCircles } from "./geometry";
 import { emit, hash, inputOfPlayer, presence, rank, random, type MatchModule, type MatchPlayer, type MatchState } from "./types";
 
 /**
- * Floor is Lava – square temple tiles over lava. Tile states (digit string):
- * 0 gone for good, 1 intact, 2 cracking, 3 gone but regenerating.
- * Stepping on an intact tile starts its 0.8 s crack timer.
+ * Floor is Lava – square temple tiles on three floors above the lava. Tile
+ * states (digit string, floor after floor, top floor first): 0 gone for good,
+ * 1 intact, 2 cracking, 3 gone but regenerating. Stepping on an intact tile
+ * starts its 0.8 s crack timer. Whoever stands over a hole drops one floor;
+ * only a hole in the bottom floor leads into the lava and costs a life.
  */
 export const FL = {
-  cols: 9, rows: 13, radius: .32, speed: 3.2, airSpeed: 1.4, inertia: .35,
+  cols: 9, rows: 13, floors: 3, dropMs: 450, radius: .32, speed: 3.2, airSpeed: 1.4, inertia: .35,
   crackMs: 800, regenMs: 2500, regenShare: .35,
   jumpMs: 550, jumpCooldown: 3000, lives: 2, invulnMs: 1200,
-  ringAt: [10000, 15000] as const, roundMax: 20000, pause: 2600, rounds: 3, winBonus: 3,
-  tiebreakMax: 20000,
+  ringAt: [16000, 23000] as const, roundMax: 30000, pause: 2600, rounds: 3, winBonus: 3,
+  tiebreakMax: 25000,
   /** Shove: short dash in facing direction; a hit victim slides without control. */
   shoveMs: 220, shoveSpeed: 6, shoveCooldown: 2500, knock: 6.5, slideMs: 350, slide: .92, pushCredit: 1500
 } as const;
 export interface Runner {
-  id: string; x: number; y: number; vx: number; vy: number; lives: number; alive: boolean; airUntil: number; jumpReady: number; invulnUntil: number; outAt?: number;
+  id: string; x: number; y: number;
+  /** Floor index, 0 = top. While dropping this is already the floor below. */
+  floor: number; dropUntil: number; vx: number; vy: number; lives: number; alive: boolean; airUntil: number; jumpReady: number; invulnUntil: number; outAt?: number;
   /** Facing (unit vector) for the shove. */
   fx: number; fy: number;
   shoveUntil: number; shoveReady: number; slideUntil: number;
@@ -37,22 +41,25 @@ export interface LavaGame {
   tiebreakWinner?: string;
   history: { points: Record<string, number>; winners: string[]; tiebreak: boolean }[];
 }
-const index = (x: number, y: number) => Math.floor(y) * FL.cols + Math.floor(x);
+export const FLOOR_TILES = FL.cols * FL.rows;
+const index = (x: number, y: number, floor = 0) => floor * FLOOR_TILES + Math.floor(y) * FL.cols + Math.floor(x);
 const setTile = (g: LavaGame, i: number, v: string) => { g.tiles = g.tiles.slice(0, i) + v + g.tiles.slice(i + 1); };
 export const grounded = (s: MatchState, r: Runner) => s.time >= r.airUntil;
-const ring = (i: number) => { const x = i % FL.cols, y = Math.floor(i / FL.cols); return Math.min(x, y, FL.cols - 1 - x, FL.rows - 1 - y); };
+/** Distance of a tile from the edge of its floor (0 = outer ring). */
+export const ring = (i: number) => { const j = i % FLOOR_TILES, x = j % FL.cols, y = Math.floor(j / FL.cols); return Math.min(x, y, FL.cols - 1 - x, FL.rows - 1 - y); };
+export const dropping = (s: MatchState, r: Runner) => s.time < r.dropUntil;
 
 function startRound(s: MatchState<LavaGame>, ids: string[], tiebreak: boolean) {
   const g = s.game;
   g.round++; g.tiebreak = tiebreak; g.phase = "play"; g.roundStart = s.time; g.rings = 0; g.timers = {};
-  g.tiles = "1".repeat(FL.cols * FL.rows);
-  g.regen = Array.from({ length: FL.cols * FL.rows }, () => random(s) < FL.regenShare ? "1" : "0").join("");
+  g.tiles = "1".repeat(FLOOR_TILES * FL.floors);
+  g.regen = Array.from({ length: FLOOR_TILES * FL.floors }, () => random(s) < FL.regenShare ? "1" : "0").join("");
   // Start positions on a ring around the centre, same distance for everyone.
   const placed = s.players.filter(p => ids.includes(p.id));
   g.runners = Object.fromEntries(s.players.map(p => {
     const i = placed.indexOf(p), a = (i / Math.max(1, placed.length)) * Math.PI * 2 + (g.round - 1) * .5;
     const x = FL.cols / 2 + Math.cos(a) * 2.6, y = FL.rows / 2 + Math.sin(a) * 3.6;
-    return [p.id, { id: p.id, x, y, vx: 0, vy: 0, lives: tiebreak ? 1 : FL.lives, alive: i >= 0 && !p.gone, airUntil: 0, jumpReady: s.time, invulnUntil: s.time + 500,
+    return [p.id, { id: p.id, x, y, floor: 0, dropUntil: 0, vx: 0, vy: 0, lives: tiebreak ? 1 : FL.lives, alive: i >= 0 && !p.gone, airUntil: 0, jumpReady: s.time, invulnUntil: s.time + 500,
       fx: -Math.cos(a), fy: -Math.sin(a), shoveUntil: 0, shoveReady: s.time, slideUntil: 0, pushedBy: "", pushedAt: -1e9 }];
   }));
   emit(s, "round", tiebreak ? "Stechrunde!" : `Durchgang ${g.round} von ${FL.rounds}`, ids);
@@ -83,15 +90,17 @@ function lava(s: MatchState<LavaGame>, r: Runner) {
   const by = r.pushedBy && s.time - r.pushedAt <= FL.pushCredit ? [r.id, r.pushedBy] : [r.id];
   Object.assign(r, { slideUntil: 0, shoveUntil: 0, pushedBy: "", pushedAt: -1e9 });
   if (r.lives <= 0) { r.alive = false; r.outAt = s.time; emit(s, "out", by.length > 1 ? "Reingeschubst!" : "In die Lava!", by); return; }
-  // Safe respawn on the intact tile farthest from the others.
-  const others = Object.values(g.runners).filter(o => o.alive && o.id !== r.id);
+  // Safe respawn on the lowest floor that still has an intact inner tile, farthest from the others there.
   let best = -1, score = -1;
-  for (let i = 0; i < g.tiles.length; i++) if (g.tiles[i] === "1" && ring(i) >= 1) {
-    const x = i % FL.cols + .5, y = Math.floor(i / FL.cols) + .5, d = others.length ? Math.min(...others.map(o => dist(o.x, o.y, x, y))) : 9;
-    if (d > score + 1e-9) { best = i; score = d; }
+  for (let floor = FL.floors - 1; floor >= 0 && best < 0; floor--) {
+    const others = Object.values(g.runners).filter(o => o.alive && o.id !== r.id && o.floor === floor);
+    for (let i = floor * FLOOR_TILES; i < (floor + 1) * FLOOR_TILES; i++) if (g.tiles[i] === "1" && ring(i) >= 1) {
+      const j = i % FLOOR_TILES, x = j % FL.cols + .5, y = Math.floor(j / FL.cols) + .5, d = others.length ? Math.min(...others.map(o => dist(o.x, o.y, x, y))) : 9;
+      if (d > score + 1e-9) { best = i; score = d; }
+    }
   }
-  if (best >= 0) Object.assign(r, { x: best % FL.cols + .5, y: Math.floor(best / FL.cols) + .5 });
-  Object.assign(r, { vx: 0, vy: 0, invulnUntil: s.time + FL.invulnMs, airUntil: 0 });
+  if (best >= 0) { const j = best % FLOOR_TILES; Object.assign(r, { x: j % FL.cols + .5, y: Math.floor(j / FL.cols) + .5, floor: Math.floor(best / FLOOR_TILES) }); }
+  Object.assign(r, { vx: 0, vy: 0, invulnUntil: s.time + FL.invulnMs, airUntil: 0, dropUntil: 0 });
   emit(s, "hit", by.length > 1 ? "Geschubst! Ein Leben weg" : "Heiß! Ein Leben weg", by);
 }
 
@@ -99,9 +108,9 @@ export const floorIsLava: MatchModule<LavaGame> = {
   id: "lava",
   meta: {
     name: "Floor is Lava", seconds: (FL.rounds * (FL.roundMax + FL.pause) + FL.tiebreakMax + FL.pause) / 1000 + 2, players: [2, 3, 4, 5, 6], hz: 20,
-    instruction: "Jede Platte, die du betrittst, zerbröselt nach 0,8 Sekunden. Mit dem Schubser rempelst du andere auf bröselnde Platten oder in die Lava (alle 2,5 Sekunden; wer springt, weicht aus). Platten mit leuchtender Rune kommen nach 2,5 Sekunden zurück. Mit dem Sprungknopf überspringst du kleine Lücken (alle 3 Sekunden). Lava kostet ein Leben, du hast 2 pro Durchgang. Ab Sekunde 10 verschwindet der Rand. +1 für jede Person, die vor dir fällt, +3 für den Durchgangssieg. Drei Durchgänge.",
+    instruction: "Drei Etagen über der Lava: Jede Platte, die du betrittst, zerbröselt nach 0,8 Sekunden. Stehst du über einem Loch, fällst du eine Etage tiefer – erst ein Loch in der untersten Etage führt in die Lava. Mit dem Schubser rempelst du andere auf bröselnde Platten (alle 2,5 Sekunden; wer springt, weicht aus). Platten mit leuchtender Rune kommen nach 2,5 Sekunden zurück. Mit dem Sprungknopf überspringst du kleine Lücken (alle 3 Sekunden). Lava kostet ein Leben, du hast 2 pro Durchgang. Ab Sekunde 16 verschwindet auf allen Etagen der Rand. +1 für jede Person, die vor dir fällt, +3 für den Durchgangssieg. Drei Durchgänge.",
     controls: "Stick: laufen · Knöpfe: springen und schubsen.",
-    look: { icon: "♨", action: "Bleib in Bewegung", hint: "Stick laufen · springen · schubsen", goal: "Am längsten über der Lava bleiben" }
+    look: { icon: "♨", action: "Bleib in Bewegung, Etage für Etage", hint: "Stick laufen · springen · schubsen", goal: "Am längsten über der Lava bleiben" }
   },
   create(s) {
     s.game = { round: 0, phase: "play", tiebreak: false, roundStart: 0, tiles: "", regen: "", timers: {}, rings: 0, runners: {}, points: Object.fromEntries(s.players.map(p => [p.id, 0])), history: [] };
@@ -132,7 +141,8 @@ export const floorIsLava: MatchModule<LavaGame> = {
     }
     for (let i = 0; i < alive.length; i++) for (let j = i + 1; j < alive.length; j++) {
       const a = alive[i], b = alive[j];
-      if (grounded(s, a) !== grounded(s, b)) continue;
+      // Only runners on the same floor and at the same height meet; a falling runner meets nobody.
+      if (a.floor !== b.floor || dropping(s, a) || dropping(s, b) || grounded(s, a) !== grounded(s, b)) continue;
       // A shove that reaches someone on the same height sends them sliding (not while protected).
       if (dist(a.x, a.y, b.x, b.y) < FL.radius * 2 + .05) for (const [hitter, victim] of [[a, b], [b, a]] as const) {
         if (s.time >= hitter.shoveUntil || s.time < victim.invulnUntil || s.time < victim.slideUntil) continue;
@@ -160,9 +170,16 @@ export const floorIsLava: MatchModule<LavaGame> = {
     }
     for (const r of alive) {
       if (!grounded(s, r)) continue;
-      const i = index(r.x, r.y), tile = g.tiles[i];
+      const i = index(r.x, r.y, r.floor), tile = g.tiles[i];
       if (tile === "1") { setTile(g, i, "2"); g.timers[i] = s.time + FL.crackMs; }
-      else if ((tile === "0" || tile === "3") && s.time >= r.invulnUntil) lava(s, r);
+      else if ((tile === "0" || tile === "3") && s.time >= r.invulnUntil) {
+        if (r.floor >= FL.floors - 1) lava(s, r);
+        else {
+          // Through the hole onto the floor below; airborne until the landing.
+          r.floor++; r.dropUntil = r.airUntil = s.time + FL.dropMs; r.slideUntil = 0; r.shoveUntil = 0;
+          emit(s, "drop", "Eine Etage tiefer!", [r.id]);
+        }
+      }
     }
     const left = Object.values(g.runners).filter(r => r.alive);
     if (left.length <= 1 || roundTime >= (g.tiebreak ? FL.tiebreakMax : FL.roundMax)) endRound(s);
@@ -190,20 +207,20 @@ export const floorIsLava: MatchModule<LavaGame> = {
     const g = s.game, me = g.runners[id];
     if (g.phase !== "play" || !me?.alive) return {};
     // Head for the nearest intact tile that is not the current one; jump when the floor is about to give way.
-    const here = index(me.x, me.y), salt = hash(`${id}:${g.round}`) % 7;
+    const here = index(me.x, me.y, me.floor), salt = hash(`${id}:${g.round}`) % 7, base = me.floor * FLOOR_TILES;
     let best = here, score = -Infinity;
-    for (let i = 0; i < g.tiles.length; i++) {
+    for (let i = base; i < base + FLOOR_TILES; i++) {
       if (g.tiles[i] !== "1" || i === here) continue;
-      const x = i % FL.cols + .5, y = Math.floor(i / FL.cols) + .5, d = dist(me.x, me.y, x, y);
-      const crowd = Object.values(g.runners).filter(o => o.alive && o.id !== id && dist(o.x, o.y, x, y) < 1.2).length;
+      const j = i - base, x = j % FL.cols + .5, y = Math.floor(j / FL.cols) + .5, d = dist(me.x, me.y, x, y);
+      const crowd = Object.values(g.runners).filter(o => o.alive && o.id !== id && o.floor === me.floor && dist(o.x, o.y, x, y) < 1.2).length;
       const value = -d + ring(i) * .6 - crowd * 2 + ((i * 7 + salt) % 5) * .05;
       if (d < 3.2 && value > score) { best = i; score = value; }
     }
-    const tx = best % FL.cols + .5, ty = Math.floor(best / FL.cols) + .5, dx = tx - me.x, dy = ty - me.y, d = Math.hypot(dx, dy) || 1;
+    const tx = (best - base) % FL.cols + .5, ty = Math.floor((best - base) / FL.cols) + .5, dx = tx - me.x, dy = ty - me.y, d = Math.hypot(dx, dy) || 1;
     const crumbling = g.tiles[here] === "2" && (g.timers[here] ?? Infinity) - s.time < 250;
-    const gapAhead = g.tiles[index(clamp(me.x + dx / d * .7, 0, FL.cols - .01), clamp(me.y + dy / d * .7, 0, FL.rows - .01))] !== "1";
+    const gapAhead = g.tiles[index(clamp(me.x + dx / d * .7, 0, FL.cols - .01), clamp(me.y + dy / d * .7, 0, FL.rows - .01), me.floor)] !== "1";
     // Shove a close opponent standing in front.
-    const victim = Object.values(g.runners).find(o => o.alive && o.id !== id && dist(o.x, o.y, me.x, me.y) < 1.1 && ((o.x - me.x) * me.fx + (o.y - me.y) * me.fy) / (dist(o.x, o.y, me.x, me.y) || 1) > .7);
+    const victim = Object.values(g.runners).find(o => o.alive && o.id !== id && o.floor === me.floor && dist(o.x, o.y, me.x, me.y) < 1.1 && ((o.x - me.x) * me.fx + (o.y - me.y) * me.fy) / (dist(o.x, o.y, me.x, me.y) || 1) > .7);
     const shove = !!victim && s.time >= me.shoveReady && grounded(s, me) && hash(`${id}:${Math.floor(s.time / 400)}`) % 3 === 0;
     const aim = shove && victim ? { x: victim.x - me.x, y: victim.y - me.y } : { x: dx / d, y: dy / d };
     return { x: aim.x, y: aim.y, pressA: s.time >= me.jumpReady && grounded(s, me) && (crumbling || gapAhead && d > .8), pressB: shove };
