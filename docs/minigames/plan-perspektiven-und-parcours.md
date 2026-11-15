@@ -23,7 +23,10 @@ von Leveln, Figuren oder Optik eines bestimmten Spiels.
 | B1 | Parcours-Kern: 3D-Bewegung, Aktionen, Hindernisse, Kontrollpunkte, Wertung, Bots | fertig |
 | B2 | Parcours-Darstellung: 3D-Strecke, animierte Figuren, Verfolgerkamera, Steuerung | fertig (Gerätetest offen) |
 | B3 | Erste Läufe | fertig: alle fünf Läufe der Tabelle unten |
-| B4 | Weitere Läufe | offen (Ideen in „Nächste Läufe“) |
+| B4 | Weitere Läufe, Finale, Zuschauen | fertig (Gerätetest offen): Fallklappen, Windkanal, Kletterwand, Finale Standhaft, Zuschauer-Ansicht |
+| C1 | Parcours als ein Eintrag im Zufallspool, Chaos Run zu 1st Gen | fertig |
+| C2 | Kamera per Wischen drehen (Floor is Lava, Turmsicht, Parcours) | fertig (Gerätetest offen) |
+| C3 | Gerätetest vorbereiten: Testmodus `?messung` und [Protokoll](geraetetest.md) | fertig; der Test selbst steht aus |
 
 ## A1 – Verfolgerkamera (gemeinsam)
 
@@ -97,8 +100,8 @@ Jeder Lauf ist ein eigenes Minispiel im Pool (eigener Name, eigene Hindernisse):
 
 ### Nächste Läufe (Ideen)
 
-Fallklappen-Feld mit Warnlicht, Windkanal mit Ventilatoren, Kletterwand mit
-wechselnden Griffen, Staffel im Team, Endlos-Runde „Letzte Person steht“.
+Staffel im Team, Rutschbahn mit Hindernissen, Labyrinth-Lauf mit wechselnden
+Wänden, weitere Finals (z. B. Krone schnappen).
 
 ## Tests und Grenzen
 
@@ -117,4 +120,6 @@ wechselnden Griffen, Staffel im Team, Endlos-Runde „Letzte Person steht“.
 | B1 | `shared/matches/parcours.ts` (Kern, Bots) und `parcoursCourses.ts` (Strecken). Je Lauf ein eigenes Match-Modul über `parcoursModule(id)`. Feste Geometrie je Lauf; geheim (aus dem Zufall der Partie, nie in einer Sicht): echte Türen, tragende Platten. 3 Teilschritte je 50 ms, gepufferte Sprung-/Hechtwünsche (160 ms), Nachsprung 120 ms, Stufen bis 0,32 m, Festhalten an Kanten (Oberkante 0,9–2,15 m über den Füßen, bis 4 s) und an anderen (von vorn, bis 2 s, Seil 1,1 m, Gehaltene laufen mit 45 %). Ende: alle im Ziel/raus, 20 s nach der ersten Ankunft oder nach 120 s. Wertung: Ankunft, sonst Fortschritt. Regeltest `parcours-test` (alle Aktionen, Hindernisse, Geheimnisse, Ziel, Bots in allen Läufen mit 2/4/6, JSON-Neustart, Determinismus); Rechenzeit ≈ 11 ms je Spielsekunde bei sechs Bots (Node) |
 | B2 | `src/three/parcoursWorld.ts`: Studio-Look (Nachtblau, Gelb, Pink, Violett, Türkis), statische Kästen instanziert je Art, bewegte Teile aus denselben Zeitfunktionen, Türen platzen auf, bekannte Platten grün, Wippen kippen, Bänder laufen, Glibber steigt; niedrige Balken pink, hohe gelb. Animierte Figuren (`riggedFigure`), Verfolgerkamera aus A1. Steuerung: Stick links, rechts 2×2 Hechten/Springen/Ducken/Festhalten. Canvas-Rückfall als Draufsicht. Playwright `phone`: Laufen, Springen, Hechten, Ducken, Festhalten in beiden Bewegungseinstellungen, alle fünf Läufe mit sechs Figuren (91–173 Zeichenaufrufe), 2D-Rückfall |
 | B3 | Türenlotto, Kreiselkurs, Wippenwerk, Glibberflut, Geisterpfad im Pool und in der Übung; Bots brauchen 9–31 s, echte Spielzeit und Balance offen |
+| B4 | Kern erweitert um verschwindende Kästen (`blink`: Takt, Anteil offen, Start; Warnung 0,9 s vorher, orange blinkend, mit reduzierter Bewegung stetig), Wind (`winds`: Drift in m/s, 1,3-fach in der Luft, mit Takt), Ausscheidungsmodus (`elimination`: Sturz = raus, Ende bei einer stehenden Person oder nach 90 s, Wertung nach Sturzzeit), Balken mit Startzeit und Stoßstärke je Strecke. Landen auf einer Kante nur, wenn die Füße vorher darüber waren (5 cm Toleranz): 1,7-m-Kanten gehen nur mit Festhalten. Läufe: **Fallklappen** (zwei Klappenfelder in eigenem Takt), **Windkanal** (Seitenwind im Wechsel auf Stegen, Dauerwind über Trittsteinen, Gegenwind auf der Rampe, Ventilatoren und Windpfeile), **Kletterwand** (vier 1,7-m-Stufen aus je drei Griffblöcken, die zeitweise verschwinden). **Standhaft** (Finale, eigener Pool-Eintrag, „Sekunden“): 5×5 Klappen, äußerer Ring ab 12 s, Mitte ab 48 s, Balken ab 3 s bzw. 20 s, halbe Stoßstärke, Start im Kreis. **Zuschauen:** nach Ziel, Aus oder als Zuschauer folgt die Kamera der führenden Person; „Nächste Person zeigen“ wechselt (`shownRacer`). Regeltest erweitert (Klappen, Wind, Kanten, Finale, Zuschauen, Bots in allen neun Strecken); Playwright `phone`: alle neun Strecken mit sechs Figuren (95–176 Zeichenaufrufe), Zuschauen. Bots: im Windkanal fallen sie oft – nur für die Übung relevant |
+| C1–C3 | Zufallspool: `miniPool` enthält nur den ersten Lauf, das Füllen des Beutels macht daraus einen zufälligen Lauf (`parcoursRuns`); freie Wahl, Übung und Testräume behalten den gewählten Lauf. Kamera-Wischen: `CameraSwipe` hinter Stick und Knöpfen (Turmsicht: oberes linkes Viertel), ≈ 0,008 rad/px, Automatik pausiert 1,6 s. Testmodus siehe [geraetetest.md](geraetetest.md) |
 | A3 | Modul `tankview` (`shared/matches/tankView.ts`): Regeln von Tank Trouble, `view` entfernt Panzer, Wracks und fremde Kugeln ohne freie Sichtlinie oder weiter als 6; Zuschauer sehen alles; Bots fahren ohne Sicht Streife (`driveTowards`). 3D mit Mauern 1,15 hoch, Nebel 5,5–11, Kamera 2,6 hinter und 3,6 über dem Panzer. Regeltest `tank-view-test`, Playwright `phone` (Kamera, Stick und Zielen relativ zur Kamera, Schuss, nur sichtbare Gegner im Snapshot) |

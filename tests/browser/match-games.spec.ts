@@ -613,7 +613,7 @@ for (const motion of ["no-preference", "reduce"] as const) test(`Hindernis-Parco
   } finally { session.close(); }
 });
 
-for (const [miniId, name] of [["tuerenlotto", "Türenlotto"], ["kreiselkurs", "Kreiselkurs"], ["wippenwerk", "Wippenwerk"], ["glibberflut", "Glibberflut"], ["geisterpfad", "Geisterpfad"]] as const) test(`${name} mit sechs Figuren: Strecke und Figuren stehen, Zeichenaufwand begrenzt`, async ({ page }, testInfo) => {
+for (const [miniId, name] of [["tuerenlotto", "Türenlotto"], ["kreiselkurs", "Kreiselkurs"], ["wippenwerk", "Wippenwerk"], ["glibberflut", "Glibberflut"], ["geisterpfad", "Geisterpfad"], ["fallklappen", "Fallklappen"], ["windkanal", "Windkanal"], ["kletterwand", "Kletterwand"], ["standhaft", "Standhaft"]] as const) test(`${name} mit sechs Figuren: Strecke und Figuren stehen, Zeichenaufwand begrenzt`, async ({ page }, testInfo) => {
   await page.emulateMedia({ reducedMotion: "no-preference" });
   const six = ["alpha_rick_prime", "alpha_morty_smith", "alpha_summer_smith", "alpha_eric_cartman", "alpha_korvo", "alpha_mr_poopybutthole"] as const;
   const session = await onlineSession(page, false, [...six], false, "free-minigame", { miniId });
@@ -670,5 +670,27 @@ test("Testmodus (?messung): Messfeld mit FPS, Netz und Kamera-Reglern, Werte ble
     await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("gsg-messung-kamera-kreiselkurs") ?? "{}").camDistK)).toBe(1.3);
     await session.action({ type: "finish" }, session.ids[1]);
     await expect(page.getByRole("heading", { name: "Euer Ergebnis", exact: true })).toBeVisible();
+  } finally { session.close(); }
+});
+
+test("Hindernis-Parcours: wer raus ist, schaut zu und wechselt die gezeigte Person", async ({ page }, testInfo) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const session = await onlineSession(page, false, ["alpha_rick_prime", "alpha_morty_smith", "alpha_summer_smith"], false, "free-minigame", { miniId: "kreiselkurs" }, ["Anna", "Ben", "Clara"]);
+  try {
+    await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
+    for (const other of session.ids.slice(1)) await session.action({ type: "ready" }, other);
+    await matchStarted(page);
+    const world = page.locator(".match-world");
+    await expect(world).toHaveAttribute("data-watch", session.ids[0], { timeout: 20000 });
+    // Keep the others "racing": they send neutral input; this device gives up.
+    await session.action({ type: "finish" }, session.ids[0]);
+    const next = page.getByRole("button", { name: "Nächste Person zeigen" });
+    await expect(next).toBeVisible();
+    await expect.poll(() => world.getAttribute("data-watch")).not.toBe(session.ids[0]);
+    const first = await world.getAttribute("data-watch");
+    expect([session.ids[1], session.ids[2]]).toContain(first);
+    await next.tap();
+    await expect.poll(() => world.getAttribute("data-watch")).not.toBe(first);
+    await page.screenshot({ path: testInfo.outputPath("parcours-watch.png") });
   } finally { session.close(); }
 });

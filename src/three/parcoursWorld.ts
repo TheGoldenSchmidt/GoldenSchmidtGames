@@ -1,6 +1,6 @@
 import * as T from "three";
-import { boxAt, course, gooAt, sweeperAngle, type Box, type Look } from "../../shared/matches/parcoursCourses";
-import type { ParcoursGame } from "../../shared/matches/parcours";
+import { blinkOpen, blinkWarn, boxAt, course, gooAt, sweeperAngle, type Box, type Look } from "../../shared/matches/parcoursCourses";
+import { shownRacer, type ParcoursGame } from "../../shared/matches/parcours";
 import { followCamera, takeCameraTurn, type ChaseLocal, type MatchWorld, type MatchWorldFrame } from "../matches/client";
 import { ChaseCamera, Debris, Impact } from "./matchScene";
 import { riggedFigure, type CharacterKit, type RiggedFigure } from "./riggedFigure";
@@ -18,9 +18,9 @@ const FIGURE_H = 1.6;
 const COLOR = {
   sky: 0x1d2466, fog: 0x2b3790, floor: 0xffd166, side: 0xd9893c, wall: 0x6544e8, door: 0xff86c8, pusher: 0xe3263b,
   belt: 0x3a3f66, stripe: 0xfff9ed, step: 0xffe3a3, seesaw: 0x57e4cb, tile: 0xbfe6ff, tileGood: 0x7be38f, roller: 0xb23a48,
-  ledge: 0xffb347, finish: 0xfff9ed, ink: 0x24133f, goo: 0x8dff5a, bar: 0xff5f8f, post: 0xfff9ed, own: 0xffe44e, flag: 0x57e4cb
+  ledge: 0xffb347, finish: 0xfff9ed, trap: 0xffe3a3, hold: 0xc98bff, warn: 0xff6a1f, wind: 0xbfe6ff, ink: 0x24133f, goo: 0x8dff5a, bar: 0xff5f8f, post: 0xfff9ed, own: 0xffe44e, flag: 0x57e4cb
 } as const;
-const LOOK_COLOR: Record<Look, number> = { floor: COLOR.floor, wall: COLOR.wall, door: COLOR.door, pusher: COLOR.pusher, belt: COLOR.belt, step: COLOR.step, seesaw: COLOR.seesaw, tile: COLOR.tile, roller: COLOR.roller, ledge: COLOR.ledge, finish: COLOR.finish };
+const LOOK_COLOR: Record<Look, number> = { floor: COLOR.floor, wall: COLOR.wall, door: COLOR.door, pusher: COLOR.pusher, belt: COLOR.belt, step: COLOR.step, seesaw: COLOR.seesaw, tile: COLOR.tile, roller: COLOR.roller, ledge: COLOR.ledge, finish: COLOR.finish, trap: COLOR.trap, hold: COLOR.hold };
 
 interface RacerView { fig: RiggedFigure; ring: T.Mesh; loop: string }
 
@@ -35,9 +35,9 @@ export function createParcoursWorld(host: HTMLElement, read: () => MatchWorldFra
   // Static boxes: one instanced mesh per look; moving, door, tile and seesaw boxes get their own meshes.
   const unit = new T.BoxGeometry(1, 1, 1), dummy = new T.Object3D();
   const statics = new Map<Look, Box[]>(), stripes: { mesh: T.Mesh; b: Box }[] = [];
-  const dynamic: { b: Box; mesh: T.Object3D }[] = [], doors = new Map<number, T.Mesh>(), tiles = new Map<number, T.Mesh>(), seesaws = new Map<number, T.Group>();
+  const dynamic: { b: Box; mesh: T.Object3D }[] = [], blinking: { b: Box; mesh: T.Mesh; base: T.Color }[] = [], doors = new Map<number, T.Mesh>(), tiles = new Map<number, T.Mesh>(), seesaws = new Map<number, T.Group>();
   for (const b of c.boxes) {
-    if (b.move || b.door !== undefined || b.tile !== undefined || b.seesaw !== undefined) continue;
+    if (b.move || b.blink || b.door !== undefined || b.tile !== undefined || b.seesaw !== undefined) continue;
     statics.set(b.look, [...(statics.get(b.look) ?? []), b]);
   }
   for (const [look, list] of statics) {
@@ -48,9 +48,13 @@ export function createParcoursWorld(host: HTMLElement, read: () => MatchWorldFra
     if (look === "belt") for (const b of list) for (let z = b.z0 + .4; z < b.z1; z += 1.2) stripes.push({ b, mesh: kit.box(world, COLOR.stripe, (b.x0 + b.x1) / 2, b.y1 + .01, -z, b.x1 - b.x0 - .2, .02, .25) });
   }
   // Chequered finish line and a gate.
-  for (let k = 0; k < 10; k++) kit.box(world, k % 2 ? COLOR.finish : COLOR.ink, -4.5 + k, c.finishY + .02, -c.finishZ, 1, .02, .5);
-  for (const side of [-1, 1]) kit.box(world, COLOR.post, side * 5.2, c.finishY + 1.6, -c.finishZ, .3, 3.2, .3);
-  kit.box(world, COLOR.door, 0, c.finishY + 3.3, -c.finishZ, 10.7, .4, .4);
+  // Finals have no finish line; the course length follows the boxes.
+  const end = Math.max(...c.boxes.map(b => b.z1));
+  if (!c.elimination) {
+    for (let k = 0; k < 10; k++) kit.box(world, k % 2 ? COLOR.finish : COLOR.ink, -4.5 + k, c.finishY + .02, -c.finishZ, 1, .02, .5);
+    for (const side of [-1, 1]) kit.box(world, COLOR.post, side * 5.2, c.finishY + 1.6, -c.finishZ, .3, 3.2, .3);
+    kit.box(world, COLOR.door, 0, c.finishY + 3.3, -c.finishZ, 10.7, .4, .4);
+  }
   // Checkpoint flags along the left edge.
   for (const cp of c.checkpoints.slice(1)) { kit.cylinder(world, COLOR.post, -5.3, cp.y + 1, -cp.z, .05, 2); kit.box(world, COLOR.flag, -5, cp.y + 1.8, -cp.z, .55, .35, .03); }
 
@@ -64,6 +68,7 @@ export function createParcoursWorld(host: HTMLElement, read: () => MatchWorldFra
       seesaws.set(b.seesaw, pivot);
     } else if (b.door !== undefined) { const m = meshFor(b); m.position.copy(W((b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2, (b.z0 + b.z1) / 2)); doors.set(b.door, m); }
     else if (b.tile !== undefined) { const m = meshFor(b); m.position.copy(W((b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2, (b.z0 + b.z1) / 2)); tiles.set(b.tile, m); }
+    else if (b.blink) { const m = meshFor(b); m.position.copy(W((b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2, (b.z0 + b.z1) / 2)); m.material = (m.material as T.MeshStandardMaterial).clone(); blinking.push({ b, mesh: m, base: new T.Color(LOOK_COLOR[b.look]) }); }
     else if (b.move) dynamic.push({ b, mesh: meshFor(b) });
   });
   // Spinning bars on a post.
@@ -75,15 +80,33 @@ export function createParcoursWorld(host: HTMLElement, read: () => MatchWorldFra
     kit.cylinder(world, COLOR.post, sw.x, sw.y1 / 2 + .3, -sw.z, .25, sw.y1 + .6);
     return { sw, pivot };
   });
+  // Wind: fans on the side the wind comes from, arrows on the floor that light up while it blows.
+  const fans = c.winds.map(w => {
+    const along = Math.abs(w.vx) > Math.abs(w.vz), group = new T.Group(), y = Math.max(w.y0, 0) + 1.2;
+    const x = along ? (w.vx > 0 ? -5.6 : 5.6) : (w.x0 + w.x1) / 2, z = along ? (w.z0 + w.z1) / 2 : (w.vz < 0 ? w.z1 + .6 : w.z0 - .6);
+    group.position.copy(W(x, y + (along ? 0 : 1.2), z)); world.add(group);
+    const rotor = new T.Group(); group.add(rotor);
+    const ring = kit.mesh(group, new T.TorusGeometry(1, .08, 8, 28), COLOR.post, 0, 0, 0);
+    for (let k = 0; k < 4; k++) { const blade = kit.box(rotor, COLOR.wind, 0, 0, 0, .18, 1.7, .05); blade.rotation.z = k * Math.PI / 4; }
+    if (along) { group.rotation.y = Math.PI / 2; } void ring;
+    const arrows = Array.from({ length: 3 }, (_, k) => {
+      const ax = along ? (w.x0 + w.x1) / 2 + (k - 1) * 2.4 : (k - 1) * 1.2, az = along ? (w.z0 + w.z1) / 2 + (k - 1) * 1.6 : (w.z0 + w.z1) / 2 + (k - 1) * 2;
+      const arrow = kit.cone(world, COLOR.wind, ax, (along ? 0 : y - 1.2) + .05, -az, .3, .6);
+      arrow.rotation.set(Math.PI / 2, 0, along ? (w.vx > 0 ? -Math.PI / 2 : Math.PI / 2) : (w.vz < 0 ? Math.PI : 0));
+      (arrow.material as T.MeshStandardMaterial) = (arrow.material as T.MeshStandardMaterial).clone();
+      return arrow;
+    });
+    return { w, rotor, arrows };
+  });
   // Rising goo.
   const goo = c.goo ? new T.Mesh(new T.PlaneGeometry(40, 120), new T.MeshStandardMaterial({ color: COLOR.goo, emissive: COLOR.goo, emissiveIntensity: .45, transparent: true, opacity: .82, roughness: .3 })) : undefined;
-  if (goo) { goo.rotation.x = -Math.PI / 2; goo.position.z = -c.finishZ / 2; world.add(goo); }
+  if (goo) { goo.rotation.x = -Math.PI / 2; goo.position.z = -end / 2; world.add(goo); }
   // Floor of the studio far below.
-  const deep = kit.box(world, 0x141a4d, 0, c.killY + 1, -c.finishZ / 2, 80, .2, c.finishZ + 60); deep.castShadow = false;
+  const deep = kit.box(world, 0x141a4d, 0, c.killY + 1, -end / 2, 80, .2, end + 60); deep.castShadow = false;
 
   const dust = new Debris(world, 80, new T.MeshStandardMaterial({ color: 0xfff9ed, roughness: 1 })), impact = new Impact(world, kit);
-  const views = new Map<string, RacerView>(), chaseCam = new ChaseCamera(kit, 4.4, 2.8, 2.6, .9), target = new T.Vector3();
-  let frame = 0, last = performance.now(), lastSeq = 0, fresh = true, doorState = "", tileState = "";
+  const warnColor = new T.Color(COLOR.warn), views = new Map<string, RacerView>(), chaseCam = new ChaseCamera(kit, 4.4, 2.8, 2.6, .9), target = new T.Vector3();
+  let shownId = "", frame = 0, last = performance.now(), lastSeq = 0, fresh = true, doorState = "", tileState = "";
 
   const viewFor = (id: string, style: number, chosen: string | undefined, own: boolean): RacerView => {
     let v = views.get(id);
@@ -102,6 +125,18 @@ export function createParcoursWorld(host: HTMLElement, read: () => MatchWorldFra
     // Moving parts follow the shared time functions.
     for (const { b, mesh } of dynamic) { const bb = boxAt(b, t); mesh.position.copy(W((bb.x0 + bb.x1) / 2, (bb.y0 + bb.y1) / 2, (bb.z0 + bb.z1) / 2)); }
     for (const { sw, pivot } of bars) pivot.rotation.y = -sweeperAngle(sw, t);
+    // Vanishing boxes: glow orange before they open (blinking unless motion is reduced), gone while open.
+    for (const { b, mesh, base } of blinking) {
+      const open = blinkOpen(b, t), warn = blinkWarn(b, t);
+      mesh.visible = !open;
+      const pulse = reduced ? 1 : .55 + .45 * Math.abs(Math.sin(time / 90));
+      (mesh.material as T.MeshStandardMaterial).color.copy(base).lerp(warnColor, warn > 0 ? Math.min(1, .35 + warn * .65) * pulse : 0);
+    }
+    for (const { w, rotor, arrows } of fans) {
+      const on = ((t / w.period + w.phase) % 1) < w.on;
+      if (on && !reduced) rotor.rotation.z += dt * 14;
+      for (const arrow of arrows) { const m = arrow.material as T.MeshStandardMaterial; m.color.setHex(on ? COLOR.warn : COLOR.wind); m.emissive.setHex(on ? 0x662200 : 0); }
+    }
     for (const [i, pivot] of seesaws) { const before = prev.tilt?.[i] ?? 0, now = g.tilt[i] ?? 0; pivot.rotation.z = -(before + (now - before) * f.alpha); }
     if (goo) goo.position.y = Math.max(c.killY + 1.2, gooAt(c, t));
     // Belt stripes run with the belt (static with reduced motion).
@@ -152,17 +187,19 @@ export function createParcoursWorld(host: HTMLElement, read: () => MatchWorldFra
       v.fig.update(dt);
     }
 
-    // Chase camera behind the own racer (spectators follow the leader).
-    const mine = g.racers[f.viewer] ?? Object.values(g.racers).sort((p, q) => q.best - p.best)[0];
+    // Chase camera behind the own racer; after the finish, when out or as a spectator: the chosen or leading racer.
+    const local = f.local as ChaseLocal & { watch?: number }, mine = shownRacer(g, s.players, f.viewer, local.watch), ownCam = mine?.id === f.viewer;
+    if (mine && mine.id !== shownId) { shownId = mine.id; fresh = true; }
+    host.dataset.watch = mine?.id ?? "";
     if (mine) {
       const before = prev.racers?.[mine.id], a = before && Math.hypot(before.x - mine.x, before.z - mine.z) < 3 ? f.alpha : 1;
       target.set(before ? before.x + (mine.x - before.x) * a : mine.x, before ? before.y + (mine.y - before.y) * a : mine.y, -(before ? before.z + (mine.z - before.z) * a : mine.z));
       const moving = Math.hypot(mine.vx, mine.vz) > 1 && (mine.pose === "run" || mine.pose === "air");
-      if (g.racers[f.viewer]) takeCameraTurn(f.local as ChaseLocal, d => chaseCam.turn(d));
+      if (ownCam) takeCameraTurn(local, d => chaseCam.turn(d));
       chaseCam.tune(f.local as ChaseLocal);
       chaseCam.update(target, moving || fresh ? mine.face : undefined, dt, reduced, 1.4);
       fresh = false;
-      if (g.racers[f.viewer]) followCamera(f.local as ChaseLocal, f.input, chaseCam.yaw);
+      if (ownCam) followCamera(local, f.input, chaseCam.yaw);
       host.dataset.yaw = chaseCam.yaw.toFixed(3);
     }
     host.dataset.camera = "chase";

@@ -1,4 +1,4 @@
-import { boxAt, course, COURSE_IDS, gooAt, sweeperAngle, type Box, type Course, type CourseId } from "./parcoursCourses";
+import { blinkOpen, blinkWarn, boxAt, course, COURSE_IDS, gooAt, sweeperAngle, windAt, type Box, type Course, type CourseId } from "./parcoursCourses";
 import { emit, hash, inputOfPlayer, presence, rank, shuffled, randomInt, type MatchModule, type MatchPlayer, type MatchState } from "./types";
 
 /**
@@ -66,8 +66,9 @@ export function surfaceAt(b: Box, bb: { x0: number; x1: number; y1: number }, g:
   const cx = (bb.x0 + bb.x1) / 2, dx = Math.max(bb.x0, Math.min(bb.x1, x)) - cx;
   return bb.y1 - Math.tan(g.tilt[b.seesaw] ?? 0) * dx;
 }
-/** Whether a box blocks racers. Secret parts count as solid where the secret is unknown (bots, devices). */
-export function solid(b: Box, g: ParcoursGame) {
+/** Whether a box blocks racers at time `t`. Secret parts count as solid where the secret is unknown (bots, devices). */
+export function solid(b: Box, g: ParcoursGame, t: number) {
+  if (b.blink && blinkOpen(b, t)) return false;
   if (b.door !== undefined) return g.doors[b.door] !== "1";
   if (b.tile !== undefined) return g.secretTiles ? g.secretTiles[b.tile] === "1" : g.tiles[b.tile] !== "2";
   return true;
@@ -75,8 +76,9 @@ export function solid(b: Box, g: ParcoursGame) {
 
 function respawn(c: Course, r: Racer, slot: number, t: number) {
   const cp = c.checkpoints[r.checkpoint];
-  // Side by side within three metres, so every checkpoint platform holds all six.
-  Object.assign(r, { x: -1.5 + (slot % 6) * .6, y: cp.y + .05, z: cp.z, vx: 0, vy: 0, vz: 0, face: 0, pose: "run", grounded: false, ground: -1, duck: false, hang: undefined, grab: undefined, respawnAt: 0, airDive: false, until: 0, lastGround: t });
+  // Side by side within three metres, so every checkpoint platform holds all six; finals start on a circle.
+  const a = .5 + (slot % 6) * Math.PI / 3, x = c.elimination ? Math.cos(a) * 3.5 : -1.5 + (slot % 6) * .6, z = c.elimination ? cp.z + Math.sin(a) * 3.5 : cp.z;
+  Object.assign(r, { x, y: cp.y + .05, z, face: c.elimination ? Math.atan2(-x, cp.z - z) : 0, vx: 0, vy: 0, vz: 0, pose: "run", grounded: false, ground: -1, duck: false, hang: undefined, grab: undefined, respawnAt: 0, airDive: false, until: 0, lastGround: t });
 }
 
 function moveRacer(s: MatchState<ParcoursGame>, c: Course, p: MatchPlayer, r: Racer, slot: number, held: boolean, h: number, t: number) {
@@ -88,7 +90,7 @@ function moveRacer(s: MatchState<ParcoursGame>, c: Course, p: MatchPlayer, r: Ra
   // Hanging on a ledge: hold on, pull up (jump or stick towards the wall) or let go.
   if (r.pose === "hang" && r.hang) {
     const b = c.boxes[r.hang.box], bb = boxAt(b, t), { nx, nz } = r.hang;
-    if (!grabHeld || t - r.hang.since > PC.hangMaxMs) {
+    if (!grabHeld || t - r.hang.since > PC.hangMaxMs || !solid(b, g, t)) {
       Object.assign(r, { pose: "air", vx: nx * 1.2, vz: nz * 1.2, vy: 0, hang: undefined });
     } else if (t - r.jumpAt <= PC.buffer || mx * -nx + mz * -nz > .3) {
       // Pull up onto the top, one step away from the edge.
@@ -136,6 +138,8 @@ function moveRacer(s: MatchState<ParcoursGame>, c: Course, p: MatchPlayer, r: Ra
     if (b.belt) r.z += b.belt * h;
     if (b.seesaw !== undefined) r.vx += Math.sin(g.tilt[b.seesaw]) * PC.gravity * PC.tiltSlide * h;
   }
+  // Wind drifts racers (a bit more in the air).
+  if (c.winds.length) { const w = windAt(c, r.x, r.y + .8, r.z, t), k = r.grounded ? 1 : 1.3; r.x += w.vx * k * h; r.z += w.vz * k * h; }
   r.vy -= PC.gravity * h;
   const prevY = r.y;
   r.x += r.vx * h; r.y += r.vy * h; r.z += r.vz * h;
@@ -151,13 +155,14 @@ function moveRacer(s: MatchState<ParcoursGame>, c: Course, p: MatchPlayer, r: Ra
     if (bb.x1 < r.x - R || bb.x0 > r.x + R || bb.z1 < r.z - R || bb.z0 > r.z + R || bb.y0 > r.y + height(r)) return;
     const surface = surfaceAt(b, bb, g, r.x);
     if (surface < r.y - .001) return;
-    if (!solid(b, g)) {
+    if (!solid(b, g, t)) {
       // A hidden-path tile that does not carry gives way under the racer.
       if (b.tile !== undefined && g.tiles[b.tile] === "0" && prevY >= surface - .3 && r.y < surface) { g.tiles = g.tiles.slice(0, b.tile) + "2" + g.tiles.slice(b.tile + 1); emit(s, "tile", "Geisterplatte!", [r.id]); }
       return;
     }
     // Landing on top (also small steps and slopes).
-    if (r.vy <= .01 && (prevY >= surface - .25 || (wasGrounded && surface - r.y <= PC.step))) {
+    // Landing needs the feet above the top a sub-step ago; walking up steps needs ground contact.
+    if (r.vy <= .01 && (prevY >= surface - .05 || (wasGrounded && surface - r.y <= PC.step))) {
       r.y = surface; r.vy = 0; r.grounded = true; r.ground = i; r.lastGround = t;
       if (b.tile !== undefined && g.tiles[b.tile] === "0") g.tiles = g.tiles.slice(0, b.tile) + "1" + g.tiles.slice(b.tile + 1);
       return;
@@ -194,7 +199,7 @@ function ledgeFor(c: Course, g: ParcoursGame, r: Racer, t: number, touched?: { b
   const candidates = touched ? [touched.box, ...c.boxes.keys()] : [...c.boxes.keys()];
   for (const i of candidates) {
     const b = c.boxes[i];
-    if (b.seesaw !== undefined || b.tile !== undefined || !solid(b, g)) continue;
+    if (b.seesaw !== undefined || b.tile !== undefined || !solid(b, g, t)) continue;
     const bb = boxAt(b, t), rise = bb.y1 - r.y;
     if (rise < PC.hangMin || rise > PC.hangMax) continue;
     const reach = R + PC.hangReach;
@@ -225,7 +230,8 @@ function sweep(s: MatchState<ParcoursGame>, c: Course, r: Racer, t: number) {
     // Near the axis the bar barely moves: push straight away from it instead.
     const ax = r.x - px, az = r.z - pz, an = Math.hypot(ax, az) || 1;
     const [kx, kz] = n > .2 ? [vx / n, vz / n] : [ax / an || 1, az / an];
-    Object.assign(r, { vx: kx * PC.knock, vz: kz * PC.knock, vy: PC.knockUp, pose: "stun", until: t + PC.stunMs, hitUntil: t + PC.hitGuard, grounded: false, ground: -1, grab: undefined, duck: false });
+    const k = c.knock ?? 1;
+    Object.assign(r, { vx: kx * PC.knock * k, vz: kz * PC.knock * k, vy: PC.knockUp * Math.max(.6, k), pose: "stun", until: t + PC.stunMs, hitUntil: t + PC.hitGuard, grounded: false, ground: -1, grab: undefined, duck: false });
     emit(s, "hit", "Umgehauen!", [r.id]);
     return;
   }
@@ -246,13 +252,18 @@ function startGame(s: MatchState<ParcoursGame>, id: CourseId): ParcoursGame {
   return g;
 }
 
+const FINAL_INSTRUCTION = "Stick zum Laufen (oben = von der Kamera weg), Springen über den niedrigen Balken, Ducken unter dem hohen, Hechten und Festhalten wie im Parcours. Wer fällt, scheidet aus. Wer zuletzt steht, gewinnt; nach 90 Sekunden gewinnen alle, die noch stehen.";
 const INSTRUCTION = "Lauf selbst durch den Parcours: Stick zum Laufen und Lenken (oben = von der Kamera weg). Springen über Lücken und niedrige Balken, Hechten für einen weiten Satz nach vorn, Festhalten (halten) an Kanten zum Hochziehen oder an anderen, um sie zu bremsen, Ducken (halten) unter hohen Balken durch. Wer fällt, startet am letzten Kontrollpunkt. Die Reihenfolge im Ziel entscheidet, sonst der Fortschritt.";
 const GOALS: Record<CourseId, { icon: string; action: string; extra: string }> = {
   tuerenlotto: { icon: "▥", action: "Welche Tür geht auf?", extra: "Drei Türreihen: Nur manche Türen brechen auf, die anderen sind massiv. Dazwischen Schieber und ein Graben." },
   kreiselkurs: { icon: "✣", action: "Über und unter Balken", extra: "Drehende Balken: über niedrige springen, unter hohen ducken. Dazwischen wandernde Inseln über dem Abgrund." },
   wippenwerk: { icon: "⚖", action: "Balance und Kanten", extra: "Wippen neigen sich unter Gewicht, rollende Walzen musst du überspringen, zum Schluss eine Wand zum Festhalten und Hochziehen." },
   glibberflut: { icon: "♒", action: "Nach oben, schnell!", extra: "Aufstieg über Treppen, Förderbänder gegen die Laufrichtung und Kanten, während von unten Glibber steigt. Wer erwischt wird, scheidet aus." },
-  geisterpfad: { icon: "◌", action: "Finde den Pfad", extra: "Nur ein unsichtbarer Pfad aus Platten trägt; was einmal betreten wurde, bleibt für alle sichtbar." }
+  geisterpfad: { icon: "◌", action: "Finde den Pfad", extra: "Nur ein unsichtbarer Pfad aus Platten trägt; was einmal betreten wurde, bleibt für alle sichtbar." },
+  fallklappen: { icon: "▦", action: "Achte aufs Warnlicht", extra: "Zwei Felder aus Klappen über dem Abgrund: Jede Klappe öffnet sich in ihrem eigenen Takt, kurz vorher glüht sie orange." },
+  windkanal: { icon: "≋", action: "Gegen den Wind", extra: "Schmale Stege, Seitenwind, der die Richtung wechselt, Trittsteine im Dauerwind und zum Schluss Gegenwind auf der Rampe." },
+  kletterwand: { icon: "⌸", action: "Halt dich fest", extra: "Vier Stufen, jede zu hoch zum Springen: festhalten und hochziehen. Die Griffblöcke verschwinden zwischendurch – wähle einen, der bleibt." },
+  standhaft: { icon: "♛", action: "Bleib stehen", extra: "Finale auf Klappen unter zwei Drehbalken: Erst öffnet sich der äußere Ring, später auch die Mitte." }
 };
 
 /** One match module per run; all share the engine above. */
@@ -261,10 +272,10 @@ export function parcoursModule(id: CourseId): MatchModule<ParcoursGame> {
   return {
     id,
     meta: {
-      name: c.name, seconds: PC.maxMs / 1000 + 2, players: [2, 3, 4, 5, 6], hz: 20,
-      instruction: `${goal.extra} ${INSTRUCTION}`,
+      name: c.name, seconds: (c.limitMs ?? PC.maxMs) / 1000 + 2, players: [2, 3, 4, 5, 6], hz: 20,
+      instruction: `${goal.extra} ${c.elimination ? FINAL_INSTRUCTION : INSTRUCTION}`,
       controls: "Stick laufen · Springen · Hechten · Festhalten (halten) · Ducken (halten).",
-      look: { icon: goal.icon, action: goal.action, hint: "Stick · springen · hechten · festhalten · ducken", goal: "Als Erste ins Ziel" }
+      look: { icon: goal.icon, action: goal.action, hint: "Stick · springen · hechten · festhalten · ducken", goal: c.elimination ? "Als Letzte stehen" : "Als Erste ins Ziel" }
     },
     create(s) { s.game = startGame(s, id); return s.game; },
     step(s, dt) {
@@ -307,7 +318,13 @@ export function parcoursModule(id: CourseId): MatchModule<ParcoursGame> {
           if (target) { r.grab = target.id; r.grabSince = t; emit(s, "hold", "Erwischt!", [target.id, r.id]); }
         }
         // Falling, goo, checkpoints, progress, arrival.
-        if (!r.respawnAt && r.y < c.killY) { r.falls++; r.respawnAt = t + PC.respawnMs; r.pose = "air"; emit(s, "fall", "Abgestürzt!", [r.id]); continue; }
+        if (!r.respawnAt && r.y < c.killY) {
+          r.falls++;
+          // In a final a fall is the end; elsewhere back to the last checkpoint.
+          if (c.elimination) { r.pose = "out"; r.outAt = t; emit(s, "out", "Raus!", [r.id]); }
+          else { r.respawnAt = t + PC.respawnMs; r.pose = "air"; emit(s, "fall", "Abgestürzt!", [r.id]); }
+          continue;
+        }
         if (c.goo && r.y < gooAt(c, t) - .1) { r.pose = "out"; r.outAt = t; r.respawnAt = 0; emit(s, "out", "Vom Glibber erwischt!", [r.id]); continue; }
         if (r.respawnAt) continue;
         if (r.grounded) while (r.checkpoint + 1 < c.checkpoints.length && r.z >= c.checkpoints[r.checkpoint + 1].z) r.checkpoint++;
@@ -326,7 +343,11 @@ export function parcoursModule(id: CourseId): MatchModule<ParcoursGame> {
         return angle + (target - angle) * (1 - Math.exp(-PC.tiltRate * dt));
       });
       const active = s.players.filter(p => !p.gone).map(p => g.racers[p.id]);
-      if (active.every(r => r.pose === "done" || r.pose === "out") || (g.firstFinish !== undefined && t >= g.firstFinish + PC.finishGrace) || t >= PC.maxMs) s.done = true;
+      const standing = active.filter(r => r.pose !== "done" && r.pose !== "out").length;
+      if (standing === 0 || (c.elimination && standing <= 1 && s.players.length > 1) || (g.firstFinish !== undefined && t >= g.firstFinish + PC.finishGrace) || t >= (c.limitMs ?? PC.maxMs)) {
+        s.done = true;
+        if (c.elimination) emit(s, "finale", standing === 1 ? "Steht als Letzte!" : "Zeit um – alle Stehenden gewinnen", active.filter(r => r.pose !== "out").map(r => r.id));
+      }
     },
     press(s, p, kind, at) {
       const r = s.game.racers[p.id];
@@ -336,6 +357,11 @@ export function parcoursModule(id: CourseId): MatchModule<ParcoursGame> {
     remove(s, id) { const r = s.game.racers[id]; if (r && r.pose !== "done") { r.pose = "out"; r.outAt = s.time; } },
     standings(s) {
       const g = s.game;
+      // Finals: still standing first, then who fell later.
+      if (c.elimination) return rank(s.players.map(p => {
+        const r = g.racers[p.id], survived = Math.round((r.outAt ?? s.time) / 1000);
+        return { id: p.id, score: survived, detail: r.outAt === undefined ? "steht noch" : `${survived} s gestanden`, keys: [presence(p), r.outAt === undefined ? 1 : 0, r.outAt ?? 0] };
+      }));
       return rank(s.players.map(p => {
         const r = g.racers[p.id], place = g.order.indexOf(p.id), done = place >= 0;
         return { id: p.id, score: Math.round(r.best), detail: done ? `im Ziel als ${place + 1}.` : `${Math.round(r.best)} m · ${r.falls}× gefallen`,
@@ -348,39 +374,91 @@ export function parcoursModule(id: CourseId): MatchModule<ParcoursGame> {
   };
 }
 
-/** Bots: run forward, pick doors and tiles, jump gaps and low bars, duck high bars, climb ledges. */
+/** Bots: run forward, pick doors, tiles and holds, avoid opening trapdoors, lean into wind, jump gaps and low bars, duck high bars, climb ledges. */
 function parcoursBot(s: MatchState<ParcoursGame>, c: Course, id: string) {
   const g = s.game, r = g.racers[id], t = s.time;
   if (!r || r.pose === "done" || r.pose === "out" || r.respawnAt) return {};
   const salt = hash(`${id}:${Math.floor(t / 1600)}`);
-  let tx = Math.max(-3.5, Math.min(3.5, ((hash(id) % 7) - 3) * .9));
+  // Is (x, z) on a box that will still carry in `soon` ms (and is not warning)?
+  const safeAt = (x: number, z: number, soon = 600) => c.boxes.some(b => {
+    const bb = boxAt(b, t);
+    return x >= bb.x0 + .15 && x <= bb.x1 - .15 && z >= bb.z0 && z <= bb.z1 && bb.y1 <= r.y + .4 && bb.y1 >= r.y - 1.2 && solid(b, g, t) && solid(b, g, t + soon) && !blinkWarn(b, t);
+  });
+  let tx = Math.max(-3.5, Math.min(3.5, ((hash(id) % 7) - 3) * .9)), mz = 1;
+  if (c.elimination) {
+    // Final: head for the safest plate near the middle; stay put while it holds.
+    let best = { x: r.x, z: r.z, score: -Infinity };
+    for (const b of c.boxes) {
+      const cx = (b.x0 + b.x1) / 2, cz = (b.z0 + b.z1) / 2;
+      if (!solid(b, g, t) || !solid(b, g, t + 1200) || blinkWarn(b, t)) continue;
+      const score = -Math.hypot(cx - r.x, cz - r.z) * .6 - Math.hypot(cx, cz - 5) * .3 + (salt % 5) * .01;
+      if (score > best.score) best = { x: cx, z: cz, score };
+    }
+    const dx = best.x - r.x, dz = best.z - r.z, d = Math.hypot(dx, dz);
+    const sweepers = sweeperDanger(c, r, t);
+    return { x: d > .3 ? dx / d : 0, y: d > .3 ? -dz / d : 0, pressA: sweepers.jump && r.grounded, hb: sweepers.duck };
+  }
   // Doors ahead: an opened one, otherwise a guess that changes now and then.
   const row = c.doorRows.find(dr => dr.z > r.z - .5 && dr.z - r.z < 7);
   if (row) { const open = row.doors.find(d => g.doors[d] === "1"); tx = -4 + 2 * row.doors.indexOf(open ?? row.doors[salt % 5]); }
   // Hidden path: a tile known to carry, otherwise a guess that is not known to fail.
   const tiles = c.tileRows.find(tr => tr.z + 1.8 > r.z + .2 && tr.z - r.z < 2.5);
   if (tiles) { const safe = tiles.tiles.find(i => g.tiles[i] === "1"), maybe = tiles.tiles.filter(i => g.tiles[i] !== "2"); const pick = safe ?? maybe[salt % Math.max(1, maybe.length)] ?? tiles.tiles[2]; tx = -3.6 + 1.8 * tiles.tiles.indexOf(pick); }
-  // Seesaws: stay near the middle.
+  // Seesaws and narrow walkways: stay on the boxes ahead.
   if (c.boxes.some(b => b.seesaw !== undefined && r.z > b.z0 - 1 && r.z < b.z1)) tx = 0;
-  // In front of a closed door with another door in mind: step back and sideways first.
-  const blockedDoor = row && Math.abs(tx - r.x) > .4 && row.z - r.z < .9;
-  const dx = tx - r.x, mz = r.pose === "hang" ? 1 : blockedDoor ? -.3 : Math.abs(dx) > 1.2 && row ? .35 : 1, n = Math.hypot(dx * .8, mz);
-  // Look ahead: no ground → jump; low bar → jump; high bar → duck; wall with an edge → jump and hold.
-  const groundAhead = (ahead: number) => c.boxes.some(b => { if (!solid(b, g)) return false; const bb = boxAt(b, t); const x = r.x, z = r.z + ahead; return x >= bb.x0 - .1 && x <= bb.x1 + .1 && z >= bb.z0 && z <= bb.z1 && bb.y1 <= r.y + .4 && bb.y1 >= r.y - 1.2; });
-  let jump = r.grounded && (!groundAhead(.9) || !groundAhead(1.4));
-  let duck = false;
-  for (const sw of c.sweepers) {
-    if (Math.abs(sw.z - r.z) > sw.length + .8 || Math.hypot(r.x - sw.x, r.z - sw.z) > sw.length + .8) continue;
-    const a = sweeperAngle(sw, t + 250), dxs = Math.cos(a), dzs = Math.sin(a), u = Math.max(-sw.length, Math.min(sw.length, (r.x - sw.x) * dxs + (r.z - sw.z) * dzs));
-    if (Math.hypot(r.x - sw.x - dxs * u, r.z - sw.z - dzs * u) > 1.1) continue;
-    if (sw.y1 <= .8) jump = r.grounded; else duck = true;
-  }
-  const wall = c.boxes.find(b => { if (!solid(b, g) || b.door !== undefined) return false; const bb = boxAt(b, t); return r.x > bb.x0 && r.x < bb.x1 && bb.z0 - r.z > 0 && bb.z0 - r.z < 1.2 && bb.y1 - r.y > PC.step && bb.y1 - r.y <= PC.hangMax; });
+  // Stay on the box underfoot (narrow walkways), then aim for the next one ahead.
+  const under = r.grounded && r.ground >= 0 ? c.boxes[r.ground] : undefined;
+  if (under && under.x1 - under.x0 < 9) tx = Math.max(under.x0 + .6, Math.min(under.x1 - .6, tx));
+  const ahead = c.boxes.filter(b => b.z0 >= r.z - .1 && b.z0 < r.z + 3 && b.y1 <= r.y + .4 && b.y1 >= r.y - .6 && b.look !== "wall" && b.door === undefined);
+  ahead.sort((a, b) => a.z0 - b.z0 || Math.abs((a.x0 + a.x1) / 2 - r.x) - Math.abs((b.x0 + b.x1) / 2 - r.x));
+  if (ahead.length && !ahead.some(b => tx >= b.x0 + .3 && tx <= b.x1 - .3)) { const b = ahead[0]; tx = (b.x0 + b.x1) / 2; }
+  // Holds: the block of the next level that is there and stays.
+  const holds = c.boxes.filter(b => b.look === "hold" && b.z0 > r.z - .2 && b.z0 - r.z < 3 && b.y1 > r.y + .5);
+  if (holds.length) { const ok = holds.filter(b => solid(b, g, t) && solid(b, g, t + 1500) && !blinkWarn(b, t)); const pick = (ok.length ? ok : holds).sort((a, b) => Math.abs((a.x0 + a.x1) / 2 - r.x) - Math.abs((b.x0 + b.x1) / 2 - r.x))[0]; tx = (pick.x0 + pick.x1) / 2; }
+  // Trapdoors: wait while the plate ahead is warning or open.
+  // (Only a trapdoor right ahead that is warning, open or about to open makes a bot wait.)
+  const trapAhead = c.boxes.find(b => { if (b.look !== "trap") return false; const z = r.z + 1.8; return tx >= b.x0 && tx <= b.x1 && z >= b.z0 && z <= b.z1; });
+  if (trapAhead && r.grounded && (!solid(trapAhead, g, t) || !solid(trapAhead, g, t + 700) || blinkWarn(trapAhead, t))) mz = safeAt(r.x, r.z, 300) ? 0 : 1;
+  // Steer towards the target lane and against the wind (velocity wanted, as a share of running speed).
+  const wind = windAt(c, r.x, r.y + .8, r.z, t);
+  const wantX = Math.max(-PC.run, Math.min(PC.run, (tx - r.x) * 3 - wind.vx)), wantZ = mz * PC.run * .8 - wind.vz;
+  const n = Math.max(PC.run, Math.hypot(wantX, wantZ));
+  const dx = wantX / n, fz = wantZ / n;
+  // Look ahead: no ground → jump; bars; wall with an edge → jump and hold.
+  const groundAhead = (step: number) => c.boxes.some(b => { if (!solid(b, g, t)) return false; const bb = boxAt(b, t); const x = r.x, z = r.z + step; return x >= bb.x0 - .1 && x <= bb.x1 + .1 && z >= bb.z0 && z <= bb.z1 && bb.y1 <= r.y + .4 && bb.y1 >= r.y - 1.2; });
+  const sweepers = sweeperDanger(c, r, t);
+  let jump = fz > .1 && r.grounded && (!groundAhead(.9) || !groundAhead(1.4)) || sweepers.jump && r.grounded;
+  const wall = c.boxes.find(b => { if (!solid(b, g, t) || b.door !== undefined) return false; const bb = boxAt(b, t); return r.x > bb.x0 && r.x < bb.x1 && bb.z0 - r.z > 0 && bb.z0 - r.z < 1.2 && bb.y1 - r.y > PC.step && bb.y1 - r.y <= PC.hangMax; });
   if (wall && boxAt(wall, t).y1 - r.y > .5) jump = r.grounded;
-  // Pushers and rollers close by: hop over low ones.
-  const pusher = c.boxes.find(b => (b.look === "roller") && (() => { const bb = boxAt(b, t + 200); return r.z + 1.3 > bb.z0 && r.z < bb.z1 + .2 && r.x + 1 > bb.x0 && r.x - 1 < bb.x1; })());
-  if (pusher) jump = r.grounded;
-  return { x: dx * .8 / n, y: -mz / n, pressA: jump && !duck, hb: duck, ha: !!wall || r.pose === "hang" };
+  // Rollers close by: hop over them.
+  if (c.boxes.some(b => b.look === "roller" && (() => { const bb = boxAt(b, t + 200); return r.z + 1.3 > bb.z0 && r.z < bb.z1 + .2 && r.x + 1 > bb.x0 && r.x - 1 < bb.x1; })())) jump = r.grounded;
+  return { x: dx, y: -fz, pressA: jump && !sweepers.duck, hb: sweepers.duck, ha: !!wall || r.pose === "hang" || holds.length > 0 };
+}
+
+/** Spinning bars that will reach the racer shortly: jump over low ones, duck under high ones. */
+function sweeperDanger(c: Course, r: Racer, t: number) {
+  let jump = false, duck = false;
+  for (const sw of c.sweepers) {
+    if (Math.hypot(r.x - sw.x, r.z - sw.z) > sw.length + .8) continue;
+    const a = sweeperAngle(sw, t + 250), dx = Math.cos(a), dz = Math.sin(a), u = Math.max(-sw.length, Math.min(sw.length, (r.x - sw.x) * dx + (r.z - sw.z) * dz));
+    if (Math.hypot(r.x - sw.x - dx * u, r.z - sw.z - dz * u) > 1.1) continue;
+    if (sw.y1 <= .8) jump = true; else duck = true;
+  }
+  return { jump, duck };
 }
 
 export const PARCOURS_IDS = COURSE_IDS;
+
+/**
+ * Racer a device shows: its own while it is still racing; afterwards (or as a
+ * spectator) the racer in player slot `slot` if still racing, else the leader.
+ */
+export function shownRacer(g: ParcoursGame, players: readonly { id: string }[], viewer: string, slot?: number) {
+  const own = g.racers[viewer];
+  if (own && own.pose !== "done" && own.pose !== "out") return own;
+  const racing = players.map(p => g.racers[p.id]).filter(r => r && r.pose !== "done" && r.pose !== "out");
+  const chosen = slot !== undefined ? g.racers[players[slot]?.id ?? ""] : undefined;
+  if (chosen && racing.includes(chosen)) return chosen;
+  return [...racing].sort((a, b) => b.best - a.best)[0] ?? own ?? Object.values(g.racers)[0];
+}
+export { FINAL_IDS } from "./parcoursCourses";

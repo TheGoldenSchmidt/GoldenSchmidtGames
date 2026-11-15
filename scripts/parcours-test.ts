@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
 import { advanceMatch, botMatchInput, createMatch, matchStandings, publicMatch, removeMatchPlayer, setMatchControl, type MatchId } from "../shared/matches/framework";
-import { PC, type ParcoursGame, type Racer } from "../shared/matches/parcours";
-import { course, COURSE_IDS, gooAt, sweeperAngle, type CourseId } from "../shared/matches/parcoursCourses";
+import { PC, shownRacer, type ParcoursGame, type Racer } from "../shared/matches/parcours";
+import { BLINK_WARN, blinkOpen, blinkWarn, course, COURSE_IDS, FINAL_IDS, gooAt, sweeperAngle, windAt, type CourseId } from "../shared/matches/parcoursCourses";
 import { NEUTRAL_MATCH_INPUT, type MatchInput, type MatchState } from "../shared/matches/types";
 import { createPartyGame, partyMiniResults, tickParty } from "../shared/party";
 import { PartyBotDriver } from "../shared/partyBots";
 
 type PS = MatchState<ParcoursGame>;
+const ALL = [...COURSE_IDS, ...FINAL_IDS];
 const make = (id: CourseId, count = 2, seed = 4) => createMatch(id as MatchId, Array.from({ length: count }, (_, i) => ({ id: `p${i}`, style: i })), seed) as PS;
 const seqs = new Map<string, number>();
 /** Sends held input plus optional taps (a = jump, b = dive). */
@@ -21,7 +22,7 @@ const park = (s: PS, id = "p1") => put(s.game.racers[id], 4.4, 0, 2);
 const forward = { y: -1 };
 
 // Start: alle nebeneinander am ersten Kontrollpunkt, auf dem Boden, Geheimnisse nicht in der Sicht.
-for (const id of COURSE_IDS) {
+for (const id of ALL) {
   const s = make(id, 6), c = course(id), racers = Object.values(s.game.racers);
   assert.equal(new Set(racers.map(r => r.x.toFixed(2))).size, 6, `${id}: verschiedene Startplätze`);
   run(s, 300);
@@ -179,8 +180,73 @@ for (const id of COURSE_IDS) {
   assert.equal(quit.game.racers.p1.pose, "out");
 }
 
-// Komplette Partien mit Bots über die Party (2, 4, 6 je Lauf), JSON-Neustart, Determinismus.
-for (const id of COURSE_IDS) for (const count of [2, 4, 6]) {
+// Klappen und wechselnde Griffe: Warnung vor dem Öffnen, offen trägt nichts, man fällt; am Griff hängend fällt man mit.
+{
+  const c = course("fallklappen"), trap = c.boxes.find(b => b.blink)!;
+  let t = 0; while (!blinkOpen(trap, t)) t += 50;
+  assert.ok(blinkWarn(trap, t - BLINK_WARN / 2) > .3 && blinkWarn(trap, t - BLINK_WARN - 100) === 0, "Warnung kurz vor dem Öffnen");
+  const s = make("fallklappen"); park(s); const r = s.game.racers.p0;
+  s.time = t - 200; put(r, (trap.x0 + trap.x1) / 2, 0, (trap.z0 + trap.z1) / 2); run(s, 150, () => send(s, "p0"));
+  assert.ok(r.grounded, "Geschlossene Klappe trägt");
+  run(s, 600, () => send(s, "p0"));
+  assert.ok(!r.grounded && r.y < -.5, "Offene Klappe: man fällt");
+  // Finale-Klappen bleiben die ersten Sekunden zu.
+  const f = course("standhaft");
+  assert.ok(f.boxes.every(b => !blinkOpen(b, 11000)), "Finale: erst nach 12 s öffnet sich etwas");
+}
+
+// Kanten über Sprunghöhe: ohne Festhalten kein Hochrutschen (auch nicht an der Kletterwand).
+{
+  const s = make("kletterwand"); park(s); const r = s.game.racers.p0, hold = course("kletterwand").boxes.find(b => b.look === "hold" && b.y1 < 2)!;
+  put(r, (hold.x0 + hold.x1) / 2, 0, hold.z0 - .8);
+  run(s, 1500, () => send(s, "p0", forward, r.grounded ? "a" : undefined));
+  assert.ok(r.y < 1, `Ohne Festhalten nicht hoch (${r.y})`);
+}
+
+// Wind: treibt seitlich, nur solange er bläst; Gegenwind bremst auf der Rampe.
+{
+  const c = course("windkanal"), side = c.winds[0];
+  let on = 0; while (((on / side.period + side.phase) % 1) >= side.on) on += 50;
+  let off = on; while (((off / side.period + side.phase) % 1) < side.on) off += 50;
+  assert.ok(windAt(c, 0, 1, 8, on).vx > 2 && windAt(c, 0, 1, 8, off).vx === 0);
+  const s = make("windkanal"); park(s); const r = s.game.racers.p0;
+  s.time = on; put(r, 0, 0, 8); run(s, 300, () => send(s, "p0"));
+  assert.ok(r.x > .5, `Seitenwind treibt (${r.x})`);
+}
+
+// Finale: Sturz = raus (kein Kontrollpunkt), wer zuletzt steht, gewinnt; Balken ruhen am Anfang; schwächere Stöße.
+{
+  const c = course("standhaft");
+  assert.equal(sweeperAngle(c.sweepers[0], 0), sweeperAngle(c.sweepers[0], 2900), "Balken ruhen bis 3 s");
+  const s = make("standhaft", 3);
+  run(s, 200, () => s.players.forEach(p => send(s, p.id)));
+  put(s.game.racers.p1, 0, 0, 40, { grounded: false, pose: "air" });
+  run(s, 1500, () => s.players.forEach(p => send(s, p.id)));
+  assert.equal(s.game.racers.p1.pose, "out", "Sturz im Finale = raus"); assert.equal(s.game.racers.p1.respawnAt, 0);
+  assert.equal(s.done, false);
+  put(s.game.racers.p2, 0, 0, 40, { grounded: false, pose: "air" });
+  run(s, 1500, () => s.players.forEach(p => send(s, p.id)));
+  assert.equal(s.done, true, "Eine Person steht noch: Ende");
+  const table = matchStandings(s);
+  assert.deepEqual(table.map(r => r.id), ["p0", "p2", "p1"], "Später gefallen = besser");
+  assert.ok(s.events.some(e => e.kind === "finale" && e.ids[0] === "p0"));
+}
+
+// Zuschauen: eigene Figur, solange sie läuft; danach die gewählte oder die führende, die noch läuft.
+{
+  const s = make("kreiselkurs", 3), g = s.game;
+  g.racers.p1.best = 20; g.racers.p2.best = 10;
+  assert.equal(shownRacer(g, s.players, "p0").id, "p0");
+  g.racers.p0.pose = "done";
+  assert.equal(shownRacer(g, s.players, "p0").id, "p1", "Führende Person");
+  assert.equal(shownRacer(g, s.players, "p0", 2).id, "p2", "Gewählte Person");
+  g.racers.p2.pose = "out";
+  assert.equal(shownRacer(g, s.players, "p0", 2).id, "p1", "Ausgeschiedene nicht");
+  assert.equal(shownRacer(g, s.players, "zuschauer").id, "p1");
+}
+
+// Komplette Partien mit Bots über die Party (2, 4, 6 je Lauf und Finale), JSON-Neustart, Determinismus.
+for (const id of ALL) for (const count of [2, 4, 6]) {
   const players = Array.from({ length: count }, (_, i) => ({ id: `b${i}`, name: `Bot ${i}`, bot: true }));
   let g = createPartyGame(players, undefined, true, 90 + count, 0, "free-minigame", { miniId: id });
   const driver = new PartyBotDriver(); let now = 0;
@@ -188,9 +254,9 @@ for (const id of COURSE_IDS) for (const count of [2, 4, 6]) {
   assert.equal(g.phase, "finished", `${id}: ${count} Bots`);
   assert.ok(partyMiniResults(g).every(r => r.participated));
 }
-for (const id of COURSE_IDS) {
+for (const id of ALL) {
   const play = (restart: boolean) => { let s = make(id, 4, 61); for (let t = 50, n = 0; !s.done && t < 130000; t += 50) { if (restart && t === 3000) s = JSON.parse(JSON.stringify(s)); for (const p of s.players) setMatchControl(s, p.id, botMatchInput(s, p.id), ++n, t); advanceMatch(s, t); } return s; };
   const a = play(false), b = play(true);
   assert.deepEqual(a.game.order, b.game.order, `${id}: deterministisch auch nach Neustart`); assert.equal(a.time, b.time);
 }
-console.log("Hindernis-Parcours erfolgreich: Start und Geheimnisse, Laufen, Sprunghöhe, Graben und Kontrollpunkt, Hechten, Drehbalken (Springen und Ducken), Festhalten an Kanten und an anderen, Türen, Geisterplatten, Wippen, Förderband, Glibber, Zielreihenfolge und Zielschluss, Aufgeben, Bots in allen fünf Läufen, JSON-Neustart und Determinismus.");
+console.log("Hindernis-Parcours erfolgreich (8 Läufe und Finale): Start und Geheimnisse, Klappen mit Warnung, Kanten ohne Hochrutschen, Wind, Finale mit Ausscheiden, Zuschauen, Laufen, Sprunghöhe, Graben und Kontrollpunkt, Hechten, Drehbalken (Springen und Ducken), Festhalten an Kanten und an anderen, Türen, Geisterplatten, Wippen, Förderband, Glibber, Zielreihenfolge und Zielschluss, Aufgeben, Bots in allen Läufen, JSON-Neustart und Determinismus.");

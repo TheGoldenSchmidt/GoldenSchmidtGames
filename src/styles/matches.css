@@ -129,6 +129,14 @@ body:has(.party-screen--playing .match-game) { padding-block:0; }
 .parcours-buttons { display:grid; grid-template-columns:repeat(2, 68px); gap:8px; }
 .match-controls .parcours-buttons .match-action { width:68px; height:68px; -webkit-touch-callout:none; }
 .match-controls .parcours-buttons .match-action span { font-size:.56rem; letter-spacing:-.01em; }
+/* Watching others after the finish: one button at the bottom. */
+.match-controls .parcours-watch { margin:0 auto; display:flex; align-items:center; gap:8px; min-height:48px; padding:0 18px; border-radius:999px; border:2px solid #24133f; background:#ffe44e; color:#24133f; font-weight:900; box-shadow:0 4px 0 #24133f; }
+.match-controls .parcours-watch i { width:14px; height:14px; border-radius:50%; border:2px solid #24133f; }
+.match-controls .parcours-watch:focus-visible { outline:3px solid #fff9ed; outline-offset:3px; }
+.match-preview--fallklappen { background:repeating-linear-gradient(90deg, #ffe3a3 0 22px, #1d2466 22px 26px); color:#ff6a1f; }
+.match-preview--windkanal { background:linear-gradient(90deg, #bfe6ff, #1d2466); color:#ffe44e; }
+.match-preview--kletterwand { background:repeating-linear-gradient(0deg, #c98bff 0 16px, #1d2466 16px 22px); color:#ffe44e; }
+.match-preview--standhaft { background:radial-gradient(circle at 50% 55%, #ffe3a3 35%, #1d2466 37%); color:#ff5f8f; }
 .match-preview--tuerenlotto { background:repeating-linear-gradient(90deg, #ff86c8 0 18px, #6544e8 18px 24px); color:#ffe44e; }
 .match-preview--kreiselkurs { background:radial-gradient(circle at 50% 50%, #ffd166 30%, #1d2466 32%); color:#ff5f8f; }
 .match-preview--wippenwerk { background:linear-gradient(#1d2466 55%, #57e4cb 55%); color:#ffd166; }

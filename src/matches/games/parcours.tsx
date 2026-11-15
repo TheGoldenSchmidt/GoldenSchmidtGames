@@ -1,9 +1,10 @@
-import { PC, type ParcoursGame } from "../../../shared/matches/parcours";
-import { boxAt, course, gooAt, sweeperAngle, type Look } from "../../../shared/matches/parcoursCourses";
+import { useState } from "react";
+import { PC, shownRacer, type ParcoursGame } from "../../../shared/matches/parcours";
+import { blinkOpen, blinkWarn, boxAt, course, gooAt, sweeperAngle, type Look } from "../../../shared/matches/parcoursCourses";
 import { ActionButton, CameraSwipe, Stick } from "../controls";
 import { chaseStick, lerp, playerColor, type MatchClient, type MatchControlsProps, type MatchFrame } from "../client";
 
-const LOOK_FILL: Record<Look, string> = { floor: "#ffd166", wall: "#6544e8", door: "#ff86c8", pusher: "#e3263b", belt: "#3a3f66", step: "#ffe3a3", seesaw: "#57e4cb", tile: "#bfe6ff", roller: "#b23a48", ledge: "#ffb347", finish: "#fff9ed" };
+const LOOK_FILL: Record<Look, string> = { floor: "#ffd166", wall: "#6544e8", door: "#ff86c8", pusher: "#e3263b", belt: "#3a3f66", step: "#ffe3a3", seesaw: "#57e4cb", tile: "#bfe6ff", roller: "#b23a48", ledge: "#ffb347", finish: "#fff9ed", trap: "#ffe3a3", hold: "#c98bff" };
 
 /** Canvas fallback: the course from above around the own racer, forward is up. */
 function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
@@ -16,7 +17,8 @@ function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
   for (const { b, bb } of boxes) {
     if (b.door !== undefined && g.doors[b.door] === "1") continue;
     if (b.tile !== undefined && g.tiles[b.tile] === "2") continue;
-    ctx.fillStyle = b.tile !== undefined && g.tiles[b.tile] === "1" ? "#7be38f" : LOOK_FILL[b.look];
+    if (blinkOpen(b, t)) continue;
+    ctx.fillStyle = b.tile !== undefined && g.tiles[b.tile] === "1" ? "#7be38f" : blinkWarn(b, t) ? "#ff6a1f" : LOOK_FILL[b.look];
     ctx.fillRect(X(bb.x0), Y(bb.z1), (bb.x1 - bb.x0) * scale, (bb.z1 - bb.z0) * scale);
     if (b.y1 - (b.y0 + (b.look === "floor" || b.look === "finish" || b.look === "belt" ? 1 : 0)) > 1) { ctx.strokeStyle = "#24133f"; ctx.lineWidth = 2; ctx.strokeRect(X(bb.x0), Y(bb.z1), (bb.x1 - bb.x0) * scale, (bb.z1 - bb.z0) * scale); }
   }
@@ -40,6 +42,14 @@ function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
 
 function ParcoursControls({ io, view, viewer, active, world }: MatchControlsProps) {
   const g = view.game as ParcoursGame, me = g.racers[viewer], off = !active || !me || me.pose === "done" || me.pose === "out";
+  const [, redraw] = useState(0), local = io.local as Record<string, number>;
+  // Watching others (after the finish, when out, as a spectator): pick the next racer still in the race.
+  const watching = !me || me.pose === "done" || me.pose === "out";
+  const shown = shownRacer(g, view.players, viewer, local.watch), slots = view.players.map((p, i) => ({ p, i })).filter(({ p }) => { const r = g.racers[p.id]; return r && r.pose !== "done" && r.pose !== "out" && p.id !== viewer; });
+  const next = () => { const at = slots.findIndex(({ p }) => p.id === shown?.id); const pick = slots[(at + 1) % slots.length]; if (pick) { local.watch = pick.i; redraw(n => n + 1); } };
+  const shownPlayer = view.players.find(p => p.id === shown?.id);
+  if (watching && !view.done) return <>{slots.length > 1 && <button type="button" className="parcours-watch" onClick={next}>
+    <i aria-hidden="true" style={{ background: playerColor(shownPlayer?.style ?? 0) }} />Nächste Person zeigen</button>}</>;
   return <>
     {world && <CameraSwipe local={io.local} />}
     <Stick disabled={!active} onMove={(x, y) => chaseStick(io, x, y)} />
@@ -51,6 +61,9 @@ function ParcoursControls({ io, view, viewer, active, world }: MatchControlsProp
     </div>
   </>;
 }
+
+/** Finals count seconds standing instead of metres. */
+export const finalClient = (): MatchClient => ({ ...parcoursClient, unit: "Sekunden" });
 
 export const parcoursClient: MatchClient = {
   render,
@@ -65,16 +78,17 @@ export const parcoursClient: MatchClient = {
     const g = view.game as ParcoursGame, me = g.racers[viewer];
     if (!me || view.done) return undefined;
     if (me.respawnAt) return { title: "Abgestürzt!", text: "Zurück zum Kontrollpunkt …" };
-    if (me.pose === "out") return { title: "Vom Glibber erwischt", text: "Du schaust den anderen zu." };
     return undefined;
   },
   quiet: ["jump", "dive", "land", "climb"],
   Controls: ParcoursControls,
   status(view, viewer) {
-    const g = view.game as ParcoursGame, c = course(g.course), me = g.racers[viewer], left = Math.max(0, Math.ceil(((g.firstFinish !== undefined ? g.firstFinish + PC.finishGrace : PC.maxMs) - view.time) / 1000));
+    const g = view.game as ParcoursGame, c = course(g.course), me = g.racers[viewer], left = Math.max(0, Math.ceil(((g.firstFinish !== undefined ? g.firstFinish + PC.finishGrace : c.limitMs ?? PC.maxMs) - view.time) / 1000));
     if (!me) return `noch ${left} s`;
     const place = g.order.indexOf(viewer);
-    return place >= 0 ? `Im Ziel als ${place + 1}. · noch ${left} s` : `${Math.round(me.best)} von ${c.finishZ} m · ${g.firstFinish !== undefined ? "Zielschluss in" : "noch"} ${left} s`;
+    if (c.elimination) return me.pose === "out" ? `Raus – du schaust zu · noch ${left} s` : `Du stehst noch · ${Object.values(g.racers).filter(r => r.pose !== "out").length} stehen · noch ${left} s`;
+    if (me.pose === "out") return `Raus – du schaust zu · noch ${left} s`;
+    return place >= 0 ? `Im Ziel als ${place + 1}. · du schaust zu · noch ${left} s` : `${Math.round(me.best)} von ${c.finishZ} m · ${g.firstFinish !== undefined ? "Zielschluss in" : "noch"} ${left} s`;
   },
   sound(event, viewer) {
     const mine = event.ids[0] === viewer;

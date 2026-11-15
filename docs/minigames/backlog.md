@@ -31,12 +31,13 @@ Ergebnis, automatisch getestet) · **blockiert**.
 | 6 | Floor is Lava | `lava` | 2–6 | P2 | fertig | Regeln (`floor-is-lava-test`), Browser `phone` |
 | 7 | Sumo Smash | `sumo` | 2–6 | P3 | fertig | Regeln (`ring-games-test`), Browser `phone` |
 | 8 | Bumper Mayhem | `bumpercars` | 2–6 | P3 | fertig | Regeln (`ring-games-test`), Browser `phone` |
-| 9 | Chaos Run | `chaosrun` | 2–6 | P3 | fertig | Regeln (`chaos-run-test`), Browser `phone` |
+| 9 | Chaos Run | `chaosrun` | 2–6 | P3 | fertig, seit Nov. 2026 bei den 1st Generation Minigames | Regeln (`chaos-run-test`), Browser `phone` |
 | 10 | Arrow Masters | `arrows` | 2–6 | P4 | fertig | Regeln (`arrow-masters-test`), Browser `phone` |
 | 11 | Tower Tumble | `tower` | 2–6 | P4 | fertig | Regeln (`tower-tumble-test`), Browser `phone` |
 | 12 | Hook Wars | `hooks` | 2–6 | P4 | fertig, seit Nov. 2026 bei den 1st Generation Minigames | Regeln (`hook-wars-test`), Browser `phone` |
 | 13 | Tank Trouble – Turmsicht | `tankview` | 2–6 | P2 | fertig (Nov. 2026, Gerätetest offen) | Regeln (`tank-view-test`), Browser `phone` |
-| 14–18 | Hindernis-Parcours: Türenlotto, Kreiselkurs, Wippenwerk, Glibberflut, Geisterpfad | `tuerenlotto`, `kreiselkurs`, `wippenwerk`, `glibberflut`, `geisterpfad` | 2–6 | P2 | fertig (Nov. 2026, Gerätetest und Balance offen) | Regeln (`parcours-test`), Browser `phone` |
+| 14–21 | Hindernis-Parcours: Türenlotto, Kreiselkurs, Wippenwerk, Glibberflut, Geisterpfad, Fallklappen, Windkanal, Kletterwand (im Zufallspool ein Eintrag) | `tuerenlotto`, `kreiselkurs`, `wippenwerk`, `glibberflut`, `geisterpfad`, `fallklappen`, `windkanal`, `kletterwand` | 2–6 | P2 | fertig (Nov. 2026, Gerätetest und Balance offen) | Regeln (`parcours-test`), Browser `phone` |
+| 22 | Standhaft (Finale) | `standhaft` | 2–6 | P2 | fertig (Nov. 2026, Gerätetest offen) | Regeln (`parcours-test`), Browser `phone` |
 
 „Fertig“ heißt: in Lobby, Zufallspool, Übung (gegen Bots), Bot-Testraum,
 Wettbewerb und Inselparty spielbar; Ergebnis fließt in die bestehende Wertung.
@@ -169,8 +170,9 @@ Gefühl auf echten Handys ist für die umgesetzten Punkte weiter ungeprüft.
 
 ## Nächste Schritte
 
-1. Gerätetest aller zwölf Spiele auf mindestens zwei echten Handys
-   (Android/iOS) im Node- und Handy-Modus; Ergebnisse hier eintragen.
+1. Gerätetest auf mindestens zwei echten Handys (Android/iOS) im Node- und
+   Handy-Modus nach [geraetetest.md](geraetetest.md) (Testmodus `?messung`);
+   Ergebnisse dort eintragen, danach Kamera- und Balancewerte nachstellen.
 2. `nearby.spec.ts` in CI beobachten; bei Fehlern mit Match-Spielen den
    Handy-Worker prüfen.
 3. Nach Rückmeldung aus echten Runden Werte feinjustieren (Tempo von Light

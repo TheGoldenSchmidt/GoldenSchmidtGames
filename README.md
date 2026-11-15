@@ -60,23 +60,24 @@ Beide Modi verwenden die bestehenden Arena- und Gleichstandsregeln und vergeben 
 
 ## Neue Match-Minispiele
 
-Zusätzlich zu den 14 ersten 3D-Minispielen gibt es zwölf 2D-Arcade-Minispiele für Smartphones; Hook Wars zählt inzwischen zu den **1st Generation Minigames**:
+Zusätzlich zu den 14 ersten 3D-Minispielen gibt es zwölf 2D-Arcade-Minispiele für Smartphones; Hook Wars und Chaos Run zählen inzwischen zu den **1st Generation Minigames**:
 
 - **Quick Draw** (2–6): Duell bis 3 Siege oder 5 Gruppen-Durchgänge mit 3/2/1 Punkten, Täuschungen, Fehlstarts und Stechen. Der Server allein kennt den Signalzeitpunkt und prüft gemeldete Reaktionszeiten gegen seine eigene Uhr und die gemessene Laufzeit.
 - **Light Trails** (2–6): Gleiter mit Lichtspuren auf einem Raster, Wischen oder ⟲/⟳, schrumpfende Arena, drei Durchgänge.
 - **Neon Pong** (1v1 oder 2v2): eigenes Tor unten, Schläger per Finger, Power-ups, 7 Tore oder 90 Sekunden mit Golden Goal.
 - **Tank Trouble** (2–6): Labyrinth mit abprallenden Kugeln, zerstörbaren Mauern, Power-ups und Respawn; 7 Abschüsse oder 90 Sekunden mit Stechen. In 2.5D mit der gewählten Figur in der Panzerluke; ohne WebGL die 2D-Fläche.
 - **Bomb Arena** (2–6): Bomben mit Kettenreaktionen, Kisten, Power-ups (Reichweite, Bombe, Tempo, Kick), schließende Arena, zwei Durchgänge und Sudden Death. In 2.5D mit den gewählten Figuren; ohne WebGL die 2D-Fläche.
-- **Hindernis-Parcours** (2–6, fünf Läufe: Türenlotto, Kreiselkurs, Wippenwerk, Glibberflut, Geisterpfad): selbst gelaufener Gameshow-Hindernislauf in 3D mit Verfolgerkamera; laufen und lenken, springen, hechten, festhalten (Kanten und andere), ducken. Kontrollpunkte, Ankunftsreihenfolge entscheidet.
+- **Hindernis-Parcours** (2–6, acht Läufe: Türenlotto, Kreiselkurs, Wippenwerk, Glibberflut, Geisterpfad, Fallklappen, Windkanal, Kletterwand): selbst gelaufener Gameshow-Hindernislauf in 3D mit Verfolgerkamera (per Wischen drehbar); laufen und lenken, springen, hechten, festhalten (Kanten und andere), ducken. Kontrollpunkte, Ankunftsreihenfolge entscheidet; wer im Ziel oder raus ist, schaut anderen zu. In der Zufallsauswahl zählen die Läufe zusammen als ein Spiel.
+- **Standhaft** (2–6): Finale auf Klappen unter zwei Drehbalken; wer fällt, scheidet aus, wer zuletzt steht, gewinnt.
 - **Tank Trouble – Turmsicht** (2–6): Tank Trouble mit Kamera hinter dem eigenen Panzer; Gegner und Kugeln sieht man nur bei freier Sichtlinie (die Raumautorität sendet nichts anderes).
 - **Floor is Lava** (2–6): Verfolgerkamera hinter der eigenen Figur (Übersicht per Knopf), drei Etagen Tempelplatten über Lava, die unter den Füßen zerbröseln und teils zurückkehren; wer durch ein Loch fällt, landet eine Etage tiefer, erst unter der untersten wartet die Lava. Sprung und Schubser mit Abklingzeit, einstürzender Rand mit Vorwarnung, drei Durchgänge und Stechrunde. In 2.5D mit den gewählten Figuren; ohne WebGL die 2D-Fläche.
 - **Sumo Smash** und **Bumper Mayhem** (2–6): Ring-Outs mit Stoß beziehungsweise Turbo, 3 Leben, schrumpfende Arena, Entscheidung nach 75 Sekunden und Sudden Death. Sumo Smash in 2.5D mit animierten Figuren (Quaternius, CC0) und mitgehender Kamera.
-- **Chaos Run** (2–6): Auto-Runner mit Lücken, Hämmern, Plattformen, einstürzenden Brücken, Wänden und Balken; Checkpoints und Fortschrittsanzeige. In 2.5D mit animierten Figuren in eigenen Spuren und Verfolgerkamera.
+- **Chaos Run** (2–6, 1st Generation): Auto-Runner mit Lücken, Hämmern, Plattformen, einstürzenden Brücken, Wänden und Balken; Checkpoints und Fortschrittsanzeige. In 2.5D mit animierten Figuren in eigenen Spuren und Verfolgerkamera.
 - **Arrow Masters** (2–6): 10 Sekunden verdeckt zielen, alle Pfeile fliegen gleichzeitig, Wind, Hindernisse, Zielscheiben, fünf Runden und Präzisions-Stechen.
 - **Tower Tumble** (2–6): Turmrennen – alle bauen gleichzeitig auf einem eigenen schmalen Sockel mit derselben Steinfolge; Steine mit ⇦/⇨ verschieben, drehen, schnell fallen lassen; nach dem Aufsetzen echte Starrkörperphysik. Wer zuerst 2 s über 16 m steht, gewinnt, sonst nach 2 Minuten die Höhe.
 - **Hook Wars** (2–6, 1st Generation): Greifhaken mit Schwingen und Heranziehen, Energiekerne in die eigene Zone bringen, Gegnern Kerne abluchsen.
 
-In Inselparty, Roll It Up! und Schlag den GoldenSchmidt blendet die Checkbox **1st Generation Minigames** die 14 ersten 3D-Minispiele und Hook Wars aus der Zufallsauswahl aus; standardmäßig sind sie dabei. Im freien Modus stehen beide Gruppen getrennt zur Wahl. Spiele, die nicht zur Spielerzahl passen, werden nicht gezogen. Übung gegen Bots, Aufgeben und die bisherigen Pausen-, Wiederbeitritts- und Wertungsabläufe gelten auch hier. Stand, Regeln und Architektur: [Backlog](docs/minigames/backlog.md), [Spezifikation](docs/minigames/spezifikation.md), [Konzept](docs/minigames/konzept.md).
+In Inselparty, Roll It Up! und Schlag den GoldenSchmidt blendet die Checkbox **1st Generation Minigames** die 14 ersten 3D-Minispiele, Hook Wars und Chaos Run aus der Zufallsauswahl aus; standardmäßig sind sie dabei. Im freien Modus stehen beide Gruppen getrennt zur Wahl. Spiele, die nicht zur Spielerzahl passen, werden nicht gezogen. Übung gegen Bots, Aufgeben und die bisherigen Pausen-, Wiederbeitritts- und Wertungsabläufe gelten auch hier. Für Gerätetests zeigt `?messung` am Ende der Adresse ein Messfeld (Bildrate, Netz, Kamera-Regler); Ablauf im [Gerätetest-Protokoll](docs/minigames/geraetetest.md). Stand, Regeln und Architektur: [Backlog](docs/minigames/backlog.md), [Spezifikation](docs/minigames/spezifikation.md), [Konzept](docs/minigames/konzept.md).
 
 ## Roll It Up!
 
