@@ -63,8 +63,8 @@ export async function participate(page:Page,session:Session,otherSeq:number) {
   const g=(await session.state()).partyGame!;
   if(g.mini?.match){
     await matchStarted(page);
-    // A short drag works for every control type (tap zone, stick, slider, swipe and aim pads).
-    const box=(await page.locator(".match-controls button, .match-controls [role=group], .match-controls [role=slider]").first().boundingBox())!;
+    // A short drag works for every control type (tap zone, stick, slider, swipe and aim pads); camera swipe and camera toggle send no game input.
+    const box=(await page.locator(".match-controls button:not(.match-camera), .match-controls [role=group]:not(.match-camera-swipe), .match-controls [role=slider]").first().boundingBox())!;
     await page.mouse.move(box.x+box.width*.4,box.y+box.height*.5);await page.mouse.down();
     await page.mouse.move(box.x+box.width*.4+45,box.y+box.height*.5,{steps:3});await page.mouse.up();
     await expect.poll(async()=>(await session.state()).partyGame!.mini!.runs[session.ids[0]].lastInput).toBeGreaterThan(0);
