@@ -6,6 +6,7 @@ import { MATCH_CLIENTS } from "./registry";
 import { playerColor, type MatchIO, type MatchWorld } from "./client";
 import { preloadFigures } from "../figures/catalog";
 import { playSfx, setSoundEnabled, soundEnabled, unlockSound, vibrate } from "./sfx";
+import { measureEnabled, MeasurePanel } from "./MeasurePanel";
 
 /** True when this browser can create a WebGL context (checked once). */
 let webgl: boolean | undefined;
@@ -33,6 +34,8 @@ export function MatchStage({ game, id, now, control, busy = false }: Props) {
   const local = useRef<Record<string, number>>({});
   const activeRef = useRef(active), controlRef = useRef(control), lastSend = useRef(0), pending = useRef<number | undefined>(undefined);
   const lastEvent = useRef(match.eventSeq);
+  // Test mode only: arrival times of snapshots for the measurement panel.
+  const [measuring] = useState(measureEnabled), arrivals = useRef<number[]>([]);
   const [feedback, setFeedback] = useState({ text: "", key: 0, good: true });
   const [sound, setSound] = useState(soundEnabled());
   activeRef.current = active; controlRef.current = control;
@@ -40,6 +43,7 @@ export function MatchStage({ game, id, now, control, busy = false }: Props) {
   // Keep the latest two snapshots for interpolation; ignore stale ones.
   if (match !== snapshots.current.cur && match.time >= snapshots.current.cur.time) {
     snapshots.current = { prev: snapshots.current.cur.time === match.time ? snapshots.current.prev : snapshots.current.cur, cur: match, at: performance.now(), echo: game.serverTime ?? Date.now() };
+    if (measuring) { arrivals.current.push(snapshots.current.at); if (arrivals.current.length > 200) arrivals.current.shift(); }
   }
   // A reloaded device continues its tap counters from the authority's state.
   if (own) { input.current.ca = Math.max(input.current.ca, own.usedA); input.current.cb = Math.max(input.current.cb, own.usedB); input.current.cn = Math.max(input.current.cn, own.usedN); }
@@ -163,6 +167,7 @@ export function MatchStage({ game, id, now, control, busy = false }: Props) {
       {world !== "off" && (() => { const banner = client.banner?.(match, id); return banner && <div className="match-banner" role="status"><b>{banner.title}</b><span>{banner.text}</span></div>; })()}
       <div className="match-controls"><Controls io={io} view={match} viewer={id} active={active} world={world === "ready"} /></div>
       {count > 0 && <div className="match-countdown" role="status"><b key={count}>{count}</b><span>{meta.controls}</span></div>}
+      {measuring && <MeasurePanel gameId={matchId} name={meta.name} local={local.current} arrivals={arrivals} rtt={own?.rtt} chase={!!client.chase && world === "ready"} />}
       {match.done && <div className="match-countdown match-done" role="status"><b>✓</b><span>Das Ergebnis steht fest!</span></div>}
       {!own && <div className="match-countdown" role="status"><span>Du schaust zu.</span></div>}
       {feedback.text && count <= 0 && !match.done && <p className={`match-feedback ${feedback.good ? "is-good" : "is-bad"}`} key={feedback.key} role="status">{feedback.text}</p>}

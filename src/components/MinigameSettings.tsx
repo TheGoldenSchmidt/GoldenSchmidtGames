@@ -6,7 +6,7 @@ import { MINIGAME_DEFAULTS, type MinigameMode, type MinigameOptions } from "../.
 /** The "1st Generation Minigames" (14 3D arenas and Hook Wars) can be left out of random draws. */
 export function ClassicToggle({ value, onChange }: { value: boolean; onChange: (value: boolean) => void }) {
   return <label className="option-toggle classic-toggle">
-    <span><strong>{FIRST_GEN_LABEL}</strong><small>Die 14 ersten 3D-Minispiele und Hook Wars mitspielen. Ohne Haken kommen nur die neuen Spiele dran.</small></span>
+    <span><strong>{FIRST_GEN_LABEL}</strong><small>Die 14 ersten 3D-Minispiele, Hook Wars und Chaos Run mitspielen. Ohne Haken kommen nur die neuen Spiele dran.</small></span>
     <input type="checkbox" checked={value} onChange={event => onChange(event.target.checked)} />
   </label>;
 }

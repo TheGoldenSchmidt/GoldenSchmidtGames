@@ -1,5 +1,5 @@
 import { TANK_FIELD, TT, wallRects, type TankGame } from "../../../shared/matches/tankTrouble";
-import { AimPad, Stick } from "../controls";
+import { AimPad, CameraSwipe, Stick } from "../controls";
 import { chaseAim, chaseStick, lerp, playerColor, type ChaseLocal, type MatchClient, type MatchFrame } from "../client";
 
 const POWER_ICON = { rapid: "⚡", triple: "⋔", shield: "⛨" } as const;
@@ -118,10 +118,12 @@ export const tankTroubleClient: MatchClient = {
  */
 export const tankViewClient: MatchClient = {
   ...tankTroubleClient,
+  chase: true,
   world: () => import("../../three/tankWorld").then(m => (host: HTMLElement, read: Parameters<typeof m.createTankWorld>[1], onError: () => void) => m.createTankWorld(host, read, onError, { chase: true })),
-  Controls({ io, active }) {
+  Controls({ io, active, world }) {
     const local = io.local as ChaseLocal;
     return <>
+      {world && <CameraSwipe local={io.local} className="tank-camera-swipe" />}
       <div className="tank-aim-half"><AimPad label="Zielen und schießen" radius={70}
         onAim={(x, y) => { if (active) chaseAim(io, x, y); }}
         onRelease={(x, y) => { if (!active) return; chaseAim(io, x, y, false); io.press("a"); local.aimX = local.aimY = 0; io.set({ ax: 0, ay: 0 }); }}>

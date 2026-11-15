@@ -95,3 +95,27 @@ export function AimPad({ onAim, onRelease, label, radius = 90, children, classNa
     {children}
   </div>;
 }
+
+const CAMERA_HINT = "gsg-camera-swipe-seen";
+/**
+ * Horizontal swipe area that turns a chase camera (writes `camTurn` into the
+ * match IO's local values). Place it before the other controls so stick and
+ * buttons stay on top. A short hint shows until the first swipe on this device.
+ */
+export function CameraSwipe({ local, className = "" }: { local: Record<string, number>; className?: string }) {
+  const start = useRef<{ id: number; x: number } | undefined>(undefined);
+  const [seen, setSeen] = useState(() => { try { return localStorage.getItem(CAMERA_HINT) === "1"; } catch { return false; } });
+  const move = (event: React.PointerEvent) => {
+    const s = start.current;
+    if (!s || s.id !== event.pointerId) return;
+    // About 140° for a swipe across a phone screen; swipe left turns the view left.
+    local.camTurn = (local.camTurn ?? 0) + (event.clientX - s.x) * .008;
+    s.x = event.clientX;
+    if (!seen) { setSeen(true); try { localStorage.setItem(CAMERA_HINT, "1"); } catch { /* private mode */ } }
+  };
+  return <div className={`match-camera-swipe ${className}`} role="group" aria-label="Kamera drehen: waagrecht wischen"
+    onPointerDown={event => { if (start.current) return; start.current = { id: event.pointerId, x: event.clientX }; event.currentTarget.setPointerCapture(event.pointerId); }}
+    onPointerMove={move} onPointerUp={() => { start.current = undefined; }} onPointerCancel={() => { start.current = undefined; }}>
+    {!seen && <span className="match-camera-hint" aria-hidden="true">↔ wischen: Kamera drehen</span>}
+  </div>;
+}

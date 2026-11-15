@@ -1,6 +1,6 @@
 import { PC, type ParcoursGame } from "../../../shared/matches/parcours";
 import { boxAt, course, gooAt, sweeperAngle, type Look } from "../../../shared/matches/parcoursCourses";
-import { ActionButton, Stick } from "../controls";
+import { ActionButton, CameraSwipe, Stick } from "../controls";
 import { chaseStick, lerp, playerColor, type MatchClient, type MatchControlsProps, type MatchFrame } from "../client";
 
 const LOOK_FILL: Record<Look, string> = { floor: "#ffd166", wall: "#6544e8", door: "#ff86c8", pusher: "#e3263b", belt: "#3a3f66", step: "#ffe3a3", seesaw: "#57e4cb", tile: "#bfe6ff", roller: "#b23a48", ledge: "#ffb347", finish: "#fff9ed" };
@@ -38,9 +38,10 @@ function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
   if (me?.respawnAt) { ctx.fillStyle = "#24133fcc"; ctx.fillRect(0, h * .4, w, 50); ctx.fillStyle = "#fff9ed"; ctx.font = "900 18px 'Trebuchet MS', sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("Zurück zum Kontrollpunkt …", w / 2, h * .4 + 25); }
 }
 
-function ParcoursControls({ io, view, viewer, active }: MatchControlsProps) {
+function ParcoursControls({ io, view, viewer, active, world }: MatchControlsProps) {
   const g = view.game as ParcoursGame, me = g.racers[viewer], off = !active || !me || me.pose === "done" || me.pose === "out";
   return <>
+    {world && <CameraSwipe local={io.local} />}
     <Stick disabled={!active} onMove={(x, y) => chaseStick(io, x, y)} />
     <div className="parcours-buttons">
       <ActionButton icon="⇗" label="Hechten" tone="pink" disabled={off} onPress={() => io.press("b")} />
@@ -53,6 +54,7 @@ function ParcoursControls({ io, view, viewer, active }: MatchControlsProps) {
 
 export const parcoursClient: MatchClient = {
   render,
+  chase: true,
   unit: "Meter",
   world: async () => {
     const [scene, rig] = await Promise.all([import("../../three/parcoursWorld"), import("../../three/riggedFigure")]);

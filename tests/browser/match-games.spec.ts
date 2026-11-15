@@ -151,6 +151,16 @@ for (const players of [2, 4] as const) test(`Neon Pong ${players === 2 ? "1v1" :
   } finally { session.close(); }
 });
 
+
+/** Swipes horizontally across the camera area and returns how far the chase camera turned (radians). */
+async function swipeCamera(page: import("@playwright/test").Page, area: { x: number; y: number }, dx = 120) {
+  const world = page.locator(".match-world"), before = Number(await world.getAttribute("data-yaw"));
+  await page.mouse.move(area.x, area.y); await page.mouse.down();
+  await page.mouse.move(area.x + dx, area.y, { steps: 6 }); await page.mouse.up();
+  await page.waitForTimeout(150);
+  return Number(await world.getAttribute("data-yaw")) - before;
+}
+
 for (const motion of ["no-preference", "reduce"] as const) test(`Tank Trouble 2.5D (${motion}): Figuren in den Panzern, Stick fährt, Laser beim Zielen, Loslassen schießt`, async ({ page }, testInfo) => {
   await page.emulateMedia({ reducedMotion: motion });
   const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "tanks" });
@@ -208,6 +218,9 @@ for (const motion of ["no-preference", "reduce"] as const) test(`Tank Trouble �
     await page.mouse.move(stick.x + stick.width / 2, stick.y + stick.height / 2 - 45, { steps: 3 });
     await expect.poll(async () => { const input = await own(); return forward(input.x, input.y); }, { timeout: 3000 }).toBeGreaterThan(.9);
     await page.mouse.up();
+    // Swiping on the upper left turns the camera.
+    const stage = (await page.locator(".match-stage").boundingBox())!;
+    expect(Math.abs(await swipeCamera(page, { x: stage.x + 30, y: stage.y + stage.height * .2 }, 100))).toBeGreaterThan(.4);
     // Drag up on the right half = aim ahead; release fires.
     const aim = (await page.getByRole("group", { name: "Zielen und schießen" }).boundingBox())!;
     await page.mouse.move(aim.x + aim.width / 2, aim.y + aim.height / 2); await page.mouse.down();
@@ -334,6 +347,11 @@ for (const motion of ["no-preference", "reduce"] as const) test(`Floor is Lava 2
     await expect(page.getByRole("button", { name: "Übersicht", exact: true })).toHaveAttribute("aria-pressed", "true");
     await page.getByRole("button", { name: "Übersicht", exact: true }).tap();
     await expect(world).toHaveAttribute("data-camera", "chase");
+    // Swiping on the free stage turns the camera (hint until the first swipe).
+    await expect(page.getByText("wischen: Kamera drehen")).toBeVisible();
+    const stage = (await page.locator(".match-stage").boundingBox())!;
+    expect(Math.abs(await swipeCamera(page, { x: stage.x + 60, y: stage.y + stage.height * .35 }))).toBeGreaterThan(.5);
+    await expect(page.getByText("wischen: Kamera drehen")).toHaveCount(0);
     await expect.poll(async () => (await game()).tiles.includes("2")).toBe(true);
     const start = await me();
     const stick = page.getByRole("group", { name: "Bewegungsstick" }), box = (await stick.boundingBox())!;
@@ -571,6 +589,8 @@ for (const motion of ["no-preference", "reduce"] as const) test(`Hindernis-Parco
     await page.mouse.move(stick.x + stick.width / 2, stick.y + stick.height / 2 - 45, { steps: 3 });
     await expect.poll(async () => (await me()).z - start.z, { timeout: 4000 }).toBeGreaterThan(1.5);
     await page.mouse.up();
+    const stage = (await page.locator(".match-stage").boundingBox())!;
+    expect(Math.abs(await swipeCamera(page, { x: stage.x + 60, y: stage.y + stage.height * .3 }))).toBeGreaterThan(.5);
     await page.getByRole("button", { name: "Springen", exact: true }).tap();
     await expect.poll(async () => (await match()).players.find(p => p.id === session.ids[0])!.usedA, { timeout: 3000 }).toBeGreaterThan(0);
     await page.screenshot({ path: testInfo.outputPath(`parcours-jump-${motion}.png`) });
@@ -628,6 +648,26 @@ test("Hindernis-Parcours ohne WebGL: die 2D-Draufsicht übernimmt, das Spiel lä
     await matchStarted(page);
     await expect(page.locator(".match-canvas")).toBeVisible();
     await expect(page.locator(".match-world")).toHaveCount(0);
+    await session.action({ type: "finish" }, session.ids[1]);
+    await expect(page.getByRole("heading", { name: "Euer Ergebnis", exact: true })).toBeVisible();
+  } finally { session.close(); }
+});
+
+test("Testmodus (?messung): Messfeld mit FPS, Netz und Kamera-Reglern, Werte bleiben auf dem Gerät", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("gsg-messung", "1"));
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "kreiselkurs" });
+  try {
+    await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
+    await session.action({ type: "ready" }, session.ids[1]);
+    await matchStarted(page);
+    const panel = page.getByRole("complementary", { name: "Messwerte für den Gerätetest" });
+    await expect(panel).toBeVisible();
+    await expect.poll(async () => Number((await panel.getByRole("button", { name: /^Messung/ }).textContent())!.match(/(\d+) FPS/)?.[1] ?? 0), { timeout: 5000 }).toBeGreaterThan(0);
+    await expect(panel.getByText(/Netz: \d+ ms/)).toBeVisible();
+    const distance = panel.getByRole("slider").first();
+    await distance.fill("1.3");
+    await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("gsg-messung-kamera-kreiselkurs") ?? "{}").camDistK)).toBe(1.3);
     await session.action({ type: "finish" }, session.ids[1]);
     await expect(page.getByRole("heading", { name: "Euer Ergebnis", exact: true })).toBeVisible();
   } finally { session.close(); }

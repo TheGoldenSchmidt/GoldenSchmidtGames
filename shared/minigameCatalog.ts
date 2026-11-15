@@ -1,5 +1,6 @@
 import { ACTION_MINI_IDS, ARENA_META, isArenaId, type ArenaId } from "./partyArena";
 import { MATCH_IDS, MATCH_MODULES, isMatchId, matchEligible, playerRange, type MatchId } from "./matches/framework";
+import { COURSE_IDS } from "./matches/parcoursCourses";
 
 /**
  * All digital minigames that rooms can draw. The "1st Generation Minigames"
@@ -9,7 +10,13 @@ import { MATCH_IDS, MATCH_MODULES, isMatchId, matchEligible, playerRange, type M
 export type PlayableMiniId = ArenaId | MatchId;
 export const FIRST_GEN_LABEL = "1st Generation Minigames";
 /** Match games moved to the first generation; they stay playable but are not "new". */
-export const FIRST_GEN_MATCH_IDS: readonly MatchId[] = ["hooks"];
+export const FIRST_GEN_MATCH_IDS: readonly MatchId[] = ["hooks", "chaosrun"];
+/**
+ * The obstacle runs count as one entry in the random draw ("Hindernis-Parcours"):
+ * the bag holds the first run as placeholder and the draw picks one run.
+ */
+export const PARCOURS_RUN_IDS: readonly MatchId[] = COURSE_IDS;
+export const isParcoursRun = (id: unknown): id is MatchId => typeof id === "string" && (PARCOURS_RUN_IDS as readonly string[]).includes(id);
 export const NEW_MATCH_IDS: readonly MatchId[] = MATCH_IDS.filter(id => !FIRST_GEN_MATCH_IDS.includes(id));
 export const FIRST_GEN_MINI_IDS: readonly PlayableMiniId[] = [...FIRST_GEN_MATCH_IDS, ...ACTION_MINI_IDS];
 export const PLAYABLE_MINI_IDS: readonly PlayableMiniId[] = [...NEW_MATCH_IDS, ...FIRST_GEN_MINI_IDS];
@@ -20,7 +27,9 @@ export function miniName(id: PlayableMiniId) { return isMatchId(id) ? MATCH_MODU
 export function miniEligible(id: PlayableMiniId, players: number) { return isMatchId(id) ? matchEligible(id, players) : players >= 1 && players <= 6; }
 export function miniPlayerHint(id: PlayableMiniId) { return isMatchId(id) ? `${playerRange(id)} Spieler` : "1–6 Spieler"; }
 
-/** Draw pool for a room. Never empty for valid settings; callers check `length`. */
+/** Draw pool for a room (the parcours runs as one entry). Never empty for valid settings; callers check `length`. */
 export function miniPool(players: number, classic: boolean): PlayableMiniId[] {
-  return [...NEW_MATCH_IDS, ...(classic ? FIRST_GEN_MINI_IDS : [])].filter(id => miniEligible(id, players));
+  return [...NEW_MATCH_IDS, ...(classic ? FIRST_GEN_MINI_IDS : [])].filter(id => miniEligible(id, players) && (!isParcoursRun(id) || id === PARCOURS_RUN_IDS[0]));
 }
+/** Runs a drawn parcours entry can become for this player count. */
+export const parcoursRuns = (players: number) => PARCOURS_RUN_IDS.filter(id => miniEligible(id, players));

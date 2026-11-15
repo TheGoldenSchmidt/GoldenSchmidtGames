@@ -1,6 +1,6 @@
 import * as T from "three";
 import { FL, FLOOR_TILES, ring, type LavaGame, type Runner } from "../../shared/matches/floorIsLava";
-import { followCamera, headingOf, type ChaseLocal, type MatchWorld, type MatchWorldFrame } from "../matches/client";
+import { followCamera, headingOf, takeCameraTurn, type ChaseLocal, type MatchWorld, type MatchWorldFrame } from "../matches/client";
 import { ChaseCamera, Debris, fittedFigure, fitTiltedCamera, Impact } from "./matchScene";
 import { SceneKit, type Character } from "./sceneKit";
 
@@ -224,6 +224,8 @@ export function createLavaWorld(host: HTMLElement, read: () => MatchWorldFrame, 
       const [x, y] = runnerPos(mine, prev.runners?.[f.viewer], f.alpha), moving = Math.hypot(mine.vx, mine.vy) > .6;
       target.set(wx(x), feetY(mine, f.simTime, reduced), wz(y));
       // The camera swings slowly behind the running direction; standing still keeps it where it is.
+      takeCameraTurn(local, d => chaseCam.turn(d));
+      chaseCam.tune(f.local as ChaseLocal);
       chaseCam.update(target, moving || fresh ? headingOf(mine.fx, mine.fy) : undefined, dt, reduced, 1.3);
       fresh = false; followCamera(local, f.input, chaseCam.yaw);
     }

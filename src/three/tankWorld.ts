@@ -1,6 +1,6 @@
 import * as T from "three";
 import { TANK_FIELD, TT, wallRects, type TankGame, type TankPower } from "../../shared/matches/tankTrouble";
-import { followCamera, headingOf, type ChaseLocal, type MatchWorld, type MatchWorldFrame } from "../matches/client";
+import { followCamera, headingOf, takeCameraTurn, type ChaseLocal, type MatchWorld, type MatchWorldFrame } from "../matches/client";
 import { ChaseCamera, Debris, fittedFigure, fitTiltedCamera, Impact } from "./matchScene";
 import { PLAYER_COLORS, SceneKit, type Character } from "./sceneKit";
 
@@ -216,6 +216,8 @@ export function createTankWorld(host: HTMLElement, read: () => MatchWorldFrame, 
       const before = prev.tanks?.[f.viewer], smooth = before && before.alive && me.alive ? f.alpha : 1;
       target.set(wx(before ? before.x + (me.x - before.x) * smooth : me.x), 0, wz(before ? before.y + (me.y - before.y) * smooth : me.y));
       // The camera swings behind the hull, which turns with the driving direction.
+      takeCameraTurn(f.local as ChaseLocal, d => chaseCam.turn(d));
+      chaseCam.tune(f.local as ChaseLocal);
       chaseCam.update(target, headingOf(Math.cos(me.angle), Math.sin(me.angle)), Math.min(.05, (time - lastFrame) / 1000), reduced, 2.2);
       followCamera(f.local as ChaseLocal, f.input, chaseCam.yaw);
     }

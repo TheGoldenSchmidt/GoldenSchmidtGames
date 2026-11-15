@@ -1,7 +1,7 @@
 import * as T from "three";
 import { boxAt, course, gooAt, sweeperAngle, type Box, type Look } from "../../shared/matches/parcoursCourses";
 import type { ParcoursGame } from "../../shared/matches/parcours";
-import { followCamera, type ChaseLocal, type MatchWorld, type MatchWorldFrame } from "../matches/client";
+import { followCamera, takeCameraTurn, type ChaseLocal, type MatchWorld, type MatchWorldFrame } from "../matches/client";
 import { ChaseCamera, Debris, Impact } from "./matchScene";
 import { riggedFigure, type CharacterKit, type RiggedFigure } from "./riggedFigure";
 import { PLAYER_COLORS, SceneKit } from "./sceneKit";
@@ -158,6 +158,8 @@ export function createParcoursWorld(host: HTMLElement, read: () => MatchWorldFra
       const before = prev.racers?.[mine.id], a = before && Math.hypot(before.x - mine.x, before.z - mine.z) < 3 ? f.alpha : 1;
       target.set(before ? before.x + (mine.x - before.x) * a : mine.x, before ? before.y + (mine.y - before.y) * a : mine.y, -(before ? before.z + (mine.z - before.z) * a : mine.z));
       const moving = Math.hypot(mine.vx, mine.vz) > 1 && (mine.pose === "run" || mine.pose === "air");
+      if (g.racers[f.viewer]) takeCameraTurn(f.local as ChaseLocal, d => chaseCam.turn(d));
+      chaseCam.tune(f.local as ChaseLocal);
       chaseCam.update(target, moving || fresh ? mine.face : undefined, dt, reduced, 1.4);
       fresh = false;
       if (g.racers[f.viewer]) followCamera(f.local as ChaseLocal, f.input, chaseCam.yaw);

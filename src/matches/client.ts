@@ -56,6 +56,8 @@ export interface MatchClient {
    * error the stage falls back to `render` on the canvas; rules are unaffected.
    */
   world?: () => Promise<MatchWorldFactory>;
+  /** True when the 3D world uses a chase camera (test mode shows camera sliders). */
+  chase?: boolean;
   /** Text overlay for the 3D world (the canvas draws its own). */
   banner?(view: MatchState, viewer: string): { title: string; text: string } | undefined;
 }
@@ -84,6 +86,14 @@ export interface ChaseLocal {
   aimX?: number; aimY?: number;
   /** 1 = overview chosen on this device. */
   overview?: number;
+  /** Camera turn by hand (radians) not yet applied by the 3D world. */
+  camTurn?: number;
+  /** Test mode: chase camera distance, height and follow speed as multipliers. */
+  camDistK?: number; camHeightK?: number; camTurnK?: number;
+}
+/** Applies a pending hand turn to a chase camera (call once per frame before `update`). */
+export function takeCameraTurn(local: ChaseLocal, turn: (delta: number) => void) {
+  if (local.camTurn) { turn(local.camTurn); local.camTurn = 0; }
 }
 
 /**

@@ -130,18 +130,29 @@ export const angleDelta = (from: number, to: number) => Math.atan2(Math.sin(to -
 export class ChaseCamera {
   yaw = 0;
   private ready = false;
+  /** Seconds the automatic turning still waits after the player turned the camera by hand. */
+  private manual = 0;
   private eye = new T.Vector3();
   private aim = new T.Vector3();
-  constructor(private kit: SceneKit, public distance = 4.4, public height = 3, public lookAhead = 1.6, public lookHeight = .7) {}
+  private base: [number, number];
+  private turnK = 1;
+  constructor(private kit: SceneKit, public distance = 4.4, public height = 3, public lookAhead = 1.6, public lookHeight = .7) { this.base = [distance, height]; }
+  /** Device-local tuning from the test mode (multipliers, 1 = default). */
+  tune(local: { camDistK?: number; camHeightK?: number; camTurnK?: number }) {
+    this.distance = this.base[0] * (local.camDistK ?? 1); this.height = this.base[1] * (local.camHeightK ?? 1); this.turnK = local.camTurnK ?? 1;
+  }
   /** Forget the previous position (e.g. after switching camera modes). */
-  reset() { this.ready = false; }
+  reset() { this.ready = false; this.manual = 0; }
+  /** Turn by hand (radians); the automatic follow pauses for a moment afterwards. */
+  turn(delta: number, pause = 1.6) { this.yaw += delta; this.manual = pause; }
   /**
    * Moves the camera behind `target`. `wantedYaw` (if given) is the heading to
    * turn towards at `turnRate` per second; `snap` jumps there at once.
    */
   update(target: T.Vector3, wantedYaw: number | undefined, dt: number, reduced: boolean, turnRate = 1.6) {
-    if (!this.ready && wantedYaw !== undefined) this.yaw = wantedYaw;
-    else if (wantedYaw !== undefined) this.yaw += angleDelta(this.yaw, wantedYaw) * (reduced ? 1 : 1 - Math.exp(-dt * turnRate));
+    this.manual = Math.max(0, this.manual - dt);
+    if (!this.ready && wantedYaw !== undefined && !this.manual) this.yaw = wantedYaw;
+    else if (wantedYaw !== undefined && !this.manual) this.yaw += angleDelta(this.yaw, wantedYaw) * (reduced ? 1 : 1 - Math.exp(-dt * turnRate * this.turnK));
     const fx = Math.sin(this.yaw), fz = -Math.cos(this.yaw);
     const eye = new T.Vector3(target.x - fx * this.distance, target.y + this.height, target.z - fz * this.distance);
     const aim = new T.Vector3(target.x + fx * this.lookAhead, target.y + this.lookHeight, target.z + fz * this.lookAhead);

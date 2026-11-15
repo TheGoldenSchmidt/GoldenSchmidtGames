@@ -1,5 +1,5 @@
 import { FL, FLOOR_TILES, dropping, grounded, type LavaGame } from "../../../shared/matches/floorIsLava";
-import { ActionButton, Stick } from "../controls";
+import { ActionButton, CameraSwipe, Stick } from "../controls";
 import { useEffect, useState } from "react";
 import { chaseStick, lerp, playerColor, type ChaseLocal, type MatchClient, type MatchControlsProps, type MatchFrame } from "../client";
 
@@ -77,6 +77,7 @@ function LavaControls({ io, view, viewer, active, world }: MatchControlsProps) {
   // With the chase camera the stick is relative to the camera: up runs away from it.
   const move = (x: number, y: number) => chaseStick(io, x, y);
   return <>
+    {world && !overview && <CameraSwipe local={io.local} />}
     {world && <button type="button" className="match-camera" aria-pressed={overview} onClick={() => setOverview(v => !v)}>Übersicht</button>}
     <Stick disabled={!active} onMove={move} />
     <div className="lava-buttons">
@@ -88,6 +89,7 @@ function LavaControls({ io, view, viewer, active, world }: MatchControlsProps) {
 
 export const floorIsLavaClient: MatchClient = {
   render,
+  chase: true,
   // 2.5D presentation; the canvas above stays as fallback without WebGL.
   world: () => import("../../three/lavaWorld").then(m => m.createLavaWorld),
   banner(view, viewer) {

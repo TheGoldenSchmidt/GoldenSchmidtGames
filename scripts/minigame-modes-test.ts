@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { availableBets, checkMinigameSetup, minigameOptions } from "../shared/minigameModes";
-import { isClassicMini, isPlayableMini, miniPool, PLAYABLE_MINI_IDS } from "../shared/minigameCatalog";
+import { isClassicMini, isParcoursRun, isPlayableMini, miniPool, PARCOURS_RUN_IDS, PLAYABLE_MINI_IDS } from "../shared/minigameCatalog";
 import { ACTION_MINI_IDS } from "../shared/partyArena";
 import { applyPartyAction, applyPartyControl, createPartyGame, publicParty, tickParty, type PartyGame } from "../shared/party";
 import { PartyBotDriver } from "../shared/partyBots";
@@ -19,7 +19,10 @@ assert.equal(minigameOptions({ rounds: total }).rounds, total);
 assert.ok(miniPool(2, false).length >= 1 && miniPool(2, false).every(id => !isClassicMini(id)));
 // Hook Wars gehört zu den 1st Generation Minigames: nur mit Haken im Pool, aber weiter direkt wählbar.
 assert.ok(!miniPool(4, false).includes("hooks") && miniPool(4, true).includes("hooks") && isPlayableMini("hooks"));
-assert.equal(miniPool(2, true).length, total);
+// Die Hindernis-Läufe zählen als ein Eintrag; Chaos Run ist jetzt 1st Generation.
+assert.equal(miniPool(2, true).length, total - PARCOURS_RUN_IDS.length + 1);
+assert.ok(!miniPool(4, false).includes("chaosrun") && miniPool(4, true).includes("chaosrun"));
+assert.equal(miniPool(4, false).filter(isParcoursRun).length, 1, "Parcours nur einmal im Pool");
 assert.throws(() => checkMinigameSetup("goldenschmidt", minigameOptions({ rounds: miniPool(2, false).length + 1, classic: false }), 2));
 checkMinigameSetup("goldenschmidt", minigameOptions({ rounds: miniPool(2, false).length, classic: false }), 2);
 
@@ -49,9 +52,10 @@ for (const miniId of PLAYABLE_MINI_IDS) {
 }
 assert.deepEqual(play(createPartyGame(players, undefined, true, 123, now, "free-minigame"), undefined, false).winners, []);
 
-for (const [rounds, classic] of [[1, true], [5, true], [14, true], [total, true], [miniPool(2, false).length, false]] as const) {
+for (const [rounds, classic] of [[1, true], [5, true], [14, true], [miniPool(2, true).length, true], [miniPool(2, false).length, false]] as const) {
   let g = createPartyGame(players, undefined, true, 123, now, "goldenschmidt", { rounds, classic });
   if (!classic) assert.ok(g.miniBag.concat(g.mini!.id).every(id => !isClassicMini(id)), "Ohne 1st Generation nur neue Spiele");
+  assert.ok(g.miniBag.concat(g.mini!.id).filter(isParcoursRun).length <= 1, "Höchstens ein Hindernis-Lauf je Beutel");
   const replay = createPartyGame(players, undefined, true, 123, now, "goldenschmidt", { rounds, classic });
   assert.equal(g.mini!.id, replay.mini!.id); assert.deepEqual(g.miniBag, replay.miniBag);
   const selected = new Set<string>();
