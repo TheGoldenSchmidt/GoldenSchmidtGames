@@ -162,3 +162,15 @@
 .iw-menu .room .lobby-config__game { display:grid; grid-template-columns:60px 1fr; align-items:center; column-gap:12px; }
 .lobby-config__game .game-art { grid-column:1; grid-row:1 / 3; }
 .lobby-config__game :is(select,span:not(.game-art)) { grid-column:2; }
+
+.host-gallery summary { gap:10px; }
+.host-gallery summary > .menu-icon { margin-left:auto; }
+.host-shelf .character-avatar { display:grid; place-items:center; width:100%; height:auto; aspect-ratio:1.35;
+  border:0; border-radius:0; background:radial-gradient(ellipse at 50% 72%,#e3cf94,#928391 85%); }
+.host-shelf .character-avatar img { width:100%; height:100%; object-fit:contain; min-height:0; }
+.iw-menu .host-entry .field--code,.iw-menu .qr-entry { padding:14px; border:1px solid #be9962;
+  border-radius:12px; background:linear-gradient(145deg,#383041,#211e32); color:#fff2d8; }
+.host-entry > p:not(.error-message) { color:#fff2d8; background:#282338; padding:10px; border-radius:8px; }
+.iw-menu .qr-entry .button--primary { background:transparent url("../assets/expedition/citrine.webp") center/100% 100%;
+  border:0; box-shadow:none; min-height:52px; }
+.iw-menu .host-entry .field--code > span { color:#ffe3a6; }

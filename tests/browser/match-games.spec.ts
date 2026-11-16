@@ -1,3 +1,4 @@
+import { selectEntryCharacter } from "./select-entry-character";
 import { test, expect } from "@playwright/test";
 import { matchStarted, onlineSession } from "./party-session";
 import type { MatchState } from "../../shared/matches/types";
@@ -23,7 +24,7 @@ test("Lobby: neue Spiele, 1st-Generation-Checkbox und 320 Pixel ohne Überlauf",
   await page.goto("/");
   await page.getByRole("button", { name: /Online spielen/ }).click();
   await page.getByRole("button", { name: /^Raum erstellen/ }).click();
-  await page.getByLabel("Deine Spielfigur").selectOption({label: "Morty Smith"});
+  await selectEntryCharacter(page, "Morty Smith");
   await page.getByRole("button", { name: "Neuen Raum erstellen" }).click();
   await page.getByLabel("Ausgewähltes Spiel").selectOption("goldenschmidt");
   const classic = page.getByRole("checkbox", { name: /1st Generation Minigames/ });

@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { CHARACTERS, isCharacterId, type CharacterId } from "../../shared/characters";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { CHARACTERS, characterName, isCharacterId, type CharacterId } from "../../shared/characters";
 import { GameCardFace } from "../components/GameCardFace";
 import { MenuIcon } from "../components/MenuIcon";
 import { GAMES, getGame, isPartyMode } from "../../shared/games";
@@ -13,6 +13,20 @@ import { tokenForJoin } from "../lib/roomSession";
 import { socket, useTableTransport } from "../lib/socket";
 import { GuestPair } from "../nearby/Pairing";
 import { nearby } from "../nearby/nearbySocket";
+
+function EntryGallery({title, selection, portrait, initiallyOpen = false, children}: {
+  title: string; selection: string; portrait?: ReactNode; initiallyOpen?: boolean; children: ReactNode;
+}) {
+  const ref = useRef<HTMLDetailsElement>(null);
+  return <details className="host-gallery" name="room-entry-gallery" open={initiallyOpen} ref={ref}>
+    <summary>{portrait}<span>{title}<strong>{selection}</strong></span><MenuIcon name="next"/></summary>
+    <div className="game-shelf host-shelf" role="group" aria-label={title} onClick={event => {
+      if (!(event.target instanceof Element) || !event.target.closest("button:enabled") || !ref.current) return;
+      ref.current.open = false;
+      ref.current.querySelector("summary")?.focus();
+    }}>{children}</div>
+  </details>;
+}
 
 type EntryMode = "host" | "join" | "test";
 
@@ -46,7 +60,7 @@ export function RoomEntryForm({ mode, profile, onBack, onJoined, onCharacterChan
   const [bots, setBots] = useState(3);
   const [seed, setSeed] = useState("42");
   const [gameId, setGameId] = useState<GameId>(mode === "host" ? "qwixx" : "free-minigame");
-  const gallery = useRef<HTMLDetailsElement>(null);
+
   const active = useRef(true);
   const invitationCode = useRef("");
   const characterId = isCharacterId(profile.characterId) ? profile.characterId : undefined;
@@ -118,27 +132,30 @@ export function RoomEntryForm({ mode, profile, onBack, onJoined, onCharacterChan
   return <main className="page iw-menu screen-enter">
     <IslandWorld />
     <ScreenHeader title={title} onBack={onBack} />
-    <div className="page__content entry-frame"><form className={`iw-card room-entry ${mode === "host" ? "host-entry" : ""}`} onSubmit={event => { event.preventDefault(); if (!qr) void submit(); }}>
-      {mode === "host" && <details className="host-gallery" open ref={gallery}>
-        <summary><span>Spiel auswählen<strong>{getGame(gameId).name}</strong></span><MenuIcon name="next"/></summary>
-        <div className="game-shelf host-shelf">
-          {GAMES.filter(game => game.status === "ready").map(game =>
-            <button type="button" key={game.id} disabled={loading} aria-pressed={game.id === gameId} onClick={() => {
-              setGameId(game.id);
-              if (gallery.current) {
-                gallery.current.open = false;
-                gallery.current.querySelector("summary")?.focus();
-              }
-            }}><GameCardFace game={game}/></button>
-          )}
-        </div>
-      </details>}
+    <div className="page__content entry-frame"><form className={`iw-card room-entry ${mode !== "test" ? "host-entry" : ""}`} onSubmit={event => { event.preventDefault(); if (!qr) void submit(); }}>
+      {mode === "host" && <EntryGallery title="Spiel auswählen" selection={getGame(gameId).name} initiallyOpen>
+        {GAMES.filter(game => game.status === "ready").map(game =>
+          <button type="button" key={game.id} disabled={loading} aria-pressed={game.id === gameId} onClick={() => setGameId(game.id)}>
+            <GameCardFace game={game}/>
+          </button>
+        )}
+      </EntryGallery>}
+      {mode !== "test" ? <EntryGallery title="Deine Spielfigur" selection={characterName(characterId)}
+        portrait={<CharacterAvatar id={characterId} decorative/>}>
+        {CHARACTERS.map(character =>
+          <button type="button" key={character.id} disabled={loading || pairing} aria-pressed={character.id === characterId}
+            onClick={() => onCharacterChange(character.id)}>
+            <CharacterAvatar id={character.id} decorative/>
+            <span className="game-shelf__caption"><strong>{character.name}</strong></span>
+          </button>
+        )}
+      </EntryGallery> :
       <label className="local-character-field entry-character">
         <CharacterAvatar id={characterId} decorative />
         <span>Deine Spielfigur<select value={characterId ?? ""} disabled={loading || pairing} onChange={event => {
           if (isCharacterId(event.target.value)) onCharacterChange(event.target.value);
         }}><option value="" disabled>Figur wählen</option>{CHARACTERS.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></span>
-      </label>
+      </label>}
       {mode === "host" && <fieldset className="hosting-choice" disabled={loading}>
         <legend>Wo spielt ihr?</legend>
         <label><input type="radio" name="hosting" checked={!deviceHost} onChange={() => setDeviceHost(false)} /><MenuIcon name="globe"/><span><strong>Über das Internet</strong><small>Teile den Raumcode mit deinen Freunden.</small></span></label>
@@ -147,8 +164,8 @@ export function RoomEntryForm({ mode, profile, onBack, onJoined, onCharacterChan
       {mode === "join" && <>
         <fieldset className="hosting-choice" disabled={loading}>
           <legend>Deine Einladung</legend>
-          <label><input type="radio" name="invitation" checked={!qr} onChange={() => changeJoinMethod(false)} /><strong>Raumcode</strong></label>
-          <label><input type="radio" name="invitation" checked={qr} onChange={() => changeJoinMethod(true)} /><strong>QR vom Handy-Host</strong></label>
+          <label><input type="radio" name="invitation" checked={!qr} onChange={() => changeJoinMethod(false)} /><MenuIcon name="door"/><strong>Raumcode</strong></label>
+          <label><input type="radio" name="invitation" checked={qr} onChange={() => changeJoinMethod(true)} /><MenuIcon name="group"/><strong>QR vom Handy-Host</strong></label>
         </fieldset>
         {!qr && <label className="field field--code"><span>Raumcode</span><input value={code} maxLength={5} autoCapitalize="characters" placeholder="ABCDE" onChange={e => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))} /></label>}
         {qr && !characterId && <p>Wähle deine Figur, um die Einladung zu scannen.</p>}

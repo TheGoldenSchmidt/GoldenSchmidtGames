@@ -1,3 +1,4 @@
+import { selectEntryCharacter } from "./select-entry-character";
 import { test, expect } from "@playwright/test";
 import { endOwnAttempt, onlineSession, participate } from "./party-session";
 import { CHARACTERS } from "../../shared/characters";
@@ -23,7 +24,7 @@ test("Beide Minispielmodi sind in der Lobby konfigurierbar", async ({ page }, te
   await page.goto("/");
   await page.getByRole("button", { name: /Online spielen/ }).click();
   await page.getByRole("button", { name: /^Raum erstellen/ }).click();
-  await page.getByLabel("Deine Spielfigur").selectOption({label: "Morty Smith"});
+  await selectEntryCharacter(page, "Morty Smith");
   await page.getByRole("button", { name: "Neuen Raum erstellen" }).click();
   await page.getByLabel("Ausgewähltes Spiel").selectOption("free-minigame");
   const minigame = page.getByRole("combobox", { name: "Minispiel", exact: true });

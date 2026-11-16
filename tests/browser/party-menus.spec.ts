@@ -1,3 +1,4 @@
+import { selectEntryCharacter } from "./select-entry-character";
 import { test, expect } from "@playwright/test";
 
 for (const reducedMotion of ["reduce", "no-preference"] as const) {
@@ -36,8 +37,8 @@ test("Partymenüs: Online-Auswahl, Lobby und Figurenwechsel", async ({ page }, i
   await page.getByRole("button", { name: /Online spielen/ }).click();
   await page.getByRole("button", { name: /^Raum erstellen/ }).click();
   await expect(page.getByRole("button", { name: "Neuen Raum erstellen", exact: true })).toBeDisabled();
-  await page.getByLabel("Deine Spielfigur").selectOption({label: "Morty Smith"});
-  await expect(page.locator(".entry-character img")).toBeVisible();
+  await selectEntryCharacter(page, "Morty Smith");
+  await expect(page.locator("summary .character-avatar img")).toBeVisible();
   await page.screenshot({ path: info.outputPath("online-auswahl.png"), fullPage: true });
   await page.getByRole("button", { name: "Neuen Raum erstellen", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Lobby", exact: true })).toBeVisible();
@@ -61,7 +62,7 @@ test("Partymenüs: Handy-Einladung mit lesbarem QR und Textcode", async ({ page 
   await page.goto("/");
   await page.getByRole("button", { name: /Online spielen/ }).click();
   await page.getByRole("button", { name: /^Raum erstellen/ }).click();
-  await page.getByLabel("Deine Spielfigur").selectOption({label: "Morty Smith"});
+  await selectEntryCharacter(page, "Morty Smith");
   await page.getByRole("radio", { name: /Dieses Handy/ }).check();
   await page.getByRole("button", { name: "Neuen Raum erstellen", exact: true }).click();
   await page.getByRole("button", { name: "Gerät verbinden", exact: true }).click();

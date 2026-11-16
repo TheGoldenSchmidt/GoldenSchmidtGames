@@ -1,3 +1,5 @@
+import { CHARACTERS } from "../../shared/characters";
+import { selectEntryCharacter } from "./select-entry-character";
 import { test, expect } from "@playwright/test";
 
 test("Online-Wege trennen Erstellen, Raumcode und QR und behalten die Figur", async ({page}) => {
@@ -12,11 +14,11 @@ test("Online-Wege trennen Erstellen, Raumcode und QR und behalten die Figur", as
   await expect(create.locator(".adventure-choice__face")).toHaveCSS("background-image", citrine);
   await create.click();
   await expect(page.getByRole("textbox", {name: "Raumcode"})).toHaveCount(0);
-  await page.getByLabel("Deine Spielfigur").selectOption({label: "Morty Smith"});
+  await selectEntryCharacter(page, "Morty Smith");
   await page.getByRole("button", {name: "Zurück"}).click();
   await page.getByRole("button", {name: /^Raum beitreten/}).click();
   await expect(page.getByRole("button", {name: "Neuen Raum erstellen"})).toHaveCount(0);
-  await expect(page.getByLabel("Deine Spielfigur")).toHaveValue("alpha_morty_smith");
+  await expect(page.locator("summary").filter({hasText:"Deine Spielfigur"})).toContainText("Morty Smith");
   const code = page.getByRole("textbox", {name: "Raumcode"});
   await code.fill("abc12");
   await expect(code).toHaveValue("ABC12");
@@ -69,13 +71,31 @@ test("Illustrierte Online-Spielwahl übernimmt das gewählte Spiel in die Lobby"
   await page.goto("/");
   await page.getByRole("button", {name:/Online spielen/}).click();
   await page.getByRole("button", {name:/^Raum erstellen/}).click();
-  const cards = page.locator(".host-shelf button");
+  const cards = page.getByRole("group", {name:"Spiel auswählen"}).getByRole("button");
   await expect(cards).toHaveCount(7);
   await page.screenshot({path:info.outputPath("spielwahl.png")});
   await page.getByRole("button", {name:/^Inselparty/}).click();
-  await expect(page.locator(".host-gallery summary")).toContainText("Inselparty");
-  await page.getByLabel("Deine Spielfigur").selectOption({label:"Morty Smith"});
+  await expect(page.locator("summary").filter({hasText:"Spiel auswählen"})).toContainText("Inselparty");
+  await selectEntryCharacter(page, "Morty Smith");
   await page.screenshot({path:info.outputPath("raum-erstellen.png")});
   await page.getByRole("button", {name:"Neuen Raum erstellen"}).click();
   await expect(page.getByLabel("Ausgewähltes Spiel")).toHaveValue("party");
+});
+
+test("Beitritt zeigt Figurenkarten und behält die Wahl beim Wechsel zum QR-Code", async ({page}, info) => {
+  await page.emulateMedia({reducedMotion:"reduce"});
+  await page.goto("/");
+  await page.getByRole("button", {name:/Online spielen/}).click();
+  await page.getByRole("button", {name:/^Raum beitreten/}).click();
+  const figure = page.locator("summary").filter({hasText:"Deine Spielfigur"});
+  await figure.click();
+  const cards = page.getByRole("group", {name:"Deine Spielfigur"}).getByRole("button");
+  await expect(cards).toHaveCount(CHARACTERS.length);
+  await page.screenshot({path:info.outputPath("figuren.png")});
+  await cards.filter({hasText:"MC Goldie"}).click();
+  await expect(figure).toContainText("MC Goldie");
+  await page.screenshot({path:info.outputPath("beitreten.png")});
+  await page.getByRole("radio", {name:/QR vom Handy/}).check();
+  await expect(page.getByRole("button", {name:"Einladung scannen"})).toBeVisible();
+  await expect(figure).toContainText("MC Goldie");
 });
