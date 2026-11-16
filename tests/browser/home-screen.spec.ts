@@ -38,8 +38,9 @@ for (const reducedMotion of ["no-preference", "reduce"] as const) {
       .filter(animation => animation.playState === "running").length), { timeout: 5000 }).toBe(0);
     // One fixed screen: nothing scrolls, the sky and corner layers are decoration only.
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
-    await expect(page.locator(".expedition-motto")).toHaveText("Play like the GoldenSchmidt - Be like the GoldenSchmidt");
+    await expect(page.locator(".expedition-motto blockquote")).toHaveText("Play like the GoldenSchmidt - Be like the GoldenSchmidt");
     await expect(page.locator(".expedition-motto")).toHaveCSS("opacity", "1");
+    await expect(page.locator(".expedition-motto figcaption")).toHaveText("— TheGoldenSchmidt");
     // The dark stone face narrows above the lower rim. Keep the whole last line on that face.
     const plaque = (await page.locator(".crest-plaque").boundingBox())!;
     const games = (await page.locator(".crest-games").boundingBox())!;

@@ -395,11 +395,15 @@ hub.onPeer((socket) => {
 
   withPayload(
     "room:create",
-    (payload: { playerId?: string; name?: string; characterId?: unknown }, callback: (ack: Ack<RoomState>) => void) => {
+    (payload: { playerId?: string; name?: string; gameId?: GameId; characterId?: unknown }, callback: (ack: Ack<RoomState>) => void) => {
       if (ownerPeer && socket.id !== ownerPeer) return callback({ok:false,error:"Nur das Host-Gerät kann Räume erstellen."});
       if(!isCharacterId(payload?.characterId))return callback({ok:false,error:"Wähle zuerst eine Spielfigur."});
       const playerId = cleanPlayerId(payload?.playerId);
       if (!playerId) return callback({ ok: false, error: "Ungültige Spieler-ID." });
+      let game;
+      try { game = getGame(payload.gameId ?? "qwixx"); }
+      catch { return callback({ ok: false, error: "Unbekanntes Spiel." }); }
+      if (game.status !== "ready") return callback({ ok: false, error: "Dieses Spiel ist noch nicht verfügbar." });
       const code = createCode();
       const player: Player = {
         id: playerId,
@@ -413,7 +417,7 @@ hub.onPeer((socket) => {
         code,
         hostId: playerId,
         players: [player],
-        config: { gameId: "qwixx", playerCount: 2, durakCheatMode: false },
+        config: { gameId: game.id, playerCount: game.minPlayers, durakCheatMode: false },
         phase: "lobby"
       };
       registerRoom(room);

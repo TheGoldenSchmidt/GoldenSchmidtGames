@@ -134,3 +134,5 @@
   .expedition-island {object-fit:contain;mask-image:radial-gradient(ellipse closest-side,#000 72%,transparent 145%);}
 }
 @media (prefers-reduced-motion:reduce) { .expedition-home *, .adventure-choice__face {animation:none;transition:none;} }
+.expedition-motto blockquote { display:grid; justify-items:center; margin:0; font-style:italic; font-synthesis:style; }
+.expedition-motto figcaption { margin-top:4px; color:#f7d798; font:550 .69rem/1.25 var(--iw-font-ui); letter-spacing:.055em; }

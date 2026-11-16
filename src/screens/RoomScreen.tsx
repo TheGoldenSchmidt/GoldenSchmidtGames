@@ -119,6 +119,7 @@ export function RoomScreen({
           <h2 className="iw-plank iw-card__title">Spiel</h2>
         <div className="lobby-config">
           <label className="lobby-config__game">
+            <span className={`game-art game-art--${room.config.gameId}`} aria-hidden="true"/>
             <span>Ausgewähltes Spiel</span>
             <select
               value={room.config.gameId}

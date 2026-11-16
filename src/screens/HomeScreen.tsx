@@ -66,11 +66,14 @@ export function HomeScreen({profile, online, onProfile, onLocal, onOnline, onRes
       </span>
     </h1>
     <div className="expedition-dock">
-      <blockquote className="expedition-motto" lang="en">
-        <span>Play like the <em>GoldenSchmidt</em></span>
-        <span className="motto-divider"> - </span>
-        <span>Be like the <em>GoldenSchmidt</em></span>
-      </blockquote>
+      <figure className="expedition-motto">
+        <blockquote lang="en">
+          <span>Play like the <em>GoldenSchmidt</em></span>
+          <span className="motto-divider"> - </span>
+          <span>Be like the <em>GoldenSchmidt</em></span>
+        </blockquote>
+        <figcaption>— TheGoldenSchmidt</figcaption>
+      </figure>
       <div className="expedition-controls">
         <nav className="expedition-actions" aria-label="Spielmodus wählen">
           <AdventureChoice title="Lokal spielen" detail="Zusammen an einem Gerät" icon="group" onClick={onLocal}/>

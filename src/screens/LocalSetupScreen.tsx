@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { GameCardFace } from "../components/GameCardFace";
 import { GAMES, getGame, isPartyMode } from "../../shared/games";
 import type { GameId } from "../../shared/types";
 import {CHARACTERS,isCharacterId,type CharacterId} from "../../shared/characters";
@@ -88,8 +89,7 @@ export function LocalSetupScreen({
             changeCount(Math.max(entry.minPlayers, Math.min(entry.maxPlayers, count)));
             setSettingUp(true);
           }}>
-            <span className={`game-art game-art--${entry.id}`} aria-hidden="true"/>
-            <span className="game-shelf__caption"><strong>{entry.name}</strong><small>{entry.minPlayers}–{entry.maxPlayers} Spieler · {entry.id === "durak" ? "Karten" : "Würfel"}</small></span>
+            <GameCardFace game={entry}/>
           </button>
         )}
         <button onClick={onTest}><span className="game-art game-art--test" aria-hidden="true"/>

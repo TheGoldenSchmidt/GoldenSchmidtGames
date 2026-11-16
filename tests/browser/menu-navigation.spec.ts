@@ -63,3 +63,19 @@ test("Menübuttons spielen genau einen kurzen Klick, stumme Buttons bleiben leis
     expect(duration).toBeLessThan(.04);
   }
 });
+
+test("Illustrierte Online-Spielwahl übernimmt das gewählte Spiel in die Lobby", async ({page}, info) => {
+  await page.emulateMedia({reducedMotion:"reduce"});
+  await page.goto("/");
+  await page.getByRole("button", {name:/Online spielen/}).click();
+  await page.getByRole("button", {name:/^Raum erstellen/}).click();
+  const cards = page.locator(".host-shelf button");
+  await expect(cards).toHaveCount(7);
+  await page.screenshot({path:info.outputPath("spielwahl.png")});
+  await page.getByRole("button", {name:/^Inselparty/}).click();
+  await expect(page.locator(".host-gallery summary")).toContainText("Inselparty");
+  await page.getByLabel("Deine Spielfigur").selectOption({label:"Morty Smith"});
+  await page.screenshot({path:info.outputPath("raum-erstellen.png")});
+  await page.getByRole("button", {name:"Neuen Raum erstellen"}).click();
+  await expect(page.getByLabel("Ausgewähltes Spiel")).toHaveValue("party");
+});

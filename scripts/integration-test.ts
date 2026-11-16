@@ -62,6 +62,8 @@ try {
   outsider.emit("room:create", hostIdentity); // Valid data, no acknowledgement.
   outsider.emit("party:control", {}, "not-a-callback");
   await assert.rejects(emit(outsider, "room:create", null), /Ungültige Nachricht/);
+  await assert.rejects(emit(outsider, "room:create", { ...hostIdentity, gameId: "unknown" }), /Unbekanntes Spiel/);
+  await assert.rejects(emit(outsider, "room:create", { ...hostIdentity, gameId: "binokel" }), /nicht verfügbar/);
   await assert.rejects(emit(outsider, "qwixx:state"), /keinem Raum/);
   assert.equal((await (await fetch(endpoint + "/api/health")).json()).rooms, 0);
   const created = await emit<RoomState>(host, "room:create", hostIdentity);

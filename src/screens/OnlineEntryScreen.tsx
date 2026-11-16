@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { CHARACTERS, isCharacterId, type CharacterId } from "../../shared/characters";
-import { GAMES, isPartyMode } from "../../shared/games";
+import { GameCardFace } from "../components/GameCardFace";
+import { MenuIcon } from "../components/MenuIcon";
+import { GAMES, getGame, isPartyMode } from "../../shared/games";
 import type { Ack, GameId, GuestProfile, RoomState } from "../../shared/types";
 import { IslandWorld } from "../components/IslandWorld";
 import { ScreenHeader } from "../components/ScreenHeader";
@@ -43,7 +45,8 @@ export function RoomEntryForm({ mode, profile, onBack, onJoined, onCharacterChan
   const [loading, setLoading] = useState(false);
   const [bots, setBots] = useState(3);
   const [seed, setSeed] = useState("42");
-  const [gameId, setGameId] = useState<GameId>("free-minigame");
+  const [gameId, setGameId] = useState<GameId>(mode === "host" ? "qwixx" : "free-minigame");
+  const gallery = useRef<HTMLDetailsElement>(null);
   const active = useRef(true);
   const invitationCode = useRef("");
   const characterId = isCharacterId(profile.characterId) ? profile.characterId : undefined;
@@ -100,7 +103,7 @@ export function RoomEntryForm({ mode, profile, onBack, onJoined, onCharacterChan
       else onJoined(response.data);
     };
     if (mode === "test") socket.timeout(15000).emit("party:test-create", { ...player, gameId, bots, seed: Number(seed) }, done);
-    else if (mode === "host") socket.timeout(5000).emit("room:create", player, done);
+    else if (mode === "host") socket.timeout(5000).emit("room:create", { ...player, gameId }, done);
     else socket.timeout(5000).emit("room:join", { ...player, code, sessionToken: tokenForJoin(code, profile.id) }, done);
   }
 
@@ -115,7 +118,21 @@ export function RoomEntryForm({ mode, profile, onBack, onJoined, onCharacterChan
   return <main className="page iw-menu screen-enter">
     <IslandWorld />
     <ScreenHeader title={title} onBack={onBack} />
-    <div className="page__content entry-frame"><form className="iw-card room-entry" onSubmit={event => { event.preventDefault(); if (!qr) void submit(); }}>
+    <div className="page__content entry-frame"><form className={`iw-card room-entry ${mode === "host" ? "host-entry" : ""}`} onSubmit={event => { event.preventDefault(); if (!qr) void submit(); }}>
+      {mode === "host" && <details className="host-gallery" open ref={gallery}>
+        <summary><span>Spiel auswählen<strong>{getGame(gameId).name}</strong></span><MenuIcon name="next"/></summary>
+        <div className="game-shelf host-shelf">
+          {GAMES.filter(game => game.status === "ready").map(game =>
+            <button type="button" key={game.id} disabled={loading} aria-pressed={game.id === gameId} onClick={() => {
+              setGameId(game.id);
+              if (gallery.current) {
+                gallery.current.open = false;
+                gallery.current.querySelector("summary")?.focus();
+              }
+            }}><GameCardFace game={game}/></button>
+          )}
+        </div>
+      </details>}
       <label className="local-character-field entry-character">
         <CharacterAvatar id={characterId} decorative />
         <span>Deine Spielfigur<select value={characterId ?? ""} disabled={loading || pairing} onChange={event => {
@@ -124,8 +141,8 @@ export function RoomEntryForm({ mode, profile, onBack, onJoined, onCharacterChan
       </label>
       {mode === "host" && <fieldset className="hosting-choice" disabled={loading}>
         <legend>Wo spielt ihr?</legend>
-        <label><input type="radio" name="hosting" checked={!deviceHost} onChange={() => setDeviceHost(false)} /><span><strong>Über das Internet</strong><small>Teile den Raumcode mit deinen Freunden.</small></span></label>
-        <label><input type="radio" name="hosting" checked={deviceHost} onChange={() => setDeviceHost(true)} /><span><strong>Dieses Handy</strong><small>Im selben WLAN oder Hotspot per QR einladen. Lass dein Handy geöffnet.</small></span></label>
+        <label><input type="radio" name="hosting" checked={!deviceHost} onChange={() => setDeviceHost(false)} /><MenuIcon name="globe"/><span><strong>Über das Internet</strong><small>Teile den Raumcode mit deinen Freunden.</small></span></label>
+        <label><input type="radio" name="hosting" checked={deviceHost} onChange={() => setDeviceHost(true)} /><MenuIcon name="group"/><span><strong>Dieses Handy</strong><small>Im selben WLAN oder Hotspot per QR einladen. Lass dein Handy geöffnet.</small></span></label>
       </fieldset>}
       {mode === "join" && <>
         <fieldset className="hosting-choice" disabled={loading}>
