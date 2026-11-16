@@ -46,7 +46,7 @@ export default defineConfig({
       },
       workbox: {
         // Fonts and the rendered start screen layers are part of the offline app shell.
-        globPatterns: ["**/*.{js,css,html,woff2,webp}"],
+        globPatterns: ["**/*.{js,css,html,woff2,webp,wav}"],
         navigateFallback: "/index.html",
         skipWaiting: false,
         clientsClaim: true

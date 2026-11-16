@@ -40,7 +40,7 @@ test("Menübuttons spielen genau einen kurzen Klick, stumme Buttons bleiben leis
     const start = AudioBufferSourceNode.prototype.start;
     AudioBufferSourceNode.prototype.start = function (...args) {
       const log = JSON.parse(sessionStorage.getItem("menu-clicks") ?? "[]") as number[];
-      log.push(this.buffer?.duration ?? 0);
+      log.push((this.buffer?.duration ?? 0) / this.playbackRate.value);
       sessionStorage.setItem("menu-clicks", JSON.stringify(log));
       start.apply(this, args);
     };
@@ -52,6 +52,7 @@ test("Menübuttons spielen genau einen kurzen Klick, stumme Buttons bleiben leis
   await page.getByRole("button", {name: /Online spielen/}).click();
   const clicks: number[] = await page.evaluate(() => JSON.parse(sessionStorage.getItem("menu-clicks") ?? "[]"));
   expect(clicks).toHaveLength(2);
+  expect(clicks[1]).toBeGreaterThan(clicks[0] * 1.3);
   for (const duration of clicks) {
     expect(duration).toBeGreaterThan(0);
     expect(duration).toBeLessThan(.04);

@@ -207,7 +207,7 @@ export default function App() {
     <div className="app-shell" onClickCapture={event => {
       const control = event.target instanceof Element ? event.target.closest("button, summary") : null;
       if (!control?.closest(".expedition-home, .iw-menu, .iw-dialog") || control.matches(".menu-sound, :disabled")) return;
-      playMenuClick();
+      void playMenuClick(control.matches('[data-menu-direction="back"], [aria-expanded="true"], details[open] > summary') ? "back" : "forward");
     }}>
       {view === "home" && (
         <HomeScreen

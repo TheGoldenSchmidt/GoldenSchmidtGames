@@ -28,16 +28,21 @@
 .expedition-profile span { display: grid; place-items: center; border-radius: 50%; width: 30px; height: 30px; flex: none; background: linear-gradient(145deg,#ffdaeb,#ac7ccc); color: #311831; font: 1.1rem var(--iw-font-display); }
 .expedition-profile b { font-size: .78rem; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; }
 .expedition-hero { width: min(100%, 760px); flex: 1 1 0; min-height: 0; margin: 0; position: relative; }
-.expedition-hero img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 42%;
-  mask-image: linear-gradient(to bottom,transparent,black 5%,black 89%,transparent);
-  animation: island-arrival 850ms cubic-bezier(.2,.7,.3,1) both;
-}
+.expedition-scene { position:absolute; inset:0; container-type:size; pointer-events:none; }
+.expedition-island { display:block; width:100%; height:100%; object-fit:cover; object-position:50% 42%;
+  mask-image:linear-gradient(to bottom, transparent, black 7%, black 86%, transparent); }
+.expedition-crest { display:block; position:absolute; width:min(100cqh, 125cqw); aspect-ratio:1;
+  left:50%; top:42%; transform:translate(-50%, -42%); }
+.crest-piece { position:absolute; display:block; height:auto; }
+.crest-plaque { left:12%; top:2%; width:76%; height:59%; --arrival:0ms; }
+.crest-golden { left:25%; top:18.5%; width:50%; --arrival:480ms; }
+.crest-schmidt { left:20%; top:31%; width:60%; --arrival:880ms; }
+.crest-games { left:29.5%; top:44.5%; width:41%; --arrival:1280ms; }
+.crest-crown { left:42.9%; top:6.9%; width:14.2%; --arrival:1680ms; }
 .expedition-dock { flex: none; width: min(100%, 540px); padding: 0 20px max(12px,env(safe-area-inset-bottom)); text-align: center; }
-.expedition-motto { display: flex; align-items: center; justify-content: center; gap: 11px; font: 600 clamp(.62rem,2.6vw,.76rem) var(--iw-font-ui);
-  letter-spacing: .13em; text-transform: uppercase; margin: 8px 0 18px; color: #ffe6aa; text-shadow: 0 1px 3px #000; }
-.expedition-motto i { height: 1px; width: 28px; position: relative; background: #d4ac72; }
-.expedition-motto i::after { content: ""; position:absolute; right:0; top:-2px; width:5px; height:5px; transform:rotate(45deg); background:#f7d68e; }
-.expedition-motto i:last-child { transform:rotate(180deg); }
+.expedition-motto { font:600 clamp(.76rem,3.3vw,.94rem)/1.35 var(--iw-font-ui); margin:8px 0 18px;
+  color:#ffe6aa; text-shadow:0 1px 4px #151120; text-wrap:balance; }
+.expedition-motto span { white-space:nowrap; }
 .expedition-actions { display: grid; gap: 12px; }
 .adventure-choice {
   --edge: #885123; --top: #fff1bf; --base: #ffc86a; --low: #e8a045; --accent: #75431e; --letter: #3a2215;
@@ -74,20 +79,34 @@
 .expedition-home :is(.menu-sound,.dock-tool,.expedition-profile):focus-visible { outline:3px solid #ffdd8e; outline-offset:3px; }
 .expedition-utilities:has(.app-update:not([data-status=idle],[data-status=unsupported])) {padding-bottom:44px;}
 .expedition-utilities .app-update:not([data-status=idle],[data-status=unsupported]) p {top:calc(100% - 39px);bottom:auto;padding:4px 8px;font-size:.7rem;max-height:40px;border:0;text-align:center;}
-@keyframes island-arrival {from {opacity:.35;transform:scale(1.035)} to {opacity:1;transform:scale(1)}}
+@media (prefers-reduced-motion:no-preference) {
+  .expedition-home[data-intro="loading"] :is(.crest-piece,.expedition-motto) { visibility:hidden; }
+  .expedition-home[data-intro="playing"] .crest-piece { animation:crest-drop 400ms var(--arrival) both; }
+  .expedition-home[data-intro="playing"] .crest-plaque { animation-duration:480ms; }
+  .expedition-home[data-intro="playing"] .expedition-motto { animation:motto-reveal 550ms ease-out 2080ms both; }
+}
+@keyframes crest-drop {
+  0% { transform:translateY(-110dvh); animation-timing-function:cubic-bezier(.4,.04,.8,.55); }
+  72% { transform:translateY(0); animation-timing-function:ease-out; }
+  85% { transform:translateY(-5px); animation-timing-function:ease-in; }
+  100% { transform:translateY(0); }
+}
+@keyframes motto-reveal { from { opacity:0; } to { opacity:1; } }
 @keyframes dock-arrival {from {opacity:.2;transform:translateY(10px)} to {opacity:1;transform:none}}
 .expedition-actions > button {animation:dock-arrival .38s ease-out both}
 .expedition-actions > button:nth-child(2) {animation-delay:.08s}
 @media (max-height:680px) {
   .expedition-motto { margin:2px 0 10px; }
   .expedition-utilities { margin-top:12px; }
-  .expedition-hero img {object-fit:contain;}
+  .expedition-island { width:min(100%, 100cqh); margin:auto; object-fit:contain;
+    mask-image:linear-gradient(to right,transparent,black 10%,black 90%,transparent), linear-gradient(to bottom,transparent,black 7%,black 88%,transparent);
+    mask-composite:intersect; }
 }
 @media (min-width:700px) and (orientation:landscape) {
   body:has(.expedition-home) {padding:0}
   .expedition-home {display:grid;grid-template: auto 1fr / minmax(0,1.35fr) minmax(280px,1fr);padding:0 max(22px,5vw);gap:0 5vw;}
   .expedition-bar {grid-column:1/-1;max-width:none;width:100%;}
   .expedition-hero {height:min(77dvh,680px);width:100%;}
-  .expedition-hero img {object-fit:contain;mask-image:radial-gradient(ellipse closest-side,#000 72%,transparent 145%);}
+  .expedition-island {object-fit:contain;mask-image:radial-gradient(ellipse closest-side,#000 72%,transparent 145%);}
 }
 @media (prefers-reduced-motion:reduce) { .expedition-home *, .adventure-choice__face {animation:none;transition:none;} }

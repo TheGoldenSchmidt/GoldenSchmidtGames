@@ -1,4 +1,4 @@
-/** Small synthesized sound effects; no audio files, no network. */
+/** Match effects are synthesized. Menu navigation shares one short mouse sample. */
 const KEY = "gsg.match.sound";
 let context: AudioContext | undefined;
 
@@ -10,27 +10,25 @@ export function unlockSound() {
   try { context ??= new AudioContext(); if (context.state === "suspended") void context.resume(); } catch { context = undefined; }
 }
 
-let clickBuffer: AudioBuffer | undefined;
+let clickBuffer: Promise<AudioBuffer> | undefined;
 
-export function playMenuClick() {
+export async function playMenuClick(direction: "forward" | "back" = "forward") {
   if (!soundEnabled()) return;
   unlockSound();
-  if (!context) return;
-  if (!clickBuffer) {
-    const rate = context.sampleRate;
-    clickBuffer = context.createBuffer(1, Math.ceil(rate * .032), rate);
-    const samples = clickBuffer.getChannelData(0);
-    for (let i = 0; i < samples.length; i++) {
-      const t = i / rate;
-      const snap = (Math.random() * 2 - 1) * .16 * Math.exp(-t / .002);
-      const body = .12 * Math.sin(2 * Math.PI * 340 * t) * Math.exp(-t / .0045);
-      samples[i] = Math.min(1, t / .00035) * (snap + body);
-    }
-  }
-  const source = context.createBufferSource();
-  source.buffer = clickBuffer;
-  source.connect(context.destination);
-  source.start();
+  const audio = context;
+  if (!audio) return;
+  try {
+    clickBuffer ??= fetch(new URL("../assets/audio/menu-click.wav?no-inline", import.meta.url))
+      .then(response => response.arrayBuffer())
+      .then(bytes => audio.decodeAudioData(bytes));
+    const buffer = await clickBuffer;
+    if (!soundEnabled()) return;
+    const source = audio.createBufferSource();
+    source.buffer = buffer;
+    source.playbackRate.value = direction === "back" ? .72 : 1;
+    source.connect(audio.destination);
+    source.start();
+  } catch { clickBuffer = undefined; }
 }
 
 export type Sfx = "tick" | "go" | "shot" | "hit" | "score" | "fail" | "win" | "bounce" | "power" | "boom";

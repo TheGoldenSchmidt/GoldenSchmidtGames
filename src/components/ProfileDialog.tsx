@@ -43,7 +43,7 @@ export function ProfileDialog({
           />
         </label>
         <div className="dialog__actions">
-          <button className="button button--ghost" onClick={onClose}>Abbrechen</button>
+          <button className="button button--ghost" data-menu-direction="back" onClick={onClose}>Abbrechen</button>
           <button
             className="button button--primary"
             onClick={() => onSave({ ...profile, username: username.trim() })}

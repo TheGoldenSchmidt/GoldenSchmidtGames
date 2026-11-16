@@ -68,7 +68,7 @@ export function InstallPrompt() {
       </button>
       {showHelp && (
         <div className="install-help">
-          <button className="install-help__close" onClick={() => setShowHelp(false)} aria-label="Installationshilfe schließen">×</button>
+          <button data-menu-direction="back" className="install-help__close" onClick={() => setShowHelp(false)} aria-label="Installationshilfe schließen">×</button>
           {installError && <p role="alert">{installError}</p>}
           {isIos ? <p>Öffne diesen Link in <strong>Safari</strong>. Wähle <strong>Teilen → Zum Home-Bildschirm</strong> und, falls angezeigt, <strong>Als Web-App öffnen → Hinzufügen</strong>.</p>
             : <p>Öffne diesen Link direkt in <strong>Chrome</strong> oder deinem normalen Browser. Wähle im <strong>⋮-Menü</strong> den Eintrag <strong>App installieren</strong> oder <strong>Zum Startbildschirm hinzufügen</strong>. Auf dem PC findest du die Installation meist oben in der Adressleiste.</p>}
