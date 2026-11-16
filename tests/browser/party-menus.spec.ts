@@ -33,7 +33,7 @@ test("Partymenüs: Online-Auswahl, Lobby und Figurenwechsel", async ({ page }, i
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   await page.getByRole("button", { name: /Online spielen/ }).click();
-    await page.getByRole("button", { name: /^Raum erstellen/ }).click();
+  await page.getByRole("button", { name: /^Raum erstellen/ }).click();
   await expect(page.getByRole("button", { name: "Neuen Raum erstellen", exact: true })).toBeDisabled();
   await page.getByLabel("Deine Spielfigur").selectOption({label: "Morty Smith"});
   await expect(page.locator(".entry-character img")).toBeVisible();
@@ -59,7 +59,7 @@ test("Partymenüs: Handy-Einladung mit lesbarem QR und Textcode", async ({ page 
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   await page.getByRole("button", { name: /Online spielen/ }).click();
-    await page.getByRole("button", { name: /^Raum erstellen/ }).click();
+  await page.getByRole("button", { name: /^Raum erstellen/ }).click();
   await page.getByLabel("Deine Spielfigur").selectOption({label: "Morty Smith"});
   await page.getByRole("radio", { name: /Dieses Handy/ }).check();
   await page.getByRole("button", { name: "Neuen Raum erstellen", exact: true }).click();

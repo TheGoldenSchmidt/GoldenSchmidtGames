@@ -270,7 +270,7 @@ export default function App() {
             ? <QwixxGameScreen profile={profile} initialRoom={room} onExit={leaveOnline} onLobby={backToLobby} />
             : room.config.gameId === "durak" ? <DurakGameScreen profile={profile} initialRoom={room} onExit={leaveOnline} onLobby={backToLobby} />
             : room.config.gameId === "kribbeln" ? <KribbelnGameScreen profile={profile} initialRoom={room} onExit={leaveOnline} onLobby={backToLobby} />
-            : isPartyMode(room.config.gameId) && <PartyGameScreen profile={profile} initialRoom={room} onExit={leaveOnline} onLobby={backToLobby}/>}
+            : isPartyMode(room.config.gameId) && <PartyGameScreen profile={profile} initialRoom={room} onExit={leaveOnline} onLobby={room.partyTest ? undefined : backToLobby}/>}
         </GameIntro>
       )}
       {view==="game-online" && room && !room.partyTest && session?.nearby?.role==="host" && <HostInvite code={room.code}/>}

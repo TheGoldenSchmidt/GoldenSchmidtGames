@@ -22,7 +22,7 @@ test("Lobby: neue Spiele, 1st-Generation-Checkbox und 320 Pixel ohne Überlauf",
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   await page.getByRole("button", { name: /Online spielen/ }).click();
-    await page.getByRole("button", { name: /^Raum erstellen/ }).click();
+  await page.getByRole("button", { name: /^Raum erstellen/ }).click();
   await page.getByLabel("Deine Spielfigur").selectOption({label: "Morty Smith"});
   await page.getByRole("button", { name: "Neuen Raum erstellen" }).click();
   await page.getByLabel("Ausgewähltes Spiel").selectOption("goldenschmidt");

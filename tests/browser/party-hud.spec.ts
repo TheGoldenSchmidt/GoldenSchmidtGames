@@ -1,4 +1,5 @@
 import {test,expect,type Locator,type Page} from '@playwright/test';
+import { CHARACTERS } from '../../shared/characters';
 import {randomUUID} from 'node:crypto';
 import {onlineSession} from './party-session';
 
@@ -44,7 +45,7 @@ for(const motion of ['no-preference','reduce'] as const) {
     await page.goto('/');await page.getByRole("button", {name: /Lokal spielen/}).click();
     await page.getByRole("button", {name: /^Minispiele testen/}).click();
     await expect(page.getByRole("button", {name: "Testpartie mit Bots erstellen"})).toBeDisabled();
-    await expect(page.getByLabel("Deine Spielfigur").locator("option")).toHaveCount(14);
+    await expect(page.getByLabel("Deine Spielfigur").locator("option")).toHaveCount(CHARACTERS.length + 1);
     await page.getByLabel("Deine Spielfigur").selectOption({label: "Prime Rick"});
     await page.getByLabel("Testspiel").selectOption("party");
     await page.getByLabel('Bot-Mitspieler').selectOption('2');

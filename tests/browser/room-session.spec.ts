@@ -33,7 +33,7 @@ test("Durak verbindet dasselbe Gerät in Lobby und Partie wieder", async ({ page
     }
     async function joinByCode() {
       await page.getByRole("button", { name: /Online spielen/ }).click();
-    await page.getByRole("button", { name: /^Raum beitreten/ }).click();
+      await page.getByRole("button", { name: /^Raum beitreten/ }).click();
       await page.getByLabel("Deine Spielfigur").selectOption({label: "Morty Smith"});
       await page.getByRole("textbox", { name: "Raumcode" }).fill(room.code);
       await page.getByRole("button", { name: "Raum beitreten", exact: true }).click();

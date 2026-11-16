@@ -22,7 +22,7 @@ test("Beide Minispielmodi sind in der Lobby konfigurierbar", async ({ page }, te
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   await page.getByRole("button", { name: /Online spielen/ }).click();
-    await page.getByRole("button", { name: /^Raum erstellen/ }).click();
+  await page.getByRole("button", { name: /^Raum erstellen/ }).click();
   await page.getByLabel("Deine Spielfigur").selectOption({label: "Morty Smith"});
   await page.getByRole("button", { name: "Neuen Raum erstellen" }).click();
   await page.getByLabel("Ausgewähltes Spiel").selectOption("free-minigame");
