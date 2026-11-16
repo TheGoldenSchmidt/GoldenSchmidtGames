@@ -5,6 +5,13 @@ liegt die normale React-Oberfläche mit allen Bedienelementen. Gestalterische Vo
 die [Referenz](design/startscreen-referenz.webp); Gestaltungsregeln stehen in den
 [Designregeln](../designregeln.md).
 
+## App-Icon
+
+Das App-Icon verwendet das Steinwappen, die Krone und die drei Initialen aus den
+Titelgrafiken in `src/assets/expedition/`. Nach einer Änderung am Motiv erzeugt
+`npm run generate:icons` mit Playwright-Chromium die PNG-Dateien in `public/`.
+Die vier Größen werden mit eingecheckt und beim Build direkt ausgeliefert.
+
 ## Architektur
 
 | Schicht | Inhalt | Technik |
