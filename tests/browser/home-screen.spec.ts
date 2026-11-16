@@ -42,6 +42,12 @@ for (const reducedMotion of ["no-preference", "reduce"] as const) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
     await expect(page.locator(".expedition-motto")).toHaveText("Play like the GoldenSchmidt - Be like the GoldenSchmidt");
     await expect(page.locator(".expedition-motto")).toHaveCSS("opacity", "1");
+    // The dark stone face narrows above the lower rim. Keep the whole last line on that face.
+    const plaque = (await page.locator(".crest-plaque").boundingBox())!;
+    const games = (await page.locator(".crest-games").boundingBox())!;
+    expect(games.x).toBeGreaterThan(plaque.x + plaque.width * .25);
+    expect(games.x + games.width).toBeLessThan(plaque.x + plaque.width * .75);
+    expect(games.y + games.height).toBeLessThan(plaque.y + plaque.height * .8);
     await page.screenshot({ path: info.outputPath(`start-${reducedMotion}.png`), fullPage: true });
 
     // Both modes remain immediately accessible, including from the keyboard.

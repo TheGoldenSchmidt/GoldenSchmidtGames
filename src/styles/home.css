@@ -34,11 +34,11 @@
 .expedition-crest { display:block; position:absolute; width:min(100cqh, 125cqw); aspect-ratio:1;
   left:50%; top:42%; transform:translate(-50%, -42%); }
 .crest-piece { position:absolute; display:block; height:auto; }
-.crest-plaque { left:12%; top:2%; width:76%; height:59%; --arrival:0ms; }
-.crest-golden { left:25%; top:18.5%; width:50%; --arrival:480ms; }
-.crest-schmidt { left:20%; top:31%; width:60%; --arrival:880ms; }
-.crest-games { left:29.5%; top:44.5%; width:41%; --arrival:1280ms; }
-.crest-crown { left:42.9%; top:6.9%; width:14.2%; --arrival:1680ms; }
+.crest-plaque { left:12%; top:2%; width:76%; height:62%; --arrival:0ms; }
+.crest-golden { left:27.5%; top:17.5%; width:45%; --arrival:860ms; }
+.crest-schmidt { left:24%; top:29%; width:52%; --arrival:1520ms; }
+.crest-games { left:33.5%; top:41.5%; width:33%; --arrival:2180ms; }
+.crest-crown { left:43.8%; top:7%; width:12.4%; --arrival:2840ms; }
 .expedition-dock { flex: none; width: min(100%, 540px); padding: 0 20px max(12px,env(safe-area-inset-bottom)); text-align: center; }
 .expedition-motto { font:600 clamp(.76rem,3.3vw,.94rem)/1.35 var(--iw-font-ui); margin:8px 0 18px;
   color:#ffe6aa; text-shadow:0 1px 4px #151120; text-wrap:balance; }
@@ -81,15 +81,13 @@
 .expedition-utilities .app-update:not([data-status=idle],[data-status=unsupported]) p {top:calc(100% - 39px);bottom:auto;padding:4px 8px;font-size:.7rem;max-height:40px;border:0;text-align:center;}
 @media (prefers-reduced-motion:no-preference) {
   .expedition-home[data-intro="loading"] :is(.crest-piece,.expedition-motto) { visibility:hidden; }
-  .expedition-home[data-intro="playing"] .crest-piece { animation:crest-drop 400ms var(--arrival) both; }
-  .expedition-home[data-intro="playing"] .crest-plaque { animation-duration:480ms; }
-  .expedition-home[data-intro="playing"] .expedition-motto { animation:motto-reveal 550ms ease-out 2080ms both; }
+  .expedition-home[data-intro="playing"] .crest-piece { animation:crest-drop 660ms cubic-bezier(.28,.04,.22,1) var(--arrival) both; }
+  .expedition-home[data-intro="playing"] .crest-plaque { animation-duration:860ms; }
+  .expedition-home[data-intro="playing"] .expedition-motto { animation:motto-reveal 650ms ease-in-out 3500ms both; }
 }
 @keyframes crest-drop {
-  0% { transform:translateY(-110dvh); animation-timing-function:cubic-bezier(.4,.04,.8,.55); }
-  72% { transform:translateY(0); animation-timing-function:ease-out; }
-  85% { transform:translateY(-5px); animation-timing-function:ease-in; }
-  100% { transform:translateY(0); }
+  from { transform:translateY(calc(-100% - 50cqh - max(80px, env(safe-area-inset-top)))); }
+  to { transform:translateY(0); }
 }
 @keyframes motto-reveal { from { opacity:0; } to { opacity:1; } }
 @keyframes dock-arrival {from {opacity:.2;transform:translateY(10px)} to {opacity:1;transform:none}}
