@@ -60,8 +60,8 @@ export function InstallPrompt() {
 
   return (
     <aside className="install-card" aria-label="App installieren">
-      <button className="iw-slab iw-slab--stone home-utility" onClick={install} aria-expanded={installEvent ? undefined : showHelp}>
-        <span className="iw-slab__face">
+      <button className="dock-tool" onClick={install} aria-expanded={installEvent ? undefined : showHelp}>
+        <span className="dock-tool__contents">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 4v10.5M7.5 10.5 12 15l4.5-4.5M5 19.5h14" /></svg>
           <span>App installieren</span>
         </span>

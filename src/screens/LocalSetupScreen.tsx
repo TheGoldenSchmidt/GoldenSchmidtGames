@@ -1,6 +1,5 @@
-import { isPartyMode } from "../../shared/games";
 import { useMemo, useState } from "react";
-import { GAMES, getGame } from "../../shared/games";
+import { GAMES, getGame, isPartyMode } from "../../shared/games";
 import type { GameId } from "../../shared/types";
 import {CHARACTERS,isCharacterId,type CharacterId} from "../../shared/characters";
 import {CharacterAvatar} from "../components/CharacterAvatar";
@@ -18,6 +17,7 @@ export function LocalSetupScreen({
 }) {
   const [gameId, setGameId] = useState<GameId>("qwixx");
   const game = getGame(gameId);
+  const [settingUp, setSettingUp] = useState(false);
   const [count, setCount] = useState(2);
   const [characters,setCharacters]=useState<Array<CharacterId|undefined>>([]);
   const [names, setNames] = useState(["Spieler 1", "Spieler 2"]);
@@ -36,42 +36,9 @@ export function LocalSetupScreen({
   return (
     <main className="page iw-menu local-setup screen-enter">
       <IslandWorld />
-      <ScreenHeader title="Lokal spielen" onBack={onBack} />
+      <ScreenHeader title={settingUp ? game.name : "Lokal spielen"} onBack={settingUp ? () => setSettingUp(false) : onBack} />
+      {settingUp ? <>
       <div className="page__content">
-        <section className="iw-card local-setup__games">
-          <h2 className="iw-plank iw-card__title">Spiel auswählen</h2>
-
-        <div className="game-choices">
-          {GAMES.filter(entry=>entry.status === "ready" && !isPartyMode(entry.id)).map((entry) => (
-            <button
-              className={`game-choice game-choice--${entry.id} ${entry.id === gameId ? "is-selected" : ""}`}
-              aria-pressed={entry.id === gameId}
-              key={entry.id}
-              disabled={entry.status !== "ready"}
-              onClick={() => {
-                setGameId(entry.id);
-                changeCount(Math.max(entry.minPlayers, Math.min(entry.maxPlayers, count)));
-              }}
-            >
-              <span className={`game-choice__tile game-choice__tile--${entry.id}`} aria-hidden="true">
-                {entry.id === "qwixx" ? "2–12" : entry.id === "durak" ? "♠" : entry.id === "kribbeln" ? "⚄" : entry.id === "party" ? "⚑" : "B"}
-              </span>
-              <span>
-                <strong>{entry.name}{entry.status === "soon" && <em>Bald</em>}</strong>
-                <small>{entry.shortDescription}</small>
-              </span>
-              {entry.id === gameId && <span className="check" aria-label="Ausgewählt">✓</span>}
-            </button>
-          ))}
-          <button className="game-choice entry-choice" onClick={onTest}>
-            <span className="game-choice__tile" aria-hidden="true">⚑</span>
-            <span><strong>Minispiele testen</strong><small>Alleine gegen Bots spielen</small></span>
-            <span aria-hidden="true">›</span>
-          </button>
-        </div>
-
-        </section>
-
         <section className="iw-card local-setup__players">
           <h2 className="iw-plank iw-card__title">Spieler</h2>
         <div className="section-heading section-heading--row">
@@ -114,6 +81,22 @@ export function LocalSetupScreen({
           {game.name} starten
         </button>
       </div>
+      </> : <nav className="page__content game-shelf" aria-label="Spiel auswählen">
+        {GAMES.filter(entry => entry.status === "ready" && !isPartyMode(entry.id)).map(entry =>
+          <button key={entry.id} onClick={() => {
+            setGameId(entry.id);
+            changeCount(Math.max(entry.minPlayers, Math.min(entry.maxPlayers, count)));
+            setSettingUp(true);
+          }}>
+            <span className={`game-art game-art--${entry.id}`} aria-hidden="true"/>
+            <span className="game-shelf__caption"><strong>{entry.name}</strong><small>{entry.minPlayers}–{entry.maxPlayers} Spieler · {entry.id === "durak" ? "Karten" : "Würfel"}</small></span>
+          </button>
+        )}
+        <button onClick={onTest}><span className="game-art game-art--test" aria-hidden="true"/>
+          <span className="game-shelf__caption"><strong>Minispiele testen</strong><small>Alleine gegen Bots</small></span>
+        </button>
+      </nav>}
+
     </main>
   );
 }

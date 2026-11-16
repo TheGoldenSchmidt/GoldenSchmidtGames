@@ -4,6 +4,12 @@ Diese Regeln gelten bei jeder UI-Erweiterung und UI-Bearbeitung. Sie beschreiben
 den Inselwelt-Stil, der die gesamte App tragen soll, und den Stand seiner Umsetzung.
 Technische Vorgaben und Prüfabläufe stehen in [AGENTS.md](AGENTS.md).
 
+## Menü-Gegenentwurf auf dem Vorschau-Branch
+
+Die neu gebauten Menüs verwenden lokal gespeicherte Illustrationen und gerenderte Buttonflächen aus `src/assets/expedition/`. Auf dem Startbildschirm trägt ein steinernes Wappen den Titel; darunter stehen die Spielzugänge in Gold und Amethyst. Der Status, die Tonwahl und das Gastprofil liegen über der Illustration. Der Untertitel „Minispiele · Party · Gemeinsam“ entspricht der eingereichten Vorlage. In Untermenüs rahmen eine Landschaft und eine Krone den Titel. Spielmotive kennzeichnen die lokalen Spiele. Helles Papier trägt längere Eingaben und Listen.
+
+Die folgenden Beschreibungen der gerenderten Ebenen, alten Button-Sprites, Renderbefehle und Auftrittsreihenfolge dokumentieren den Vergleichsstand auf main. Der Vorschau-Branch verwendet dafür `HomeScreen.tsx`, `AdventureChoice.tsx`, `home.css` und `menus.css`. Bewegung klingt nach dem Einstieg aus. Kurze auf- und absteigende Töne bestätigen Vorwärts und Zurück. Tonwahl, Fokus, reduzierte Bewegung und Offline-Zugriff gehören zur Prüfung.
+
 ## Richtung: die Inselwelt
 
 GoldenSchmidtGames spielt auf einer schwebenden Insel: ein Abenteuer-Spielplatz für

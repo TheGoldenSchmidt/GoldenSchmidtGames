@@ -4,6 +4,7 @@ import { GAMES, isPartyMode } from "../../shared/games";
 import type { Ack, GameId, GuestProfile, RoomState } from "../../shared/types";
 import { IslandWorld } from "../components/IslandWorld";
 import { ScreenHeader } from "../components/ScreenHeader";
+import { AdventureChoice } from "../components/AdventureChoice";
 import { CharacterAvatar } from "../components/CharacterAvatar";
 import { displayName } from "../lib/profile";
 import { tokenForJoin } from "../lib/roomSession";
@@ -17,20 +18,12 @@ export function OnlineEntryScreen({ onBack, onSelect }: {
   onBack: () => void;
   onSelect: (role: "host" | "join") => void;
 }) {
-  return <main className="page iw-menu screen-enter">
+  return <main className="page iw-menu route-selection screen-enter">
     <IslandWorld />
     <ScreenHeader title="Online spielen" onBack={onBack} />
     <section className="page__content entry-choices">
-      <button className="game-choice entry-choice" onClick={() => onSelect("host")}>
-        <span className="game-choice__tile" aria-hidden="true">＋</span>
-        <span><strong>Raum erstellen</strong><small>Ein Spiel wählen und Freunde einladen</small></span>
-        <span aria-hidden="true">›</span>
-      </button>
-      <button className="game-choice entry-choice" onClick={() => onSelect("join")}>
-        <span className="game-choice__tile" aria-hidden="true">⇥</span>
-        <span><strong>Raum beitreten</strong><small>Mit Raumcode oder QR-Einladung</small></span>
-        <span aria-hidden="true">›</span>
-      </button>
+      <AdventureChoice title="Raum erstellen" detail="Freunde zum Spiel einladen" icon="flag" onClick={() => onSelect("host")}/>
+      <AdventureChoice title="Raum beitreten" detail="Mit Raumcode oder QR-Einladung" icon="door" violet onClick={() => onSelect("join")}/>
     </section>
   </main>;
 }
@@ -144,7 +137,7 @@ export function RoomEntryForm({ mode, profile, onBack, onJoined, onCharacterChan
         {qr && !characterId && <p>Wähle deine Figur, um die Einladung zu scannen.</p>}
       </>}
       {mode === "test" && <>
-        <p>Spiele auf diesem Gerät gegen Bots. Dein Handy übernimmt den Spielstand.</p>
+        <p>Spiele alleine gegen Bots. Dein Spielstand bleibt auf diesem Gerät.</p>
         <label className="field"><span>Testspiel</span><select value={gameId} onChange={e => setGameId(e.target.value as GameId)}>{GAMES.filter(game => isPartyMode(game.id)).map(game => <option key={game.id} value={game.id}>{game.name}</option>)}</select></label>
         <label className="field"><span>Bot-Mitspieler</span><select value={bots} onChange={e => setBots(Number(e.target.value))}>{[1,2,3,4,5].map(n => <option key={n} value={n}>{n} {n === 1 ? "Bot" : "Bots"}</option>)}</select></label>
         <details><summary>Startwert anpassen</summary><label className="field"><span>Startwert für wiederholbare Partien</span><input type="number" min="0" max="4294967295" value={seed} onChange={e => setSeed(e.target.value)} /></label></details>

@@ -10,8 +10,10 @@ export function unlockSound() {
   try { context ??= new AudioContext(); if (context.state === "suspended") void context.resume(); } catch { context = undefined; }
 }
 
-export type Sfx = "tick" | "go" | "shot" | "hit" | "score" | "fail" | "win" | "bounce" | "power" | "boom";
+export type Sfx = "menuOpen" | "menuBack" | "tick" | "go" | "shot" | "hit" | "score" | "fail" | "win" | "bounce" | "power" | "boom";
 const SHAPES: Record<Sfx, { f: number; to: number; d: number; type: OscillatorType; v: number; noise?: boolean }> = {
+  menuOpen: { f: 590, to: 885, d: .14, type: "sine", v: .065 },
+  menuBack: { f: 587, to: 392, d: .1, type: "triangle", v: .04 },
   tick: { f: 660, to: 660, d: .06, type: "square", v: .03 },
   go: { f: 880, to: 1320, d: .18, type: "square", v: .05 },
   shot: { f: 220, to: 60, d: .16, type: "sawtooth", v: .07, noise: true },

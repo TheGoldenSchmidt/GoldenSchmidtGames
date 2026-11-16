@@ -21,3 +21,16 @@ test("Online-Wege trennen Erstellen, Raumcode und QR und behalten die Figur", as
   await page.getByRole("radio", {name: "Raumcode"}).check();
   await expect(code).toHaveValue("ABC12");
 });
+
+test("Menüton lässt sich ausschalten und bleibt nach Neustart stumm", async ({page}) => {
+  await page.goto("/");
+  const sound = page.getByRole("button", {name: "Spieltöne"});
+  await expect(sound).toHaveAttribute("aria-pressed","true");
+  await sound.click();
+  await page.getByRole("button", {name: /Online spielen/}).click();
+  await expect(sound).toHaveAttribute("aria-pressed","false");
+  await page.reload();
+  await expect(sound).toHaveAttribute("aria-pressed","false");
+  await sound.click();
+  await expect(sound).toHaveAttribute("aria-pressed","true");
+});

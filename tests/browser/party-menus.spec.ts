@@ -9,8 +9,9 @@ for (const reducedMotion of ["reduce", "no-preference"] as const) {
     await page.screenshot({ path: info.outputPath("profil.png") });
     await page.getByRole("button", { name: "Speichern", exact: true }).click();
     await page.getByRole("button", { name: /Lokal spielen/ }).click();
-    await expect(page.getByRole("button", { name: "Qwixx starten", exact: true })).toBeDisabled();
+    await expect(page.getByRole("navigation", {name: "Spiel auswählen"})).toBeVisible();
     await page.getByRole("button", { name: /^Durak / }).click();
+    await expect(page.getByRole("button", {name:"Durak starten",exact:true})).toBeDisabled();
     await page.getByRole("combobox", { name: "Figur von Spieler 1", exact: true }).selectOption("alpha_rick_prime");
     await page.getByRole("combobox", { name: "Figur von Spieler 2", exact: true }).selectOption("alpha_korvo");
     await page.getByRole("checkbox", { name: /Schummelmodus/ }).check();

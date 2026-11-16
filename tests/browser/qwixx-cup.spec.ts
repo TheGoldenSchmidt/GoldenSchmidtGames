@@ -7,6 +7,7 @@ async function localQwixx(page: Page, reduced = false) {
   await page.emulateMedia({ reducedMotion: reduced ? "reduce" : "no-preference" });
   await page.addInitScript(() => { Math.random = () => 0; });
   await page.goto("/"); await page.getByRole("button", { name: /Lokal spielen/ }).click();
+  await page.getByRole("button", {name:/^Qwixx /}).click();
   for (let player = 1; player <= 2; player++) await page.getByRole("combobox", { name: `Figur von Spieler ${player}`, exact: true }).selectOption("alpha_rick_prime");
   await page.getByRole("button", { name: "Qwixx starten", exact: true }).click();
   if (!reduced) await page.getByRole("button", { name: "Intro überspringen" }).click();

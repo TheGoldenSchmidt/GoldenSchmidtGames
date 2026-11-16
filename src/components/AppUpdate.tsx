@@ -23,7 +23,7 @@ export function AppUpdate() {
     let active = true;
     let cleanup = () => {};
     getRegistration().then(reg => {
-      const inspect = () => { if (active && reg.waiting) setStatus("ready"); };
+      const inspect = () => { if (active && reg.active && reg.waiting) setStatus("ready"); };
       const found = () => {
         const worker = reg.installing;
         worker?.addEventListener("statechange", inspect);
@@ -52,8 +52,8 @@ export function AppUpdate() {
   }
 
   return <aside className="app-update" aria-label="App aktualisieren" data-status={status}>
-    <button className="iw-slab iw-slab--stone home-utility" onClick={status === "ready" ? apply : check} disabled={["checking", "applying", "unsupported"].includes(status)}>
-      <span className="iw-slab__face">
+    <button className="dock-tool" onClick={status === "ready" ? apply : check} disabled={["checking", "applying", "unsupported"].includes(status)}>
+      <span className="dock-tool__contents">
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19.5 11a7.6 7.6 0 0 0-13.6-3.6M5.4 3.6v4.2h4.2M4.5 13a7.6 7.6 0 0 0 13.6 3.6M18.6 20.4v-4.2h-4.2" /></svg>
         <span>{status === "ready" ? "Neue Version laden" : status === "checking" ? "Suche nach Updates …" : status === "applying" ? "Update wird geladen …" : "Updates prüfen"}</span>
       </span>

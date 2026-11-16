@@ -16,6 +16,7 @@ import { DurakGameScreen } from "./screens/DurakGameScreen";
 import { KribbelnGameScreen } from "./screens/KribbelnGameScreen";
 import { PartyGameScreen, PARTY_ONLINE_SAVE, readPartySave, type PartySavedSession } from "./screens/PartyGameScreen";
 import { RoomScreen } from "./screens/RoomScreen";
+import { playSfx, soundEnabled, unlockSound } from "./matches/sfx";
 import { GameIntro } from "./components/GameIntro";
 import type {CharacterId} from "../shared/characters";
 
@@ -203,7 +204,12 @@ export default function App() {
   </section></main>;
 
   return (
-    <div className="app-shell">
+    <div className="app-shell" onClickCapture={event => {
+      const control = event.target instanceof Element ? event.target.closest("button, summary") : null;
+      if (!control?.closest(".expedition-home, .iw-menu, .iw-dialog") || control.matches(".menu-sound, :disabled") || !soundEnabled()) return;
+      unlockSound();
+      playSfx(control.matches(".voyage-back") ? "menuBack" : "menuOpen");
+    }}>
       {view === "home" && (
         <HomeScreen
           profile={profile}

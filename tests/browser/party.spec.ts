@@ -8,6 +8,7 @@ test.describe.configure({mode:"parallel"});
 test("Partyinsel wird ausschließlich online angeboten",async({page})=>{
   await page.goto("/");await page.getByRole("button",{name:/Lokal spielen/}).click();
   await expect(page.getByRole("button",{name:/Inselparty/})).toHaveCount(0);
+  await page.getByRole("button", {name:/^Qwixx /}).click();
   await expect(page.getByRole("button",{name:"Qwixx starten",exact:true})).toBeVisible();
 });
 
