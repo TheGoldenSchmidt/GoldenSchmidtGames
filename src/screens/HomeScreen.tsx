@@ -13,7 +13,7 @@ import schmidt from "../assets/expedition/schmidt.webp";
 import games from "../assets/expedition/games.webp";
 import crown from "../assets/expedition/crown.webp";
 
-const titleLayers = { plaque, golden, schmidt, games, crown };
+const titleLayers = { plaque, golden, schmidt, games };
 let introShown = false;
 
 interface HomeProps {
@@ -58,19 +58,29 @@ export function HomeScreen({profile, online, onProfile, onLocal, onOnline, onRes
           {Object.entries(titleLayers).map(([part, src]) =>
             <img key={part} className={`crest-piece crest-${part}`} src={src} alt=""/>
           )}
+          <span className="crest-piece crest-crown">
+            <img src={crown} alt=""/>
+            <span className="crown-reflection" aria-hidden="true"/>
+          </span>
         </span>
       </span>
     </h1>
     <div className="expedition-dock">
-      <div className="expedition-motto"><span>Play like the GoldenSchmidt</span> - <span>Be like the GoldenSchmidt</span></div>
-      <nav className="expedition-actions" aria-label="Spielmodus wählen">
-        <AdventureChoice title="Lokal spielen" detail="Zusammen an einem Gerät" icon="group" onClick={onLocal}/>
-        <AdventureChoice title="Online spielen" detail="Jeder am eigenen Gerät" icon="globe" violet onClick={onOnline}/>
-      </nav>
-      {onResumeHost && <button className="expedition-resume" onClick={onResumeHost}>Handy-Tisch fortsetzen</button>}
-      {onResumeOnline && <button className="expedition-resume" disabled={!online} onClick={onResumeOnline}>{resumeGameName === "Inselparty" ? "Online-Inselparty" : resumeGameName} wieder beitreten</button>}
-      {resumeError && <p role="alert">{resumeError}</p>}
-      <footer className="expedition-utilities"><InstallPrompt/><AppUpdate/></footer>
+      <blockquote className="expedition-motto" lang="en">
+        <span>Play like the <em>GoldenSchmidt</em></span>
+        <span className="motto-divider"> - </span>
+        <span>Be like the <em>GoldenSchmidt</em></span>
+      </blockquote>
+      <div className="expedition-controls">
+        <nav className="expedition-actions" aria-label="Spielmodus wählen">
+          <AdventureChoice title="Lokal spielen" detail="Zusammen an einem Gerät" icon="group" onClick={onLocal}/>
+          <AdventureChoice title="Online spielen" detail="Jeder am eigenen Gerät" icon="globe" violet onClick={onOnline}/>
+        </nav>
+        {onResumeHost && <button className="expedition-resume" onClick={onResumeHost}>Handy-Tisch fortsetzen</button>}
+        {onResumeOnline && <button className="expedition-resume" disabled={!online} onClick={onResumeOnline}>{resumeGameName === "Inselparty" ? "Online-Inselparty" : resumeGameName} wieder beitreten</button>}
+        {resumeError && <p role="alert">{resumeError}</p>}
+        <footer className="expedition-utilities"><InstallPrompt/><AppUpdate/></footer>
+      </div>
     </div>
   </main>;
 }

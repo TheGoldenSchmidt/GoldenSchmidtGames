@@ -9,8 +9,6 @@ for (const reducedMotion of ["no-preference", "reduce"] as const) {
     await expect(page.getByRole("heading", { name: "GoldenSchmidtGames", exact: true })).toBeVisible();
     const local = page.getByRole("button", { name: /Lokal spielen/ });
     const online = page.getByRole("button", { name: /Online spielen/ });
-    await expect(local).toBeInViewport();
-    await expect(online).toBeInViewport();
     const island = page.getByRole("img", { name: "GoldenSchmidtGames" });
     await expect(island).toBeVisible();
     await expect.poll(() => page.evaluate(() => [...document.querySelectorAll<HTMLImageElement>(".home img")].every(img => img.complete && img.naturalWidth > 0))).toBe(true);
@@ -50,7 +48,9 @@ for (const reducedMotion of ["no-preference", "reduce"] as const) {
     expect(games.y + games.height).toBeLessThan(plaque.y + plaque.height * .8);
     await page.screenshot({ path: info.outputPath(`start-${reducedMotion}.png`), fullPage: true });
 
-    // Both modes remain immediately accessible, including from the keyboard.
+    // After the intro both modes are available, including from the keyboard.
+    await expect(local).toBeInViewport();
+    await expect(online).toBeInViewport();
     await local.focus();
     await page.keyboard.press("Enter");
     await expect(page.getByRole("heading", { name: "Lokal spielen", exact: true })).toBeVisible();
@@ -61,6 +61,34 @@ for (const reducedMotion of ["no-preference", "reduce"] as const) {
     expect(errors).toEqual([]);
   });
 }
+
+test("Krone reflektiert einmal nach der Landung, alle Buttons warten bis nach dem Zitat", async ({page}) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto("/");
+  await page.addStyleTag({content:".expedition-home * { animation-play-state:paused !important; }"});
+  await expect(page.locator(".home")).toHaveAttribute("data-intro", "playing");
+  const home = page.locator(".home");
+  const at = (time: number) => home.evaluate((element, time) => {
+    for (const animation of element.getAnimations({subtree:true})) animation.currentTime = time;
+  }, time);
+  const end = (selector: string) => page.locator(selector).evaluate(element =>
+    Number(element.getAnimations()[0].effect!.getComputedTiming().endTime));
+  const landed = await end(".crest-crown");
+  const quoteVisible = await end(".expedition-motto");
+  const buttons = home.getByRole("button");
+  const reflection = home.locator(".crown-reflection");
+  await at(landed - 1);
+  await expect(reflection).toHaveCSS("opacity", "0");
+  await expect(buttons).toHaveCount(0);
+  await at((landed + quoteVisible) / 2);
+  expect(await reflection.evaluate(element => Number(getComputedStyle(element).opacity))).toBeGreaterThan(.5);
+  await at(quoteVisible - 1);
+  await expect(reflection).toHaveCSS("opacity", "0");
+  await expect(buttons).toHaveCount(0);
+  await at(await end(".expedition-controls"));
+  await expect(buttons.first()).toBeVisible();
+  await expect(home.getByRole("button", {name:/Lokal spielen/})).toBeVisible();
+});
 
 test("Startbildschirm: Profil, Installationshilfe und schmale Ansicht", async ({ page }, info) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
