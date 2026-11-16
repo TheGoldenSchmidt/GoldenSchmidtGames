@@ -34,3 +34,26 @@ test("Menüton lässt sich ausschalten und bleibt nach Neustart stumm", async ({
   await sound.click();
   await expect(sound).toHaveAttribute("aria-pressed","true");
 });
+
+test("Menübuttons spielen genau einen kurzen Klick, stumme Buttons bleiben leise", async ({page}) => {
+  await page.addInitScript(() => {
+    const start = AudioBufferSourceNode.prototype.start;
+    AudioBufferSourceNode.prototype.start = function (...args) {
+      const log = JSON.parse(sessionStorage.getItem("menu-clicks") ?? "[]") as number[];
+      log.push(this.buffer?.duration ?? 0);
+      sessionStorage.setItem("menu-clicks", JSON.stringify(log));
+      start.apply(this, args);
+    };
+  });
+  await page.goto("/");
+  await page.getByRole("button", {name: /Online spielen/}).click();
+  await page.getByRole("button", {name: "Zurück"}).click();
+  await page.getByRole("button", {name: "Spieltöne"}).click();
+  await page.getByRole("button", {name: /Online spielen/}).click();
+  const clicks: number[] = await page.evaluate(() => JSON.parse(sessionStorage.getItem("menu-clicks") ?? "[]"));
+  expect(clicks).toHaveLength(2);
+  for (const duration of clicks) {
+    expect(duration).toBeGreaterThan(0);
+    expect(duration).toBeLessThan(.04);
+  }
+});

@@ -10,10 +10,31 @@ export function unlockSound() {
   try { context ??= new AudioContext(); if (context.state === "suspended") void context.resume(); } catch { context = undefined; }
 }
 
-export type Sfx = "menuOpen" | "menuBack" | "tick" | "go" | "shot" | "hit" | "score" | "fail" | "win" | "bounce" | "power" | "boom";
+let clickBuffer: AudioBuffer | undefined;
+
+export function playMenuClick() {
+  if (!soundEnabled()) return;
+  unlockSound();
+  if (!context) return;
+  if (!clickBuffer) {
+    const rate = context.sampleRate;
+    clickBuffer = context.createBuffer(1, Math.ceil(rate * .032), rate);
+    const samples = clickBuffer.getChannelData(0);
+    for (let i = 0; i < samples.length; i++) {
+      const t = i / rate;
+      const snap = (Math.random() * 2 - 1) * .16 * Math.exp(-t / .002);
+      const body = .12 * Math.sin(2 * Math.PI * 340 * t) * Math.exp(-t / .0045);
+      samples[i] = Math.min(1, t / .00035) * (snap + body);
+    }
+  }
+  const source = context.createBufferSource();
+  source.buffer = clickBuffer;
+  source.connect(context.destination);
+  source.start();
+}
+
+export type Sfx = "tick" | "go" | "shot" | "hit" | "score" | "fail" | "win" | "bounce" | "power" | "boom";
 const SHAPES: Record<Sfx, { f: number; to: number; d: number; type: OscillatorType; v: number; noise?: boolean }> = {
-  menuOpen: { f: 590, to: 885, d: .14, type: "sine", v: .065 },
-  menuBack: { f: 587, to: 392, d: .1, type: "triangle", v: .04 },
   tick: { f: 660, to: 660, d: .06, type: "square", v: .03 },
   go: { f: 880, to: 1320, d: .18, type: "square", v: .05 },
   shot: { f: 220, to: 60, d: .16, type: "sawtooth", v: .07, noise: true },

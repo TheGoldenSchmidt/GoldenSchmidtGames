@@ -16,7 +16,7 @@ Eine installierbare Smartphone-PWA für lokale und Online-Spiele. Das aktuelle G
 
 Das Qwixx-Modul enthält den gemeinsamen weißen Wurf, die zusätzliche Farbaktion der aktiven Person, vier getrennte Wertungsblätter, Fehlwürfe, Reihenschlüsse, automatische Wertung und die Spielergebnisanzeige.
 
-Der Menü-Gegenentwurf nutzt eine eigens illustrierte Insel mit goldenem Titelwappen, ein Landschaftspanorama und vier Spielmotive. Die WebP-Dateien liegen in `src/assets/expedition/` und werden mit der PWA zwischengespeichert. Spielzugänge, Schrift, Gastprofil, Installation und Updates sind interaktive HTML-Elemente. Der Startbildschirm füllt eine Bildschirmhöhe. Eine kurze Einblendung entfällt bei reduzierter Bewegung. Der Lautsprecher schaltet die Menü- und Match-Spieltöne auf diesem Gerät um.
+Das Spielmenü nutzt eine eigens illustrierte Insel mit goldenem Titelwappen, ein Landschaftspanorama und vier Spielmotive. Die WebP-Dateien liegen in `src/assets/expedition/` und werden mit der PWA zwischengespeichert. Spielzugänge, Schrift, Gastprofil, Installation und Updates sind interaktive HTML-Elemente. Der Startbildschirm füllt eine Bildschirmhöhe. Eine kurze Einblendung entfällt bei reduzierter Bewegung. Der Lautsprecher schaltet die Menü- und Match-Spieltöne auf diesem Gerät um.
 
 Unter **Lokal spielen** stehen die drei Tischspiele sowie **Minispiele testen** mit Bots. Unter **Online spielen** führen getrennte Wege zum Erstellen und Beitreten. Raumcode und QR-Einladung stehen im Beitrittsmenü. Lobby, Gastprofil und QR-Dialog verwenden dieselben Formular- und Aktionsstile. Die frühere 3D-Renderpipeline ist unter [Startscreen-Render](docs/startscreen-render.md) dokumentiert.
 
