@@ -8,7 +8,7 @@ export default defineConfig({
     VitePWA({
       registerType: "prompt",
       injectRegister: false,
-      includeAssets: ["gsg-icon-32.png", "gsg-icon-192.png", "gsg-icon-512.png", "gsg-apple-touch-icon.png", "characters/*.png", "models/*.glb", "models/tex/*"],
+      includeAssets: ["gsg-icon-32.png", "gsg-steinwappen-192.png", "gsg-steinwappen-512.png", "gsg-apple-touch-icon.png", "characters/*.png", "models/*.glb", "models/tex/*"],
       manifest: {
         id: "/",
         name: "GoldenSchmidtGames",
@@ -25,19 +25,19 @@ export default defineConfig({
         scope: "/",
         icons: [
           {
-            src: "/gsg-icon-192.png",
+            src: "/gsg-steinwappen-192.png",
             sizes: "192x192",
             type: "image/png",
             purpose: "any"
           },
           {
-            src: "/gsg-icon-512.png",
+            src: "/gsg-steinwappen-512.png",
             sizes: "512x512",
             type: "image/png",
             purpose: "any"
           },
           {
-            src: "/gsg-icon-512.png",
+            src: "/gsg-steinwappen-512.png",
             sizes: "512x512",
             type: "image/png",
             purpose: "maskable"

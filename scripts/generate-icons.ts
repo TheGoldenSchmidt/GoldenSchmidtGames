@@ -10,8 +10,8 @@ const sources = await Promise.all(layers.map(async name => {
 const outputs = [
   ["gsg-icon-32.png", 32],
   ["gsg-apple-touch-icon.png", 180],
-  ["gsg-icon-192.png", 192],
-  ["gsg-icon-512.png", 512]
+  ["gsg-steinwappen-192.png", 192],
+  ["gsg-steinwappen-512.png", 512]
 ] as const;
 
 const browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH });
