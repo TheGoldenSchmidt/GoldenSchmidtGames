@@ -1,3 +1,4 @@
+import { selectEntryCharacter } from "./select-entry-character";
 import { expect, test } from "@playwright/test";
 import { restartFixture } from "../../scripts/restart-fixture";
 
@@ -17,7 +18,7 @@ for (const [game, marker] of [
         await device.goto(url);
         await device.getByRole("button", { name: /Online spielen/ }).click();
     await device.getByRole("button", { name: device === page ? /^Raum erstellen/ : /^Raum beitreten/ }).click();
-        await device.getByLabel("Deine Spielfigur").selectOption({label: character});
+        await selectEntryCharacter(device, character);
       }
       await page.getByRole("button", { name: "Neuen Raum erstellen", exact: true }).click();
       const code = await page.locator(".room-code strong").innerText();

@@ -1,3 +1,4 @@
+import { selectEntryCharacter } from "./select-entry-character";
 import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
 import { io } from "socket.io-client";
@@ -124,7 +125,7 @@ for (const gameId of ["durak", "qwixx", "kribbeln", "party"] as const) test(`Onl
     await request(socket, "room:configure", { gameId, playerCount: 2, party: { rounds: 5, tempo: "slow" } });
     await page.goto("/"); await page.getByRole("button", { name: /Online spielen/ }).click();
     await page.getByRole("button", { name: /^Raum beitreten/ }).click();
-    await page.getByLabel("Deine Spielfigur").selectOption({label: "Morty Smith"});
+    await selectEntryCharacter(page, "Morty Smith");
     await page.getByRole("textbox", { name: "Raumcode" }).fill(room.code);
     await page.getByRole("button", { name: "Raum beitreten", exact: true }).click();
     await page.getByRole("button", { name: "Ich bin bereit", exact: true }).click();

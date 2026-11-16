@@ -1,3 +1,4 @@
+import { selectEntryCharacter } from "./select-entry-character";
 import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 import { io } from "socket.io-client";
@@ -34,7 +35,7 @@ test("Durak verbindet dasselbe Gerät in Lobby und Partie wieder", async ({ page
     async function joinByCode() {
       await page.getByRole("button", { name: /Online spielen/ }).click();
       await page.getByRole("button", { name: /^Raum beitreten/ }).click();
-      await page.getByLabel("Deine Spielfigur").selectOption({label: "Morty Smith"});
+      await selectEntryCharacter(page, "Morty Smith");
       await page.getByRole("textbox", { name: "Raumcode" }).fill(room.code);
       await page.getByRole("button", { name: "Raum beitreten", exact: true }).click();
     }

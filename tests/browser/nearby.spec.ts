@@ -1,3 +1,4 @@
+import { selectEntryCharacter } from "./select-entry-character";
 import { test, expect, type Page } from "@playwright/test";
 import jsQR from "jsqr";
 import { PNG } from "pngjs";
@@ -23,7 +24,7 @@ async function enter(page: Page, guest = false) {
   await page.goto("/");
   await page.getByRole("button",{name:/Online spielen/}).click();
   await page.getByRole("button", {name: guest ? /^Raum beitreten/ : /^Raum erstellen/}).click();
-  await page.getByLabel("Deine Spielfigur").selectOption({label:"Morty Smith"});
+  await selectEntryCharacter(page, "Morty Smith");
   await page.getByRole("radio", {name: guest ? /QR vom Handy-Host/ : /Dieses Handy/}).check();
 }
 
