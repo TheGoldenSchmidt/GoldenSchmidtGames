@@ -61,11 +61,10 @@
 .expedition-actions { display: grid; gap: 12px; }
 .adventure-choice {
   --edge: #885123; --top: #fff1bf; --base: #ffc86a; --low: #e8a045; --accent: #75431e; --letter: #3a2215;
-  --carving: url("../assets/expedition/gold.webp");
+  --carving: url("../assets/expedition/citrine.webp");
   position: relative; display: block; width: 100%; padding: 0; border: 0; background: none; color: var(--letter); cursor: pointer;
   filter: drop-shadow(0 5px 2px #0a0b1699); text-align: left;
 }
-.expedition-actions .adventure-choice:not(.is-amethyst) { --carving:url("../assets/expedition/citrine.webp"); }
 .adventure-choice.is-amethyst { --carving:url("../assets/expedition/amethyst.webp"); --edge: #573475; --top: #f6d9ff; --base: #dbadf5; --low: #b57cdb; --accent: #613679; --letter: #321c45; }
 .adventure-choice__face { position:relative;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:13px;
   min-height:clamp(69px,9.5dvh,87px);padding:12px 22px 15px;background:var(--carving) center/100% 100% no-repeat;transition:transform .12s,filter .12s;}

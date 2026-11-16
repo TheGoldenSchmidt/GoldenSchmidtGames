@@ -2,10 +2,15 @@ import { test, expect } from "@playwright/test";
 
 test("Online-Wege trennen Erstellen, Raumcode und QR und behalten die Figur", async ({page}) => {
   await page.goto("/");
+  const localFace = page.getByRole("button", {name: /^Lokal spielen/}).locator(".adventure-choice__face");
+  const citrine = await localFace.evaluate(el => getComputedStyle(el).backgroundImage);
+  expect(citrine).toContain("citrine");
   await page.getByRole("button", {name: /Online spielen/}).click();
   await expect(page.getByRole("combobox")).toHaveCount(0);
   await expect(page.getByRole("textbox")).toHaveCount(0);
-  await page.getByRole("button", {name: /^Raum erstellen/}).click();
+  const create = page.getByRole("button", {name: /^Raum erstellen/});
+  await expect(create.locator(".adventure-choice__face")).toHaveCSS("background-image", citrine);
+  await create.click();
   await expect(page.getByRole("textbox", {name: "Raumcode"})).toHaveCount(0);
   await page.getByLabel("Deine Spielfigur").selectOption({label: "Morty Smith"});
   await page.getByRole("button", {name: "Zurück"}).click();
