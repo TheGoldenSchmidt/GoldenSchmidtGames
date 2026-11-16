@@ -36,7 +36,7 @@ Die aktuelle Kribbeln-Aufgabe wird als Mengenbild mit Würfeln, Farbgruppen oder
 
 ## Zwei Hostingarten
 
-Beim Erstellen eines Raums wählt der Host **Node-Server** (Standard) oder **Dieses Handy**. Alle verfügbaren Spiele verwenden dieselbe Raum- und Regellogik. Die Auswahl gilt für diesen Raum; laufende Partien wechseln ihre Hostingart nicht.
+Beim Erstellen eines Raums wählt der Host **Über das Internet** (Node-Server) oder **Dieses Handy**. Alle verfügbaren Spiele verwenden dieselbe Raum- und Regellogik. Die Auswahl gilt für diesen Raum; laufende Partien wechseln ihre Hostingart nicht.
 
 Im Node-Modus verbindet sich jedes Gerät über das Internet mit dem bisherigen Server und tritt per Raumcode bei. Im Handy-Modus spielt der Host selbst mit und führt die gemeinsame Simulation in einem Worker aus. Gäste verbinden sich im selben WLAN oder Hotspot einzeln per Einladung und Antwort als QR-Code. Der Spielverkehr läuft direkt zwischen den Geräten, ohne Signalisierungsdienst, STUN/TURN oder Cloud-Datenbank. Verschiedene Gruppen haben unabhängige Hosts.
 
@@ -52,7 +52,7 @@ Auf dem Startbildschirm prüft „Updates prüfen“ den Service Worker ohne Bro
 
 ## Freies Minispiel und Schlag den GoldenSchmidt
 
-Unter **Online spielen → Neuen Raum erstellen → Ausgewähltes Spiel** sind beide Modi für 2–6 Personen verfügbar. Jede Person spielt am eigenen Gerät. Im Modus **Freies Minispiel** wählt der Host eines der 26 Minispiele aus (12 neue, 14 klassische), sofern es zur Spielerzahl passt. Nach Anleitung, optionaler Übung und gemeinsamem Countdown wird genau dieses Spiel gewertet und das Ergebnis angezeigt.
+Unter **Online spielen → Raum erstellen → Ausgewähltes Spiel** sind beide Modi für 2–6 Personen verfügbar. Jede Person spielt am eigenen Gerät. Im Modus **Freies Minispiel** wählt der Host eines der 26 Minispiele aus (12 neue, 14 klassische), sofern es zur Spielerzahl passt. Nach Anleitung, optionaler Übung und gemeinsamem Countdown wird genau dieses Spiel gewertet und das Ergebnis angezeigt.
 
 Bei **Schlag den GoldenSchmidt** wählt der Host 1 bis zur Zahl der passenden Minispiele (Standard: 5; ohne 1st Generation Minigames entsprechend weniger). Die Raumautorität zieht die Spiele zufällig ohne Wiederholung. Vor jedem Spiel kennt ihr die Aufgabe und setzt verdeckt einen eigenen, noch freien Wert von 1 bis zur gewählten Spielanzahl. Sobald alle gesetzt haben, werden die Einsätze aufgedeckt. Ein gesetzter Wert ist auch bei einer Niederlage verbraucht und kann nicht geändert werden. Die erstplatzierte Person erhält ihren eigenen Einsatz als Punkte; alle anderen erhalten 0 Punkte. Die höchste Gesamtpunktzahl gewinnt. Bei gleichem Gesamtstand wird der Sieg geteilt. Der Host startet jeweils das nächste Minispiel.
 
@@ -81,7 +81,7 @@ In Inselparty, Roll It Up! und Schlag den GoldenSchmidt blendet die Checkbox **1
 
 ## Roll It Up!
 
-Wählt im Online-Raum **Roll It Up!** für 2–6 Personen. Der Modus läuft auf dem Node-Server und beim Handy-Hosting. Für eine Solopartie lässt sich im Online-Menü ein Testspiel mit Bots erstellen.
+Wählt im Online-Raum **Roll It Up!** für 2–6 Personen. Der Modus läuft auf dem Node-Server und beim Handy-Hosting. Für eine Solopartie lässt sich unter **Lokal spielen → Minispiele testen** ein Testspiel mit Bots auf dem eigenen Gerät erstellen.
 
 Das Auftakt-Minispiel legt die Zugreihenfolge fest. Ihr würfelt, entscheidet an Abzweigungen und verdient in gemeinsamen Minispielen Münzen. In der Bauschale liegen sechs feste Kaufstellen jeweils fünf Felder auseinander. Der Grinder kostet 8 Münzen, Pape und Filter kosten je 3, jeder der drei Weedbuds kostet 5. Beim Passieren kann jede Figur an jeder Station einmal für ihr eigenes Set einkaufen. Die normalen Zug-Items haben weiterhin drei eigene Inventarplätze.
 

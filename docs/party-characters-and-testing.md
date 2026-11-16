@@ -4,7 +4,7 @@
 
 ## Im Spiel
 
-Unter **Online spielen → Inselparty alleine testen** lässt sich ein Testraum
+Unter **Lokal spielen → Minispiele testen** lässt sich ein Testraum
 mit einer Person und ein bis fünf Bots anlegen. Vorher die eigene Figur wählen;
 in der Lobby die Rundenzahl wählen und **Ich bin bereit** drücken. Die Bots melden sich selbst
 bereit, würfeln, verwenden Items und steuern ihre Figuren in den Minispielen.
@@ -19,8 +19,7 @@ Oben in der Partie öffnet **Testpartie mit Bots** die Werkzeuge:
 Der Startwert bestimmt Würfelreihenfolge und Arenaaufbau. Eingaben, Kollisionen
 und Zeitablauf beeinflussen das Ergebnis weiterhin. Ein Testraum ist privat
 für seine erstellende Person und deren Bots; andere Personen können ihm nicht
-beitreten. Die Partie läuft auf dem gewählten Node-Server oder Host-Handy. Nach einem
-Verbindungsabbruch kann dieselbe Sitzung wieder beitreten. Nach einem Serverneustart lädt der Server auch Testraum, Startwert und Bots aus dem [Spielstandspeicher](../DEPLOYMENT.md), sofern dieser erhalten geblieben ist. Render Free benötigt dafür optionalen externen Speicher; zum Starten und Testen ist Turso nicht erforderlich.
+beitreten. Das Gerät speichert die Partie lokal. Über **Handy-Tisch fortsetzen** lässt sie sich wieder öffnen.
 
 In allen Spielen wählt jede Person ihre Figur vor dem Erstellen oder Beitreten.
 Die Auswahl wird im Gastprofil gespeichert und ist in der Lobby änderbar.

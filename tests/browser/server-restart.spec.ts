@@ -16,7 +16,8 @@ for (const [game, marker] of [
       for (const [device, character] of [[page, "Prime Rick"], [guest, "Morty Smith"]] as const) {
         await device.goto(url);
         await device.getByRole("button", { name: /Online spielen/ }).click();
-        await device.getByRole("button", { name: character, exact: true }).click();
+    await device.getByRole("button", { name: device === page ? /^Raum erstellen/ : /^Raum beitreten/ }).click();
+        await device.getByLabel("Deine Spielfigur").selectOption({label: character});
       }
       await page.getByRole("button", { name: "Neuen Raum erstellen", exact: true }).click();
       const code = await page.locator(".room-code strong").innerText();

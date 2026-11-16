@@ -30,7 +30,7 @@ export function ProfileDialog({
         <div className="dialog__handle" aria-hidden="true" />
         <h2 id="profile-title" className="iw-plank">Dein Gastprofil</h2>
         <p className="muted">
-          Der Name ist optional und wird nur auf diesem Gerät gespeichert. Ein Konto für Statistiken folgt später.
+          Der Name ist optional und wird nur auf diesem Gerät gespeichert.
         </p>
         <label className="field">
           <span>Anzeigename</span>

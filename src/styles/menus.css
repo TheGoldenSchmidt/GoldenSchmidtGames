@@ -270,3 +270,14 @@ button.room-code { cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
   .iw-menu *, .iw-menu *::before, .iw-menu *::after, .iw-dialog * { animation: none !important; transition: none !important; }
 }
+
+.iw-menu .entry-choices, .iw-menu .entry-frame {
+  width: min(100%, 620px); margin-inline: auto; display: grid; gap: 18px;
+}
+.iw-menu .entry-choice { text-align: left; width: 100%; }
+.iw-menu .entry-choice > :last-child { font-size: 1.6rem; justify-self: end; }
+.iw-menu .room-entry .hosting-choice { margin: 0; }
+.iw-menu .room-entry .field { margin: 0; }
+.iw-menu .entry-character select, .iw-menu .room-entry .field select { min-height: 44px; width: 100%; }
+.iw-menu .room-entry summary { min-height: 44px; align-content: center; cursor: pointer; }
+.iw-menu .room-entry { display: grid; gap: 16px; margin: 0; }

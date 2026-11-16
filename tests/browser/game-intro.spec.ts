@@ -121,7 +121,8 @@ for (const gameId of ["durak", "qwixx", "kribbeln", "party"] as const) test(`Onl
     const room = await request<RoomState>(socket, "room:create", {characterId:"alpha_rick_prime", playerId: randomUUID(), name: "Anna" });
     await request(socket, "room:configure", { gameId, playerCount: 2, party: { rounds: 5, tempo: "slow" } });
     await page.goto("/"); await page.getByRole("button", { name: /Online spielen/ }).click();
-    await page.getByRole("button",{name:"Morty Smith",exact:true}).click();
+    await page.getByRole("button", { name: /^Raum beitreten/ }).click();
+    await page.getByLabel("Deine Spielfigur").selectOption({label: "Morty Smith"});
     await page.getByRole("textbox", { name: "Raumcode" }).fill(room.code);
     await page.getByRole("button", { name: "Raum beitreten", exact: true }).click();
     await page.getByRole("button", { name: "Ich bin bereit", exact: true }).click();

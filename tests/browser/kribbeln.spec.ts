@@ -207,13 +207,15 @@ test("Online sehen beide Geräte behaltene Würfel und dieselben gelandeten Farb
     await page.addInitScript(profile => localStorage.setItem("spielraum.profile.v1", JSON.stringify(profile)), { id: randomUUID(), username: "Anna" });
     await observer.addInitScript(profile => localStorage.setItem("spielraum.profile.v1", JSON.stringify(profile)), { id: randomUUID(), username: "Ben" });
     await page.goto("/"); await page.getByRole("button", { name: /Online spielen/ }).click();
-    await page.getByRole("button",{name:"Prime Rick",exact:true}).click();
+    await page.getByRole("button", { name: /^Raum erstellen/ }).click();
+    await page.getByLabel("Deine Spielfigur").selectOption({label: "Prime Rick"});
     await page.getByRole("button", { name: "Neuen Raum erstellen", exact: true }).click();
     await page.getByRole("combobox", { name: "Ausgewähltes Spiel", exact: true }).selectOption("kribbeln");
     const code = await page.locator(".room-code strong").innerText();
     await observer.goto(new URL("/", page.url()).href); await observer.getByRole("button", { name: /Online spielen/ }).click();
+    await observer.getByRole("button", { name: /^Raum beitreten/ }).click();
     await observer.getByRole("textbox", { name: "Raumcode" }).fill(code);
-    await observer.getByRole("button",{name:"Morty Smith",exact:true}).click();
+    await observer.getByLabel("Deine Spielfigur").selectOption({label: "Morty Smith"});
     await observer.getByRole("button", { name: "Raum beitreten", exact: true }).click();
     await observer.getByRole("button", { name: "Ich bin bereit", exact: true }).click();
     await page.getByRole("button", { name: "Ich bin bereit", exact: true }).click();

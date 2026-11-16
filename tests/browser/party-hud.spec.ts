@@ -41,9 +41,12 @@ for(const motion of ['no-preference','reduce'] as const) {
   test(`HUD: Steuerknöpfe passen im laufenden Querformat (${motion})`,async({page},info)=>{
     await page.emulateMedia({reducedMotion:motion});
     await page.addInitScript(profile=>localStorage.setItem('spielraum.profile.v1',JSON.stringify(profile)),{id:randomUUID(),username:'Anna'});
-    await page.goto('/');await page.getByRole('button',{name:/Online spielen/}).click();
-    await page.getByRole('button',{name:'Prime Rick',exact:true}).click();
-    await page.getByText('Inselparty alleine testen',{exact:true}).click();
+    await page.goto('/');await page.getByRole("button", {name: /Lokal spielen/}).click();
+    await page.getByRole("button", {name: /^Minispiele testen/}).click();
+    await expect(page.getByRole("button", {name: "Testpartie mit Bots erstellen"})).toBeDisabled();
+    await expect(page.getByLabel("Deine Spielfigur").locator("option")).toHaveCount(14);
+    await page.getByLabel("Deine Spielfigur").selectOption({label: "Prime Rick"});
+    await page.getByLabel("Testspiel").selectOption("party");
     await page.getByLabel('Bot-Mitspieler').selectOption('2');
     await page.getByRole('button',{name:'Testpartie mit Bots erstellen'}).click();
     await page.getByRole('button',{name:'Ich bin bereit',exact:true}).click();

@@ -258,3 +258,5 @@ Browser-Emulation belegt keine Leistung auf einem echten Handy.
 
 Neue Gestaltungsentscheidungen in diesem Dokument festhalten. Implementierte und
 geprüfte Ansichten von bloß geplanten Erweiterungen unterscheiden.
+
+Im Online-Einstieg zuerst Erstellen oder Beitreten wählen. Eine kompakte Figurenliste begleitet beide Wege. QR und Raumcode sind Beitrittsarten. Lokale Bot-Partien stehen neben den spielbaren Titeln im lokalen Menü.

@@ -1,161 +1,165 @@
-import { useState, useEffect, useRef } from "react";
-import type { GuestProfile, RoomState } from "../../shared/types";
-import { ScreenHeader } from "../components/ScreenHeader";
+import { useEffect, useRef, useState } from "react";
+import { CHARACTERS, isCharacterId, type CharacterId } from "../../shared/characters";
+import { GAMES, isPartyMode } from "../../shared/games";
+import type { Ack, GameId, GuestProfile, RoomState } from "../../shared/types";
 import { IslandWorld } from "../components/IslandWorld";
+import { ScreenHeader } from "../components/ScreenHeader";
+import { CharacterAvatar } from "../components/CharacterAvatar";
 import { displayName } from "../lib/profile";
-import { nearby } from "../nearby/nearbySocket";
-import { GuestPair } from "../nearby/Pairing";
-import { socket, useTableTransport } from "../lib/socket";
 import { tokenForJoin } from "../lib/roomSession";
-import {PartyCharacterPicker} from "../components/PartyCharacterPicker";
-import {isCharacterId,type CharacterId} from "../../shared/characters";
+import { socket, useTableTransport } from "../lib/socket";
+import { GuestPair } from "../nearby/Pairing";
+import { nearby } from "../nearby/nearbySocket";
 
-export function OnlineEntryScreen({
-  profile,
-  onBack,
-  onJoined,
-  onCharacterChange
-}: {
+type EntryMode = "host" | "join" | "test";
+
+export function OnlineEntryScreen({ onBack, onSelect }: {
+  onBack: () => void;
+  onSelect: (role: "host" | "join") => void;
+}) {
+  return <main className="page iw-menu screen-enter">
+    <IslandWorld />
+    <ScreenHeader title="Online spielen" onBack={onBack} />
+    <section className="page__content entry-choices">
+      <button className="game-choice entry-choice" onClick={() => onSelect("host")}>
+        <span className="game-choice__tile" aria-hidden="true">＋</span>
+        <span><strong>Raum erstellen</strong><small>Ein Spiel wählen und Freunde einladen</small></span>
+        <span aria-hidden="true">›</span>
+      </button>
+      <button className="game-choice entry-choice" onClick={() => onSelect("join")}>
+        <span className="game-choice__tile" aria-hidden="true">⇥</span>
+        <span><strong>Raum beitreten</strong><small>Mit Raumcode oder QR-Einladung</small></span>
+        <span aria-hidden="true">›</span>
+      </button>
+    </section>
+  </main>;
+}
+
+export function RoomEntryForm({ mode, profile, onBack, onJoined, onCharacterChange }: {
+  mode: EntryMode;
   profile: GuestProfile;
   onBack: () => void;
   onJoined: (room: RoomState) => void;
-  onCharacterChange:(id:CharacterId)=>void;
+  onCharacterChange: (id: CharacterId) => void;
 }) {
-  const [nearbyMode, setNearbyMode] = useState(false);
+  const [deviceHost, setDeviceHost] = useState(!navigator.onLine);
+  const [qr, setQr] = useState(false);
   const [pairing, setPairing] = useState(false);
-  const [joinOpen, setJoinOpen] = useState(false);
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [bots,setBots]=useState(3),[seed,setSeed]=useState("42");
-  const selected=isCharacterId(profile.characterId)?profile.characterId:undefined;
-
-  const invitationCode = useRef("");
+  const [bots, setBots] = useState(3);
+  const [seed, setSeed] = useState("42");
+  const [gameId, setGameId] = useState<GameId>("free-minigame");
   const active = useRef(true);
+  const invitationCode = useRef("");
+  const characterId = isCharacterId(profile.characterId) ? profile.characterId : undefined;
+  const title = mode === "host" ? "Raum erstellen" : mode === "join" ? "Raum beitreten" : "Minispiele testen";
+  const validSeed = seed !== "" && Number.isInteger(Number(seed)) && Number(seed) >= 0 && Number(seed) <= 0xffffffff;
+
   useEffect(() => {
     active.current = true;
+    return () => { active.current = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!qr || !characterId) return;
     const paired = () => {
       const code = invitationCode.current;
-      if (!code || nearby.route?.role !== "guest" || !selected) return;
-      socket.timeout(8000).emit("room:join", { code, playerId:profile.id, sessionToken:tokenForJoin(code,profile.id),
-        characterId:selected, name:displayName(profile) }, (err:Error|null,res:{ok:boolean;data?:RoomState;error?:string})=>{
-        if (!active.current) return;
-        if (err || !res?.ok || !res.data) setError(res?.error ?? "Der Host antwortet nicht.");
-        else onJoined(res.data);
+      if (!code || nearby.route?.role !== "guest") return;
+      socket.timeout(8000).emit("room:join", {
+        code, playerId: profile.id, sessionToken: tokenForJoin(code, profile.id),
+        characterId, name: displayName(profile)
+      }, (err: Error | null, response?: Ack<RoomState>) => {
+        if (!active.current || invitationCode.current !== code) return;
+        if (err || !response?.ok || !response.data) setError(response?.error ?? "Der Host antwortet nicht.");
+        else onJoined(response.data);
       });
     };
-    nearby.on("connect",paired);
-    return () => { active.current=false; nearby.off("connect",paired); };
-  },[profile,selected,onJoined]);
+    nearby.on("connect", paired);
+    return () => { nearby.off("connect", paired); };
+  }, [qr, characterId, profile, onJoined]);
 
-  async function prepareHost() {
-    if (nearbyMode) {
-      useTableTransport({ role:"host",table:crypto.randomUUID() });
-      try { await nearby.start(); } catch { setError("Der Tisch konnte nicht geöffnet werden. Prüfe den verfügbaren Gerätespeicher."); setLoading(false); return false; }
-    } else { useTableTransport();ensureConnection(); }
-    return active.current;
-  }
-
-  const [testMode,setTestMode]=useState("party");
-  async function createTest(){
-    if(!selected)return setError("Wähle zuerst deine Spielfigur.");
-    setLoading(true);setError("");if (!await prepareHost()) return;
-    socket.timeout(15000).emit("party:test-create",{playerId:profile.id,name:displayName(profile),characterId:selected,bots,gameId:testMode,seed:Number(seed)},(err:Error|null,response:{ok:boolean;data?:RoomState;error?:string})=>{setLoading(false);if(err||!response.ok||!response.data)return setError(response?.error??"Der Spielhost antwortet gerade nicht.");onJoined(response.data);});
-  }
-
-  function ensureConnection() {
-    if (!socket.connected) socket.connect();
-  }
-
-  async function createRoom() {
-    if(!selected)return setError("Wähle zuerst deine Spielfigur.");
+  async function submit() {
+    if (loading || !characterId) return;
     setLoading(true);
     setError("");
-    if (!await prepareHost()) return;
-    socket.timeout(5000).emit(
-      "room:create",
-      { playerId: profile.id, name: displayName(profile), characterId:selected },
-      (timeoutError: Error | null, response: { ok: boolean; data?: RoomState; error?: string }) => {
-        setLoading(false);
-        if (timeoutError) return setError("Der Spielhost antwortet gerade nicht.");
-        if (!response.ok || !response.data) return setError(response.error ?? "Raum konnte nicht erstellt werden.");
-        onJoined(response.data);
+    const player = { playerId: profile.id, characterId, name: displayName(profile) };
+    if (mode === "test" || (mode === "host" && deviceHost)) {
+      useTableTransport({ role: "host", table: crypto.randomUUID() });
+      try { await nearby.start(); }
+      catch {
+        if (active.current) {
+          setError("Der Tisch konnte nicht geöffnet werden. Prüfe den verfügbaren Gerätespeicher.");
+          setLoading(false);
+        }
+        return;
       }
-    );
+    } else {
+      useTableTransport();
+      socket.connect();
+    }
+    if (!active.current) return;
+    const done = (err: Error | null, response?: Ack<RoomState>) => {
+      if (!active.current) return;
+      setLoading(false);
+      if (err || !response?.ok || !response.data) setError(response?.error ?? "Der Spielhost antwortet gerade nicht. Versuche es erneut.");
+      else onJoined(response.data);
+    };
+    if (mode === "test") socket.timeout(15000).emit("party:test-create", { ...player, gameId, bots, seed: Number(seed) }, done);
+    else if (mode === "host") socket.timeout(5000).emit("room:create", player, done);
+    else socket.timeout(5000).emit("room:join", { ...player, code, sessionToken: tokenForJoin(code, profile.id) }, done);
   }
 
-  function joinRoom() {
-    if (code.length < 5) return setError("Bitte gib den vollständigen Raumcode ein.");
-    if(!selected)return setError("Wähle zuerst deine Spielfigur.");
-    setLoading(true);
+  function changeJoinMethod(nextQr: boolean) {
+    invitationCode.current = "";
+    if (qr) nearby.disconnect();
+    setPairing(false);
     setError("");
-    useTableTransport();ensureConnection();
-    socket.timeout(5000).emit(
-      "room:join",
-      { code, playerId: profile.id, sessionToken: tokenForJoin(code, profile.id), name: displayName(profile), characterId:selected },
-      (timeoutError: Error | null, response: { ok: boolean; data?: RoomState; error?: string }) => {
-        setLoading(false);
-        if (timeoutError) return setError("Der Spielhost antwortet gerade nicht.");
-        if (!response.ok || !response.data) return setError(response.error ?? "Beitritt nicht möglich.");
-        onJoined(response.data);
-      }
-    );
+    setQr(nextQr);
   }
 
-  return (
-    <main className="page iw-menu screen-enter">
-      <IslandWorld />
-      <ScreenHeader title="Online spielen" onBack={onBack} />
-      <section className="page__content online-entry">
-
-        <p className="iw-note">Zusammen an einen Tisch: Jede Person spielt auf ihrem eigenen Gerät.</p>
-
-        <PartyCharacterPicker value={selected} disabled={loading} onChange={onCharacterChange}/>
-
-        <section className="iw-card">
-          <h2 className="iw-plank iw-card__title">Neuer Raum</h2>
-        <fieldset className="hosting-choice" disabled={loading||pairing}>
-          <legend>Wo soll der Raum laufen?</legend>
-          <label><input type="radio" name="hosting" checked={!nearbyMode} onChange={()=>setNearbyMode(false)}/><span><strong>Node-Server</strong><small>Alle brauchen Internet. Beitritt mit Raumcode.</small></span></label>
-          <label><input type="radio" name="hosting" checked={nearbyMode} onChange={()=>setNearbyMode(true)}/><span><strong>Dieses Handy</strong><small>Gleiches WLAN oder Hotspot. Beitritt per QR. Das Host-Handy spielt mit und bleibt geöffnet. Ohne Internet: App vorher auf allen Geräten laden.</small></span></label>
+  return <main className="page iw-menu screen-enter">
+    <IslandWorld />
+    <ScreenHeader title={title} onBack={onBack} />
+    <div className="page__content entry-frame"><form className="iw-card room-entry" onSubmit={event => { event.preventDefault(); if (!qr) void submit(); }}>
+      <label className="local-character-field entry-character">
+        <CharacterAvatar id={characterId} decorative />
+        <span>Deine Spielfigur<select value={characterId ?? ""} disabled={loading || pairing} onChange={event => {
+          if (isCharacterId(event.target.value)) onCharacterChange(event.target.value);
+        }}><option value="" disabled>Figur wählen</option>{CHARACTERS.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></span>
+      </label>
+      {mode === "host" && <fieldset className="hosting-choice" disabled={loading}>
+        <legend>Wo spielt ihr?</legend>
+        <label><input type="radio" name="hosting" checked={!deviceHost} onChange={() => setDeviceHost(false)} /><span><strong>Über das Internet</strong><small>Teile den Raumcode mit deinen Freunden.</small></span></label>
+        <label><input type="radio" name="hosting" checked={deviceHost} onChange={() => setDeviceHost(true)} /><span><strong>Dieses Handy</strong><small>Im selben WLAN oder Hotspot per QR einladen. Lass dein Handy geöffnet.</small></span></label>
+      </fieldset>}
+      {mode === "join" && <>
+        <fieldset className="hosting-choice" disabled={loading}>
+          <legend>Deine Einladung</legend>
+          <label><input type="radio" name="invitation" checked={!qr} onChange={() => changeJoinMethod(false)} /><strong>Raumcode</strong></label>
+          <label><input type="radio" name="invitation" checked={qr} onChange={() => changeJoinMethod(true)} /><strong>QR vom Handy-Host</strong></label>
         </fieldset>
-        <button className="button button--primary button--wide" onClick={createRoom} disabled={loading||pairing||!selected}>
-          {loading ? "Verbindung wird hergestellt …" : "Neuen Raum erstellen"}
-        </button>
-        </section>
-
-        <section className="iw-card">
-          <h2 className="iw-plank iw-card__title">Raum beitreten</h2>
-
-        <label className="field field--code">
-          <span>Raumcode</span>
-          <input
-            value={code}
-            maxLength={5}
-            inputMode="text"
-            autoCapitalize="characters"
-            placeholder="ABCDE"
-            onChange={(event) => setCode(event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
-          />
-        </label>
-        <button className="button button--secondary button--wide" onClick={joinRoom} disabled={loading || !selected || code.length < 5}>
-          Raum beitreten
-        </button>
-        </section>
-        {selected && <details className="nearby-join" onToggle={event=>{
-          const open=event.currentTarget.open;setJoinOpen(open);
-          if(!open && pairing){nearby.disconnect();setPairing(false);invitationCode.current="";}
-        }}><summary>Einem Handy-Host per QR beitreten</summary>
-          {joinOpen && <GuestPair onReset={()=>setPairing(false)} onOffer={(code,table)=>{setPairing(true);invitationCode.current=code;useTableTransport({table,role:"guest"});}}/>}
-        </details>}
-        <details className="party-test-entry"><summary><span>Inselparty alleine testen</span> · Roll It Up!</summary><p>Eine vollständige Online-Partie mit Bots. Wähle deine Figur, spiele alle Runden oder starte ein bestimmtes Minispiel.</p>
-          <label>Testspiel<select value={testMode} onChange={e=>setTestMode(e.target.value)}><option value="party">Inselparty</option><option value="roll-it-up">Roll It Up!</option><option value="free-minigame">Freies Minispiel</option><option value="goldenschmidt">Schlag den GoldenSchmidt</option></select></label>
-          <label>Bot-Mitspieler<select value={bots} disabled={loading||!selected} onChange={e=>setBots(Number(e.target.value))}>{[1,2,3,4,5].map(n=><option key={n} value={n}>{n} {n===1?"Bot":"Bots"}</option>)}</select></label>
-          <label>Startwert für wiederholbare Partien<input type="number" min="0" max="4294967295" step="1" value={seed} onChange={e=>setSeed(e.target.value)}/></label>
-          <button className="button button--primary button--wide" disabled={loading||!selected||seed===""||!Number.isInteger(Number(seed))||Number(seed)<0||Number(seed)>0xffffffff} onClick={createTest}>{loading?"Testpartie wird vorbereitet …":"Testpartie mit Bots erstellen"}</button>
-        </details>
-        {error && <p className="error-message" role="alert">{error}</p>}
-      </section>
-    </main>
-  );
+        {!qr && <label className="field field--code"><span>Raumcode</span><input value={code} maxLength={5} autoCapitalize="characters" placeholder="ABCDE" onChange={e => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))} /></label>}
+        {qr && !characterId && <p>Wähle deine Figur, um die Einladung zu scannen.</p>}
+      </>}
+      {mode === "test" && <>
+        <p>Spiele auf diesem Gerät gegen Bots. Dein Handy übernimmt den Spielstand.</p>
+        <label className="field"><span>Testspiel</span><select value={gameId} onChange={e => setGameId(e.target.value as GameId)}>{GAMES.filter(game => isPartyMode(game.id)).map(game => <option key={game.id} value={game.id}>{game.name}</option>)}</select></label>
+        <label className="field"><span>Bot-Mitspieler</span><select value={bots} onChange={e => setBots(Number(e.target.value))}>{[1,2,3,4,5].map(n => <option key={n} value={n}>{n} {n === 1 ? "Bot" : "Bots"}</option>)}</select></label>
+        <details><summary>Startwert anpassen</summary><label className="field"><span>Startwert für wiederholbare Partien</span><input type="number" min="0" max="4294967295" value={seed} onChange={e => setSeed(e.target.value)} /></label></details>
+      </>}
+      {!qr && <button className="button button--primary button--wide" disabled={!characterId || loading || (mode === "join" && code.length !== 5) || (mode === "test" && !validSeed)}>
+        {loading ? "Verbindung wird hergestellt …" : mode === "host" ? "Neuen Raum erstellen" : mode === "test" ? "Testpartie mit Bots erstellen" : title}
+      </button>}
+      {error && <p className="error-message" role="alert">{error}</p>}
+    </form>
+    {qr && characterId && <div className="iw-card room-entry qr-entry"><GuestPair onReset={() => { setPairing(false); invitationCode.current = ""; setError(""); }} onOffer={(code, table) => {
+      if (!active.current) return;
+      setPairing(true);
+      invitationCode.current = code;
+      useTableTransport({ table, role: "guest" });
+    }} /></div>}
+    </div>
+  </main>;
 }

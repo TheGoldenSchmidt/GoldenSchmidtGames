@@ -9,9 +9,11 @@ import { IslandWorld } from "../components/IslandWorld";
 
 export function LocalSetupScreen({
   onBack,
+  onTest,
   onStart
 }: {
   onBack: () => void;
+  onTest: () => void;
   onStart: (gameId: GameId, names: string[], options?: { durakCheatMode: boolean; characters:CharacterId[] }) => void;
 }) {
   const [gameId, setGameId] = useState<GameId>("qwixx");
@@ -38,12 +40,12 @@ export function LocalSetupScreen({
       <div className="page__content">
         <section className="iw-card local-setup__games">
           <h2 className="iw-plank iw-card__title">Spiel auswählen</h2>
-          <p className="iw-card__lead">Weitere Spiele kommen als eigene Module hinzu.</p>
 
         <div className="game-choices">
-          {GAMES.filter(entry=>!isPartyMode(entry.id)).map((entry) => (
+          {GAMES.filter(entry=>entry.status === "ready" && !isPartyMode(entry.id)).map((entry) => (
             <button
               className={`game-choice game-choice--${entry.id} ${entry.id === gameId ? "is-selected" : ""}`}
+              aria-pressed={entry.id === gameId}
               key={entry.id}
               disabled={entry.status !== "ready"}
               onClick={() => {
@@ -58,9 +60,14 @@ export function LocalSetupScreen({
                 <strong>{entry.name}{entry.status === "soon" && <em>Bald</em>}</strong>
                 <small>{entry.shortDescription}</small>
               </span>
-              {entry.status === "ready" && <span className="check" aria-label="Ausgewählt">✓</span>}
+              {entry.id === gameId && <span className="check" aria-label="Ausgewählt">✓</span>}
             </button>
           ))}
+          <button className="game-choice entry-choice" onClick={onTest}>
+            <span className="game-choice__tile" aria-hidden="true">⚑</span>
+            <span><strong>Minispiele testen</strong><small>Alleine gegen Bots spielen</small></span>
+            <span aria-hidden="true">›</span>
+          </button>
         </div>
 
         </section>

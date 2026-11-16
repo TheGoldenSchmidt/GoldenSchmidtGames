@@ -33,9 +33,10 @@ test("Partymenüs: Online-Auswahl, Lobby und Figurenwechsel", async ({ page }, i
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   await page.getByRole("button", { name: /Online spielen/ }).click();
+    await page.getByRole("button", { name: /^Raum erstellen/ }).click();
   await expect(page.getByRole("button", { name: "Neuen Raum erstellen", exact: true })).toBeDisabled();
-  await page.getByRole("button", { name: "Morty Smith", exact: true }).click();
-  await expect(page.locator(".party-character-canvas")).toHaveAttribute("data-webgl", "ready");
+  await page.getByLabel("Deine Spielfigur").selectOption({label: "Morty Smith"});
+  await expect(page.locator(".entry-character img")).toBeVisible();
   await page.screenshot({ path: info.outputPath("online-auswahl.png"), fullPage: true });
   await page.getByRole("button", { name: "Neuen Raum erstellen", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Lobby", exact: true })).toBeVisible();
@@ -43,6 +44,7 @@ test("Partymenüs: Online-Auswahl, Lobby und Figurenwechsel", async ({ page }, i
   await expect(page.getByRole("combobox", { name: "Tempo", exact: true })).toBeVisible();
   await page.getByRole("button", { name: /Spielfigur ändern/ }).click();
   await page.getByRole("button", { name: "Prime Rick", exact: true }).click();
+  await expect(page.locator(".party-character-canvas")).toHaveAttribute("data-webgl", "ready");
   await expect(page.locator(".player-row").first()).toContainText("Prime Rick");
   await page.getByRole("button", { name: /Figurenwahl schließen/ }).click();
   await expect(page.locator(".party-character-picker")).toHaveCount(0);
@@ -57,7 +59,8 @@ test("Partymenüs: Handy-Einladung mit lesbarem QR und Textcode", async ({ page 
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   await page.getByRole("button", { name: /Online spielen/ }).click();
-  await page.getByRole("button", { name: "Morty Smith", exact: true }).click();
+    await page.getByRole("button", { name: /^Raum erstellen/ }).click();
+  await page.getByLabel("Deine Spielfigur").selectOption({label: "Morty Smith"});
   await page.getByRole("radio", { name: /Dieses Handy/ }).check();
   await page.getByRole("button", { name: "Neuen Raum erstellen", exact: true }).click();
   await page.getByRole("button", { name: "Gerät verbinden", exact: true }).click();

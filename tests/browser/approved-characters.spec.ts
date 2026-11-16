@@ -34,6 +34,10 @@ test("Sechs freigegebene Figuren bleiben in gemeinsamer Insel und Arena erhalten
 test("Animierte Figuren stehen in der Auswahl: zwei Gruppen, Vorschau auf der Bühne",async({page})=>{
   const errors:string[]=[];page.on("pageerror",e=>errors.push(e.message));await page.emulateMedia({reducedMotion:"reduce"});
   await page.goto("/");await page.getByRole("button",{name:/Online spielen/}).click();
+  await page.getByRole("button", {name: /^Raum erstellen/}).click();
+  await page.getByLabel("Deine Spielfigur").selectOption({label:"Morty Smith"});
+  await page.getByRole("button",{name:"Neuen Raum erstellen"}).click();
+  await page.getByRole("button",{name:/Spielfigur ändern/}).click();
   const grid=page.getByRole("group",{name:"Spielfigur auswählen",exact:true});
   await expect(grid.getByRole("heading",{name:"Animierte Figuren",exact:true})).toBeVisible();
   await expect(grid.getByRole("heading",{name:"Klassische Figuren",exact:true})).toBeVisible();

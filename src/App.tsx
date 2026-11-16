@@ -10,7 +10,7 @@ import { clearActiveSession, loadActiveSession, loadLastHost, storeActiveSession
 import { HomeScreen } from "./screens/HomeScreen";
 import { IslandWorld } from "./components/IslandWorld";
 import { LocalSetupScreen } from "./screens/LocalSetupScreen";
-import { OnlineEntryScreen } from "./screens/OnlineEntryScreen";
+import { OnlineEntryScreen, RoomEntryForm } from "./screens/OnlineEntryScreen";
 import { QwixxGameScreen } from "./screens/QwixxGameScreen";
 import { DurakGameScreen } from "./screens/DurakGameScreen";
 import { KribbelnGameScreen } from "./screens/KribbelnGameScreen";
@@ -19,7 +19,7 @@ import { RoomScreen } from "./screens/RoomScreen";
 import { GameIntro } from "./components/GameIntro";
 import type {CharacterId} from "../shared/characters";
 
-type View = "home" | "local-setup" | "online-entry" | "room" | "game-local" | "game-online";
+type View = "home" | "local-setup" | "online-entry" | "host" | "join" | "test" | "room" | "game-local" | "game-online";
 
 export default function App() {
   const [profile, setProfile] = useState<GuestProfile>(() => loadProfile());
@@ -219,6 +219,7 @@ export default function App() {
       )}
       {view === "local-setup" && (
         <LocalSetupScreen
+          onTest={() => setView("test")}
           onBack={() => setView("home")}
           onStart={(gameId, names, options) => {
             setLocalGameId(gameId);
@@ -231,9 +232,12 @@ export default function App() {
         />
       )}
       {view === "online-entry" && (
-        <OnlineEntryScreen
+        <OnlineEntryScreen onBack={() => setView("home")} onSelect={setView} />
+      )}
+      {(view === "host" || view === "join" || view === "test") && (
+        <RoomEntryForm key={view} mode={view}
           profile={profile}
-          onBack={()=>{socket.disconnect();setView("home");}}
+          onBack={() => { socket.disconnect(); setView(view === "test" ? "local-setup" : "online-entry"); }}
           onCharacterChange={id=>updateProfile({...profile,characterId:id})}
           onJoined={(nextRoom) => {
             keepSession(nextRoom);

@@ -18,13 +18,13 @@ async function snapshot(page:Page):Promise<SavedRoom> {
   });
 }
 
-async function enter(page: Page) {
+async function enter(page: Page, guest = false) {
   await page.emulateMedia({reducedMotion:"reduce"});
   await page.goto("/");
   await page.getByRole("button",{name:/Online spielen/}).click();
-  await page.getByRole("button",{name:"Morty Smith",exact:true}).click();
-  await page.getByRole("radio",{name:/Dieses Handy/}).check();
-  await page.getByText("Einem Handy-Host per QR beitreten",{exact:true}).click();
+  await page.getByRole("button", {name: guest ? /^Raum beitreten/ : /^Raum erstellen/}).click();
+  await page.getByLabel("Deine Spielfigur").selectOption({label:"Morty Smith"});
+  await page.getByRole("radio", {name: guest ? /QR vom Handy-Host/ : /Dieses Handy/}).check();
 }
 
 test("Handy-Host startet ohne Internet aus der installierten PWA",async({page,browser})=>{
@@ -41,7 +41,7 @@ test("Handy-Host startet ohne Internet aus der installierten PWA",async({page,br
       await device.context().routeWebSocket("**/*",route=>route.close());
       await device.addInitScript(()=>Object.defineProperty(navigator,"onLine",{get:()=>false}));
     }
-    await Promise.all([enter(page),enter(guest)]);
+    await Promise.all([enter(page),enter(guest,true)]);
     await page.getByRole("button",{name:"Neuen Raum erstellen"}).click();
     await pair(page,guest);
     for(const device of [page,guest])await device.getByRole("button",{name:"Ich bin bereit",exact:true}).click();
@@ -64,7 +64,7 @@ test("Fünf Geräte steuern gemeinsam, ein zweiter Tisch bleibt unabhängig",asy
       window.requestAnimationFrame=callback=>window.setTimeout(()=>callback(performance.now()),100);
       window.cancelAnimationFrame=id=>clearTimeout(id);
     });
-    for(const device of [...devices,other])await enter(device);
+    for(const device of [...devices,other])await enter(device, guests.includes(device));
     for(const host of [page,other])await host.getByRole("button",{name:"Neuen Raum erstellen"}).click();
     await page.getByLabel("Ausgewähltes Spiel").selectOption("party");
     await expect(page.getByRole("combobox",{name:"Spielerzahl",exact:true})).toBeEnabled();
@@ -164,17 +164,20 @@ test("QR-Beitritt behält bei verweigerter Kamera die Textcode-Eingabe",async({p
   await page.addInitScript(()=>{
     navigator.mediaDevices.getUserMedia=async()=>{throw new DOMException("denied","NotAllowedError");};
   });
-  await enter(page);
+  await enter(page,true);
   await page.getByRole("button",{name:"Einladung scannen",exact:true}).click();
   await expect(page.getByRole("alert")).toContainText("Kamera nicht verfügbar");
   await submit(page,"kein-gueltiger-code");
   await expect(page.getByRole("alert")).toContainText("Kein gültiger Tisch-Code");
-  await expect(page.getByRole("button",{name:"Neuen Raum erstellen"})).toBeEnabled();
+  await expect(page.getByRole("button",{name:"Einladung scannen"})).toBeEnabled();
 });
 
 test("Handy-Host setzt seinen Tisch fort und entfernt geschlossene Partien",async({page})=>{
-  await enter(page);
-  await page.getByText("Inselparty alleine testen",{exact:true}).click();
+  await page.goto("/");
+  await page.getByRole("button",{name:/Lokal spielen/}).click();
+  await page.getByRole("button",{name:/^Minispiele testen/}).click();
+  await page.getByLabel("Deine Spielfigur").selectOption({label:"Morty Smith"});
+  await page.getByLabel("Testspiel").selectOption("party");
   await page.getByLabel("Bot-Mitspieler").selectOption("1");
   await page.getByRole("button",{name:"Testpartie mit Bots erstellen"}).click();
   await page.getByRole("button",{name:"Ich bin bereit",exact:true}).click();
@@ -196,7 +199,7 @@ for(const [game,marker] of [["qwixx",".qwixx-turn"],["kribbeln",".kribbel-score-
     test.setTimeout(120000);
     const guest=await browser.newPage({viewport:page.viewportSize()!});
     try{
-      await Promise.all([enter(page),enter(guest)]);
+      await Promise.all([enter(page),enter(guest,true)]);
       await page.getByRole("button",{name:"Neuen Raum erstellen"}).click();
       await page.getByLabel("Ausgewähltes Spiel").selectOption(game);
       await pair(page,guest);
