@@ -232,6 +232,13 @@ Die normale mobile Brettansicht nutzt eine Bildschirmhöhe ohne Seitenscrollen;
 längere Auswahlen dürfen innerhalb eines Panels scrollen. Beim Schließen kehrt
 der Fokus zum Auslöser zurück. Minispiel-Auswahl und Regeltext stehen nicht mehr
 unter dem laufenden Brett. Die bestehende Farbwelt der Spielansicht bleibt erhalten.
+In den letzten drei Inselparty-Runden trägt die Rundenanzeige die gelbe Zeile
+„Schlussrunde“. Bis zum ersten Wurf der ersten Schlussrunde steht oben im Zugbereich
+eine tiefblaue Ansage mit gelbem „×2“-Abzeichen, gleich für Ziehende und
+Zuschauende; der Würfelknopf bleibt darunter erreichbar. Die Siegerehrung der Inselparty
+zeigt zuerst die drei Bonus-Trophäen als Zeilen mit goldenem Stern (nicht vergeben:
+grauer Stern), die nacheinander erscheinen, danach Konfetti und Sieger. Das ist der
+einzige Auftritt der Ansicht; reduzierte Bewegung zeigt alles sofort.
 
 Match-Minispiele (`src/matches/`) teilen eine Bühne: oben ein dunkles HUD mit
 gelbem Spieltitel, eigener Punktzahl und Tontaste, darunter ein Zwischenstand
@@ -265,4 +272,4 @@ Browser-Emulation belegt keine Leistung auf einem echten Handy.
 Neue Gestaltungsentscheidungen in diesem Dokument festhalten. Implementierte und
 geprüfte Ansichten von bloß geplanten Erweiterungen unterscheiden.
 
-Im Online-Einstieg zuerst Erstellen oder Beitreten wählen. Eine kompakte Figurenliste begleitet beide Wege. QR und Raumcode sind Beitrittsarten. Lokale Bot-Partien stehen neben den spielbaren Titeln im lokalen Menü.
+Im Online-Einstieg zuerst Erstellen oder Beitreten wählen. Eine kompakte Figurenliste begleitet beide Wege. QR und Raumcode sind Beitrittsarten. Das lokale Menü gliedert die Spielkarten unter zwei Holzschildern: „Ein Handy für alle“ (Qwixx, Durak, Kribbeln) und „Allein mit Bots“ (Roll It Up!, Inselparty, Freies Minispiel, Schlag den GoldenSchmidt) mit dem Glashinweis „Läuft nur auf diesem Handy, auch ohne Internet.“. Bot-Karten nennen „1–5 Bots“ statt der Spielerzahl; ihre Einrichtung trägt den Spielnamen als Titel.

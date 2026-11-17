@@ -71,8 +71,21 @@ room.config.gameId="party";
 room.partyGame=boardGame(players,{rounds:5},true,123);
 const partyStart=renderToString(<PartyGameScreen profile={profile} initialRoom={room} onExit={exit}/>);
 assert.match(partyStart,/Inselparty/);assert.match(partyStart,/Inselkarte/);assert.match(partyStart,/Trophäenstand/);
+// Last rounds: header mark, doubled field labels and the announcement before the first roll.
+const finalRoom=structuredClone(room);finalRoom.partyGame!.round=3;finalRoom.partyGame!.turn=0;finalRoom.partyGame!.phase="turn";finalRoom.partyGame!.finalStretch={round:3,help:[{id:"b",item:"double"}]};
+const plain=(html:string)=>html.replaceAll("<!-- -->","");
+const finalTurn=plain(renderToString(<PartyGameScreen profile={profile} initialRoom={finalRoom} onExit={exit}/>));
+assert.match(finalTurn,/Schlussrunde/);assert.match(finalTurn,/Die letzten 3 Runden!/);assert.match(finalTurn,/Rückenwind für Ben: Doppelwürfel im Inventar/);
+finalRoom.partyGame!.turn=1;assert.doesNotMatch(renderToString(<PartyGameScreen profile={profile} initialRoom={finalRoom} onExit={exit}/>),/party-final-call/,"Die Ansage endet nach dem ersten Zug");
+assert.doesNotMatch(partyStart,/Schlussrunde/);
 room.partyGame.phase="finished";room.partyGame.winners=["a"];
 assert.match(renderToString(<PartyGameScreen profile={profile} initialRoom={room} onExit={exit}/>),/Die Insel feiert euch/);
+// The verdict addresses only the winners; bonus trophies are listed for everyone.
+room.partyGame.bonus=[{id:"minis",winners:["b"],value:4},{id:"walker",winners:["a","b"],value:40},{id:"unlucky",winners:[],value:0}];room.partyGame.winners=["b"];
+const finale=plain(renderToString(<PartyGameScreen profile={profile} initialRoom={room} onExit={exit}/>));
+assert.match(finale,/Bonus-Trophäen/);assert.match(finale,/Minispiel-Ass/);assert.match(finale,/Meiste verlorene Münzen: nicht vergeben/);
+assert.match(finale,/gewinnt die Inselparty!/);assert.doesNotMatch(finale,/Du gewinnst/);
+assert.match(renderToString(<PartyGameScreen profile={{id:"b",username:"Ben"}} initialRoom={room} onExit={exit}/>),/Du gewinnst die Inselparty!/);
 room.config.gameId="roll-it-up";
 room.partyGame=boardGame(players,{rounds:5},true,123,100000,"roll-it-up");
 room.partyGame.turn=room.partyGame.order.indexOf(profile.id);
@@ -86,7 +99,11 @@ assert.match(renderToString(<PartyGameScreen profile={profile} initialRoom={room
 for(const id of ["targets","colors","memory","timing","trail","risk",...ACTION_MINI_IDS] as const){const practice=createPartyPractice(id);assert.ok(renderToString(<PartyMini game={publicParty(practice,"practice")} id="practice" now={Date.now()} send={()=>{}}/>).length>100);}
 // Neue Match-Spiele: Bühne mit HUD, Zwischenstand, Spielfeld und Touch-Steuerung (Übung gegen Bots).
 for(const id of MATCH_IDS){const practice=createPartyPractice(id),html=renderToString(<PartyMini game={publicParty(practice,"practice")} id="practice" now={practice.mini!.startAt-1000} send={()=>{}}/>);assert.match(html,/match-stage/);assert.match(html,/Zwischenstand/);assert.match(html,new RegExp(MATCH_MODULES[id].meta.name));}
-const localSetup=renderToString(<LocalSetupScreen onTest={exit} onBack={exit} onStart={exit}/>);assert.doesNotMatch(localSetup,/Inselparty|Roll It Up!/);assert.match(localSetup,/Qwixx/);
+const localSetup=renderToString(<LocalSetupScreen onTest={exit} onBack={exit} onStart={exit}/>).replaceAll("<!-- -->","");assert.match(localSetup,/Qwixx/);
+// Party modes appear only in the bot section: each human still plays on an own device, bots fill the other places.
+const botSection=localSetup.indexOf("Allein mit Bots");assert.ok(botSection>localSetup.indexOf("Kribbeln"));
+for(const name of ["Roll It Up!","Inselparty","Freies Minispiel","Schlag den GoldenSchmidt"]){const card=`<strong>${name}</strong>`;assert.ok(localSetup.indexOf(card)>botSection,name);assert.equal(localSetup.split(card).length,2,`${name} genau einmal`);}
+assert.equal((localSetup.match(/1–5 Bots/g)??[]).length,4);assert.doesNotMatch(localSetup,/Minispiele testen/);
 for(const mode of ["free-minigame","goldenschmidt"] as const) {
   room.config.gameId=mode;room.partyGame=createPartyGame(players,undefined,true,123,100000,mode,{rounds:1,miniId:"dash"});
   const start=renderToString(<PartyGameScreen profile={profile} initialRoom={room} onExit={exit}/>);

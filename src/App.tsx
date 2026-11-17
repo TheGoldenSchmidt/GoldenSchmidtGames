@@ -36,6 +36,7 @@ export default function App() {
   const [localNames, setLocalNames] = useState<string[]>([]);
   const [localCharacters,setLocalCharacters]=useState<CharacterId[]>([]);
   const [localGameId, setLocalGameId] = useState<GameId>("qwixx");
+  const [testGameId, setTestGameId] = useState<GameId>("party");
   const [localDurakCheatMode, setLocalDurakCheatMode] = useState(false);
   const [playIntro, setPlayIntro] = useState(false);
   const [resumeError,setResumeError]=useState("");
@@ -260,7 +261,7 @@ export default function App() {
       )}
       {view === "local-setup" && (
         <LocalSetupScreen
-          onTest={() => setView("test")}
+          onTest={gameId => { setTestGameId(gameId); setView("test"); }}
           onBack={() => setView("home")}
           onStart={(gameId, names, options) => {
             setLocalGameId(gameId);
@@ -276,7 +277,7 @@ export default function App() {
         <OnlineEntryScreen onBack={() => setView("home")} onSelect={setView} />
       )}
       {(view === "host" || view === "join" || view === "test") && (
-        <RoomEntryForm key={view} mode={view}
+        <RoomEntryForm key={view} mode={view} testGameId={testGameId}
           profile={profile}
           onBack={() => { socket.disconnect(); setView(view === "test" ? "local-setup" : "online-entry"); }}
           onCharacterChange={id=>updateProfile({...profile,characterId:id})}

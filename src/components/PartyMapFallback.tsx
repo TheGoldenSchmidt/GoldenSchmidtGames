@@ -2,14 +2,13 @@ import { fieldName, JAYSPOT, partyBoard, partyPaths, stationAt } from "../../sha
 import { mapObjective, objectiveHint, TrayMapArt } from "./RollItUp";
 import {characterId,characterPortrait} from "../../shared/characters";
 import { useEffect, useState, type CSSProperties } from "react";
-import { FIELD_VISUALS } from "../lib/partyFieldVisuals";
+import { FIELD_VISUALS, fieldHelp } from "../lib/partyFieldVisuals";
 import { activePartyPlayer, BOARD, type PartyGame } from "../../shared/party";
 
 
 // Visual coordinates only: rules and all 34 connections stay unchanged.
 const POSITIONS: Record<number,[number,number]>={28:[77,60],29:[67,63],30:[65,75],31:[33,69],32:[34,57],33:[24,49]};
 const islandMap=BOARD.map(f=>({...f,x:POSITIONS[f.id]?.[0]??f.x,y:POSITIONS[f.id]?.[1]??f.y}));
-const FIELD_HELP={start:"Beim Passieren bekommst du 3 Münzen.",coin:"Beim Landen bekommst du 3 Münzen.",bad:"Beim Landen verlierst du bis zu 3 Münzen. Ein Schild schützt dich.",event:"Eine Überraschung für dich oder die ganze Gruppe.",gift:"Hier wartet ein zufälliges Item auf dich.",shop:"Kaufe ein Item für deinen nächsten Zug.",safe:"Hier kannst du die Aussicht genießen. Keine weiteren Effekte."};
 
 function Palm({x,y,size=1}:{x:number;y:number;size?:number}) {
   return <g transform={`translate(${x} ${y}) scale(${size})`}><path d="M0 5q2-5 0-11" stroke="#9d7341" strokeWidth="1.6" fill="none"/><path d="M0-6q-7-5-8 1 4-2 8-1m0 0q-1-8 5-7-3 3-5 7m0 0q7-5 9 1-5-2-9-1m0 0q-6-8-9-4 5 0 9 4" fill="#237250"/><circle cy="-5" r="1.1" fill="#bd8849"/></g>;
@@ -54,6 +53,6 @@ export function PartyMapFallback({game,rolling=false,onTravelChange,onInspect}:{
       </g>)}
       {game.players.map((player,i)=>{const field=map[player.id===p.id&&animated!==undefined?animated:player.position],occupants=game.players.filter(q=>q.position===player.position),same=occupants.findIndex(q=>q.id===player.id);const shift=occupants.length>1?(same%3-1)*2.6:0;return <g key={player.id} data-player={player.id} data-field={field.id} className={`party-pawn party-pawn--${i} ${player.id===p.id?"is-active":""}`} style={{transform:`translate(${field.x+shift}px,${field.y-2.5-Math.floor(same/3)*3}px)`}}><title>{`${player.name}: Feld ${player.position}`}</title><ellipse cy="3" rx="2" ry=".65" fill="#10485b" opacity=".3"/><path d="M-1.8 1.4q-1-3.5 1.8-4.2 2.8.7 1.8 4.2L0 3Z"/><circle cy="-.9" r="1.65"/><image href={characterPortrait(characterId(player.characterId,i))} x="-2.5" y="-3.5" width="5" height="6"/></g>;})}
     </svg></div>
-    {!onInspect&&<div className="party-map-caption" role="status">{selected!==undefined?<><strong>Feld {selected}: {fieldName(game,selected)}</strong><span>{objectiveHint(game,selected)}{selected!==JAYSPOT&&FIELD_HELP[map[selected].type]}</span></>:<><strong>{game.phase==="path"?"Du stehst an einer Abzweigung.":tray?"Die Bauschale":"Deine Insel, dein Weg."}</strong><span>{game.phase==="path"?"Die markierten Felder zeigen deine beiden Wege.":"Felder antippen und entdecken, was dich erwartet."}</span></>}</div>}
+    {!onInspect&&<div className="party-map-caption" role="status">{selected!==undefined?<><strong>Feld {selected}: {fieldName(game,selected)}</strong><span>{objectiveHint(game,selected)}{selected!==JAYSPOT&&fieldHelp(game,map[selected].type)}</span></>:<><strong>{game.phase==="path"?"Du stehst an einer Abzweigung.":tray?"Die Bauschale":"Deine Insel, dein Weg."}</strong><span>{game.phase==="path"?"Die markierten Felder zeigen deine beiden Wege.":"Felder antippen und entdecken, was dich erwartet."}</span></>}</div>}
   </section>;
 }
