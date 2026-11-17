@@ -56,7 +56,7 @@ liegen als Overlays darin. Feldinfos erscheinen beim Antippen als Pop-up, ohne d
 Kameraausschnitt zu verändern. Zusätzlich gibt es eine umschaltbare klare Übersicht
 und eine aufklappbare Legende mit Feld- und Figurensuche. Auf kleinen Displays bleibt der
 Würfelknopf am unteren Rand erreichbar. Auf dem Brett gibt es keine kurze
-Entscheidungsfrist; die Tempo-Einstellung steuert die Bewegungsgeschwindigkeit.
+Entscheidungsfrist. Die Figuren bewegen sich mit Normaltempo.
 Die Minispiele behalten ihre jeweiligen Zeitlimits und den gemeinsamen Start.
 
 Würfeln und Wegwahl beginnen eine eigene Bewegungsphase. Der Server gibt jeden

@@ -44,7 +44,9 @@ test("Partymenüs: Online-Auswahl, Lobby und Figurenwechsel", async ({ page }, i
   await page.getByRole("button", { name: "Neuen Raum erstellen", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Lobby", exact: true })).toBeVisible();
   await selectLobbyGame(page, "party");
-  await expect(page.getByRole("combobox", { name: "Tempo", exact: true })).toBeVisible();
+  await expect(page.getByRole("combobox",{name:"Runden",exact:true})).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Tempo", exact: true })).toHaveCount(0);
+  await expect(page.getByText("Minispiele ausprobieren",{exact:true})).toHaveCount(0);
   await selectEntryCharacter(page, "Prime Rick");
   await expect(page.locator(".player-row").first()).toContainText("Prime Rick");
   await expect(page.locator(".room details[open]")).toHaveCount(0);

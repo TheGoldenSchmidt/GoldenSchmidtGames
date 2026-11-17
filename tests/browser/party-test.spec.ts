@@ -16,12 +16,13 @@ test("Solo-Test: eigene JSON-Figur wählen, drehen und mit echten Bots spielen",
     await page.getByLabel("Bot-Mitspieler").selectOption("2");
   await page.getByRole("button",{name:"Testpartie mit Bots erstellen"}).click();
   await expect(page.getByText("Deine Testpartie",{exact:true})).toBeVisible();
-  await page.getByText("3D-Figur ansehen",{exact:true}).click();
+  await page.locator(".room summary").filter({hasText:"Deine Spielfigur"}).click();
   const preview=page.getByRole("img",{name:/3D-Vorschau/});
   await expect(preview).toHaveAttribute("data-webgl","ready");
   for(const name of ["Morty Smith","Mr Nimbus","Pupa","Eric Cartman"]){
     await selectEntryCharacter(page,name);
     await expect(page.locator(".room summary").filter({hasText:"Deine Spielfigur"})).toContainText(name);
+    await page.locator(".room summary").filter({hasText:"Deine Spielfigur"}).click();
     await expect(preview).toHaveAttribute("aria-label",`3D-Vorschau: ${name}`);
     await expect(preview).toHaveAttribute("data-webgl","ready");
   }
@@ -29,7 +30,7 @@ test("Solo-Test: eigene JSON-Figur wählen, drehen und mit echten Bots spielen",
   for(let i=0;i<4;i++)await page.getByRole("button",{name:"Figur drehen"}).click();
   await page.screenshot({path:info.outputPath("figurenwahl.png"),fullPage:true});
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
-  await page.getByText("3D-Figur ansehen",{exact:true}).click();
+  await page.locator(".room summary").filter({hasText:"Deine Spielfigur"}).click();
   await page.getByRole("button",{name:"Ich bin bereit",exact:true}).click();
   const intro=page.getByRole("button",{name:"Intro überspringen"});if(await intro.count())await intro.click();
   await expect(page.locator(".party-mini-intro")).toBeVisible();

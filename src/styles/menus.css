@@ -186,3 +186,18 @@
 .room .host-shelf button:disabled { cursor:default; }
 .iw-menu .room .party-settings { color:#352b31; }
 .iw-menu .room .lobby-config label > span,.iw-menu .room .ready-mark:not(.is-ready),.iw-menu .room .room-code small { color:#ead7bd; }
+/* Card selection and rules are independent touch targets. */
+.game-tile { position:relative; display:grid; min-width:0; }
+.game-shelf .game-help { position:absolute; top:0; left:0; width:44px; height:44px; display:grid; place-items:center; border:0; border-radius:0; background:none; box-shadow:none; }
+.game-help span { display:grid; place-items:center; width:24px; height:24px; border:1px solid #e8bd77; border-radius:50%; background:#262136ed; color:#ffe0a7; font:600 .9rem var(--iw-font-ui); }
+.game-rules { width:min(90vw,400px); padding:22px; margin:auto; color:#fff2d9; border:1px solid #c79f67; border-radius:14px; background:linear-gradient(145deg,#393044,#221e31); box-shadow:0 12px 48px #10101dc9; }
+.game-rules::backdrop { background:#171525bb; }
+.game-rules h2 { margin:7px 0 12px; font:400 1.65rem var(--iw-font-display); color:#ffdd9f; }
+.game-rules p { font:400 .92rem/1.5 var(--iw-font-ui); }
+.game-shelf .game-rules button { display:block; padding:10px 16px; min-height:44px; color:#34251e; background:#f3c978; font-weight:650; }
+.room .lobby-settings .settings-fields { display:grid; gap:0; min-width:0; margin:0; padding:0; border:0; background:none; }
+.room .lobby-settings .settings-fields > label { display:flex; align-items:center; justify-content:space-between; gap:14px; margin:0; padding:10px 0; color:#fff0d6; min-height:48px; font:500 .9rem var(--iw-font-ui); }
+.room .lobby-settings fieldset.settings-fields > label { border-top:1px solid #b4997055; }
+.iw-menu .room .lobby-settings select { width:auto; max-width:62%; min-height:44px; background:#282238; color:#ffe2ac; border:1px solid #ad8b62; border-radius:8px; }
+.room .settings-checkbox input { accent-color:#cca4df; }
+.host-gallery > .party-character-stage { margin:0 10px 10px; border-radius:10px; overflow:hidden; }

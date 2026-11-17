@@ -73,6 +73,7 @@ for(const analog of ["words","bridge"] as MiniId[]){
   assert.equal(game.phase,"mini-result");assert.deepEqual(game.players.map(p=>p.coins).sort((a,b)=>a-b),[14,20],"Auch bei Gleichstand eindeutige Plätze");
   let replacement=make();replacement.options.analog=true;replacement.phase="summary";replacement.turn=1;replacement.miniBag=[analog];replacement=command(replacement,{type:"next"});replacement=act(replacement,replacement.players[0].id,{type:"material",available:false},now);assert.ok(ACTION_MINI_IDS.includes(replacement.mini!.id as typeof ACTION_MINI_IDS[number]));
 }
+for (const tempo of ["slow", "normal", "fast"] as const) assert.equal(partyOptions({tempo}).tempo, "normal");
 assert.equal(partyOptions({analog:true}).analog,false,"Alte analoge Einstellungen werden nicht mehr aktiviert");
 // The visible reward must equal the actual change, including ties and memory tiebreaks.
 for(const scores of [[4,3,3,0],[3,3,3,0]]) {

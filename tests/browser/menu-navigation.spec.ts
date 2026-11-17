@@ -72,7 +72,7 @@ test("Illustrierte Online-Spielwahl übernimmt das gewählte Spiel in die Lobby"
   await page.goto("/");
   await page.getByRole("button", {name:/Online spielen/}).click();
   await page.getByRole("button", {name:/^Raum erstellen/}).click();
-  const cards = page.getByRole("group", {name:"Spiel auswählen"}).getByRole("button");
+  const cards = page.getByRole("group", {name:"Spiel auswählen"}).locator("button[aria-pressed]");
   await expect(cards).toHaveCount(7);
   await page.screenshot({path:info.outputPath("spielwahl.png")});
   await page.getByRole("button", {name:/^Inselparty/}).click();

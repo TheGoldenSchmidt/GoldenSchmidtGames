@@ -10,7 +10,6 @@ import { PartySettings } from "../components/PartySettings";
 import { MinigameSettings } from "../components/MinigameSettings";
 import { isMinigameMode, type MinigameOptions } from "../../shared/minigameModes";
 import type { PartyOptions } from "../../shared/party";
-import { CharacterPreview } from "../components/CharacterPreview";
 import { GameGallery, CharacterGallery } from "../components/RoomGalleries";
 import {CharacterAvatar} from "../components/CharacterAvatar";
 import {preloadFigures} from "../figures/catalog";
@@ -30,7 +29,6 @@ export function RoomScreen({
   const [room, setRoom] = useState(initialRoom);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
-  const [showPreview,setShowPreview]=useState(false);
   const viewerIndex = room.players.findIndex(player => player.id === profile.id);
   const myFigure = room.players[viewerIndex]?.characterId;
   const isHost = room.hostId === profile.id;
@@ -92,7 +90,7 @@ export function RoomScreen({
           const next = getGame(id);
           if (id !== game.id) configure(id, Math.max(next.minPlayers, Math.min(next.maxPlayers, room.config.playerCount)));
         }}/>
-        <CharacterGallery characterId={myFigure} onChange={id => { if (id !== myFigure) chooseCharacter(id); }}/>
+        <CharacterGallery previewIndex={Math.max(0,viewerIndex)} characterId={myFigure} onChange={id => { if (id !== myFigure) chooseCharacter(id); }}/>
 
         <section className="iw-card">
           <h2 className="iw-plank iw-card__title">Mitspieler</h2>
@@ -121,9 +119,9 @@ export function RoomScreen({
         </div>
         </section>
 
-        <section className="iw-card">
+        <section className="iw-card lobby-settings">
           <h2 className="iw-plank iw-card__title">Spieleinstellungen</h2>
-        <div className="lobby-config">
+        <div className="settings-fields">
           <label>
             <span>Spielerzahl</span>
             <select value={room.config.playerCount} disabled={!isHost||Boolean(room.partyTest)} onChange={(event) => configure(room.config.gameId, Number(event.target.value))}>
@@ -134,7 +132,7 @@ export function RoomScreen({
 
         {isMinigameMode(room.config.gameId)
           ? <MinigameSettings mode={room.config.gameId} value={room.config.minigames} players={room.config.playerCount} disabled={!isHost} onChange={value=>configure(room.config.gameId,room.config.playerCount,false,room.config.party,value)}/>
-          : isPartyMode(room.config.gameId) && <PartySettings rollItUp={room.config.gameId==="roll-it-up"} characterId={room.players.find(p=>p.id===profile.id)?.characterId} value={room.config.party} disabled={!isHost} onChange={value=>configure(room.config.gameId,room.config.playerCount,false,value)}/>}
+          : isPartyMode(room.config.gameId) && <PartySettings rollItUp={room.config.gameId==="roll-it-up"} value={room.config.party} disabled={!isHost} onChange={value=>configure(room.config.gameId,room.config.playerCount,false,value)}/>}
         {room.config.gameId === "durak" && (
           <label className="option-toggle">
             <span><strong>Schummelmodus</strong><small>Regelwidrig decken oder nachlegen – auf eigenes Risiko.</small></span>
@@ -148,10 +146,6 @@ export function RoomScreen({
         )}
         </section>
 
-        <details className="lobby-preview" onToggle={event => setShowPreview(event.currentTarget.open)}>
-          <summary>3D-Figur ansehen</summary>
-          {showPreview && <CharacterPreview value={myFigure} index={Math.max(0,viewerIndex)}/>}
-        </details>
         <button
           className={`button button--wide ${currentPlayerReady ? "button--secondary" : "button--primary"}`}
           onClick={toggleReady}

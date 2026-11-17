@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { GameCardFace } from "../components/GameCardFace";
+import { GameTile } from "../components/GameTile";
 import { GAMES, getGame, isPartyMode } from "../../shared/games";
 import type { GameId } from "../../shared/types";
 import {CHARACTERS,isCharacterId,type CharacterId} from "../../shared/characters";
@@ -84,13 +84,11 @@ export function LocalSetupScreen({
       </div>
       </> : <nav className="page__content game-shelf" aria-label="Spiel auswählen">
         {GAMES.filter(entry => entry.status === "ready" && !isPartyMode(entry.id)).map(entry =>
-          <button key={entry.id} onClick={() => {
+          <GameTile key={entry.id} game={entry} onSelect={() => {
             setGameId(entry.id);
             changeCount(Math.max(entry.minPlayers, Math.min(entry.maxPlayers, count)));
             setSettingUp(true);
-          }}>
-            <GameCardFace game={entry}/>
-          </button>
+          }}/>
         )}
         <button onClick={onTest}><span className="game-art game-art--test" aria-hidden="true"/>
           <span className="game-shelf__caption"><strong>Minispiele testen</strong><small>Alleine gegen Bots</small></span>

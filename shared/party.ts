@@ -62,7 +62,7 @@ export type PartyAction =
 export function partyOptions(value?: Partial<PartyOptions>): PartyOptions {
   const rounds = value?.rounds ?? 8, tempo = value?.tempo ?? "normal", classic = value?.classic ?? true;
   if (!Number.isInteger(rounds) || rounds < 5 || rounds > 15 || !["slow","normal","fast"].includes(tempo) || (value?.analog !== undefined && typeof value.analog !== "boolean") || typeof classic !== "boolean") throw new Error("Ungültige Inselparty-Einstellungen.");
-  return { rounds, tempo, analog: false, classic };
+  return { rounds, tempo: "normal", analog: false, classic };
 }
 function random(g: PartyGame) { g.rng = (Math.imul(g.rng, 1664525) + 1013904223) >>> 0; return g.rng / 4294967296; }
 function shuffle<T>(g: PartyGame, source: readonly T[]): T[] { const result = [...source]; for (let i=result.length-1;i>0;i--) { const j=Math.floor(random(g)*(i+1)); [result[i],result[j]]=[result[j],result[i]]; } return result; }

@@ -27,6 +27,10 @@ test("Beide Minispielmodi sind in der Lobby konfigurierbar", async ({ page }, te
   await page.getByRole("button", { name: /^Raum erstellen/ }).click();
   await selectEntryCharacter(page, "Morty Smith");
   await page.getByRole("button", { name: "Neuen Raum erstellen" }).click();
+  await selectLobbyGame(page, "roll-it-up");
+  await expect(page.getByRole("checkbox", {name:"1st Generation Minigames",exact:true})).toBeVisible();
+  await expect(page.locator(".lobby-settings select")).toHaveCount(1);
+  await expect(page.locator(".lobby-settings p")).toHaveCount(0);
   await selectLobbyGame(page, "free-minigame");
   const minigame = page.getByRole("combobox", { name: "Minispiel", exact: true });
   await expect(minigame).toBeVisible();
@@ -37,7 +41,16 @@ test("Beide Minispielmodi sind in der Lobby konfigurierbar", async ({ page }, te
   await selectLobbyGame(page, "goldenschmidt");
   await page.getByLabel("Anzahl Minispiele").selectOption("14");
   await expect(page.getByLabel("Anzahl Minispiele")).toHaveValue("14");
-  await expect(page.getByText(/14 zufällige Minispiele ohne Wiederholung/)).toBeVisible();
+  const settings = page.locator(".lobby-settings");
+  await settings.screenshot({path:testInfo.outputPath("einstellungen.png")});
+  await page.locator(".room summary").filter({hasText:"Spiel auswählen"}).click();
+  await page.getByRole("button",{name:"Regeln für Inselparty",exact:true}).click();
+  const rules = page.getByRole("dialog",{name:"Inselparty"});
+  await expect(rules).toContainText("Trophäen");
+  await rules.screenshot({path:testInfo.outputPath("regeln.png")});
+  await rules.getByRole("button",{name:"Schließen"}).click();
+  await expect(page.getByRole("button",{name:/^Schlag den GoldenSchmidt/})).toHaveAttribute("aria-pressed","true");
+  await page.locator(".room summary").filter({hasText:"Spiel auswählen"}).click();
   await page.setViewportSize({ width: 320, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({ path: testInfo.outputPath("lobby-320.png"), fullPage: true });
