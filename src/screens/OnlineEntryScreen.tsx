@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { CHARACTERS, isCharacterId, type CharacterId } from "../../shared/characters";
 import { GameGallery, CharacterGallery } from "../components/RoomGalleries";
 import { MenuIcon } from "../components/MenuIcon";
-import { GAMES, isPartyMode } from "../../shared/games";
+import { getGame } from "../../shared/games";
 import type { Ack, GameId, GuestProfile, RoomState } from "../../shared/types";
 import { IslandWorld } from "../components/IslandWorld";
 import { ScreenHeader } from "../components/ScreenHeader";
@@ -30,8 +30,10 @@ export function OnlineEntryScreen({ onBack, onSelect }: {
   </main>;
 }
 
-export function RoomEntryForm({ mode, profile, onBack, onJoined, onCharacterChange }: {
+export function RoomEntryForm({ mode, profile, testGameId = "party", onBack, onJoined, onCharacterChange }: {
   mode: EntryMode;
+  /** Mode "test": the party mode chosen under "Lokal spielen → Allein mit Bots". */
+  testGameId?: GameId;
   profile: GuestProfile;
   onBack: () => void;
   onJoined: (room: RoomState) => void;
@@ -45,12 +47,12 @@ export function RoomEntryForm({ mode, profile, onBack, onJoined, onCharacterChan
   const [loading, setLoading] = useState(false);
   const [bots, setBots] = useState(3);
   const [seed, setSeed] = useState("42");
-  const [gameId, setGameId] = useState<GameId>(mode === "host" ? "qwixx" : "free-minigame");
+  const [gameId, setGameId] = useState<GameId>(mode === "host" ? "qwixx" : testGameId);
 
   const active = useRef(true);
   const invitationCode = useRef("");
   const characterId = isCharacterId(profile.characterId) ? profile.characterId : undefined;
-  const title = mode === "host" ? "Raum erstellen" : mode === "join" ? "Raum beitreten" : "Minispiele testen";
+  const title = mode === "host" ? "Raum erstellen" : mode === "join" ? "Raum beitreten" : getGame(gameId).name;
   const validSeed = seed !== "" && Number.isInteger(Number(seed)) && Number(seed) >= 0 && Number(seed) <= 0xffffffff;
 
   useEffect(() => {
@@ -142,8 +144,7 @@ export function RoomEntryForm({ mode, profile, onBack, onJoined, onCharacterChan
         {qr && !characterId && <p>Wähle deine Figur, um die Einladung zu scannen.</p>}
       </>}
       {mode === "test" && <>
-        <p>Spiele alleine gegen Bots. Dein Spielstand bleibt auf diesem Gerät.</p>
-        <label className="field"><span>Testspiel</span><select value={gameId} onChange={e => setGameId(e.target.value as GameId)}>{GAMES.filter(game => isPartyMode(game.id)).map(game => <option key={game.id} value={game.id}>{game.name}</option>)}</select></label>
+        <p>Du spielst allein gegen Bots. Alles läuft auf diesem Handy, auch ohne Internet, und der Spielstand bleibt hier.</p>
         <label className="field"><span>Bot-Mitspieler</span><select value={bots} onChange={e => setBots(Number(e.target.value))}>{[1,2,3,4,5].map(n => <option key={n} value={n}>{n} {n === 1 ? "Bot" : "Bots"}</option>)}</select></label>
         <details><summary>Startwert anpassen</summary><label className="field"><span>Startwert für wiederholbare Partien</span><input type="number" min="0" max="4294967295" value={seed} onChange={e => setSeed(e.target.value)} /></label></details>
       </>}

@@ -35,7 +35,7 @@
 .iw-menu .game-choice.is-selected,.iw-menu .hosting-choice label:has(input:checked) {border:1px solid #975d29;box-shadow:inset 0 0 0 1px #b48040;background:#ffe6ac;}
 .iw-menu .game-choice.is-selected .check {display:grid;place-items:center;background:#55422b;color:#ffe397;width:21px;height:21px;border-radius:50%;}
 .game-art {width:54px;height:54px;border-radius:6px;background-image:url("../assets/expedition/game-art.webp");background-size:200% 200%;box-shadow:inset 0 0 0 1px #38242444;}
-.game-art--qwixx {background-position:0 0}.game-art--durak {background-position:100% 0}.game-art--kribbeln {background-position:0 100%}.game-art--test {background-position:100% 100%}
+.game-art--qwixx {background-position:0 0}.game-art--durak {background-position:100% 0}.game-art--kribbeln {background-position:0 100%}
 .iw-menu.local-setup .page__content {display:grid;gap:14px;}
 .iw-menu.local-setup {padding-bottom:98px;}
 .iw-menu .section-heading--row {display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px;}
@@ -120,6 +120,10 @@
 .iw-menu.screen-enter {animation:voyage-arrival .24s ease-out;}
 @keyframes voyage-arrival {from{opacity:.4} to{opacity:1}}
 .iw-menu.local-setup > nav.game-shelf {grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+/* Section signs: "Ein Handy für alle" (pass and play) and "Allein mit Bots" (local table host). */
+.game-shelf__group {grid-column:1/-1;justify-self:center;min-height:46px;margin:6px 0 0;font-size:1.1rem;}
+.game-shelf__group:not(:first-child) {margin-top:18px;}
+.game-shelf__note {grid-column:1/-1;margin:-4px auto 2px;font-size:.76rem;}
 .game-shelf button {min-width:0;overflow:hidden;display:grid;text-align:left;padding:0;border:1px solid #dec18d;border-radius:11px;color:#fff3d9;background:linear-gradient(135deg,#342c3d,#201e30);box-shadow:0 4px 0 #1b1828,0 6px 14px #16142166;cursor:pointer;}
 .game-shelf .game-art {width:100%;height:auto;aspect-ratio:1;max-height:none;border-radius:0;}
 .game-shelf__caption {display:grid;gap:4px;padding:12px 10px 14px;border-top:1px solid #d8b88580;}

@@ -178,9 +178,8 @@ test("QR-Beitritt behält bei verweigerter Kamera die Textcode-Eingabe",async({p
 test("Handy-Host setzt seinen Tisch fort und entfernt geschlossene Partien",async({page})=>{
   await page.goto("/");
   await page.getByRole("button",{name:/Lokal spielen/}).click();
-  await page.getByRole("button",{name:/^Minispiele testen/}).click();
+  await page.getByRole("button",{name:/^Inselparty 1–5 Bots/}).click();
   await page.getByLabel("Deine Spielfigur").selectOption({label:"Morty Smith"});
-  await page.getByLabel("Testspiel").selectOption("party");
   await page.getByLabel("Bot-Mitspieler").selectOption("1");
   await page.getByRole("button",{name:"Testpartie mit Bots erstellen"}).click();
   await page.getByRole("button",{name:"Ich bin bereit",exact:true}).click();

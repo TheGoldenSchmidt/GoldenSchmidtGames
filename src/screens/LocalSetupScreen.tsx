@@ -13,7 +13,8 @@ export function LocalSetupScreen({
   onStart
 }: {
   onBack: () => void;
-  onTest: () => void;
+  /** Party modes run with bots on this device (local table host, also offline). */
+  onTest: (gameId: GameId) => void;
   onStart: (gameId: GameId, names: string[], options?: { durakCheatMode: boolean; characters:CharacterId[] }) => void;
 }) {
   const [gameId, setGameId] = useState<GameId>("qwixx");
@@ -82,6 +83,7 @@ export function LocalSetupScreen({
         </button>
       </div>
       </> : <nav className="page__content game-shelf" aria-label="Spiel auswählen">
+        <h2 className="iw-plank game-shelf__group">Ein Handy für alle</h2>
         {GAMES.filter(entry => entry.status === "ready" && !isPartyMode(entry.id)).map(entry =>
           <GameTile key={entry.id} game={entry} onSelect={() => {
             setGameId(entry.id);
@@ -89,9 +91,11 @@ export function LocalSetupScreen({
             setSettingUp(true);
           }}/>
         )}
-        <button onClick={onTest}><span className="game-art game-art--test" aria-hidden="true"/>
-          <span className="game-shelf__caption"><strong>Minispiele testen</strong><small>Alleine gegen Bots</small></span>
-        </button>
+        <h2 className="iw-plank game-shelf__group">Allein mit Bots</h2>
+        <p className="iw-note game-shelf__note">Läuft nur auf diesem Handy, auch ohne Internet.</p>
+        {GAMES.filter(entry => entry.status === "ready" && isPartyMode(entry.id)).map(entry =>
+          <GameTile key={entry.id} game={entry} players="1–5 Bots" onSelect={() => onTest(entry.id)}/>
+        )}
       </nav>}
 
     </main>

@@ -43,11 +43,10 @@ for(const motion of ['no-preference','reduce'] as const) {
     await page.emulateMedia({reducedMotion:motion});
     await page.addInitScript(profile=>localStorage.setItem('spielraum.profile.v1',JSON.stringify(profile)),{id:randomUUID(),username:'Anna'});
     await page.goto('/');await page.getByRole("button", {name: /Lokal spielen/}).click();
-    await page.getByRole("button", {name: /^Minispiele testen/}).click();
+    await page.getByRole("button", {name: /^Inselparty 1–5 Bots/}).click();
     await expect(page.getByRole("button", {name: "Testpartie mit Bots erstellen"})).toBeDisabled();
     await expect(page.getByLabel("Deine Spielfigur").locator("option")).toHaveCount(CHARACTERS.length + 1);
     await page.getByLabel("Deine Spielfigur").selectOption({label: "Prime Rick"});
-    await page.getByLabel("Testspiel").selectOption("party");
     await page.getByLabel('Bot-Mitspieler').selectOption('2');
     await page.getByRole('button',{name:'Testpartie mit Bots erstellen'}).click();
     await page.getByRole('button',{name:'Ich bin bereit',exact:true}).click();

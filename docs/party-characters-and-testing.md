@@ -4,8 +4,10 @@
 
 ## Im Spiel
 
-Unter **Lokal spielen → Minispiele testen** lässt sich ein Testraum
-mit einer Person und ein bis fünf Bots anlegen. Vorher die eigene Figur wählen;
+Unter **Lokal spielen → Allein mit Bots** lässt sich für Roll It Up!, Inselparty,
+Freies Minispiel und Schlag den GoldenSchmidt ein Testraum mit einer Person und
+ein bis fünf Bots anlegen. Er läuft auf dem eigenen Handy, nach dem ersten Laden
+der PWA auch ohne Internet. Vorher die eigene Figur wählen;
 in der Lobby die Rundenzahl wählen und **Ich bin bereit** drücken. Die Bots melden sich selbst
 bereit, würfeln, verwenden Items und steuern ihre Figuren in den Minispielen.
 

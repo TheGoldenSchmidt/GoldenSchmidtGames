@@ -13,13 +13,13 @@ const rules: Record<GameDefinition["id"], string> = {
   binokel: "Reize, melde Kombinationen und sammle Punkte in den Stichen."
 };
 
-export function GameTile({game, selected, disabled, onSelect}: {
-  game: GameDefinition; selected?: boolean; disabled?: boolean; onSelect: () => void;
+export function GameTile({game, selected, disabled, players, onSelect}: {
+  game: GameDefinition; selected?: boolean; disabled?: boolean; players?: string; onSelect: () => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const heading = useId();
   return <div className="game-tile">
-    <button type="button" disabled={disabled} aria-pressed={selected} onClick={onSelect}><GameCardFace game={game}/></button>
+    <button type="button" disabled={disabled} aria-pressed={selected} onClick={onSelect}><GameCardFace game={game} players={players}/></button>
     <button type="button" className="game-help" aria-label={`Regeln für ${game.name}`} aria-haspopup="dialog"
       onClick={() => dialog.current?.showModal()}><span aria-hidden="true">?</span></button>
     <dialog ref={dialog} className="game-rules" aria-labelledby={heading}>

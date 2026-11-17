@@ -272,4 +272,4 @@ Browser-Emulation belegt keine Leistung auf einem echten Handy.
 Neue Gestaltungsentscheidungen in diesem Dokument festhalten. Implementierte und
 geprüfte Ansichten von bloß geplanten Erweiterungen unterscheiden.
 
-Im Online-Einstieg zuerst Erstellen oder Beitreten wählen. Eine kompakte Figurenliste begleitet beide Wege. QR und Raumcode sind Beitrittsarten. Lokale Bot-Partien stehen neben den spielbaren Titeln im lokalen Menü.
+Im Online-Einstieg zuerst Erstellen oder Beitreten wählen. Eine kompakte Figurenliste begleitet beide Wege. QR und Raumcode sind Beitrittsarten. Das lokale Menü gliedert die Spielkarten unter zwei Holzschildern: „Ein Handy für alle“ (Qwixx, Durak, Kribbeln) und „Allein mit Bots“ (Roll It Up!, Inselparty, Freies Minispiel, Schlag den GoldenSchmidt) mit dem Glashinweis „Läuft nur auf diesem Handy, auch ohne Internet.“. Bot-Karten nennen „1–5 Bots“ statt der Spielerzahl; ihre Einrichtung trägt den Spielnamen als Titel.

@@ -99,7 +99,11 @@ assert.match(renderToString(<PartyGameScreen profile={profile} initialRoom={room
 for(const id of ["targets","colors","memory","timing","trail","risk",...ACTION_MINI_IDS] as const){const practice=createPartyPractice(id);assert.ok(renderToString(<PartyMini game={publicParty(practice,"practice")} id="practice" now={Date.now()} send={()=>{}}/>).length>100);}
 // Neue Match-Spiele: Bühne mit HUD, Zwischenstand, Spielfeld und Touch-Steuerung (Übung gegen Bots).
 for(const id of MATCH_IDS){const practice=createPartyPractice(id),html=renderToString(<PartyMini game={publicParty(practice,"practice")} id="practice" now={practice.mini!.startAt-1000} send={()=>{}}/>);assert.match(html,/match-stage/);assert.match(html,/Zwischenstand/);assert.match(html,new RegExp(MATCH_MODULES[id].meta.name));}
-const localSetup=renderToString(<LocalSetupScreen onTest={exit} onBack={exit} onStart={exit}/>);assert.doesNotMatch(localSetup,/Inselparty|Roll It Up!/);assert.match(localSetup,/Qwixx/);
+const localSetup=renderToString(<LocalSetupScreen onTest={exit} onBack={exit} onStart={exit}/>).replaceAll("<!-- -->","");assert.match(localSetup,/Qwixx/);
+// Party modes appear only in the bot section: each human still plays on an own device, bots fill the other places.
+const botSection=localSetup.indexOf("Allein mit Bots");assert.ok(botSection>localSetup.indexOf("Kribbeln"));
+for(const name of ["Roll It Up!","Inselparty","Freies Minispiel","Schlag den GoldenSchmidt"]){const card=`<strong>${name}</strong>`;assert.ok(localSetup.indexOf(card)>botSection,name);assert.equal(localSetup.split(card).length,2,`${name} genau einmal`);}
+assert.equal((localSetup.match(/1–5 Bots/g)??[]).length,4);assert.doesNotMatch(localSetup,/Minispiele testen/);
 for(const mode of ["free-minigame","goldenschmidt"] as const) {
   room.config.gameId=mode;room.partyGame=createPartyGame(players,undefined,true,123,100000,mode,{rounds:1,miniId:"dash"});
   const start=renderToString(<PartyGameScreen profile={profile} initialRoom={room} onExit={exit}/>);
