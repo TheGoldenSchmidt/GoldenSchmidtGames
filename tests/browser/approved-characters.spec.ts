@@ -84,7 +84,7 @@ for(const [game,marker] of [["Qwixx",".qwixx-turn"],["Durak",".durak-players"],[
   await page.getByRole("button",{name:new RegExp(`^${game} `)}).first().click();
   await expect(page.getByRole("button",{name:`${game} starten`,exact:true})).toBeDisabled();
   const selected=CHARACTERS.slice(2,4);
-  for(let i=0;i<2;i++)await page.getByRole("combobox",{name:`Figur von Spieler ${i+1}`,exact:true}).selectOption(selected[i].id);
+  for(let i=0;i<2;i++)await selectEntryCharacter(page, selected[i].name, `Figur von Spieler ${i+1}`);
   await page.getByRole("button",{name:`${game} starten`,exact:true}).click();
   if(game==="Durak")await page.getByRole("button",{name:"Karten anzeigen",exact:true}).click();
   await expect(page.locator(`${marker} .character-avatar`).first()).toBeVisible();

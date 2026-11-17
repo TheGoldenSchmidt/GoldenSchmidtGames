@@ -33,10 +33,10 @@ export function GameGallery({gameId, disabled = false, initiallyOpen = false, on
       </EntryGallery>;
 }
 
-export function CharacterGallery({characterId, previewIndex, disabled = false, onChange}: {
-  characterId?: CharacterId; previewIndex?: number; disabled?: boolean; onChange: (id: CharacterId) => void;
+export function CharacterGallery({characterId, previewIndex, title = "Deine Spielfigur", disabled = false, onChange}: {
+  characterId?: CharacterId; previewIndex?: number; title?: string; disabled?: boolean; onChange: (id: CharacterId) => void;
 }) {
-  return <EntryGallery title="Deine Spielfigur" selection={characterName(characterId)}
+  return <EntryGallery title={title} selection={characterName(characterId)}
         preview={previewIndex !== undefined && characterId && <CharacterPreview value={characterId} index={previewIndex}/>}
         portrait={<CharacterAvatar id={characterId} decorative/>}>
         {CHARACTERS.map(character =>

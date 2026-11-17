@@ -117,14 +117,14 @@
 :is(.iw-menu,.iw-dialog) .button:active:not(:disabled) {transform:translateY(2px);}
 .iw-menu.screen-enter {animation:voyage-arrival .24s ease-out;}
 @keyframes voyage-arrival {from{opacity:.4} to{opacity:1}}
-.iw-menu.local-setup .game-shelf {grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+.iw-menu.local-setup > nav.game-shelf {grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
 .game-shelf button {min-width:0;overflow:hidden;display:grid;text-align:left;padding:0;border:1px solid #dec18d;border-radius:11px;color:#fff3d9;background:linear-gradient(135deg,#342c3d,#201e30);box-shadow:0 4px 0 #1b1828,0 6px 14px #16142166;cursor:pointer;}
 .game-shelf .game-art {width:100%;height:auto;aspect-ratio:1;max-height:none;border-radius:0;}
 .game-shelf__caption {display:grid;gap:4px;padding:12px 10px 14px;border-top:1px solid #d8b88580;}
 .game-shelf__caption strong {font:400 clamp(1.05rem,4.4vw,1.3rem)/1.07 var(--iw-font-display);}
 .game-shelf__caption small {color:#ebd7bb;font-size:.7rem;}
 .game-shelf button:active {transform:translateY(2px);}
-.iw-menu.local-setup:has(.game-shelf) {padding-bottom:20px;}
+.iw-menu.local-setup:has(> nav.game-shelf) {padding-bottom:20px;}
 @media (prefers-reduced-motion:reduce) { .iw-menu *, .iw-menu, .iw-dialog * {animation:none;transition:none;} }
 /* Room creation shares the illustrated shelf, stone surfaces and gemstone controls. */
 .game-art:is(.game-art--roll-it-up,.game-art--party,.game-art--free-minigame,.game-art--goldenschmidt) { background-image:url("../assets/expedition/online-art.webp"); }
@@ -154,6 +154,7 @@
 .iw-menu .host-entry .hosting-choice label { color:#f8eedb; background:#282338; border:1px solid #897a92; cursor:pointer; }
 .iw-menu .host-entry .hosting-choice small { color:inherit; }
 .iw-menu .host-entry .hosting-choice label:has(:checked) { color:#321f37; background:#e1b9ef url("../assets/expedition/amethyst.webp") center / 100% 100%; border-color:#eac8f5; }
+.iw-menu.local-setup .sticky-action > .button--primary:not(:disabled),
 .iw-menu .host-entry > .button--primary:not(:disabled), .iw-menu .room > .button--primary:not(:disabled) {
   min-height:58px; border:0; border-radius:0; box-shadow:none; background:transparent url("../assets/expedition/citrine.webp") center / 100% 100%;
   color:#372315; font:400 1.2rem var(--iw-font-display);
@@ -201,3 +202,21 @@
 .iw-menu .room .lobby-settings select { width:auto; max-width:62%; min-height:44px; background:#282238; color:#ffe2ac; border:1px solid #ad8b62; border-radius:8px; }
 .room .settings-checkbox input { accent-color:#cca4df; }
 .host-gallery > .party-character-stage { margin:0 10px 10px; border-radius:10px; overflow:hidden; }
+
+.local-setup__players { display:grid; gap:12px; }
+.local-player-count,.iw-menu .local-player-setup,.local-setup__players > .option-toggle {
+  border:1px solid #be9962; border-radius:12px; background:linear-gradient(145deg,#383041f5,#211e32fa);
+  color:#fff2d8; box-shadow:inset 0 1px #f7d79444,0 3px 9px #15142166;
+}
+.local-player-count { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; }
+.local-player-count h2 { margin:0; color:#ffe2a4; font:400 1.22rem var(--iw-font-display); }
+.local-player-count .stepper { background:#272236; border-color:#8f775b; color:#ffe2a4; }
+.local-player-count .stepper button { width:44px; background:#4c3b51; color:#ffe2a4; }
+.local-player-count .stepper button:disabled { background:#282335; color:#a29aae; }
+.iw-menu .local-player-setup { display:block; padding:0; }
+.local-player-name { display:flex; align-items:center; gap:12px; padding:10px 14px; font-weight:600; font-size:.88rem; }
+.local-player-name > span { flex:none; }
+.iw-menu .local-player-name input { width:100%; min-width:0; background:#252033; border-color:#958067; color:#fff4dd; }
+.local-player-setup .host-gallery { border:0; border-top:1px solid #8c73595e; border-radius:0 0 12px 12px; box-shadow:none; background:#282336; }
+.local-setup__players > .option-toggle small { color:#e1cfba; }
+.iw-menu .local-setup__players > .option-toggle { margin:0; }

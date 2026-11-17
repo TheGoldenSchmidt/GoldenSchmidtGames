@@ -11,7 +11,7 @@ async function localGame(page: Page, reduced = false) {
   await page.goto("/");
   await page.getByRole("button", { name: /Lokal spielen/ }).click();
   await page.getByRole("button", { name: /^Kribbeln / }).first().click();
-  for(let n=1;n<=2;n++)await page.getByRole("combobox",{name:`Figur von Spieler ${n}`,exact:true}).selectOption("alpha_rick_prime");
+  for(let n=1;n<=2;n++)await selectEntryCharacter(page, "Prime Rick", `Figur von Spieler ${n}`);
   await page.getByRole("button", { name: "Kribbeln starten", exact: true }).click();
   if (!reduced) await page.getByRole("button", { name: "Intro überspringen" }).click();
   await expect(page.getByRole("heading", { name: KRIBBEL_ROWS[0].label, exact: true })).toBeVisible();

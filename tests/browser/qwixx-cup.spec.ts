@@ -9,7 +9,7 @@ async function localQwixx(page: Page, reduced = false) {
   await page.addInitScript(() => { Math.random = () => 0; });
   await page.goto("/"); await page.getByRole("button", { name: /Lokal spielen/ }).click();
   await page.getByRole("button", {name:/^Qwixx /}).click();
-  for (let player = 1; player <= 2; player++) await page.getByRole("combobox", { name: `Figur von Spieler ${player}`, exact: true }).selectOption("alpha_rick_prime");
+  for (let player = 1; player <= 2; player++) await selectEntryCharacter(page, "Prime Rick", `Figur von Spieler ${player}`);
   await page.getByRole("button", { name: "Qwixx starten", exact: true }).click();
   if (!reduced) await page.getByRole("button", { name: "Intro überspringen" }).click();
   await expect(page.locator(".qwixx-cup-table")).toBeVisible();

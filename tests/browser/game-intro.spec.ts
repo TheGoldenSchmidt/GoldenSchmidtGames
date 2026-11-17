@@ -9,9 +9,9 @@ async function localSetup(page: Page, game: string, count = 2) {
   await page.goto("/");
   await page.getByRole("button", { name: /Lokal spielen/ }).click();
   await page.getByRole("button", { name: new RegExp(`^${game} `) }).first().click();
-  for (let n = 2; n < count; n++) await page.getByRole("button", { name: "+", exact: true }).click();
+  for (let n = 2; n < count; n++) await page.getByRole("button", { name: "Spieler hinzufügen", exact: true }).click();
   for (let n = 1; n <= count; n++) await page.getByRole("textbox", { name: `Name von Spieler ${n}`, exact: true }).fill(["Anna", "Ben", "Clara", "David", "Emma", "Finn"][n - 1]);
-  for(let n=1;n<=count;n++)await page.getByRole("combobox",{name:`Figur von Spieler ${n}`,exact:true}).selectOption("alpha_rick_prime");
+  for(let n=1;n<=count;n++)await selectEntryCharacter(page, "Prime Rick", `Figur von Spieler ${n}`);
   await page.getByRole("button", { name: `${game} starten`, exact: true }).click();
 }
 
@@ -73,7 +73,7 @@ test("Escape beendet das Intro, und eine neue Partie erhält wieder ein Intro", 
   await page.getByRole("button", { name: "Beenden", exact: true }).click();
   await page.getByRole("button", { name: /Lokal spielen/ }).click();
   await page.getByRole("button", {name:/^Qwixx /}).click();
-  for(let n=1;n<=2;n++)await page.getByRole("combobox",{name:`Figur von Spieler ${n}`,exact:true}).selectOption("alpha_morty_smith");
+  for(let n=1;n<=2;n++)await selectEntryCharacter(page, "Morty Smith", `Figur von Spieler ${n}`);
   await page.getByRole("button", { name: "Qwixx starten", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Qwixx", exact: true })).toBeVisible();
 });
@@ -91,7 +91,7 @@ test("Reduzierte Bewegung überspringt Intros und beendet eine laufende Kamerafa
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.getByRole("button", { name: /Lokal spielen/ }).click();
   await page.getByRole("button", {name:/^Qwixx /}).click();
-  for(let n=1;n<=2;n++)await page.getByRole("combobox",{name:`Figur von Spieler ${n}`,exact:true}).selectOption("alpha_morty_smith");
+  for(let n=1;n<=2;n++)await selectEntryCharacter(page, "Morty Smith", `Figur von Spieler ${n}`);
   await page.getByRole("button", { name: "Qwixx starten", exact: true }).click();
   await expect(page.locator(".game-intro")).toBeVisible();
   await expect(page.locator(".qwixx-arena-world")).toHaveCount(0);

@@ -2,8 +2,8 @@ import { useMemo, useState } from "react";
 import { GameTile } from "../components/GameTile";
 import { GAMES, getGame, isPartyMode } from "../../shared/games";
 import type { GameId } from "../../shared/types";
-import {CHARACTERS,isCharacterId,type CharacterId} from "../../shared/characters";
-import {CharacterAvatar} from "../components/CharacterAvatar";
+import {isCharacterId,type CharacterId} from "../../shared/characters";
+import { CharacterGallery } from "../components/RoomGalleries";
 import { ScreenHeader } from "../components/ScreenHeader";
 import { IslandWorld } from "../components/IslandWorld";
 
@@ -31,7 +31,6 @@ export function LocalSetupScreen({
 
   function changeCount(value: number) {
     setCount(value);
-    setNames((current) => Array.from({ length: value }, (_, index) => current[index] ?? `Spieler ${index + 1}`));
   }
 
   return (
@@ -40,34 +39,34 @@ export function LocalSetupScreen({
       <ScreenHeader title={settingUp ? game.name : "Lokal spielen"} onBack={settingUp ? () => setSettingUp(false) : onBack} />
       {settingUp ? <>
       <div className="page__content">
-        <section className="iw-card local-setup__players">
-          <h2 className="iw-plank iw-card__title">Spieler</h2>
-        <div className="section-heading section-heading--row">
-          <p className="iw-card__lead">Alle spielen an diesem Gerät.</p>
-          <div className="stepper" aria-label="Spielerzahl">
-            <button onClick={() => changeCount(Math.max(game.minPlayers, count - 1))} disabled={count <= game.minPlayers}>−</button>
-            <strong>{count}</strong>
-            <button onClick={() => changeCount(Math.min(game.maxPlayers, count + 1))} disabled={count >= game.maxPlayers}>+</button>
+        <section className="local-setup__players" aria-label="Mitspieler">
+          <div className="local-player-count">
+            <h2>Spielerzahl</h2>
+            <div className="stepper">
+              <button aria-label="Spieler entfernen" onClick={() => changeCount(count - 1)} disabled={count <= game.minPlayers}>−</button>
+              <strong aria-live="polite">{count}</strong>
+              <button aria-label="Spieler hinzufügen" onClick={() => changeCount(count + 1)} disabled={count >= game.maxPlayers}>+</button>
+            </div>
           </div>
-        </div>
-
-        <div className="player-fields">
           {visibleNames.map((name, index) => (
-            <div className="local-player-setup" key={index}><label className="field field--player">
-              <span className="player-number">{index + 1}</span>
-              <input
-                value={name}
-                maxLength={24}
-                aria-label={`Name von Spieler ${index + 1}`}
-                onChange={(event) => {
-                  const next = [...visibleNames];
-                  next[index] = event.target.value;
-                  setNames(next);
-                }}
-              />
-            </label><label className="local-character-field"><CharacterAvatar id={characters[index]}/><span>Figur von Spieler {index+1}<select aria-label={`Figur von Spieler ${index+1}`} value={characters[index]??""} onChange={event=>{const id=event.target.value;if(isCharacterId(id))setCharacters(current=>{const next=[...current];next[index]=id;return next;});}}><option value="" disabled>Figur wählen</option>{CHARACTERS.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></span></label></div>
+            <div className="local-player-setup" key={index}>
+              <label className="local-player-name">
+                <span>Spieler {index + 1}</span>
+                <input value={name} maxLength={24} aria-label={`Name von Spieler ${index + 1}`}
+                  onChange={event => {
+                    const next = [...names];
+                    next[index] = event.target.value;
+                    setNames(next);
+                  }}/>
+              </label>
+              <CharacterGallery title={`Figur von Spieler ${index + 1}`} characterId={characters[index]} previewIndex={index}
+                onChange={id => {
+                  const next = [...characters];
+                  next[index] = id;
+                  setCharacters(next);
+                }}/>
+            </div>
           ))}
-        </div>
 
         {gameId === "durak" && (
           <label className="option-toggle">
