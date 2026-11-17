@@ -82,6 +82,8 @@ export function PartyGameScreen({profile,initialRoom,onExit,onLobby}:{profile:Gu
   const projected=g,own=g.players.find(q=>q.id===viewer)!,canAct=p.id===profile.id,host=room.hostId===profile.id;
   const m=projected.mini,standings=partyStanding(g),busy=pending;
   const competition=g.competition;
+  // Online rooms return to their lobby after the end; leaving the room happens there.
+  const over=["finished","aborted"].includes(g.phase);
   const tray=g.mode==="roll-it-up", board=partyBoard(g), station=tray?stationAt(p.position):undefined;
   const turnKey=`${g.round}:${g.turn}`;
   if(turnStart.current.key!==turnKey)turnStart.current={key:turnKey,coins:p.coins,trophies:p.trophies};
@@ -124,7 +126,7 @@ export function PartyGameScreen({profile,initialRoom,onExit,onLobby}:{profile:Gu
     </>}
   </fieldset>;
   return <main data-board-phase={boardPhase?g.phase:undefined} className={`party-screen ${tray?"roll-it-up":""} ${competition?"minigame-mode":""} ${competition&&g.phase!=="mini-play"?"party-menu":""} ${boardPhase?"party-screen--board":"party-screen--stage"} ${g.phase==="mini-play"?"party-screen--playing":""}`}>
-    <header className="party-header"><div><strong>{getGame(room.config.gameId).name}<span aria-hidden="true">✦</span></strong><small>Raum {room.code}</small></div><div className="party-round"><span>{g.opening?"Auftakt":<>Runde <b>{g.round}</b>{!tray&&` / ${competition?.rounds??g.options.rounds}`}</>}</span></div><div className="party-header-actions"><button className="party-game-menu" onClick={()=>setPanel("menu")} aria-label="Spielmenü öffnen" aria-haspopup="dialog">☰</button>{!boardPhase&&<button className="text-button" onClick={onExit}>Verlassen</button>}</div></header>
+    <header className="party-header"><div><strong>{getGame(room.config.gameId).name}<span aria-hidden="true">✦</span></strong><small>Raum {room.code}</small></div><div className="party-round"><span>{g.opening?"Auftakt":<>Runde <b>{g.round}</b>{!tray&&` / ${competition?.rounds??g.options.rounds}`}</>}</span></div><div className="party-header-actions"><button className="party-game-menu" onClick={()=>setPanel("menu")} aria-label="Spielmenü öffnen" aria-haspopup="dialog">☰</button>{!boardPhase&&!(over&&onLobby)&&<button className="text-button" onClick={onExit}>Verlassen</button>}</div></header>
     {room.partyTest&&!competition&&host&&socket.connected&&!["finished","aborted"].includes(g.phase)&&<PartyTestTools room={room} onUpdate={setRoom}/>}
     {!competition&&!boardPhase&&g.phase!=="mini-play"&&g.phase!=="finished"&&roster}
     {(!socket.connected||g.pausedAt>0)&&<section className="party-connection" role="status"><h2>Wir warten auf die Verbindung</h2><p>Die Partie pausiert, bis die Geräte wieder verbunden sind. Nach 60 Sekunden kann der Host ohne fehlende Spieler fortsetzen.</p>{host&&g.resumeOffered&&<button className="button button--primary" disabled={busy} onClick={()=>send({type:"resume"})}>Ohne getrennte Spieler fortsetzen</button>}{host&&<button className="button button--ghost" disabled={busy} onClick={()=>send({type:"abort"})}>Partie abbrechen</button>}</section>}

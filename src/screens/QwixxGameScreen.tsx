@@ -213,7 +213,8 @@ export function QwixxGameScreen({
       <header className="game-header qwixx-header">
         <Brand compact />
         <span className="game-header__mode">{online ? `Online · ${room!.code}` : `Runde ${game.round}`}</span>
-        <button className="text-button" onClick={onExit}>Beenden</button>
+        {/* Online the result sheet leads back to the lobby; the room is left from there. */}
+        {!(game.phase === "finished" && onLobby) && <button className="text-button" onClick={onExit}>Beenden</button>}
       </header>
 
       <div className="qwixx-play">

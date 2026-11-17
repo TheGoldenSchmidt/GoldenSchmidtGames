@@ -19,16 +19,23 @@ export function RoomScreen({
   profile,
   initialRoom,
   onBack,
+  onLeave,
+  onClose,
   onGameStart
 }: {
   profile: GuestProfile;
   initialRoom: RoomState;
   onBack: () => void;
+  /** Frees the own seat and returns to the start menu; reports an error otherwise. */
+  onLeave: (done: (error?: string) => void) => void;
+  /** Host only: closes the room for everyone. */
+  onClose: (done: (error?: string) => void) => void;
   onGameStart: (room: RoomState) => void;
 }) {
   const [room, setRoom] = useState(initialRoom);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
+  const [exit, setExit] = useState<"idle" | "confirm" | "busy">("idle");
   const viewerIndex = room.players.findIndex(player => player.id === profile.id);
   const myFigure = room.players[viewerIndex]?.characterId;
   const isHost = room.hostId === profile.id;
@@ -68,6 +75,12 @@ export function RoomScreen({
   }
 
   function chooseCharacter(id:CharacterId){setError("");socket.timeout(8000).emit("room:character",{characterId:id},(err:Error|null,response:{ok:boolean;data?:RoomState;error?:string})=>{if(err||!response.ok||!response.data)setError(response?.error??"Die Figur konnte nicht gespeichert werden.");else setRoom(response.data);});}
+
+  function finish(error?: string) { setExit("idle"); if (error) setError(error); }
+  function leave() { setError(""); setExit("busy"); onLeave(finish); }
+  function closeForAll() { setError(""); setExit("busy"); onClose(finish); }
+  // The host phone is the room's authority: it can only end the party for everyone.
+  const deviceHost = isHost && socket.tableRoute?.role === "host";
 
   async function copyCode() {
     await navigator.clipboard?.writeText(room.code);
@@ -163,6 +176,21 @@ export function RoomScreen({
             : "Sobald alle Plätze besetzt sind, können sich alle Spieler bereit melden."}
         </p>
         {error && <p className="error-message" role="alert">{error}</p>}
+
+        {!room.partyTest && <section className="lobby-exit" aria-label="Party verlassen oder beenden">
+          {exit === "confirm" ? <div className="lobby-exit__confirm" role="group" aria-labelledby="lobby-exit-title">
+            <h2 id="lobby-exit-title">Party für alle beenden?</h2>
+            <p>Der Raum {room.code} wird geschlossen. Alle Mitspieler kehren ins Startmenü zurück.</p>
+            <button className="button button--danger button--wide" onClick={closeForAll}>Ja, für alle beenden</button>
+            <button className="button button--ghost button--wide" data-menu-direction="back" onClick={() => setExit("idle")}>Abbrechen</button>
+          </div> : <>
+            {!deviceHost && <button className="button button--ghost button--wide" disabled={exit === "busy"} data-menu-direction="back" onClick={leave}>Party verlassen</button>}
+            {isHost && <button className="button button--danger button--wide" disabled={exit === "busy"} onClick={() => setExit("confirm")}>Party für alle beenden</button>}
+            <p className="lobby-exit__hint iw-note">{isHost
+              ? deviceHost ? "Dein Handy ist der Spieltisch. Beendest du die Party, schließt der Raum für alle." : "Verlässt du die Party, übernimmt ein Mitspieler die Rolle des Hosts."
+              : "Dein Platz wird frei. Mit dem Raumcode kannst du später neu beitreten."}</p>
+          </>}
+        </section>}
       </section>
     </main>
   );
