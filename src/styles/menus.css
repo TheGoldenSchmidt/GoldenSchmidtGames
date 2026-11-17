@@ -113,6 +113,8 @@
 :is(.iw-menu,.iw-dialog) .button::before {display:none;}
 :is(.iw-menu,.iw-dialog) .button--secondary {background:linear-gradient(145deg,#f1d5fc,#c797df);border-color:#80608c;color:#392446;box-shadow:inset 0 1px #fff3ff,inset 0 -2px #a076b2,0 3px 0 #674970;}
 :is(.iw-menu,.iw-dialog) .button--ghost {background:#f3e9dd;color:#453746;border-color:#b5a693;box-shadow:0 2px 0 #a5927a;}
+/* Stone (design rules, material table): actions with consequences for others, never gold. */
+:is(.iw-menu,.iw-dialog) .button--danger {background:linear-gradient(155deg,#7c7092,#605575);color:#fff8ea;border-color:#2e2742;box-shadow:inset 0 1px #c2bbd8,inset 0 -2px #4a405e,0 3px 0 #2e2742;}
 :is(.iw-menu,.iw-dialog) .button:disabled {background:#e2d9ca;color:#675f59;border-color:#c0b6a6;box-shadow:inset 0 1px #ece4d7;}
 :is(.iw-menu,.iw-dialog) .button:active:not(:disabled) {transform:translateY(2px);}
 .iw-menu.screen-enter {animation:voyage-arrival .24s ease-out;}
@@ -220,3 +222,9 @@
 .local-player-setup .host-gallery { border:0; border-top:1px solid #8c73595e; border-radius:0 0 12px 12px; box-shadow:none; background:#282336; }
 .local-setup__players > .option-toggle small { color:#e1cfba; }
 .iw-menu .local-setup__players > .option-toggle { margin:0; }
+/* Leaving or ending the party sits apart below the ready action, so it is not tapped by mistake. */
+.room .lobby-exit { display:grid; gap:10px; margin-top:18px; padding-top:18px; border-top:1px solid #f7d79440; }
+.room .lobby-exit__hint { margin:0 auto; }
+.room .lobby-exit__confirm { display:grid; gap:10px; padding:18px 16px 16px; color:#221b4f; background:#fff8ea; border:2px solid #221b4f; border-radius:14px; }
+.room .lobby-exit__confirm h2 { margin:0; font:400 1.3rem var(--iw-font-display); }
+.room .lobby-exit__confirm p { margin:0 0 4px; font:400 .88rem/1.45 var(--iw-font-ui); }

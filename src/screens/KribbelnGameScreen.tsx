@@ -78,7 +78,7 @@ export function KribbelnGameScreen({ profile, localNames, localCharacters, initi
     }
   }
   return <main className="page screen-enter kribbel-game">
-    <header className="game-header"><strong>Kribbeln</strong><span>{online ? `Online · ${room?.code}` : "Lokal"}</span><button className="text-button" onClick={onExit}>Beenden</button></header>
+    <header className="game-header"><strong>Kribbeln</strong><span>{online ? `Online · ${room?.code}` : "Lokal"}</span>{!(game.finished && onLobby) && <button className="text-button" onClick={onExit}>Beenden</button>}</header>
     <section className="page__content">
       <div className="kribbel-score-strip" aria-label="Punktestand">{standings.map(id => <span key={id} className={id === active && !game.finished ? "is-active" : ""}><CharacterAvatar id={characters[id]} decorative/>{game.names[id]} <strong>{game.scores[id]}</strong></span>)}</div>
       {game.finished ? <section className="kribbel-finale"><span aria-hidden="true">★</span><h1>Partie beendet</h1><p>Gewonnen: {game.winners.map(id => game.names[id]).join(", ")}</p><ol>{standings.map(id => <li key={id}><CharacterAvatar id={characters[id]} decorative/>{game.names[id]} <strong>{game.scores[id]} Punkte</strong></li>)}</ol></section> : <>

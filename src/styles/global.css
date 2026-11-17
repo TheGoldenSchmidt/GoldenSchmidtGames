@@ -313,3 +313,5 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
   .kribbel-task__picture { min-height: 120px; }.kribbel-task__hint { margin-bottom: 22px; }.kribbel-task__progress { min-height: 70px; }
   .kribbel-table-side { padding-top: 9px; }.kribbel-tray { padding-top: 24px; }.kribbel-tray .kribbel-dice { gap: 22px 4px; }
 }
+/* Shown over every game end screen when the way back to the lobby failed; the room is kept. */
+.lobby-return-error { position: fixed; z-index: 60; left: 16px; right: 16px; bottom: max(16px, env(safe-area-inset-bottom)); max-width: 520px; margin: 0 auto; border: 2px solid #8c3026; box-shadow: 0 8px 24px rgb(20 12 40 / .35); }

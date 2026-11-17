@@ -178,6 +178,11 @@ function closePartyRoom(room: RoomState) {
   if (!room.partyTest) return;
   const reason = room.partyGame?.phase;
   if (reason !== "finished" && reason !== "aborted") return;
+  closeRoom(room, reason);
+}
+
+// Removes the room for every member. "closed" means the host ended it from the lobby.
+function closeRoom(room: RoomState, reason: "finished" | "aborted" | "closed") {
   closingRooms.add(room.code);
   transactions.dirty(room.code);
   transactions.publish(() => {
@@ -568,6 +573,46 @@ hub.onPeer((socket) => {
     room.players.forEach(player => { player.ready = Boolean(player.bot); player.score = 0; });
     broadcast(room);
     callback({ ok: true, data: publicRoom(room, membership.playerId) });
+  });
+
+  // Leave a waiting lobby for good: the seat is freed instead of waiting for a rejoin.
+  withoutPayload("room:leave", (callback: (ack: Ack<{ left: boolean }>) => void) => {
+    const membership = socketMembership.get(socket.id);
+    const room = membership ? rooms.get(membership.roomCode) : undefined;
+    if (!membership || !room) return callback({ ok: false, error: "Du bist in keinem Raum." });
+    if (room.phase !== "lobby") return callback({ ok: false, error: "Die Partie läuft noch." });
+    if (ownerPeer && room.hostId === membership.playerId) {
+      return callback({ ok: false, error: "Das Host-Handy kann die Party nur für alle beenden." });
+    }
+    for (const [id, member] of socketMembership) {
+      if (member.roomCode === room.code && member.playerId === membership.playerId) {
+        socketMembership.delete(id);
+        hub.peer(id)?.leave(room.code);
+      }
+    }
+    room.players = room.players.filter(player => player.id !== membership.playerId);
+    roomTokens.get(room.code)?.delete(membership.playerId);
+    moveSequences.get(room.code)?.delete(membership.playerId);
+    const people = room.players.filter(player => !player.bot);
+    if (!people.length) {
+      forgetRoom(room.code);
+      transactions.dirty(room.code);
+      return callback({ ok: true, data: { left: true } });
+    }
+    if (room.hostId === membership.playerId) room.hostId = (people.find(player => player.connected) ?? people[0]).id;
+    if (!people.some(player => player.connected)) emptySince.set(room.code, Date.now());
+    broadcast(room);
+    callback({ ok: true, data: { left: true } });
+  });
+
+  withoutPayload("room:close", (callback: (ack: Ack<{ closed: boolean }>) => void) => {
+    const membership = socketMembership.get(socket.id);
+    const room = membership ? rooms.get(membership.roomCode) : undefined;
+    if (!membership || !room) return callback({ ok: false, error: "Du bist in keinem Raum." });
+    if (room.hostId !== membership.playerId) return callback({ ok: false, error: "Nur der Host kann die Party für alle beenden." });
+    if (room.phase !== "lobby") return callback({ ok: false, error: "Die Partie läuft noch. Beende sie zuerst im Spielmenü." });
+    closeRoom(room, "closed");
+    callback({ ok: true, data: { closed: true } });
   });
 
   withoutPayload("room:start", (callback: (ack: Ack<RoomState>) => void) => {
