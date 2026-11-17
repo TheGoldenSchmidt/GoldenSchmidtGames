@@ -66,6 +66,37 @@ Münz- und Ereignisfelder wirken weiterhin beim Landen, nicht beim Vorbeilaufen.
 Die Clients zeigen denselben Weg und Zeitpunkt. Reduzierte Bewegung kann die
 Animation verkürzen, zieht die serverseitige Wirkung aber nicht vor.
 
+## Trophäenstand, letzte Runden und Bonus-Trophäen
+
+Der Trophäenstand beginnt an Shop 6. Nach jedem Kauf zieht er zufällig zu einem
+der beiden anderen Shops (6, 15, 24); er bleibt nie am selben Shop. Den Zufall
+zieht die Raumautorität aus dem Zufallsstand der Partie, die Chronik nennt das
+neue Feld. Ohne Kauf bleibt er stehen.
+
+Die letzten drei Runden sind Schlussrunden (bei 5 Runden also die Runden 3 bis
+5). Plus- und Minusfelder wirken dort doppelt (+6 bzw. bis zu −6 Münzen); der
+Hafenbonus bleibt bei 3 Münzen, Ereignisse bleiben unverändert. Zu Beginn der
+ersten Schlussrunde erhalten alle Letztplatzierten (gleiche Trophäen, Münzen und
+Minispielsiege wie der letzte Platz) ein zufälliges Item. Ist ihr Inventar voll,
+bekommen sie stattdessen dessen Preis in Münzen. Bis zum ersten Wurf dieser Runde
+zeigen alle Geräte die Ansage; danach markiert „Schlussrunde“ die Rundenanzeige.
+Roll It Up! und die eigenständigen Minispielmodi haben keine Schlussrunden.
+
+Nach dem letzten Minispiel vergibt die Siegerehrung drei Bonus-Trophäen, bevor
+der Sieg feststeht. Jede zählt wie eine gekaufte Trophäe:
+
+| Bonus-Trophäe | Bedingung |
+| --- | --- |
+| Minispiel-Ass | meiste Minispielsiege (ohne Auftakt) |
+| Weltenbummler | meiste gelaufene Felder (Reisekompass zählt nicht) |
+| Pechvogel | meiste verlorene Münzen durch Minusfelder, Reparatur und Münzangel |
+
+Bei Gleichstand erhalten alle Gleichplatzierten die Bonus-Trophäe; bei einem
+Höchstwert von 0 wird sie nicht vergeben. Die Bonus-Trophäen erscheinen
+nacheinander, danach die Sieger. Bei reduzierter Bewegung steht alles sofort da;
+das Ergebnis ist in beiden Fällen gleich. Der Satz unter dem Siegernamen spricht
+nur die Sieger mit „Du“ an.
+
 ## Geschlossene Räume
 
 Nach dem letzten gewerteten Minispiel endet die Partie automatisch. Der letzte
@@ -134,6 +165,10 @@ das Match. Details: [Konzept](minigames/konzept.md).
 
 ## Tests
 
+`test:rules` prüft in `scripts/party-finale-test.ts` den wechselnden
+Trophäenstand, die Schlussrunden mit Rückenwind und die Bonus-Trophäen samt
+Gleichständen. `tests/browser/party-finale.spec.ts` spielt eine Partie mit zwei
+Geräten bis zur Siegerehrung, in beiden Bewegungseinstellungen.
 `test:rules` prüft zusätzlich alle neuen Mechaniken, Körperkontakte, Stürze,
 eindeutige Auszahlungen, den Auftakt, feste Reihenfolge und Wirkungen nach
 Ankunft. Deterministische Replays und echte Botsteuerung laufen für 14 Arenen
