@@ -32,23 +32,24 @@ test("Sechs freigegebene Figuren bleiben in gemeinsamer Insel und Arena erhalten
   }finally{session.close();}
 });
 
-test("Animierte Figuren stehen in der Auswahl: zwei Gruppen, Vorschau auf der Bühne",async({page})=>{
+test("Animierte Figuren stehen in der Auswahl: Porträtkarten, Vorschau auf der Bühne",async({page})=>{
   const errors:string[]=[];page.on("pageerror",e=>errors.push(e.message));await page.emulateMedia({reducedMotion:"reduce"});
   await page.goto("/");await page.getByRole("button",{name:/Online spielen/}).click();
   await page.getByRole("button", {name: /^Raum erstellen/}).click();
   await selectEntryCharacter(page, "Morty Smith");
   await page.getByRole("button",{name:"Neuen Raum erstellen"}).click();
-  await page.getByRole("button",{name:/Spielfigur ändern/}).click();
-  const grid=page.getByRole("group",{name:"Spielfigur auswählen",exact:true});
-  await expect(grid.getByRole("heading",{name:"Animierte Figuren",exact:true})).toBeVisible();
-  await expect(grid.getByRole("heading",{name:"Klassische Figuren",exact:true})).toBeVisible();
-  await expect(grid.getByRole("button")).toHaveCount(CHARACTERS.length);
+  await page.getByText("3D-Figur ansehen",{exact:true}).click();
+  const summary=page.locator(".room summary").filter({hasText:"Deine Spielfigur"});
+  const grid=page.getByRole("group",{name:"Deine Spielfigur",exact:true});
   for(const [name,id] of [["Bolt","rig_bolt"],["MC Goldie","rig_mc_goldie"],["Lil Schmidt","rig_lil_schmidt"],["Morty Smith","alpha_morty_smith"]] as const){
-    await grid.getByRole("button",{name,exact:true}).click();
-    await expect(grid.getByRole("button",{name,exact:false}).first()).toHaveAttribute("aria-pressed","true");
+    await selectEntryCharacter(page,name);
+    await expect(summary).toContainText(name);
     await expect(page.locator(".party-character-canvas")).toHaveAttribute("data-character",id,{timeout:20000});
     await expect(page.locator(".party-character-canvas")).toHaveAttribute("data-webgl","ready");
   }
+  await summary.click();
+  await expect(grid.getByRole("button")).toHaveCount(CHARACTERS.length);
+  await expect(grid.getByRole("button",{name:"Morty Smith"})).toHaveAttribute("aria-pressed","true");
   for(const c of CHARACTERS.filter(c=>c.id.startsWith("rig_")))expect(await grid.locator(`img[src="/characters/${c.id}.png"]`).evaluate((img:HTMLImageElement)=>img.complete?img.naturalWidth:-1),`${c.name}: Vorschaubild`).not.toBe(0);
   expect(errors).toEqual([]);
 });

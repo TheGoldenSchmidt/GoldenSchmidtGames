@@ -1,3 +1,5 @@
+import { getGame } from "../../shared/games";
+import { selectedLobbyGame, selectLobbyGame } from "./select-lobby-game";
 import { selectEntryCharacter } from "./select-entry-character";
 import { test, expect, type Page } from "@playwright/test";
 import jsQR from "jsqr";
@@ -67,7 +69,7 @@ test("Fünf Geräte steuern gemeinsam, ein zweiter Tisch bleibt unabhängig",asy
     });
     for(const device of [...devices,other])await enter(device, guests.includes(device));
     for(const host of [page,other])await host.getByRole("button",{name:"Neuen Raum erstellen"}).click();
-    await page.getByLabel("Ausgewähltes Spiel").selectOption("party");
+    await selectLobbyGame(page, "party");
     await expect(page.getByRole("combobox",{name:"Spielerzahl",exact:true})).toBeEnabled();
     await page.getByRole("combobox",{name:"Spielerzahl",exact:true}).selectOption("5");
     await expect(page.getByRole("combobox",{name:"Spielerzahl",exact:true})).toHaveValue("5");
@@ -122,11 +124,11 @@ test("Handy-Speicherfehler bestätigt keine ungespeicherte Raumänderung",async(
       };open.onerror=()=>reject(open.error);
     });
   });
-  await page.getByLabel("Ausgewähltes Spiel").selectOption("durak");
+  await selectLobbyGame(page, "durak");
   await expect.poll(async()=>(await snapshot(page)).room.config.gameId).toBe(before.room.config.gameId);
-  await expect(page.getByLabel("Ausgewähltes Spiel")).toHaveValue(before.room.config.gameId);
+  await expect(selectedLobbyGame(page)).toHaveText(getGame(before.room.config.gameId).name);
   await page.reload();
-  await expect(page.getByLabel("Ausgewähltes Spiel")).toHaveValue(before.room.config.gameId);
+  await expect(selectedLobbyGame(page)).toHaveText(getGame(before.room.config.gameId).name);
 });
 
 async function readQR(page:Page) {
@@ -202,7 +204,7 @@ for(const [game,marker] of [["qwixx",".qwixx-turn"],["kribbeln",".kribbel-score-
     try{
       await Promise.all([enter(page),enter(guest,true)]);
       await page.getByRole("button",{name:"Neuen Raum erstellen"}).click();
-      await page.getByLabel("Ausgewähltes Spiel").selectOption(game);
+      await selectLobbyGame(page, game);
       await pair(page,guest);
       for(const device of [guest,page])await device.getByRole("button",{name:"Ich bin bereit",exact:true}).click();
       for(const device of [page,guest])await expect(device.locator(marker)).toBeVisible();

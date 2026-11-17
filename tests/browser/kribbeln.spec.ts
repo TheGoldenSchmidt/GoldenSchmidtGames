@@ -1,3 +1,4 @@
+import { selectLobbyGame } from "./select-lobby-game";
 import { selectEntryCharacter } from "./select-entry-character";
 import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
@@ -211,7 +212,7 @@ test("Online sehen beide Geräte behaltene Würfel und dieselben gelandeten Farb
     await page.getByRole("button", { name: /^Raum erstellen/ }).click();
     await selectEntryCharacter(page, "Prime Rick");
     await page.getByRole("button", { name: "Neuen Raum erstellen", exact: true }).click();
-    await page.getByRole("combobox", { name: "Ausgewähltes Spiel", exact: true }).selectOption("kribbeln");
+    await selectLobbyGame(page, "kribbeln");
     const code = await page.locator(".room-code strong").innerText();
     await observer.goto(new URL("/", page.url()).href); await observer.getByRole("button", { name: /Online spielen/ }).click();
     await observer.getByRole("button", { name: /^Raum beitreten/ }).click();

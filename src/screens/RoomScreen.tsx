@@ -1,6 +1,6 @@
 import { isPartyMode } from "../../shared/games";
 import { useEffect, useMemo, useState } from "react";
-import { GAMES, getGame } from "../../shared/games";
+import { getGame } from "../../shared/games";
 import type { GameId, GuestProfile, RoomState } from "../../shared/types";
 import { ScreenHeader } from "../components/ScreenHeader";
 import { IslandWorld } from "../components/IslandWorld";
@@ -10,7 +10,8 @@ import { PartySettings } from "../components/PartySettings";
 import { MinigameSettings } from "../components/MinigameSettings";
 import { isMinigameMode, type MinigameOptions } from "../../shared/minigameModes";
 import type { PartyOptions } from "../../shared/party";
-import { PartyCharacterPicker } from "../components/PartyCharacterPicker";
+import { CharacterPreview } from "../components/CharacterPreview";
+import { GameGallery, CharacterGallery } from "../components/RoomGalleries";
 import {CharacterAvatar} from "../components/CharacterAvatar";
 import {preloadFigures} from "../figures/catalog";
 import { CHARACTERS, characterId, type CharacterId } from "../../shared/characters";
@@ -29,7 +30,9 @@ export function RoomScreen({
   const [room, setRoom] = useState(initialRoom);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
-  const [chooseFigure,setChooseFigure]=useState(false);
+  const [showPreview,setShowPreview]=useState(false);
+  const viewerIndex = room.players.findIndex(player => player.id === profile.id);
+  const myFigure = room.players[viewerIndex]?.characterId;
   const isHost = room.hostId === profile.id;
   const connectedCount = room.players.filter((player) => player.connected).length;
   const readyCount = room.players.filter((player) => player.connected && player.ready).length;
@@ -85,8 +88,11 @@ export function RoomScreen({
           <strong>{room.code}</strong>
         </button>}
 
-        <button className="lobby-character-button" onClick={()=>setChooseFigure(value=>!value)} aria-expanded={chooseFigure}><CharacterAvatar id={room.players.find(p=>p.id===profile.id)?.characterId}/><span><small>Deine Spielfigur</small><strong>{CHARACTERS.find(c=>c.id===room.players.find(p=>p.id===profile.id)?.characterId)?.name}</strong></span><b>{chooseFigure?"Figurenwahl schließen":"Spielfigur ändern"}</b></button>
-        {chooseFigure&&<PartyCharacterPicker value={room.players.find(p=>p.id===profile.id)?.characterId} index={Math.max(0,room.players.findIndex(p=>p.id===profile.id))} onChange={chooseCharacter}/>}
+        <GameGallery gameId={game.id} disabled={!isHost || Boolean(room.partyTest)} onChange={id => {
+          const next = getGame(id);
+          if (id !== game.id) configure(id, Math.max(next.minPlayers, Math.min(next.maxPlayers, room.config.playerCount)));
+        }}/>
+        <CharacterGallery characterId={myFigure} onChange={id => { if (id !== myFigure) chooseCharacter(id); }}/>
 
         <section className="iw-card">
           <h2 className="iw-plank iw-card__title">Mitspieler</h2>
@@ -116,24 +122,8 @@ export function RoomScreen({
         </section>
 
         <section className="iw-card">
-          <h2 className="iw-plank iw-card__title">Spiel</h2>
+          <h2 className="iw-plank iw-card__title">Spieleinstellungen</h2>
         <div className="lobby-config">
-          <label className="lobby-config__game">
-            <span className={`game-art game-art--${room.config.gameId}`} aria-hidden="true"/>
-            <span>Ausgewähltes Spiel</span>
-            <select
-              value={room.config.gameId}
-              disabled={!isHost||Boolean(room.partyTest)}
-              onChange={(event) => {
-                const nextGame = getGame(event.target.value as GameId);
-                configure(nextGame.id, Math.max(nextGame.minPlayers, Math.min(nextGame.maxPlayers, room.config.playerCount)));
-              }}
-            >
-              {GAMES.filter((entry) => entry.status === "ready").map((entry) => (
-                <option key={entry.id} value={entry.id}>{entry.name}</option>
-              ))}
-            </select>
-          </label>
           <label>
             <span>Spielerzahl</span>
             <select value={room.config.playerCount} disabled={!isHost||Boolean(room.partyTest)} onChange={(event) => configure(room.config.gameId, Number(event.target.value))}>
@@ -158,6 +148,10 @@ export function RoomScreen({
         )}
         </section>
 
+        <details className="lobby-preview" onToggle={event => setShowPreview(event.currentTarget.open)}>
+          <summary>3D-Figur ansehen</summary>
+          {showPreview && <CharacterPreview value={myFigure} index={Math.max(0,viewerIndex)}/>}
+        </details>
         <button
           className={`button button--wide ${currentPlayerReady ? "button--secondary" : "button--primary"}`}
           onClick={toggleReady}

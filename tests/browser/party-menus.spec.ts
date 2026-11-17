@@ -1,3 +1,4 @@
+import { selectLobbyGame } from "./select-lobby-game";
 import { selectEntryCharacter } from "./select-entry-character";
 import { test, expect } from "@playwright/test";
 
@@ -42,14 +43,18 @@ test("Partymenüs: Online-Auswahl, Lobby und Figurenwechsel", async ({ page }, i
   await page.screenshot({ path: info.outputPath("online-auswahl.png"), fullPage: true });
   await page.getByRole("button", { name: "Neuen Raum erstellen", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Lobby", exact: true })).toBeVisible();
-  await page.getByRole("combobox", { name: "Ausgewähltes Spiel", exact: true }).selectOption("party");
+  await selectLobbyGame(page, "party");
   await expect(page.getByRole("combobox", { name: "Tempo", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: /Spielfigur ändern/ }).click();
-  await page.getByRole("button", { name: "Prime Rick", exact: true }).click();
-  await expect(page.locator(".party-character-canvas")).toHaveAttribute("data-webgl", "ready");
+  await selectEntryCharacter(page, "Prime Rick");
   await expect(page.locator(".player-row").first()).toContainText("Prime Rick");
-  await page.getByRole("button", { name: /Figurenwahl schließen/ }).click();
-  await expect(page.locator(".party-character-picker")).toHaveCount(0);
+  await expect(page.locator(".room details[open]")).toHaveCount(0);
+  await page.locator(".room summary").filter({hasText:"Spiel auswählen"}).click();
+  await page.screenshot({ path: info.outputPath("spielgalerie.png") });
+  await page.locator(".room summary").filter({hasText:"Deine Spielfigur"}).click();
+  await page.locator(".room details[open] summary").evaluate(el => el.scrollIntoView({block:"start"}));
+  await page.screenshot({ path: info.outputPath("figurengalerie.png") });
+  await page.locator(".room summary").filter({hasText:"Deine Spielfigur"}).click();
+  await page.screenshot({ path: info.outputPath("lobby-handy.png") });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: info.outputPath("lobby.png"), fullPage: true });
   await page.setViewportSize({ width: 320, height: 640 });

@@ -1,3 +1,4 @@
+import { selectedLobbyGame } from "./select-lobby-game";
 import { CHARACTERS } from "../../shared/characters";
 import { selectEntryCharacter } from "./select-entry-character";
 import { test, expect } from "@playwright/test";
@@ -79,7 +80,7 @@ test("Illustrierte Online-Spielwahl übernimmt das gewählte Spiel in die Lobby"
   await selectEntryCharacter(page, "Morty Smith");
   await page.screenshot({path:info.outputPath("raum-erstellen.png")});
   await page.getByRole("button", {name:"Neuen Raum erstellen"}).click();
-  await expect(page.getByLabel("Ausgewähltes Spiel")).toHaveValue("party");
+  await expect(selectedLobbyGame(page)).toHaveText("Inselparty");
 });
 
 test("Beitritt zeigt Figurenkarten und behält die Wahl beim Wechsel zum QR-Code", async ({page}, info) => {

@@ -133,7 +133,7 @@
 .game-art--free-minigame { background-position:0 100%; }
 .game-art--goldenschmidt { background-position:100% 100%; }
 .iw-menu .host-entry { padding:0; border:none; background:none; box-shadow:none; gap:16px; }
-.host-entry :is(.host-gallery,.entry-character,.hosting-choice) {
+.host-gallery,.host-entry :is(.entry-character,.hosting-choice) {
   color:#fff2d8; background:linear-gradient(145deg,#383041f5,#211e32fa);
   border:1px solid #be9962; border-radius:12px; box-shadow:inset 0 1px #f7d79444,0 3px 9px #15142166;
 }
@@ -159,10 +159,6 @@
   color:#372315; font:400 1.2rem var(--iw-font-display);
 }
 .iw-menu .room > .button--secondary:not(:disabled) { background:transparent url("../assets/expedition/amethyst.webp") center / 100% 100%; border:0; box-shadow:none; }
-.iw-menu .room .lobby-config__game { display:grid; grid-template-columns:60px 1fr; align-items:center; column-gap:12px; }
-.lobby-config__game .game-art { grid-column:1; grid-row:1 / 3; }
-.lobby-config__game :is(select,span:not(.game-art)) { grid-column:2; }
-
 .host-gallery summary { gap:10px; }
 .host-gallery summary > .menu-icon { margin-left:auto; }
 .host-shelf .character-avatar { display:grid; place-items:center; width:100%; height:auto; aspect-ratio:1.35;
@@ -174,3 +170,19 @@
 .iw-menu .qr-entry .button--primary { background:transparent url("../assets/expedition/citrine.webp") center/100% 100%;
   border:0; box-shadow:none; min-height:52px; }
 .iw-menu .host-entry .field--code > span { color:#ffe3a6; }
+
+.iw-menu .room > .iw-card,.room .lobby-preview {
+  color:#fff1d6; border:1px solid #be9962; border-radius:12px;
+  background:linear-gradient(145deg,#383041f5,#211e32fa); box-shadow:inset 0 1px #f7d79444,0 3px 9px #15142166;
+}
+.room .lobby-preview summary { padding:13px 16px; cursor:pointer; color:#ffdfaa; }
+.iw-menu .room .iw-card__title { color:#ffe2a4; }
+.iw-menu .room .iw-card__lead,.iw-menu .room .lobby-config label { color:#f3dfc6; }
+.iw-menu .room .player-row { border-color:#786672; background:#292539; color:#fff1d8; }
+.iw-menu .room .player-row__name small { color:#e3cebd; }
+.iw-menu .room .player-row--empty { border-style:dashed; background:transparent; }
+.iw-menu .room .room-code { background:linear-gradient(120deg,#322538,#202037 66%,#45344b);
+  border-color:#cba76b; box-shadow:inset 0 0 0 3px #282033,0 3px 10px #16142166; }
+.room .host-shelf button:disabled { cursor:default; }
+.iw-menu .room .party-settings { color:#352b31; }
+.iw-menu .room .lobby-config label > span,.iw-menu .room .ready-mark:not(.is-ready),.iw-menu .room .room-code small { color:#ead7bd; }

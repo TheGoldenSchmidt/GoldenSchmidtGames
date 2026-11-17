@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { CHARACTERS, characterName, isCharacterId, type CharacterId } from "../../shared/characters";
-import { GameCardFace } from "../components/GameCardFace";
+import { useEffect, useRef, useState } from "react";
+import { CHARACTERS, isCharacterId, type CharacterId } from "../../shared/characters";
+import { GameGallery, CharacterGallery } from "../components/RoomGalleries";
 import { MenuIcon } from "../components/MenuIcon";
-import { GAMES, getGame, isPartyMode } from "../../shared/games";
+import { GAMES, isPartyMode } from "../../shared/games";
 import type { Ack, GameId, GuestProfile, RoomState } from "../../shared/types";
 import { IslandWorld } from "../components/IslandWorld";
 import { ScreenHeader } from "../components/ScreenHeader";
@@ -13,20 +13,6 @@ import { tokenForJoin } from "../lib/roomSession";
 import { socket, useTableTransport } from "../lib/socket";
 import { GuestPair } from "../nearby/Pairing";
 import { nearby } from "../nearby/nearbySocket";
-
-function EntryGallery({title, selection, portrait, initiallyOpen = false, children}: {
-  title: string; selection: string; portrait?: ReactNode; initiallyOpen?: boolean; children: ReactNode;
-}) {
-  const ref = useRef<HTMLDetailsElement>(null);
-  return <details className="host-gallery" name="room-entry-gallery" open={initiallyOpen} ref={ref}>
-    <summary>{portrait}<span>{title}<strong>{selection}</strong></span><MenuIcon name="next"/></summary>
-    <div className="game-shelf host-shelf" role="group" aria-label={title} onClick={event => {
-      if (!(event.target instanceof Element) || !event.target.closest("button:enabled") || !ref.current) return;
-      ref.current.open = false;
-      ref.current.querySelector("summary")?.focus();
-    }}>{children}</div>
-  </details>;
-}
 
 type EntryMode = "host" | "join" | "test";
 
@@ -133,23 +119,8 @@ export function RoomEntryForm({ mode, profile, onBack, onJoined, onCharacterChan
     <IslandWorld />
     <ScreenHeader title={title} onBack={onBack} />
     <div className="page__content entry-frame"><form className={`iw-card room-entry ${mode !== "test" ? "host-entry" : ""}`} onSubmit={event => { event.preventDefault(); if (!qr) void submit(); }}>
-      {mode === "host" && <EntryGallery title="Spiel auswählen" selection={getGame(gameId).name} initiallyOpen>
-        {GAMES.filter(game => game.status === "ready").map(game =>
-          <button type="button" key={game.id} disabled={loading} aria-pressed={game.id === gameId} onClick={() => setGameId(game.id)}>
-            <GameCardFace game={game}/>
-          </button>
-        )}
-      </EntryGallery>}
-      {mode !== "test" ? <EntryGallery title="Deine Spielfigur" selection={characterName(characterId)}
-        portrait={<CharacterAvatar id={characterId} decorative/>}>
-        {CHARACTERS.map(character =>
-          <button type="button" key={character.id} disabled={loading || pairing} aria-pressed={character.id === characterId}
-            onClick={() => onCharacterChange(character.id)}>
-            <CharacterAvatar id={character.id} decorative/>
-            <span className="game-shelf__caption"><strong>{character.name}</strong></span>
-          </button>
-        )}
-      </EntryGallery> :
+      {mode === "host" && <GameGallery gameId={gameId} disabled={loading} initiallyOpen onChange={setGameId}/>}
+      {mode !== "test" ? <CharacterGallery characterId={characterId} disabled={loading || pairing} onChange={onCharacterChange}/> :
       <label className="local-character-field entry-character">
         <CharacterAvatar id={characterId} decorative />
         <span>Deine Spielfigur<select value={characterId ?? ""} disabled={loading || pairing} onChange={event => {

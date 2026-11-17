@@ -1,3 +1,4 @@
+import { selectLobbyGame } from "./select-lobby-game";
 import { selectEntryCharacter } from "./select-entry-character";
 import { test, expect } from "@playwright/test";
 import { matchStarted, onlineSession } from "./party-session";
@@ -26,16 +27,16 @@ test("Lobby: neue Spiele, 1st-Generation-Checkbox und 320 Pixel ohne Überlauf",
   await page.getByRole("button", { name: /^Raum erstellen/ }).click();
   await selectEntryCharacter(page, "Morty Smith");
   await page.getByRole("button", { name: "Neuen Raum erstellen" }).click();
-  await page.getByLabel("Ausgewähltes Spiel").selectOption("goldenschmidt");
+  await selectLobbyGame(page, "goldenschmidt");
   const classic = page.getByRole("checkbox", { name: /1st Generation Minigames/ });
   await expect(classic).toBeChecked();
   await classic.tap();
   await expect(classic).not.toBeChecked();
   await expect(page.getByText(new RegExp(`aus ${miniPool(2, false).length} passenden Spielen`))).toBeVisible();
-  await page.getByLabel("Ausgewähltes Spiel").selectOption("free-minigame");
+  await selectLobbyGame(page, "free-minigame");
   await page.getByRole("combobox", { name: "Minispiel", exact: true }).selectOption("quickdraw");
   await expect(page.getByText(/Warte auf das rote »ZIEH!«/)).toBeVisible();
-  await page.getByLabel("Ausgewähltes Spiel").selectOption("party");
+  await selectLobbyGame(page, "party");
   await expect(page.getByRole("checkbox", { name: /1st Generation Minigames/ })).toBeChecked();
   await page.setViewportSize({ width: 320, height: 760 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);

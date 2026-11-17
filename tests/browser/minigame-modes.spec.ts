@@ -1,3 +1,4 @@
+import { selectLobbyGame } from "./select-lobby-game";
 import { selectEntryCharacter } from "./select-entry-character";
 import { test, expect } from "@playwright/test";
 import { endOwnAttempt, onlineSession, participate } from "./party-session";
@@ -26,14 +27,14 @@ test("Beide Minispielmodi sind in der Lobby konfigurierbar", async ({ page }, te
   await page.getByRole("button", { name: /^Raum erstellen/ }).click();
   await selectEntryCharacter(page, "Morty Smith");
   await page.getByRole("button", { name: "Neuen Raum erstellen" }).click();
-  await page.getByLabel("Ausgewähltes Spiel").selectOption("free-minigame");
+  await selectLobbyGame(page, "free-minigame");
   const minigame = page.getByRole("combobox", { name: "Minispiel", exact: true });
   await expect(minigame).toBeVisible();
   await expect(minigame.locator("option")).toHaveCount(PLAYABLE_MINI_IDS.length);
   await expect(minigame.locator("optgroup")).toHaveCount(2);
   await minigame.selectOption("golf");
   await expect(minigame).toHaveValue("golf");
-  await page.getByLabel("Ausgewähltes Spiel").selectOption("goldenschmidt");
+  await selectLobbyGame(page, "goldenschmidt");
   await page.getByLabel("Anzahl Minispiele").selectOption("14");
   await expect(page.getByLabel("Anzahl Minispiele")).toHaveValue("14");
   await expect(page.getByText(/14 zufällige Minispiele ohne Wiederholung/)).toBeVisible();

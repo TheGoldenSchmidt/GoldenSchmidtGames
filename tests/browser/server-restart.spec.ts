@@ -1,3 +1,4 @@
+import { selectLobbyGame } from "./select-lobby-game";
 import { selectEntryCharacter } from "./select-entry-character";
 import { expect, test } from "@playwright/test";
 import { restartFixture } from "../../scripts/restart-fixture";
@@ -22,7 +23,7 @@ for (const [game, marker] of [
       }
       await page.getByRole("button", { name: "Neuen Raum erstellen", exact: true }).click();
       const code = await page.locator(".room-code strong").innerText();
-      await page.getByLabel("Ausgewähltes Spiel").selectOption(game);
+      await selectLobbyGame(page, game);
       await guest.getByRole("textbox", { name: "Raumcode" }).fill(code);
       await guest.getByRole("button", { name: "Raum beitreten", exact: true }).click();
       for (const device of [guest, page]) await device.getByRole("button", { name: "Ich bin bereit", exact: true }).click();
