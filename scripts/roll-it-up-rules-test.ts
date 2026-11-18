@@ -1,12 +1,15 @@
 import assert from "node:assert/strict";
-import { activePartyPlayer, applyPartyAction, publicParty, type PartyAction, type PartyGame } from "../shared/party";
+import { createPartyGame, tickParty, activePartyPlayer, applyPartyAction, publicParty, type PartyAction, type PartyGame } from "../shared/party";
 import { boardDistances, boardPathTo, boardRoute, hasFullSet, JAYSPOT, partyBoard, partyPaths, STATIONS } from "../shared/partyBoard";
-import { botBoardAction } from "../shared/partyBots";
+import { botBoardAction, PartyBotDriver } from "../shared/partyBots";
 import { boardGame, settleMovement } from "./party-fixtures";
 
 const players = [{id:"a",name:"Ada"},{id:"b",name:"Ben"}];
 const make = () => boardGame(players,{rounds:5},true,17,100000,"roll-it-up");
-const command = (g:PartyGame, action:PartyAction) => settleMovement(applyPartyAction(g,activePartyPlayer(g).id,action,100000));
+const command = (g:PartyGame, action:PartyAction) => {
+ if(g.phase==="mini-result"&&action.type==="next"){for(const p of g.players)if(g.phase==="mini-result"&&!p.passive)g=applyPartyAction(g,p.id,action,100000);return g;}
+ return settleMovement(applyPartyAction(g,activePartyPlayer(g).id,action,100000));
+};
 
 // Guidance follows the directed game graph and never promises an unavailable goal.
 const guide = make(), traveler = activePartyPlayer(guide);
@@ -78,7 +81,7 @@ for (const gate of [31,33]) {
 }
 const poor=make(); activePartyPlayer(poor).coins=0;
 assert.notEqual(approach(poor,2).phase,"supply");
-const late=make(); late.round=5; late.phase="mini-result";
+const late=make(); late.round=5; late.phase="mini-result";late.mini=createPartyGame(players,undefined,true,17,100000,"roll-it-up").mini!;
 assert.equal(command(late,{type:"next"}).round,6);
 const board=partyBoard(g);
 for (const [i,s] of STATIONS.entries()) {
@@ -104,4 +107,21 @@ assert.equal(activePartyPlayer(match).position,JAYSPOT);
 assert.ok(hasFullSet(activePartyPlayer(match)));
 assert.deepEqual(match.winners,[activePartyPlayer(match).id]);
 
-console.log("Roll It Up! – Käufe, sechs Stationen, Hügelwege und Sofortsieg geprüft.");
+
+// Every human acknowledges independently; repeated confirmations and elapsed time cannot skip anyone.
+let results=structuredClone(late);
+results=applyPartyAction(results,players[1].id,{type:"next"},100000);
+assert.equal(results.phase,"mini-result");
+assert.deepEqual(results.mini!.resultReady,[players[1].id]);
+assert.equal(tickParty(results,1000000).phase,"mini-result");
+results=applyPartyAction(results,players[1].id,{type:"next"},100001);
+assert.equal(results.mini!.resultReady!.length,1);
+assert.equal(applyPartyAction(results,players[0].id,{type:"next"},100002).phase,"turn");
+const bots=structuredClone(late);bots.players[1].bot=true;
+assert.equal(applyPartyAction(bots,players[0].id,{type:"next"},100002).phase,"turn");
+const absent=structuredClone(results);absent.players[0].passive=true;
+assert.equal(tickParty(absent,100003).phase,"turn");
+
+const botTurn=structuredClone(bots);botTurn.turn=botTurn.order.indexOf(players[1].id);
+assert.equal(new PartyBotDriver().step(botTurn,1000000,true),botTurn,"Bots warten ohne wiederholte Bestätigungen");
+console.log("Roll It Up! – Käufe, Wege, Sofortsieg und Ergebnisbestätigung aller aktiven Menschen geprüft.");

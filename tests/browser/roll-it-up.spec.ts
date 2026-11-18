@@ -42,10 +42,11 @@ test("Bauschale: Kaufbestätigung und Wegvorschau folgen dem tatsächlichen Zug"
       if(g.phase==="moving"){await page.waitForTimeout(150);continue;}
       if(p.id===viewer&&g.phase==="supply"&&!purchased){
         const station=stationAt(p.position)!;
-        await expect(page.locator(".roll-purchase")).toContainText(`Danach ${p.coins-station.price} Münzen`);
+        await expect(page.locator(".roll-purchase")).toContainText(`${station.price} Münzen`);
+        await expect(page.locator(".roll-purchase")).not.toContainText("Danach");
         await expect(page.locator(".roll-set")).toContainText(`${p.supplies?.length??0} / 6`);
         await page.screenshot({path:info.outputPath("kaufentscheidung.png")});
-        await page.getByRole("button",{name:`${station.name} kaufen · ${station.price} Münzen`,exact:true}).tap();
+        await page.getByRole("button",{name:`${station.name} kaufen`,exact:true}).tap();
         await expect.poll(async()=>(await session.state()).partyGame!.players.find(q=>q.id===viewer)!.supplies).toContain(station.field);
         await expect(page.locator(".roll-notice")).toContainText(`${station.name} gesammelt`);
         purchased=true;continue;
@@ -64,6 +65,7 @@ test("Bauschale: Kaufbestätigung und Wegvorschau folgen dem tatsächlichen Zug"
         await expect.poll(async()=>(await session.state()).partyGame!.seq[viewer]).toBe(g.seq[viewer]+1);
         chosen=true;continue;
       }
+      if(g.phase==="mini-result"){for(const id of session.ids)if((await session.state()).partyGame!.phase==="mini-result")await session.action({type:"next"},id);continue;}
       if(g.phase==="mini-intro"||g.phase==="mini-play"){
         for(const id of session.ids)if((await session.state()).partyGame!.phase===g.phase)await session.action({type:g.phase==="mini-intro"?"ready":"finish"},id);
         continue;
@@ -95,4 +97,35 @@ for(const motion of ["no-preference","reduce"] as const)test(`Bauschale: ruhende
     await page.getByRole("button",{name:"Würfeln & losziehen",exact:true}).tap();
     await expect.poll(async()=>(await session.state()).partyGame!.dice.length).toBe(1);
   }finally{session.close();}
+});
+
+
+test("Ergebnisse bleiben bis zur Bestätigung aller Teilnehmer sichtbar",async({page})=>{
+ const session=await onlineSession(page,false,undefined,false,"roll-it-up");
+ try{
+  for(const id of session.ids)await session.action({type:"ready"},id);
+  for(const id of session.ids)if((await session.state()).partyGame!.phase==="mini-play")await session.action({type:"finish"},id);
+  await page.getByRole("button",{name:"Ergebnis bestätigen",exact:true}).tap();
+  await expect(page.getByRole("button",{name:"Bestätigt",exact:true})).toBeDisabled();
+  expect((await session.state()).partyGame!.phase).toBe("mini-result");
+  await page.reload();
+  await expect(page.getByRole("button",{name:"Bestätigt",exact:true})).toBeDisabled();
+  await session.action({type:"next"},session.ids[1]);
+  await expect(page.locator(".roll-board")).toBeVisible();
+ }finally{session.close();}
+});
+
+test("Brettkamera bleibt während Würfeln, Bewegung und Entscheidung stehen",async({page},info)=>{
+ const session=await onlineSession(page,true,undefined,true,"roll-it-up");
+ try{
+  const world=page.locator(".party-world");await settledBoardCamera(world);
+  const camera=await world.getAttribute("data-camera");
+  await page.getByRole("button",{name:"Würfeln & losziehen",exact:true}).tap();
+  await expect.poll(async()=>(await session.state()).partyGame!.dice.length).toBe(1);
+  await expect.poll(async()=>(await session.state()).partyGame!.phase,{timeout:10000}).not.toBe("moving");
+  await settledBoardCamera(world);
+  expect(await world.getAttribute("data-camera")).toBe(camera);
+  await expect(page.locator(".roll-turn")).toHaveCount(0);
+  await page.screenshot({path:info.outputPath("kompaktes-zugpanel.png")});
+ }finally{session.close();}
 });

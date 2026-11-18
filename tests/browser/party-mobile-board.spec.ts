@@ -40,6 +40,7 @@ for(const mode of ["party","roll-it-up"] as const)for(const motion of ["no-prefe
           expect(bounds.width).toBeGreaterThanOrEqual(44);expect(bounds.height).toBeGreaterThanOrEqual(44);
           expect(bounds.y+bounds.height).toBeLessThanOrEqual(size.height);
         }
+        if(mode==="roll-it-up")await expect(page.locator(".roll-world-label.is-active")).toBeVisible();
         await page.screenshot({path:info.outputPath(`board-${size.width}.png`)});
       }
       const frames=Number(await world.getAttribute("data-frames"));

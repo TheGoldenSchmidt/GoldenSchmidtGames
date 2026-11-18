@@ -78,8 +78,9 @@ const sameSeed = enterFinal(game => { for (const p of game.players) p.coins = 12
 assert.deepEqual(sameSeed.finalStretch, g.finalStretch, "Deterministisch über den Zufallsstand des Raums");
 let later = make(); later.round = 3; later.phase = "mini-result"; later = command(later, { type: "next" });
 assert.equal(later.finalStretch, undefined, "Rückenwind nur zu Beginn der letzten Runden");
-let rollItUp = boardGame(players, { rounds: 5 }, true, 4, now, "roll-it-up"); rollItUp.round = 2; rollItUp.phase = "mini-result";
-rollItUp = command(rollItUp, { type: "next" }); assert.equal(rollItUp.finalStretch, undefined);
+let rollItUp = boardGame(players, { rounds: 5 }, true, 4, now, "roll-it-up"); rollItUp.round = 2; rollItUp.phase = "mini-result"; rollItUp.mini = createPartyGame(players, undefined, true, 4, now, "roll-it-up").mini!;
+for (const player of players) rollItUp = act(rollItUp, player.id, { type: "next" }, now);
+assert.equal(rollItUp.round, 3); assert.equal(rollItUp.finalStretch, undefined);
 
 // Bonus trophies at the end: they count like bought trophies and can decide the winner.
 function finish(setup: (g: PartyGame) => void) {
