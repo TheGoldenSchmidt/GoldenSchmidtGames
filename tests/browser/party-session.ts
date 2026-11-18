@@ -25,7 +25,7 @@ export async function onlineSession(page:Page,followTurn=false,characters:Charac
     for(let i=0;i<sockets.length;i++)await send(i,{type:"ready"});
     // Match games end as soon as only one player is left in them.
     for(let i=0;i<sockets.length;i++)if(room.partyGame!.phase==="mini-play")await send(i,{type:"finish"});
-    await send(ids.indexOf(activePartyPlayer(room.partyGame!).id),{type:"next"});
+    if(gameId==="roll-it-up"){for(let i=0;i<ids.length;i++)if(room.partyGame!.phase==="mini-result")await send(i,{type:"next"});}else await send(ids.indexOf(activePartyPlayer(room.partyGame!).id),{type:"next"});
   }
   const viewer=followTurn?activePartyPlayer(room.partyGame!).id:ids[0];
   await page.addInitScript(({profile,session})=>{localStorage.setItem("spielraum.profile.v1",JSON.stringify(profile));localStorage.setItem("spielraum.party.online.v1",JSON.stringify(session));},{profile:{id:viewer,username:room.players.find(p=>p.id===viewer)!.name},session:{gameId,code:room.code,partyToken:tokens[viewer]}});

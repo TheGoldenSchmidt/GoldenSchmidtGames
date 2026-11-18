@@ -11,14 +11,14 @@ import { PartyDice } from "./PartyDice";
 import { PartyMapFallback } from "./PartyMapFallback";
 
 interface Props {
-  game:PartyGame;viewer:string;now:number;busy:boolean;rolling:boolean;blocked:boolean;connected:boolean;error:string;coinsChanged:number;
+  game:PartyGame;viewer:string;now:number;busy:boolean;rolling:boolean;blocked:boolean;connected:boolean;error:string;
   send:(action:PartyAction)=>void;onMenu:()=>void;onInventory:()=>void;
 }
 type Panel="collection"|"standings"|"fields"|"field"|"camera"|"rules";
 const primary="button button--primary button--wide",secondary="button button--ghost button--wide";
 
 /** Roll It Up's mobile board UI. Commands are committed by the existing room authority. */
-export function RollItUpBoard({game:g,viewer,now,busy,rolling,blocked,connected,error,coinsChanged,send,onMenu,onInventory}:Props) {
+export function RollItUpBoard({game:g,viewer,now,busy,rolling,blocked,connected,error,send,onMenu,onInventory}:Props) {
   const p=activePartyPlayer(g),own=g.players.find(player=>player.id===viewer)!,canAct=p.id===viewer;
   const [panel,setPanel]=useState<Panel>(),[selected,setSelected]=useState<number>(),[target,setTarget]=useState<number>();
   const [flat,setFlat]=useState(false),[failed,setFailed]=useState(false),[ready,setReady]=useState(false);
@@ -71,7 +71,7 @@ export function RollItUpBoard({game:g,viewer,now,busy,rolling,blocked,connected,
   useEffect(()=>{setSelected(undefined);setOverview(false);setZoom(1);setAngle(0);setView(n=>n+1);},[g.round,g.turn]);
   useEffect(()=>{
     const added=(own.supplies??[]).find(field=>!previousSupplies.current.includes(field));previousSupplies.current=own.supplies??[];
-    if(added===undefined)return;setToast(`${stationAt(added)?.name} gesammelt · dein Set: ${own.supplies!.length}/6`);
+    if(added===undefined)return;setToast(`${stationAt(added)?.name} gesammelt`);
     const timer=setTimeout(()=>setToast(""),3500);return()=>clearTimeout(timer);
   },[own.supplies?.join()]);
   function camera(all:boolean){setOverview(all);setZoom(1);setAngle(0);setView(n=>n+1);}
@@ -99,15 +99,15 @@ export function RollItUpBoard({game:g,viewer,now,busy,rolling,blocked,connected,
         <button className="roll-icon party-view-toggle" onClick={()=>setFlat(value=>!value)} disabled={failed} aria-label={show2d?"Zur 3D-Ansicht wechseln":"Zur 2D-Übersicht wechseln"}>{show2d?"3D":"2D"}</button>
       </div>
       {!overview&&<section className="party-decision roll-decision" aria-label="Aktuelle Spielentscheidung">
-        <div className="roll-turn"><CharacterAvatar id={p.characterId}/><strong>{canAct?`${p.name}, du bist dran!`:`${p.name} ist am Zug`}</strong>{g.deadline>0&&<span className={seconds<=5?"is-urgent":""} aria-label={`${seconds} Sekunden verbleiben`}>{seconds}s</span>}</div>
+        {(g.phase==="turn"||!canAct)&&<div className="roll-turn"><CharacterAvatar id={p.characterId}/><strong>{canAct?`${p.name}, du bist dran!`:`${p.name} ist am Zug`}</strong>{g.deadline>0&&<span className={seconds<=5?"is-urgent":""} aria-label={`${seconds} Sekunden verbleiben`}>{seconds}s</span>}</div>}
         {g.phase==="moving"&&g.dice.length>0&&<PartyDice values={g.dice} rolling={rolling} boost={g.boost}/>}
         {g.phase==="moving"?<p className="roll-moving" role="status">{p.name} zieht weiter · noch {g.steps} {g.steps===1?"Schritt":"Schritte"}</p>:!canAct?<p>{p.name} {g.phase==="turn"?"würfelt gleich.":g.phase==="supply"?`entscheidet über ${station?.name}.`:"entscheidet gerade."} Du kannst dein Set und die Karte ansehen.</p>:<fieldset disabled={disabled} className="roll-actions">
           {g.phase==="turn"&&<div className="roll-roll-actions"><button className={primary} onClick={()=>send({type:"roll"})}>Würfeln &amp; losziehen</button><button className="roll-stone roll-inventory" onClick={onInventory} aria-label="Dein Inventar öffnen" aria-haspopup="dialog">Items <small>{own.items.length}/3</small></button></div>}
           {g.phase==="path"&&<><h2>Welchen Weg nimmst du?</h2><p>Noch {g.steps} {g.steps===1?"Schritt":"Schritte"}. Wähle den Weg, dann bestätige.</p><div className="roll-paths party-path-choices">{paths.map((field,index)=>{const route=boardRoute(g,p,field,g.steps),s=route.stations.find(s=>!s.owned),last=route.fields.at(-1)!;return <button key={field} className="roll-path" aria-pressed={chosen===field} onClick={()=>setChoice(field)}><strong>{chosen===field?"✓ ":""}{field===JAYSPOT?"Zum Jayspot":index===0?"Außenweg":"Hügelweg"}</strong><span>{s?`${s.name} in ${s.steps} ${s.steps===1?"Schritt":"Schritten"}`:route.junction?"Weitere Wegwahl":fieldName(g,last)}</span><small>{route.junction?"Vorschau bis zur nächsten Gabelung":last===JAYSPOT?"Ziel erreicht":`Landung: ${FIELD_LABELS[board[last].type]}`}</small>{s&&<small>{s.price} Münzen{p.coins<s.price?` · noch ${s.price-p.coins} nötig`:""}</small>}</button>;})}</div><button className={primary} onClick={()=>send({type:"path",destination:chosen})}>Gewählten Weg nehmen</button></>}
-          {g.phase==="supply"&&station&&<div className="roll-purchase"><h2>{station.name} für dein Set</h2><p>Dieses Utensil fehlt dir noch.</p><div className="roll-price"><span>Preis <b>{station.price} Münzen</b></span><span>Danach <b>{p.coins-station.price} Münzen</b></span></div><p>Dein Set wächst von {p.supplies?.length??0} auf {(p.supplies?.length??0)+1} {(p.supplies?.length??0)===0?"Utensil":"Utensilien"}.</p><button className={primary} disabled={p.coins<station.price} onClick={()=>send({type:"supply",buy:true})}>{station.name} kaufen · {station.price} Münzen</button><button className={secondary} onClick={()=>send({type:"supply",buy:false})}>Ohne Kauf weiter</button></div>}
-          {g.phase==="shop"&&<><h2>Der Shop</h2><p>{p.coins} Münzen · ein Item pro Besuch</p>{p.items.length===3&&replaceControl}<div className="roll-shop">{ITEM_IDS.map(item=><button key={item} className="roll-shop-item" disabled={p.coins<ITEMS[item].price} onClick={()=>send({type:"shop",item,replace})}><strong>{ITEMS[item].name}<b>{ITEMS[item].price} ◉</b></strong><span>{ITEMS[item].description}</span>{p.coins<ITEMS[item].price&&<small>Noch {ITEMS[item].price-p.coins} Münzen nötig</small>}</button>)}</div><button className={secondary} onClick={()=>send({type:"shop"})}>Ohne Einkauf weiter</button></>}
+          {g.phase==="supply"&&station&&<div className="roll-purchase"><div className="roll-purchase-heading"><p>{station.name} für dein Set · fehlt noch</p><strong>{station.price} Münzen</strong></div><button className={primary} disabled={p.coins<station.price} onClick={()=>send({type:"supply",buy:true})}>{station.name} kaufen</button><button className={secondary} onClick={()=>send({type:"supply",buy:false})}>Ohne Kauf weiter</button></div>}
+          {g.phase==="shop"&&<><h2>Der Shop</h2><p>Ein Item pro Besuch</p>{p.items.length===3&&replaceControl}<div className="roll-shop">{ITEM_IDS.map(item=><button key={item} className="roll-shop-item" disabled={p.coins<ITEMS[item].price} onClick={()=>send({type:"shop",item,replace})}><strong>{ITEMS[item].name}<b>{ITEMS[item].price} ◉</b></strong><span>{ITEMS[item].description}</span>{p.coins<ITEMS[item].price&&<small>Noch {ITEMS[item].price-p.coins} Münzen nötig</small>}</button>)}</div><button className={secondary} onClick={()=>send({type:"shop"})}>Ohne Einkauf weiter</button></>}
           {g.phase==="gift"&&g.offered&&<><h2>{ITEMS[g.offered].name} für dich!</h2><p>{ITEMS[g.offered].description}</p>{p.items.length===3&&replaceControl}<button className={primary} onClick={()=>send({type:"gift",accept:true,replace})}>Geschenk annehmen</button><button className={secondary} onClick={()=>send({type:"gift",accept:false})}>Geschenk liegen lassen</button></>}
-          {g.phase==="summary"&&<><h2>{FIELD_LABELS[board[p.position].type]}</h2><p>{g.log.at(-1)}</p>{coinsChanged!==0&&<p className="roll-balance">{coinsChanged>0?"+":""}{coinsChanged} Münzen in diesem Zug</p>}<button className={primary} onClick={()=>send({type:"next"})}>Nächster Zug</button><p>{g.turn===g.order.length-1?"Jetzt spielt ihr im Minispiel um Münzen.":`Als Nächstes: ${g.players.find(q=>q.id===g.order[g.turn+1])?.name}`}</p></>}
+          {g.phase==="summary"&&<><p className="roll-outcome">{g.log.at(-1)?.replace(`${p.name}: `,"")??fieldName(g,p.position)}</p><button className={primary} onClick={()=>send({type:"next"})}>Nächster Zug</button></>}
         </fieldset>}
         {busy&&<p role="status">Zug wird bestätigt …</p>}{error&&<p className="error-message" role="alert">{error}</p>}
       </section>}

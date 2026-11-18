@@ -65,6 +65,8 @@ export class PartyBotDriver {
   private due=0;
   step(current:PartyGame,now:number,skipWait=false):PartyGame {
     if(current.pausedAt||current.phase==="finished"||current.phase==="aborted")return current;
+    // Roll It Up results wait for humans; bots are already counted as ready.
+    if(current.mode==="roll-it-up"&&current.phase==="mini-result")return current;
     let g=current;
     if(g.phase==="mini-play"&&g.mini?.match&&now>=g.mini.startAt&&now<g.deadline){
       for(const p of g.players.filter(p=>p.bot&&!p.passive)){

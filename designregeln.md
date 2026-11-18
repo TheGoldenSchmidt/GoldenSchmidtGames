@@ -239,8 +239,11 @@ grünem Hügel im Inselwelt-Himmel. Lilita One, Lexend, dunkles Glas und die
 vorhandenen Gold-/Steintasten bilden das HUD. Oben stehen eigene Münzen,
 Setfortschritt und Sammelziel; unten die aktuelle Entscheidung und die Zugreihenfolge.
 Die Übersicht zeigt Stationsnamen, die Zugansicht nur Ziel, aktive Figur und
-ausgewählten Ort. Wegwahl zeigt eine Vorschau vor der Bestätigung, ein Kauf Preis
-und Restbudget. Seltene Informationen bleiben in schließbaren Panels. Im
+ausgewählten Ort. Wegwahl zeigt eine Vorschau vor der Bestätigung; beim Kauf stehen
+Utensil und Preis kompakt in einer Zeile. Feldwirkungen erscheinen nur einmal,
+Zugansagen nur vor dem Würfeln. Die Kamera hält ihren Ausschnitt innerhalb eines
+Zuges und fokussiert automatisch erst beim Spielerwechsel neu. Seltene Informationen
+bleiben in schließbaren Panels. Im
 Smartphone-Querformat stehen Welt und Aktionsfläche nebeneinander.
 
 In den letzten drei Inselparty-Runden trägt die Rundenanzeige die gelbe Zeile

@@ -129,8 +129,11 @@ export function createBoardWorld(host:HTMLElement,read:()=>BoardFrame,select:(id
   let frame=0,last=performance.now(),lastZoom=-1,lastAngle=initial.angle,lastChoices="",lastFollow=initial.follow,lastView=initial.view,lastAspect=0,wantedDistance=19,baseDistance=19,zooming=false;
   let clockNow=initial.now,clockAt=last;
   let lastTick=0,lastVisual="",lastInsets="",lastTurn=game.order[game.turn],lastSymbols=NaN;
+  const heldFocus=initialTarget.clone();
   const oldCamera=new T.Vector3(),oldQuaternion=new T.Quaternion();let forcePaint=true;
   const invalidate=()=>{forcePaint=true;};controls.addEventListener("change",invalidate);
+  // Resizing a canvas clears its pixels even if the camera has already settled.
+  const resizeObserver=new ResizeObserver(invalidate);resizeObserver.observe(host);
   document.addEventListener("visibilitychange",invalidate);
   const startCamera=()=>{zooming=false;};controls.addEventListener("start",startCamera);
   const endZoom=()=>{if(!zooming)onZoom(T.MathUtils.clamp(Number((baseDistance/controls.getDistance()).toFixed(2)),1,2.5));};controls.addEventListener("end",endZoom);
@@ -145,16 +148,20 @@ export function createBoardWorld(host:HTMLElement,read:()=>BoardFrame,select:(id
     controls.enabled=!state.blocked;
     const active=g.players.find(p=>p.id===g.order[g.turn])!;
     const focus=state.follow?figurePoint(state.positions[active.id]??active.position).add(new T.Vector3(0,1,0)):new T.Vector3(0,1,0),oldTarget=controls.target.clone();
-    if(state.follow&&movement)focus.lerp(figurePoint(movement.destination).add(new T.Vector3(0,1,0)),state.reduce?1:progress);
+    if(!tray&&state.follow&&movement)focus.lerp(figurePoint(movement.destination).add(new T.Vector3(0,1,0)),state.reduce?1:progress);
     if(tray&&state.follow){focus.multiplyScalar(.35);focus.y=1.5;}
-    const insets=state.insets??{top:0,bottom:0},insetKey=`${insets.top}/${insets.bottom}/${insets.left}/${insets.right}/${host.clientWidth}/${host.clientHeight}`;
+    if(tray){if(state.view!==lastView||active.id!==lastTurn||state.follow!==lastFollow)heldFocus.copy(focus);focus.copy(heldFocus);}
+    const insets=state.insets??{top:0,bottom:0};
+    // Camera framing is independent of transient panels. Only viewport changes reframe it.
+    const cameraInsets=tray?(host.clientWidth>host.clientHeight&&host.clientHeight<=500?{top:160,bottom:8,left:0,right:Math.min(340,host.clientWidth*.46)+16}:{top:host.clientHeight<=670?150:170,bottom:host.clientHeight<=670?180:200,left:0,right:0}):insets;
+    const insetKey=`${cameraInsets.top}/${cameraInsets.bottom}/${cameraInsets.left}/${cameraInsets.right}/${host.clientWidth}/${host.clientHeight}`;
     const insetChanged=tray&&insetKey!==lastInsets;
-    if(insetChanged){const w=host.clientWidth,h=host.clientHeight;kit.camera.setViewOffset(w,h,((insets.right??0)-(insets.left??0))/2,(insets.bottom-insets.top)/2,w,h);lastInsets=insetKey;forcePaint=true;}
+    if(insetChanged){const w=host.clientWidth,h=host.clientHeight;kit.camera.setViewOffset(w,h,((cameraInsets.right??0)-(cameraInsets.left??0))/2,(cameraInsets.bottom-cameraInsets.top)/2,w,h);lastInsets=insetKey;forcePaint=true;}
     controls.target.lerp(focus,state.reduce?1:1-Math.exp(-dt*5));kit.camera.position.add(controls.target.clone().sub(oldTarget));
     if(state.view!==lastView||(tray&&active.id!==lastTurn)){kit.camera.position.setFromSphericalCoords(controls.getDistance(),.82,(tray?(state.follow?trayAzimuth():Math.PI):Math.PI)+state.angle).add(controls.target);lastAngle=state.angle;lastView=state.view;lastTurn=active.id;}
     if(state.zoom!==lastZoom||state.follow!==lastFollow||kit.camera.aspect!==lastAspect||insetChanged){
-      const available=Math.max(.15,(host.clientHeight-insets.top-insets.bottom)/host.clientHeight);
-      const availableWidth=Math.max(.15,(host.clientWidth-(insets.left??0)-(insets.right??0))/host.clientHeight);
+      const available=Math.max(.15,(host.clientHeight-cameraInsets.top-cameraInsets.bottom)/host.clientHeight);
+      const availableWidth=Math.max(.15,(host.clientWidth-(cameraInsets.left??0)-(cameraInsets.right??0))/host.clientHeight);
       baseDistance=tray?(state.follow?10.5:17)/(Math.tan(kit.camera.fov*Math.PI/360)*Math.min(availableWidth,available)):(state.follow?19:45)*Math.max(1,1/kit.camera.aspect);
       controls.minDistance=baseDistance/2.5;controls.maxDistance=baseDistance;wantedDistance=baseDistance/state.zoom;zooming=true;lastZoom=state.zoom;lastFollow=state.follow;lastAspect=kit.camera.aspect;
     }
@@ -162,7 +169,7 @@ export function createBoardWorld(host:HTMLElement,read:()=>BoardFrame,select:(id
     if(state.angle!==lastAngle){kit.camera.position.sub(controls.target).applyAxisAngle(new T.Vector3(0,1,0),state.angle-lastAngle).add(controls.target);lastAngle=state.angle;}
     controls.enableDamping=!state.reduce&&!state.blocked;controls.update();
     const routeKey=state.route?.join()??"";
-    const visual=tray?`${g.phaseId}/${g.pausedAt}/${state.view}/${state.selected}/${routeKey}/${g.players.map(p=>`${p.id}:${p.position}`).join()}/${state.reduce}/${state.markers?.map(m=>m.field).join()}`:"";
+    const visual=tray?`${g.phaseId}/${g.pausedAt}/${state.view}/${state.selected}/${insets.top}/${insets.bottom}/${insets.left}/${insets.right}/${routeKey}/${g.players.map(p=>`${p.id}:${p.position}`).join()}/${state.reduce}/${state.markers?.map(m=>m.field).join()}`:"";
     const cameraChanged=oldCamera.distanceToSquared(kit.camera.position)>.000001||1-Math.abs(oldQuaternion.dot(kit.camera.quaternion))>.000001;
     if(tray)host.dataset.cameraSettled=String(!zooming&&!cameraChanged&&controls.target.distanceToSquared(focus)<.0001);
     // Keep a light clock/camera check, but skip posing figures, shadows and rendering at rest.
@@ -226,5 +233,5 @@ export function createBoardWorld(host:HTMLElement,read:()=>BoardFrame,select:(id
     frame=requestAnimationFrame(animate);
   };
   frame=requestAnimationFrame(animate);
-  return {dispose:()=>{cancelAnimationFrame(frame);document.removeEventListener("visibilitychange",invalidate);controls.removeEventListener("change",invalidate);controls.removeEventListener("start",startCamera);controls.removeEventListener("end",endZoom);controls.dispose();kit.renderer.domElement.removeEventListener("pointerdown",onDown);kit.renderer.domElement.removeEventListener("pointerup",onUp);kit.renderer.domElement.removeEventListener("click",onClick);kit.renderer.domElement.removeEventListener("pointermove",onMove);kit.renderer.domElement.removeEventListener("pointercancel",onCancel);kit.dispose();}};
+  return {dispose:()=>{cancelAnimationFrame(frame);resizeObserver.disconnect();document.removeEventListener("visibilitychange",invalidate);controls.removeEventListener("change",invalidate);controls.removeEventListener("start",startCamera);controls.removeEventListener("end",endZoom);controls.dispose();kit.renderer.domElement.removeEventListener("pointerdown",onDown);kit.renderer.domElement.removeEventListener("pointerup",onUp);kit.renderer.domElement.removeEventListener("click",onClick);kit.renderer.domElement.removeEventListener("pointermove",onMove);kit.renderer.domElement.removeEventListener("pointercancel",onCancel);kit.dispose();}};
 }

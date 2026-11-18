@@ -37,7 +37,7 @@ export const SYMBOLS = ["☀", "☂", "♣", "★", "♥", "⚓"];
 export const COLORS = ["Rot", "Blau", "Grün", "Gelb"];
 export interface PartyPlayer { id: string; name: string; characterId?: CharacterId; bot?: boolean; position: number; supplies?: number[]; coins: number; trophies: number; wins: number; items: Item[]; shield: boolean; passive: boolean; walked?: number; lost?: number }
 export interface MiniRun { ready: boolean; done: boolean; score: number; attempts: number; cursor: number; opened: number[]; matched: number[]; blockedUntil: number; bank: number; loot: number; feedback: string; lastInput: number }
-export interface PartyMini { id: MiniId; startAt: number; runs: Record<string, MiniRun>; cards: number[]; prompts: number[]; words: number[]; targets: number[]; trail: number[]; risk: number[]; reports: Record<string, number>; confirms: Record<string, boolean>; material: Record<string, boolean>; arenaSeed?:number; arena?:ArenaState; match?: MatchState }
+export interface PartyMini { resultReady?: string[]; id: MiniId; startAt: number; runs: Record<string, MiniRun>; cards: number[]; prompts: number[]; words: number[]; targets: number[]; trail: number[]; risk: number[]; reports: Record<string, number>; confirms: Record<string, boolean>; material: Record<string, boolean>; arenaSeed?:number; arena?:ArenaState; match?: MatchState }
 export type PartyPhase = "turn" | "moving" | "path" | "trophy" | "supply" | "shop" | "gift" | "summary" | "mini-bet" | "mini-intro" | "mini-play" | "analog-confirm" | "mini-result" | "finished" | "aborted";
 export interface PartyGame {
   mode?: "party" | "roll-it-up" | MinigameMode;
@@ -329,7 +329,7 @@ export function applyPartyAction(current:PartyGame,id:string,action:PartyAction,
   if(action.type==="abort"){phase(g,"aborted",now);return g;}
   if(action.type==="resume"){if(!g.resumeOffered)throw new Error("Die Wartezeit läuft noch.");Object.keys(g.disconnected).forEach(id=>{g.players.find(p=>p.id===id)!.passive=true;if(g.mini?.match)removeMatchPlayer(g.mini.match,id);if(g.mini){g.mini.runs[id].done=true;const actor=g.mini.arena?.actors.find(a=>a.id===id);if(actor){actor.finished=true;actor.inputUntil=0;}}});shiftPartyClock(g,now-g.pausedAt);g.pausedAt=0;g.resumeOffered=false;return g;}
   if(g.pausedAt)throw new Error("Die Partie wartet auf die Verbindung.");
-  const miniPhase=["mini-bet","mini-intro","mini-play","analog-confirm"].includes(g.phase) || Boolean(g.competition && g.phase === "mini-result");
+  const miniPhase=["mini-bet","mini-intro","mini-play","analog-confirm"].includes(g.phase) || Boolean((g.competition||g.mode==="roll-it-up") && g.phase === "mini-result");
   if(!miniPhase && id!==p.id)throw new Error("Du bist nicht am Zug.");
   if(own.passive)throw new Error("Du schaust derzeit zu.");
   if(action.type === "bet" && g.phase === "mini-bet" && g.mode === "goldenschmidt" && g.competition) {
@@ -374,7 +374,13 @@ export function applyPartyAction(current:PartyGame,id:string,action:PartyAction,
   }if(["words","bridge"].includes(g.mini!.id))throw new Error("Analoge Aufgaben laufen bis zum Zeitende.");if(!g.online&&id!==g.players[g.localMiniIndex].id)throw new Error("Nicht dein Versuch.");const actor=g.mini?.arena?.actors.find(a=>a.id===id);if(actor){actor.finished=true;actor.vx=0;actor.vz=0;actor.inputUntil=0;}finishRun(g,id,now);}
   else if(action.type==="report"&&(g.phase==="mini-play"||g.phase==="analog-confirm")){if(!g.mini||!["words","bridge"].includes(g.mini.id)||now<g.deadline&&g.phase==="mini-play")throw new Error("Die Aufgabe läuft noch.");if(!Number.isInteger(action.score)||action.score<0||action.score>200)throw new Error("Bitte 0–200 ganze Punkte eintragen.");g.mini.reports[id]=action.score;g.mini.runs[id].score=action.score;g.mini.confirms={};finishRun(g,id,now);}
   else if(action.type==="confirm"&&g.phase==="analog-confirm"){if(!action.accept)selectMini(g,now,true);else{g.mini!.confirms[id]=true;if(!g.online||g.players.filter(p=>!p.passive).every(p=>g.mini!.confirms[p.id]))rewardMini(g,now);}}
-  else if(action.type==="next"&&g.phase==="mini-result"){if(g.competition){g.round++;selectMini(g,now);}else if(g.opening){g.opening=false;g.mini=undefined;g.turn=0;startTurn(g,now);}else if(g.mode!=="roll-it-up"&&g.round===g.options.rounds){finishParty(g,now);}else{g.round++;g.turn=0;g.mini=undefined;if(isFinalStretch(g)&&g.round===g.options.rounds-FINAL_ROUNDS+1)startFinalStretch(g);startTurn(g,now);}}
+  else if(action.type==="next"&&g.phase==="mini-result"){
+    if(g.mode==="roll-it-up"){
+      const ready=g.mini!.resultReady??=[];
+      if(!ready.includes(id))ready.push(id);
+      if(g.players.some(q=>!q.bot&&!q.passive&&!ready.includes(q.id)))return g;
+    }
+    if(g.competition){g.round++;selectMini(g,now);}else if(g.opening){g.opening=false;g.mini=undefined;g.turn=0;startTurn(g,now);}else if(g.mode!=="roll-it-up"&&g.round===g.options.rounds){finishParty(g,now);}else{g.round++;g.turn=0;g.mini=undefined;if(isFinalStretch(g)&&g.round===g.options.rounds-FINAL_ROUNDS+1)startFinalStretch(g);startTurn(g,now);}}
   else throw new Error("Diese Aktion passt nicht zur aktuellen Spielphase.");
   return g;
 }
@@ -398,6 +404,12 @@ export function tickParty(current:PartyGame,now=Date.now()):PartyGame {
   }
   if(g.phase==="mini-play"&&now>=g.deadline){const m=g.mini!;if(m.id==="words"||m.id==="bridge"){phase(g,"analog-confirm",now);return g;}const ids=g.online?g.players.filter(p=>!p.passive&&!m.runs[p.id].done).map(p=>p.id):[g.players[g.localMiniIndex].id];ids.forEach(id=>{if(g.phase==="mini-play")finishRun(g,id,now);});return g;}
   while(g.phase==="moving"&&g.movement&&now>=g.movement.arriveAt)arrive(g,g.movement.arriveAt);
+  if(g.mode==="roll-it-up"&&g.phase==="mini-result"){
+    const remaining=g.players.filter(q=>!q.passive&&!q.bot);
+    const actor=g.players.find(q=>!q.passive);
+    if(actor&&remaining.every(q=>g.mini?.resultReady?.includes(q.id)))return applyPartyAction(g,actor.id,{type:"next"},now);
+    return g;
+  }
   if(!g.online)return g;
   const p=activePartyPlayer(g);
   if(g.phase==="mini-intro"&&now>=g.deadline){if(["words","bridge"].includes(g.mini!.id))selectMini(g,now,true);else startMini(g,now);return g;}

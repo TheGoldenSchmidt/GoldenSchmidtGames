@@ -14,6 +14,11 @@ drei ersten Plätze; alle weiteren erhalten 0. Nichtteilnahme bleibt ohne
 Belohnung. Auch bei gleicher Punktzahl gibt es eindeutige Plätze. Die Anzeige
 und die tatsächliche Gutschrift verwenden dieselbe Wertungsfunktion.
 
+In Roll It Up! bleibt jedes Minispiel-Ergebnis einschließlich Auftakt stehen,
+bis alle aktiven menschlichen Teilnehmer es selbst bestätigt haben. Es gibt
+keinen automatischen Ablauf. Bots und pausierende Teilnehmer blockieren nicht;
+Bestätigungen bleiben beim Wiederbeitritt erhalten.
+
 Der erste Sturz halbiert die bis dahin erzielten Minispielpunkte (abrunden).
 Danach kann die Figur weitere Punkte sammeln. Der zweite Sturz beendet ihren
 Versuch; der zu diesem Zeitpunkt bestehende Punktestand bleibt stehen. Die
