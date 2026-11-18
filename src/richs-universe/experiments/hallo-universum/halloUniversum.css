@@ -1,0 +1,3 @@
+/* Styles of one experiment start with its own prefix, so they never touch the rest of the app. */
+.ru-hallo__tap { width:100%; }
+.ru-hallo__count { margin:12px 0 0; text-align:center; font-size:.9rem; font-weight:600; }

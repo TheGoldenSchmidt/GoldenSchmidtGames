@@ -16,13 +16,14 @@ import { DurakGameScreen } from "./screens/DurakGameScreen";
 import { KribbelnGameScreen } from "./screens/KribbelnGameScreen";
 import { PartyGameScreen, PARTY_ONLINE_SAVE, readPartySave, type PartySavedSession } from "./screens/PartyGameScreen";
 import { RoomScreen } from "./screens/RoomScreen";
+import { RichsUniverseScreen } from "./richs-universe/RichsUniverseScreen";
 import { playMenuClick } from "./matches/sfx";
 import { GameIntro } from "./components/GameIntro";
 import type {CharacterId} from "../shared/characters";
 
 const PracticeWorldScreen=lazy(()=>import("./screens/PracticeWorldScreen").then(m=>({default:m.PracticeWorldScreen})));
 
-type View = "practice-world" | "home" | "local-setup" | "online-entry" | "host" | "join" | "test" | "room" | "game-local" | "game-online";
+type View = "practice-world" | "home" | "local-setup" | "online-entry" | "host" | "join" | "test" | "room" | "game-local" | "game-online" | "richs-universe";
 
 export default function App() {
   const [profile, setProfile] = useState<GuestProfile>(() => loadProfile());
@@ -255,6 +256,7 @@ export default function App() {
           onProfile={() => setShowProfile(true)}
           onLocal={() => setView("local-setup")}
           onOnline={() => {useTableTransport(); setView("online-entry");}}
+          onUniverse={() => setView("richs-universe")}
           onResumeHost={loadLastHost(profile.id)?resumeHost:undefined}
           resumeGameName={GAMES.find(game=>game.id===readPartySave<PartySavedSession>(PARTY_ONLINE_SAVE)?.gameId)?.name??"Inselparty"}
           onResumeOnline={canResumeParty?resumeParty:undefined}
@@ -276,6 +278,9 @@ export default function App() {
             setView("game-local");
           }}
         />
+      )}
+      {view === "richs-universe" && (
+        <RichsUniverseScreen profile={profile} onBack={() => setView("home")} />
       )}
       {view === "online-entry" && (
         <OnlineEntryScreen onBack={() => setView("home")} onSelect={setView} />

@@ -10,7 +10,8 @@ const paths: Record<string, ReactNode> = {
   sound: <><path d="m3 9 4 0 5-5v16l-5-5H3zM16 8a6 6 0 0 1 0 8M19 5a10 10 0 0 1 0 14"/></>,
   muted: <><path d="m3 9 4 0 5-5v16l-5-5H3zM16 9l6 6m0-6-6 6"/></>,
   crown: <><path d="m2 6 5.5 4L12 3l4.5 7L22 6l-3 12H5zM6 21h12"/></>,
-  compass: <><circle cx="12" cy="12" r="9"/><path d="m16.5 7.5-3 6-6 3 3-6z"/></>
+  compass: <><circle cx="12" cy="12" r="9"/><path d="m16.5 7.5-3 6-6 3 3-6z"/></>,
+  planet: <><circle cx="12" cy="12" r="6"/><path d="M7.3 8.4C3.2 6.6.6 6.7 1.6 8.8c1.2 2.6 6.3 6.3 11.7 8.5 5.4 2.3 9.4 2.5 9.1.4-.2-1.4-2-3.1-4.7-4.7M19 3v4m-2-2h4"/></>
 };
 export function MenuIcon({name}: {name: keyof typeof paths}) {
   return <svg className="menu-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{paths[name]}</svg>;
