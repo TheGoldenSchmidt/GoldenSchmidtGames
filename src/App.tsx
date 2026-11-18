@@ -1,6 +1,6 @@
 import { GAMES, isPartyMode } from "../shared/games";
 import { isMinigameMode } from "../shared/minigameModes";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import type { GameId, GuestProfile, RoomState } from "../shared/types";
 import { ProfileDialog } from "./components/ProfileDialog";
 import { loadProfile, saveProfile } from "./lib/profile";
@@ -21,7 +21,9 @@ import { playMenuClick } from "./matches/sfx";
 import { GameIntro } from "./components/GameIntro";
 import type {CharacterId} from "../shared/characters";
 
-type View = "home" | "local-setup" | "online-entry" | "host" | "join" | "test" | "room" | "game-local" | "game-online" | "richs-universe";
+const PracticeWorldScreen=lazy(()=>import("./screens/PracticeWorldScreen").then(m=>({default:m.PracticeWorldScreen})));
+
+type View = "practice-world" | "home" | "local-setup" | "online-entry" | "host" | "join" | "test" | "room" | "game-local" | "game-online" | "richs-universe";
 
 export default function App() {
   const [profile, setProfile] = useState<GuestProfile>(() => loadProfile());
@@ -261,8 +263,10 @@ export default function App() {
           resumeError={resumeError}
         />
       )}
+      {view === "practice-world" && <Suspense fallback={<p role="status">Proberaum wird geladen …</p>}><PracticeWorldScreen characterId={profile.characterId} onExit={()=>setView("local-setup")}/></Suspense>}
       {view === "local-setup" && (
         <LocalSetupScreen
+          onPractice={()=>setView("practice-world")}
           onTest={gameId => { setTestGameId(gameId); setView("test"); }}
           onBack={() => setView("home")}
           onStart={(gameId, names, options) => {

@@ -8,10 +8,12 @@ import { ScreenHeader } from "../components/ScreenHeader";
 import { IslandWorld } from "../components/IslandWorld";
 
 export function LocalSetupScreen({
+  onPractice,
   onBack,
   onTest,
   onStart
 }: {
+  onPractice?: () => void;
   onBack: () => void;
   /** Party modes run with bots on this device (local table host, also offline). */
   onTest: (gameId: GameId) => void;
@@ -91,6 +93,7 @@ export function LocalSetupScreen({
             setSettingUp(true);
           }}/>
         )}
+        {onPractice&&<><h2 className="iw-plank game-shelf__group">Frei ausprobieren</h2><button className="practice-entry iw-card" onClick={onPractice}><strong>Proberaum</strong><span>Eine Insel für Bewegung, Hindernisse und Animationen.</span><small>Ohne Zeitlimit · auch offline</small></button></>}
         <h2 className="iw-plank game-shelf__group">Allein mit Bots</h2>
         <p className="iw-note game-shelf__note">Läuft nur auf diesem Handy, auch ohne Internet.</p>
         {GAMES.filter(entry => entry.status === "ready" && isPartyMode(entry.id)).map(entry =>

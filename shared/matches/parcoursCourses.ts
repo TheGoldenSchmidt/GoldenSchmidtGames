@@ -1,3 +1,4 @@
+import { proberaum } from "./proberaumCourse";
 /**
  * Hindernis-Parcours: fixed course geometry per run. Everything here is pure
  * data shared by the authority, bots and rendering; random parts (which doors
@@ -42,10 +43,12 @@ export interface DoorRow { z: number; doors: number[]; real: number; /** Door ce
 export interface LaneRow { z: number; exitZ: number; lanes: { front: number; exit: number; floor: number; x: number }[]; through: number; dead: number; trap: number }
 export interface TileRow { z: number; tiles: number[] }
 export interface Course {
+  /** Local, untimed practice world; never part of the minigame pool. */
+  practice?: boolean;
   id: string; name: string; width: number; finishZ: number; finishY: number; killY: number;
   boxes: Box[]; sweepers: Sweeper[];
   /** Respawn lines (z, floor height y); racers return to the last one they passed. */
-  checkpoints: { z: number; y: number }[];
+  checkpoints: { z: number; y: number; x?:number }[];
   doorRows: DoorRow[]; tileRows: TileRow[]; seesaws: number;
   /** Door rows with lanes behind them (dead ends and trapdoors); their doors are part of the door count. */
   laneRows?: LaneRow[];
@@ -265,8 +268,8 @@ export const COURSE_IDS = ["tuerenlotto", "kreiselkurs", "glibberflut", "geister
 export const RETIRED_COURSE_IDS = ["wippenwerk"] as const;
 /** Finals in the same engine (own entries in the draw). */
 export const FINAL_IDS = ["standhaft"] as const;
-export type CourseId = typeof COURSE_IDS[number] | typeof RETIRED_COURSE_IDS[number] | typeof FINAL_IDS[number];
-const BUILDERS: Record<CourseId, () => Course> = { tuerenlotto, kreiselkurs, wippenwerk, glibberflut, geisterpfad, fallklappen, windkanal, kletterwand, standhaft };
+export type CourseId = typeof COURSE_IDS[number] | typeof RETIRED_COURSE_IDS[number] | typeof FINAL_IDS[number] | "proberaum";
+const BUILDERS: Record<CourseId, () => Course> = { proberaum, tuerenlotto, kreiselkurs, wippenwerk, glibberflut, geisterpfad, fallklappen, windkanal, kletterwand, standhaft };
 const cache = new Map<CourseId, Course>();
 /** The (immutable, cached) course of a run. */
 export function course(id: CourseId): Course {

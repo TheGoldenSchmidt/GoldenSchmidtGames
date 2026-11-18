@@ -16,6 +16,7 @@ import "./styles/partyMenus.css";
 import "./styles/menus.css";
 import "./styles/rollItUp.css";
 import "./styles/matches.css";
+import "./styles/practiceWorld.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

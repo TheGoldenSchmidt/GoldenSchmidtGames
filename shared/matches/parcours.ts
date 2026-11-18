@@ -96,7 +96,7 @@ export function solid(b: Box, g: ParcoursGame, t: number) {
 function respawn(c: Course, r: Racer, slot: number, t: number) {
   const cp = c.checkpoints[r.checkpoint];
   // Side by side within three metres, so every checkpoint platform holds all six; finals start on a circle.
-  const a = .5 + (slot % 6) * Math.PI / 3, x = c.elimination ? Math.cos(a) * 3.5 : -1.5 + (slot % 6) * .6, z = c.elimination ? cp.z + Math.sin(a) * 3.5 : cp.z;
+  const a = .5 + (slot % 6) * Math.PI / 3, x = c.elimination ? Math.cos(a) * 3.5 : (cp.x ?? 0) -1.5 + (slot % 6) * .6, z = c.elimination ? cp.z + Math.sin(a) * 3.5 : cp.z;
   Object.assign(r, { x, y: cp.y + .05, z, face: c.elimination ? Math.atan2(-x, cp.z - z) : 0, vx: 0, vy: 0, vz: 0, pose: "run", grounded: false, ground: -1, duck: false, hang: undefined, grab: undefined, respawnAt: 0, airDive: false, until: 0, lastGround: t });
 }
 
@@ -342,6 +342,7 @@ function startGame(s: MatchState<ParcoursGame>, id: CourseId): ParcoursGame {
 const FINAL_INSTRUCTION = "Stick zum Laufen (oben = von der Kamera weg), Springen über den niedrigen Balken, Ducken unter dem hohen, Hechten und Festhalten wie im Parcours. Wer fällt, scheidet aus. Wer zuletzt steht, gewinnt; nach 90 Sekunden gewinnen alle, die noch stehen.";
 const INSTRUCTION = "Lauf selbst durch den Parcours: Stick zum Laufen und Lenken (oben = von der Kamera weg). Springen über Lücken und niedrige Balken, Hechten für einen weiten Satz nach vorn, Festhalten (halten) an anderen, um sie zu bremsen, Ducken (halten) unter hohen Balken durch. An hohe Kanten springst du und drückst den Stick zur Wand: Du hältst dich fest und kletterst hoch. Wer fällt, startet am letzten Kontrollpunkt. Die Reihenfolge im Ziel entscheidet, sonst der Fortschritt.";
 const GOALS: Record<CourseId, { icon: string; action: string; extra: string }> = {
+  proberaum:{icon:"⌸",action:"Frei ausprobieren",extra:"Alle Hindernisse auf einer Übungsinsel."},
   tuerenlotto: { icon: "▥", action: "Welche Tür geht auf?", extra: "Vier Reihen mit je sechs Türen: Nur manche brechen auf, die anderen sind massiv. Hinter manchen offenen Türen wartet ein Gang mit massivem Ausgang (Sackgasse) oder eine Falltür. Dazwischen Schieber, ein Drehbalken und ein Graben." },
   kreiselkurs: { icon: "✣", action: "Über und unter Balken", extra: "Drehende Balken in allen Varianten: über niedrige springen, unter hohen ducken, am Kreuz beides. Dazu wandernde Inseln, zwei flinke Wippen und am Ende ein Rührwerk aus schnellen Kurzbalken. Wer getroffen wird, fliegt nach vorn und außen weg." },
   wippenwerk: { icon: "⚖", action: "Balance und Kanten", extra: "Wippen neigen sich unter Gewicht, rollende Walzen musst du überspringen, zum Schluss eine Wand zum Festhalten und Hochziehen." },
@@ -412,11 +413,12 @@ export function parcoursModule(id: CourseId): MatchModule<ParcoursGame> {
           else { r.respawnAt = t + PC.respawnMs; r.pose = "air"; emit(s, "fall", "Abgestürzt!", [r.id]); }
           continue;
         }
-        if (c.goo && r.y < gooAt(c, t) - .1) { r.pose = "out"; r.outAt = t; r.respawnAt = 0; emit(s, "out", "Vom Glibber erwischt!", [r.id]); continue; }
+        if (c.practice && !r.respawnAt && c.goo && r.y < gooAt(c,t)-.1) { r.falls++; r.respawnAt=t+PC.respawnMs; r.pose="air"; emit(s,"fall","Zurück zur Station",[r.id]); continue; }
+        if (!c.practice && c.goo && r.y < gooAt(c, t) - .1) { r.pose = "out"; r.outAt = t; r.respawnAt = 0; emit(s, "out", "Vom Glibber erwischt!", [r.id]); continue; }
         if (r.respawnAt) continue;
-        if (r.grounded) while (r.checkpoint + 1 < c.checkpoints.length && r.z >= c.checkpoints[r.checkpoint + 1].z) r.checkpoint++;
+        if (r.grounded && !c.practice) while (r.checkpoint + 1 < c.checkpoints.length && r.z >= c.checkpoints[r.checkpoint + 1].z) r.checkpoint++;
         r.best = Math.max(r.best, Math.min(c.finishZ, r.z));
-        if (r.z >= c.finishZ && r.y >= c.finishY - .5) {
+        if (!c.practice && r.z >= c.finishZ && r.y >= c.finishY - .5) {
           Object.assign(r, { pose: "done", finishAt: t, vx: 0, vy: 0, vz: 0, grab: undefined, best: c.finishZ });
           g.order.push(r.id); g.firstFinish ??= t;
           emit(s, "finish", g.order.length === 1 ? "Erste im Ziel!" : `Im Ziel – Platz ${g.order.length}!`, [r.id]);
@@ -431,7 +433,7 @@ export function parcoursModule(id: CourseId): MatchModule<ParcoursGame> {
       });
       const active = s.players.filter(p => !p.gone).map(p => g.racers[p.id]);
       const standing = active.filter(r => r.pose !== "done" && r.pose !== "out").length;
-      if (standing === 0 || (c.elimination && standing <= 1 && s.players.length > 1) || (g.firstFinish !== undefined && t >= g.firstFinish + PC.finishGrace) || t >= (c.limitMs ?? PC.maxMs)) {
+      if (!c.practice && (standing === 0 || (c.elimination && standing <= 1 && s.players.length > 1) || (g.firstFinish !== undefined && t >= g.firstFinish + PC.finishGrace) || t >= (c.limitMs ?? PC.maxMs))) {
         s.done = true;
         if (c.elimination) emit(s, "finale", standing === 1 ? "Steht als Letzte!" : "Zeit um – alle Stehenden gewinnen", active.filter(r => r.pose !== "out").map(r => r.id));
       }

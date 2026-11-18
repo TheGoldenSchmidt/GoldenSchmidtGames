@@ -213,3 +213,7 @@ Alle Punkte sind mit Regeltests und Playwright `phone` geprüft; Gefühl auf ech
    Handy-Worker prüfen.
 3. Nach Rückmeldung aus echten Runden Werte feinjustieren (Tempo von Light
    Trails, Wind bei Arrow Masters, Stärke der Bots).
+
+## Proberaum (November 2026)
+
+Lokale Übungsinsel für Figuren- und Hindernismechaniken umgesetzt: neun frei erreichbare Stationen, direkte Stationswechsel, Pause/Reset, Übungsfigur zum Festhalten, Figurenwahl und Animationsvorschau. Kein zusätzliches Minispiel und kein Bestandteil der Zufallsrotation. Prüfungen: `scripts/proberaum-test.ts` (Teil von `test:rules`), bestehende Parcours-Regeln und `tests/browser/practice-world.spec.ts` auf Smartphone-Größe, normale/reduzierte Bewegung sowie Offline- und WebGL-Ersatzansicht. Geräteleistung und praktische Bedienung auf Android/iPhone bleiben offen.

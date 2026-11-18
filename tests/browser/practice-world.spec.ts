@@ -1,0 +1,45 @@
+import {test,expect} from "@playwright/test";
+for(const motion of ["no-preference","reduce"] as const)test(`Proberaum: Stationen, Bewegung, Pause, Vorschau und Rückkehr (${motion})`,async({page},info)=>{
+ test.skip(info.project.name!=="phone","Nur Smartphone");
+ await page.emulateMedia({reducedMotion:motion});
+ const errors:string[]=[];page.on("pageerror",e=>errors.push(e.message));
+ await page.goto("/");await page.getByRole("button",{name:/Lokal spielen/}).tap();
+ await page.getByRole("button",{name:/Proberaum Eine Insel/}).tap();
+ const root=page.locator(".practice-world"),world=page.getByRole("img",{name:"3D-Proberaum"});
+ await expect(world).toHaveAttribute("data-ready","true");
+ await page.context().setOffline(true);
+ await page.setViewportSize({width:320,height:740});
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBe(320);
+ await page.screenshot({path:info.outputPath("proberaum-320.png")});
+ const stick=await page.getByRole("group",{name:"Bewegungsstick",exact:true}).boundingBox();
+ const before=JSON.parse((await root.getAttribute("data-position"))!) as number[];
+ const touch=await page.context().newCDPSession(page);
+ await touch.send("Input.dispatchTouchEvent",{type:"touchStart",touchPoints:[{x:stick!.x+stick!.width/2,y:stick!.y+12,id:0}]});
+ await expect.poll(async()=>JSON.parse((await root.getAttribute("data-position"))!)[2]-before[2]).toBeGreaterThan(.8);
+ await touch.send("Input.dispatchTouchEvent",{type:"touchEnd",touchPoints:[]});await touch.detach();
+ await page.getByRole("button",{name:"Zum Stationsstart"}).tap();
+ await page.getByRole("button",{name:"Springen",exact:true}).tap();
+ await expect(root).toHaveAttribute("data-pose","air");await expect(root).toHaveAttribute("data-pose","run");
+ await page.getByRole("button",{name:"Hechten",exact:true}).tap();await expect(root).toHaveAttribute("data-pose","dive");
+ await page.getByRole("button",{name:"Zum Stationsstart"}).tap();
+ for(const name of ["Kletterstufen","Sprungkacheln","Drehbalken","Wippe & Fahrt","Band & Schieber","Windsteg","Türen & Klappen","Griffe & Glibber"]){
+  await page.getByRole("button",{name:"Stationen öffnen"}).tap();
+  await page.getByRole("dialog").getByRole("button",{name:new RegExp("^"+name.replace("&","&"))}).tap();
+  await expect(page.getByRole("button",{name:"Stationen öffnen"})).toContainText(name);
+ }
+ await page.waitForTimeout(250);await page.screenshot({path:info.outputPath("kletterstation.png")});
+ await page.getByRole("button",{name:"Pause",exact:true}).tap();await page.waitForTimeout(100);const time=await root.getAttribute("data-time");await page.waitForTimeout(200);expect(await root.getAttribute("data-time")).toBe(time);
+ await page.getByRole("button",{name:"Weiter",exact:true}).tap();
+ await page.getByRole("button",{name:"Proberaum-Werkzeuge"}).tap();
+ await page.getByRole("combobox",{name:"Deine Figur"}).selectOption("rig_glubschi");
+ await page.getByRole("dialog").getByRole("button",{name:"Tanzen",exact:true}).tap();
+ await expect(page.getByRole("status")).toContainText("Animation: Tanzen");
+ await expect(world).toHaveAttribute("data-figures",/rig_glubschi/);
+ await page.getByRole("button",{name:"Animation beenden"}).tap();
+ await page.setViewportSize({width:844,height:390});await page.screenshot({path:info.outputPath("proberaum-quer.png")});
+ await world.locator("canvas").evaluate(c=>(c as HTMLCanvasElement).getContext("webgl2")!.getExtension("WEBGL_lose_context")!.loseContext());
+ await expect(page.locator('canvas[aria-label="2D-Proberaum"]')).toBeVisible();
+ await page.getByRole("button",{name:"Zum Stationsstart"}).tap();
+ await page.getByRole("button",{name:"Proberaum verlassen"}).tap();await expect(page.getByRole("button",{name:/Proberaum Eine Insel/})).toBeVisible();
+ expect(errors).toEqual([]);
+});
