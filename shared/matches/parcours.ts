@@ -23,6 +23,12 @@ export const PC = {
   barReach: .48,
   /** Extra speed away from the bar's axis when hit (flung outwards). */
   fling: 3,
+  /**
+   * A moving bar first only carries the racer for this long: a jump or duck
+   * in this window still escapes. It hides the delay between seeing the bar
+   * on the phone and the press reaching the authority.
+   */
+  barGrace: 140,
   /** Pull-up from hanging onto the top. */
   climbMs: 620,
   /** Moving boxes faster than this (m/s, towards the racer) shove instead of only blocking. */
@@ -50,6 +56,8 @@ export interface Racer {
   checkpoint: number; best: number; falls: number; respawnAt: number; hitUntil: number;
   /** Height of the last ground stood on (pushing into a wall only grabs edges above it). */
   standY?: number;
+  /** First and latest moment of the current contact with a moving bar (see `PC.barGrace`). */
+  barTouch?: number; barLast?: number;
   finishAt?: number; outAt?: number;
 }
 export interface ParcoursGame {
@@ -292,13 +300,16 @@ function sweep(s: MatchState<ParcoursGame>, c: Course, r: Racer, t: number) {
     r.x = px + lx * (PC.barReach + .01); r.z = pz + lz * (PC.barReach + .01);
     if (bv <= .3) { const into = r.vx * lx + r.vz * lz; if (into < 0) { r.vx -= into * lx; r.vz -= into * lz; } continue; }
     const k = c.knock ?? 1, rx = r.x - sw.x, rz = r.z - sw.z, rn = Math.hypot(rx, rz) || 1;
-    if (t >= r.hitUntil) {
+    // One contact lasts while the bar keeps touching (being carried loosens it for a moment).
+    if (r.barTouch === undefined || t - (r.barLast ?? -1e9) > 250) r.barTouch = t;
+    r.barLast = t;
+    if (t >= r.hitUntil && t - r.barTouch >= PC.barGrace) {
       const speed = Math.max(PC.knock * k, bv * 1.3);
-      Object.assign(r, { vx: lx * speed + rx / rn * PC.fling * k, vz: lz * speed + rz / rn * PC.fling * k, vy: PC.knockUp * Math.max(.6, k), pose: "stun", until: t + PC.stunMs, hitUntil: t + PC.hitGuard, grounded: false, ground: -1, grab: undefined, duck: false });
+      Object.assign(r, { vx: lx * speed + rx / rn * PC.fling * k, vz: lz * speed + rz / rn * PC.fling * k, vy: PC.knockUp * Math.max(.6, k), pose: "stun", until: t + PC.stunMs, hitUntil: t + PC.hitGuard, grounded: false, ground: -1, grab: undefined, duck: false, barTouch: undefined, barLast: undefined });
       emit(s, "hit", "Umgehauen!", [r.id]);
       return;
     }
-    // Already knocked: the bar keeps carrying the racer in front of it.
+    // Just touched (a jump or duck still escapes) or already knocked: the bar carries the racer in front of it.
     const ahead = r.vx * lx + r.vz * lz, want = bv * 1.15;
     if (ahead < want) { r.vx += lx * (want - ahead); r.vz += lz * (want - ahead); }
   }

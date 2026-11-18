@@ -3,6 +3,8 @@ import { advanceMatch, botMatchInput, createMatch, matchStandings, publicMatch, 
 import { PC, shownRacer, type ParcoursGame, type Racer } from "../shared/matches/parcours";
 import { BLINK_WARN, blinkOpen, blinkWarn, course, COURSE_IDS, FINAL_IDS, gooAt, RETIRED_COURSE_IDS, sweeperAngle, windAt, type CourseId } from "../shared/matches/parcoursCourses";
 import { NEUTRAL_MATCH_INPUT, type MatchInput, type MatchState } from "../shared/matches/types";
+import * as T from "three";
+import { courseToWorld, sweeperYaw } from "../src/three/parcoursPose";
 import { createPartyGame, partyMiniResults, tickParty } from "../shared/party";
 import { PartyBotDriver } from "../shared/partyBots";
 
@@ -80,16 +82,32 @@ for (const id of ALL) {
   const at = (s: PS, sw: typeof low, ahead = 0) => { const a = sweeperAngle(sw, s.time + 50 + ahead); return { x: sw.x + Math.cos(a) * 2.5, z: sw.z + Math.sin(a) * 2.5 }; };
   const s = make("kreiselkurs"); park(s); const r = s.game.racers.p0;
   let p = at(s, low); put(r, p.x, 0, p.z); run(s, 50, () => send(s, "p0"));
+  assert.notEqual(r.pose, "stun", "Erst eine kurze Schonfrist"); 
+  run(s, PC.barGrace + 50, () => send(s, "p0"));
   assert.equal(r.pose, "stun", "Niedriger Balken haut um"); assert.ok(Math.hypot(r.vx, r.vz) > PC.knock * .8);
+  // A jump right after the first touch still escapes (reaction grace for the network delay).
+  const j = make("kreiselkurs"); park(j); const jr = j.game.racers.p0;
+  p = at(j, low); put(jr, p.x, 0, p.z); run(j, 50, () => send(j, "p0"));
+  send(j, "p0", {}, "a"); run(j, 600, () => send(j, "p0"));
+  assert.ok(!j.events.some(e => e.kind === "hit"), "Sprung in der Schonfrist rettet");
   const t = make("kreiselkurs"); park(t); const q = t.game.racers.p0;
   p = at(t, low, 250); put(q, p.x, .9, p.z, { grounded: false, pose: "air", vy: 2 }); run(t, 50, () => send(t, "p0"));
   assert.notEqual(q.pose, "stun", "Über den niedrigen Balken gesprungen");
   const u = make("kreiselkurs"); park(u); const d = u.game.racers.p0;
-  p = at(u, high); put(d, p.x, 0, p.z); run(u, 50, () => send(u, "p0"));
+  p = at(u, high); put(d, p.x, 0, p.z); run(u, PC.barGrace + 100, () => send(u, "p0"));
   assert.equal(d.pose, "stun", "Hoher Balken trifft Stehende");
   const v = make("kreiselkurs"); park(v); const e = v.game.racers.p0;
   p = at(v, high, 100); put(e, p.x, 0, p.z); send(v, "p0", { hb: true }); run(v, 50, () => send(v, "p0", { hb: true }));
   assert.ok(e.duck && e.pose !== "stun", "Geduckt unter dem hohen Balken durch");
+}
+
+// Darstellung: Jeder Drehbalken wird genau dort gezeichnet, wo er in den Regeln steht (kein Spiegelbild).
+{
+  for (const id of ALL) for (const sw of course(id).sweepers) for (const t of [0, 1700, 4300, 9100]) {
+    const a = sweeperAngle(sw, t), pivot = new T.Group(); pivot.position.set(...courseToWorld(sw.x, 0, sw.z)); pivot.rotation.y = sweeperYaw(a); pivot.updateMatrixWorld();
+    const tip = new T.Vector3(sw.length, 0, 0).applyMatrix4(pivot.matrixWorld), [wx, , wz] = courseToWorld(sw.x + Math.cos(a) * sw.length, 0, sw.z + Math.sin(a) * sw.length);
+    assert.ok(Math.hypot(tip.x - wx, tip.z - wz) < 1e-6, `${id}: Balken bei ${t} ms gezeichnet wie berechnet`);
+  }
 }
 
 // Festhalten: an zu hoher Kante hängen und hochklettern (Festhalten oder Stick zur Wand); sonst kommt man nicht hoch.

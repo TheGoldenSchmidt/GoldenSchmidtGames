@@ -2,7 +2,8 @@ import * as T from "three";
 import { blinkOpen, blinkWarn, boxAt, course, gooAt, sweeperAngle, type Box, type Look } from "../../shared/matches/parcoursCourses";
 import { PC, shownRacer, type ParcoursGame } from "../../shared/matches/parcours";
 import { followCamera, takeCameraTurn, type ChaseLocal, type MatchWorld, type MatchWorldFrame } from "../matches/client";
-import { ChaseCamera, Debris, Impact } from "./matchScene";
+import { ChaseCamera, Debris, frameBox, Impact } from "./matchScene";
+import { sweeperYaw } from "./parcoursPose";
 import { riggedFigure, type CharacterKit, type RiggedFigure } from "./riggedFigure";
 import { PLAYER_COLORS, SceneKit } from "./sceneKit";
 
@@ -22,7 +23,7 @@ const COLOR = {
 } as const;
 const LOOK_COLOR: Record<Look, number> = { floor: COLOR.floor, wall: COLOR.wall, door: COLOR.door, pusher: COLOR.pusher, belt: COLOR.belt, step: COLOR.step, seesaw: COLOR.seesaw, tile: COLOR.tile, roller: COLOR.roller, ledge: COLOR.ledge, finish: COLOR.finish, trap: COLOR.trap, hold: COLOR.hold };
 
-interface RacerView { fig: RiggedFigure; ring: T.Mesh; loop: string; air: boolean; pose: string }
+interface RacerView { fig: RiggedFigure; ring: T.Mesh; loop: string; air: boolean; pose: string; marker?: T.Mesh }
 
 export function createParcoursWorld(host: HTMLElement, read: () => MatchWorldFrame, onError: () => void, chars: CharacterKit): MatchWorld {
   const kit = new SceneKit(host, onError), world = new T.Group();
@@ -30,6 +31,8 @@ export function createParcoursWorld(host: HTMLElement, read: () => MatchWorldFra
   kit.scene.background = new T.Color(COLOR.sky); kit.scene.fog = new T.Fog(COLOR.fog, 22, 60);
   kit.camera.fov = 58; kit.camera.near = .1; kit.camera.far = 120; kit.camera.updateProjectionMatrix();
   const first = read(), g0 = first.cur.game as ParcoursGame, c = course(g0.course);
+  // The finals' overview uses a narrower lens (less distortion at the edges of the platform).
+  if (c.elimination) { kit.camera.fov = 40; kit.camera.updateProjectionMatrix(); }
   const W = (x: number, y: number, z: number) => new T.Vector3(x, y, -z);
 
   // Static boxes: one instanced mesh per look; moving, door, tile and seesaw boxes get their own meshes.
@@ -107,6 +110,10 @@ export function createParcoursWorld(host: HTMLElement, read: () => MatchWorldFra
 
   const dust = new Debris(world, 80, new T.MeshStandardMaterial({ color: 0xfff9ed, roughness: 1 })), impact = new Impact(world, kit);
   const warnColor = new T.Color(COLOR.warn), views = new Map<string, RacerView>(), chaseCam = new ChaseCamera(kit, 4.4, 2.8, 2.6, .9), target = new T.Vector3();
+  // Finals: a tilted overview of the whole platform, so bars from behind and the side are always in sight; a swipe orbits it.
+  const arena = c.elimination ? { x0: Math.min(...c.boxes.map(b => b.x0)), x1: Math.max(...c.boxes.map(b => b.x1)), z0: Math.min(...c.boxes.map(b => b.z0)), z1: Math.max(...c.boxes.map(b => b.z1)) } : undefined;
+  let arenaYaw = 0, arenaAspect = 0, arenaShot: { position: T.Vector3; target: T.Vector3 } | undefined;
+  const up = new T.Vector3(0, 1, 0);
   let shownId = "", frame = 0, last = performance.now(), lastSeq = 0, fresh = true, respawning = false, doorState = "", tileState = "";
 
   const viewFor = (id: string, style: number, chosen: string | undefined, own: boolean): RacerView => {
@@ -116,7 +123,10 @@ export function createParcoursWorld(host: HTMLElement, read: () => MatchWorldFra
     world.add(fig.group);
     const ring = kit.mesh(world, new T.TorusGeometry(.42, own ? .06 : .04, 6, 28), own ? COLOR.own : PLAYER_COLORS[style % PLAYER_COLORS.length], 0, 0, 0);
     ring.rotation.x = Math.PI / 2; ring.castShadow = false;
-    v = { fig, ring, loop: "", air: false, pose: "run" }; views.set(id, v); return v;
+    // In the finals' overview a yellow arrow above the own figure finds it at a glance.
+    const marker = own && c.elimination ? kit.cone(world, COLOR.own, 0, 0, 0, .22, .42) : undefined;
+    if (marker) { marker.rotation.x = Math.PI; marker.castShadow = false; }
+    v = { fig, ring, loop: "", air: false, pose: "run", marker }; views.set(id, v); return v;
   };
   const loop = (v: RacerView, state: Parameters<RiggedFigure["setLoop"]>[0], speed?: number) => { if (v.loop !== state || speed !== undefined) { v.fig.setLoop(state, speed); v.loop = state; } };
 
@@ -127,7 +137,8 @@ export function createParcoursWorld(host: HTMLElement, read: () => MatchWorldFra
     last = time;
     // Moving parts follow the shared time functions.
     for (const { b, mesh } of dynamic) { const bb = boxAt(b, t); mesh.position.copy(W((bb.x0 + bb.x1) / 2, (bb.y0 + bb.y1) / 2, (bb.z0 + bb.z1) / 2)); }
-    for (const { sw, pivot } of bars) pivot.rotation.y = -sweeperAngle(sw, t);
+    // (The sign matters: a mirrored bar would hit where none is drawn.)
+    for (const { sw, pivot } of bars) pivot.rotation.y = sweeperYaw(sweeperAngle(sw, t));
     // Vanishing boxes: glow orange before they open (blinking unless motion is reduced), gone while open.
     for (const { b, mesh, base } of blinking) {
       const open = blinkOpen(b, t), warn = blinkWarn(b, t);
@@ -188,6 +199,7 @@ export function createParcoursWorld(host: HTMLElement, read: () => MatchWorldFra
       const x = before ? before.x + (r.x - before.x) * a : r.x, y = before ? before.y + (r.y - before.y) * a : r.y, z = before ? before.z + (r.z - before.z) * a : r.z;
       const hidden = !!r.respawnAt || r.pose === "out";
       v.fig.group.visible = !hidden; v.ring.visible = !hidden && r.grounded;
+      if (v.marker) { v.marker.visible = !hidden; v.marker.position.set(x, y + FIGURE_H + .55 + (reduced ? 0 : Math.abs(Math.sin(time / 220)) * .12), -z); }
       v.fig.group.position.set(x, y, -z); v.ring.position.set(x, y + .03, -z);
       // Hanging and climbing: facing the wall.
       const face = (r.pose === "hang" || r.pose === "climb") && r.hang ? Math.atan2(-r.hang.nx, -r.hang.nz) : r.face;
@@ -217,7 +229,15 @@ export function createParcoursWorld(host: HTMLElement, read: () => MatchWorldFra
     const local = f.local as ChaseLocal & { watch?: number }, mine = shownRacer(g, s.players, f.viewer, local.watch), ownCam = mine?.id === f.viewer;
     if (mine && mine.id !== shownId) { shownId = mine.id; fresh = true; }
     host.dataset.watch = mine?.id ?? "";
-    if (mine) {
+    if (arena) {
+      takeCameraTurn(local, d => { arenaYaw += d; });
+      if (!arenaShot || kit.camera.aspect !== arenaAspect) { arenaAspect = kit.camera.aspect; arenaShot = frameBox(kit, arena.x0, arena.x1, -arena.z1, -arena.z0, 1.6, 54 * Math.PI / 180, 180); }
+      const offset = arenaShot.position.clone().sub(arenaShot.target).applyAxisAngle(up, -arenaYaw);
+      kit.camera.position.copy(arenaShot.target).add(offset); kit.camera.lookAt(arenaShot.target);
+      // Stick up runs away from this camera, as with the chase camera.
+      if (mine?.id === f.viewer) followCamera(local, f.input, arenaYaw);
+      host.dataset.yaw = arenaYaw.toFixed(3);
+    } else if (mine) {
       const before = prev.racers?.[mine.id], a = before && Math.hypot(before.x - mine.x, before.z - mine.z) < 3 ? f.alpha : 1;
       target.set(before ? before.x + (mine.x - before.x) * a : mine.x, before ? before.y + (mine.y - before.y) * a : mine.y, -(before ? before.z + (mine.z - before.z) * a : mine.z));
       // The camera looks along the start direction (and again after a respawn); afterwards only a swipe turns it.
@@ -231,7 +251,7 @@ export function createParcoursWorld(host: HTMLElement, read: () => MatchWorldFra
       if (ownCam) followCamera(local, f.input, chaseCam.yaw);
       host.dataset.yaw = chaseCam.yaw.toFixed(3);
     }
-    host.dataset.camera = "chase";
+    host.dataset.camera = arena ? "arena" : "chase";
     dust.update(time);
     impact.update(time, reduced);
     kit.render();
