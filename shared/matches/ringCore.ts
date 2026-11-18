@@ -31,6 +31,12 @@ export interface RingRules {
   body: number; lives: number; respawn: number; shield: number; credit: number;
   regular: number; suddenMax: number; suddenRadius: number;
   actionCooldown: number;
+  /**
+   * After a ring-out: `all` sends everyone back to their start places,
+   * `duel` does that only when two fighters are left (otherwise the fallen one
+   * returns alone on a free spot).
+   */
+  restart: "all" | "duel";
   /** Moves one fighter for one step from its input. */
   drive(f: Fighter, input: MatchInput, dt: number, now: number): void;
   /** Starts the button action (dash or turbo). */
@@ -45,6 +51,17 @@ export interface RingRules {
 const spawnPoint = (i: number, count: number, r: number) => { const a = (i / count) * Math.PI * 2 - Math.PI / 2; return { x: Math.cos(a) * r, y: Math.sin(a) * r, heading: a + Math.PI }; };
 /** Start place of a seat: on a circle inside the current ring. */
 const startPlace = (s: MatchState<RingGame>, rules: RingRules, seat: number) => spawnPoint(seat, s.players.length, Math.min(rules.radius * .55, s.game.radius * .6));
+
+/** The fallen fighter alone returns on the free spot of a small circle farthest from everyone else. */
+function respawn(s: MatchState<RingGame>, rules: RingRules, f: Fighter) {
+  const g = s.game, others = Object.values(g.fighters).filter(o => o.alive && !o.out && o.id !== f.id);
+  let best = { x: 0, y: 0, heading: 0 }, score = -1;
+  for (let i = 0; i < 8; i++) {
+    const p = spawnPoint(i, 8, Math.min(1.6, g.radius * .4)), d = others.length ? Math.min(...others.map(o => dist(o.x, o.y, p.x, p.y))) : 9;
+    if (d > score + 1e-9) { best = p; score = d; }
+  }
+  Object.assign(f, { x: best.x, y: best.y, heading: best.heading, vx: 0, vy: 0, out: false, stunUntil: 0, shieldUntil: s.time + rules.shield, lastHitBy: undefined, lastHitAt: -9999 });
+}
 
 /** Everyone still in the match back to their own start place, standing still, briefly protected. */
 function resetAll(s: MatchState<RingGame>, rules: RingRules) {
@@ -61,8 +78,9 @@ function resetAll(s: MatchState<RingGame>, rules: RingRules) {
 function ringOut(s: MatchState<RingGame>, rules: RingRules, f: Fighter) {
   const g = s.game;
   f.out = true; f.lives--; f.respawnAt = s.time + rules.respawn; f.vx = 0; f.vy = 0;
-  // A ring-out ends the exchange: everyone stops and starts again from the start places.
-  g.resetAt ??= s.time + rules.respawn;
+  // A ring-out ends the exchange: everyone stops and starts again from the start places
+  // (Sumo only in a one-on-one; with more fighters the fallen one returns alone).
+  if (rules.restart === "all" || contenders(g).length === 2) g.resetAt ??= s.time + rules.respawn;
   const by = f.lastHitBy && s.time - f.lastHitAt <= rules.credit && g.fighters[f.lastHitBy] ? f.lastHitBy : undefined;
   if (by && by !== f.id) g.fighters[by].ringOuts++;
   if (f.lives <= 0) { f.alive = false; f.outAt = s.time; }
@@ -115,7 +133,8 @@ export function ringModule(rules: RingRules): MatchModule<RingGame> {
       }
       for (const p of s.players) {
         const f = g.fighters[p.id];
-        if (!f.alive || f.out) continue;
+        if (!f.alive) continue;
+        if (f.out) { if (s.time >= f.respawnAt && !p.gone) respawn(s, rules, f); continue; }
         rules.drive(f, inputOfPlayer(s, p), dt, s.time);
         f.x += f.vx * dt; f.y += f.vy * dt;
       }

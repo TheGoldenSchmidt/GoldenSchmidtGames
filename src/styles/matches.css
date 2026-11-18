@@ -49,7 +49,10 @@
 .match-swipe-zone,.match-aim-pad { position:absolute; inset:0; touch-action:none; }
 /* Swipe to turn a chase camera: behind stick and buttons (which come later in the DOM). */
 .match-controls .match-camera-swipe { position:absolute; inset:0; touch-action:none; }
-.match-controls .match-camera-swipe.tank-camera-swipe { right:50%; bottom:45%; }
+/* Turmsicht: the camera turns on the upper right (right thumb) while the left thumb steers; aiming takes the lower right. */
+.match-controls .match-camera-swipe.tank-camera-swipe { left:50%; bottom:55%; }
+.match-game--tankview .tank-aim-half { top:45%; }
+.match-controls .tank-camera-swipe .match-camera-hint { left:auto; right:12px; }
 .match-camera-hint { position:absolute; left:12px; top:12px; padding:4px 10px; border-radius:999px; background:#24133fcc; color:#fff9ed; font-size:.72rem; font-weight:800; white-space:nowrap; pointer-events:none; }
 /* Test mode (?messung): measurements and camera sliders for device test rounds. */
 .match-measure { position:absolute; left:8px; top:52px; z-index:5; display:grid; gap:4px; max-width:min(260px, 70%); padding:8px 10px; border-radius:12px; background:#120a22e6; border:1px solid #fff9ed55; color:#fff9ed; font-size:.72rem; font-weight:700; }

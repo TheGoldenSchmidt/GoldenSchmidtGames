@@ -225,9 +225,22 @@ for (const motion of ["no-preference", "reduce"] as const) test(`Tank Trouble �
     await page.mouse.move(stick.x + stick.width / 2, stick.y + stick.height / 2 - 45, { steps: 3 });
     await expect.poll(async () => { const input = await own(); return forward(input.x, input.y); }, { timeout: 3000 }).toBeGreaterThan(.9);
     await page.mouse.up();
-    // Swiping on the upper left turns the camera.
+    // Swiping on the upper right turns the camera – also while the left thumb holds the stick.
     const stage = (await page.locator(".match-stage").boundingBox())!;
-    expect(Math.abs(await swipeCamera(page, { x: stage.x + 30, y: stage.y + stage.height * .2 }, 100))).toBeGreaterThan(.4);
+    expect(Math.abs(await swipeCamera(page, { x: stage.x + stage.width - 130, y: stage.y + stage.height * .2 }, 100))).toBeGreaterThan(.4);
+    {
+      const pad = (await page.getByRole("group", { name: "Bewegungsstick" }).boundingBox())!, client = await page.context().newCDPSession(page);
+      const sx = pad.x + pad.width / 2, sy = pad.y + pad.height / 2, cx = stage.x + stage.width - 130, cy = stage.y + stage.height * .2;
+      const touch = (type: "touchStart" | "touchMove" | "touchEnd", points: { x: number; y: number; id: number }[]) => client.send("Input.dispatchTouchEvent", { type, touchPoints: points.map(p => ({ x: p.x, y: p.y, id: p.id })) });
+      const before = Number(await world.getAttribute("data-yaw"));
+      await touch("touchStart", [{ x: sx, y: sy, id: 1 }]);
+      await touch("touchMove", [{ x: sx, y: sy - 40, id: 1 }]);
+      await touch("touchStart", [{ x: sx, y: sy - 40, id: 1 }, { x: cx, y: cy, id: 2 }]);
+      for (let k = 1; k <= 6; k++) await touch("touchMove", [{ x: sx, y: sy - 40, id: 1 }, { x: cx + k * 18, y: cy, id: 2 }]);
+      await expect.poll(async () => { const input = await own(); return Math.hypot(input.x, input.y); }, { timeout: 3000 }).toBeGreaterThan(.5);
+      await touch("touchEnd", []);
+      expect(Math.abs(Number(await world.getAttribute("data-yaw")) - before)).toBeGreaterThan(.3);
+    }
     // Drag up on the right half = aim ahead; release fires.
     const aim = (await page.getByRole("group", { name: "Zielen und schießen" }).boundingBox())!;
     await page.mouse.move(aim.x + aim.width / 2, aim.y + aim.height / 2); await page.mouse.down();
@@ -366,8 +379,8 @@ for (const motion of ["no-preference", "reduce"] as const) test(`Floor is Lava 2
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down();
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2 - 40, { steps: 3 });
     await expect.poll(async () => Math.hypot((await me()).x - start.x, (await me()).y - start.y), { timeout: 4000 }).toBeGreaterThan(.4);
-    await page.getByRole("button", { name: "Springen", exact: true }).tap();
-    await expect.poll(async () => (await me()).airUntil, { timeout: 3000 }).toBeGreaterThan(0);
+    // Tap again while the figure is still in the lava (it returns after a second) or dropping a floor.
+    await expect.poll(async () => { const r = await me(); if (r.airUntil > 0) return true; await page.getByRole("button", { name: "Springen", exact: true }).tap(); return false; }, { timeout: 6000, intervals: [300] }).toBe(true);
     await page.screenshot({ path: testInfo.outputPath(`lava-3d-jump-${motion}.png`) });
     await page.mouse.up();
     // After landing: the shove starts a dash and its cooldown.

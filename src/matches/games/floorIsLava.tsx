@@ -34,7 +34,8 @@ function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
   }
   for (const p of s.players) {
     const r = g.runners[p.id], before = prev.runners?.[p.id];
-    if (!r?.alive) continue;
+    // Out, or in the lava until the return.
+    if (!r?.alive || r.respawnAt) continue;
     const x = before?.alive ? lerp(before.x, r.x, f.alpha) : r.x, y = before?.alive ? lerp(before.y, r.y, f.alpha) : r.y;
     // Runners on other floors appear as faint ghosts; a falling runner shrinks into the floor below.
     ctx.globalAlpha = r.floor === floor ? 1 : .3;
@@ -94,11 +95,13 @@ export const floorIsLavaClient: MatchClient = {
   // 2.5D presentation; the canvas above stays as fallback without WebGL.
   world: () => import("../../three/lavaWorld").then(m => m.createLavaWorld),
   banner(view, viewer) {
-    const g = view.game as LavaGame, last = g.history.at(-1);
+    const g = view.game as LavaGame, last = g.history.at(-1), me = g.runners[viewer];
+    // In the lava for a moment: the return is announced (the canvas hides the figure meanwhile).
+    if (g.phase === "play" && me?.alive && me.respawnAt) return { title: "In der Lava!", text: `Ein Leben weg – gleich bist du zurück (${me.lives} übrig)` };
     if (g.phase === "play" || view.done) return undefined;
     return { title: last?.tiebreak ? "Stechrunde vorbei" : `Durchgang ${g.round} vorbei`, text: last?.winners.includes(viewer) ? "Du stehst am längsten!" : `+${last?.points[viewer] ?? 0} Punkte für dich` };
   },
-  quiet: ["jump", "dash", "drop", "dive"],
+  quiet: ["jump", "dash", "drop", "dive", "back"],
   Controls: LavaControls,
   status(view, viewer) {
     const g = view.game as LavaGame, me = g.runners[viewer];
