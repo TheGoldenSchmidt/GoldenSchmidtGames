@@ -3,6 +3,7 @@ import {createProberaum,PRACTICE_STATIONS,stepProberaum,visitStation} from "../s
 import {NEUTRAL_MATCH_INPUT} from "../shared/matches/types";
 import {course,sweeperAngle} from "../shared/matches/parcoursCourses";
 import {isMatchId} from "../shared/matches/framework";
+import {PC} from "../shared/matches/parcours";
 const input=()=>({...NEUTRAL_MATCH_INPUT});
 assert.equal(isMatchId("proberaum"),false,"Kein Eintrag in Wettbewerben");
 for(let i=0;i<PRACTICE_STATIONS.length;i++){
@@ -27,7 +28,10 @@ for(let i=0;i<PRACTICE_STATIONS.length;i++){
 }
 {
  const s=createProberaum(),sw=course("proberaum").sweepers[0],a=sweeperAngle(sw,50),r=s.game.racers.practice;
- Object.assign(r,{x:sw.x+Math.cos(a)*2,y:0,z:sw.z+Math.sin(a)*2,grounded:true});stepProberaum(s,input());assert.equal(r.pose,"stun");
+ Object.assign(r,{x:sw.x+Math.cos(a)*2,y:0,z:sw.z+Math.sin(a)*2,grounded:true});stepProberaum(s,input());
+ assert.notEqual(r.pose,"stun","Auch im Proberaum gilt die Reaktionsfrist");
+ for(let t=0;t<PC.barGrace+50;t+=50)stepProberaum(s,input());
+ assert.equal(r.pose,"stun","Anhaltender Balkenkontakt haut nach der Schonfrist um");
  visitStation(s,0);assert.equal(s.game.racers.practice.pose,"run");assert.equal(s.game.racers.practice.vx,0);
 }
 // All station-specific collision primitives exist in the shared course, not only in the renderer.

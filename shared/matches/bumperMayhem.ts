@@ -3,11 +3,14 @@ import { wrapAngle } from "./geometry";
 
 /** Bumper Mayhem – bumper cars with heading, inertia, top speed and a turbo. */
 /**
- * kick: extra push for the rammed car (× closing speed, × turboKick with turbo);
- * stunMs: spin-out time per unit of closing speed (capped by stunMax), in which
- * the car has no grip and only slides with `slide` friction per step.
+ * restitution: bounciness of ordinary contact (soft rubber bumpers);
+ * kick: speed of the rammed car along the contact (× closing speed, turboKick
+ * with turbo, capped by maxKnock); stunBase + stunMs per unit of closing speed
+ * (capped by stunMax): spin-out without grip, sliding with `slide` per step;
+ * coast: rolling friction per step without throttle (cars come to rest instead
+ * of drifting); overspeed: smooth slow-down per step above the speed limit.
  */
-export const BUMPER = { body: .55, accel: 7, maxSpeed: 4.4, turboSpeed: 8, turboMs: 800, turn: 4.2, grip: .25, drag: .985, restitution: 1.1, kick: .9, turboKick: 1.5, maxKnock: 15, stunMs: 110, stunMax: 900, slide: .955, hard: 2.5, cooldown: 4000, orbit: 2.8, postRadius: .6, spin: .6 } as const;
+export const BUMPER = { body: .55, accel: 7, maxSpeed: 4.4, turboSpeed: 8, turboMs: 800, turn: 4.2, grip: .25, drag: .985, coast: .92, overspeed: .88, restitution: .5, kick: .9, turboKick: 1.75, maxKnock: 11, hitterKeeps: .25, stunBase: 220, stunMs: 55, stunMax: 650, slide: .93, spinRate: 6, hard: 2.5, cooldown: 4000, orbit: 2.8, postRadius: .6, spin: .6 } as const;
 const turbo = (f: Fighter, now: number) => now < f.actionUntil;
 
 export const bumperMayhem = ringModule({
@@ -19,8 +22,8 @@ export const bumperMayhem = ringModule({
   body: BUMPER.body, lives: 3, respawn: 2000, restart: "all", shield: 1500, credit: 3000,
   regular: 75000, suddenMax: 20000, suddenRadius: 3.4, actionCooldown: BUMPER.cooldown,
   drive(f, input, dt, now) {
-    // Spun out after a hard hit: no grip, no throttle, the car spins and slides.
-    if (now < f.stunUntil) { f.vx *= BUMPER.slide; f.vy *= BUMPER.slide; f.heading = wrapAngle(f.heading + 9 * dt); return; }
+    // Spun out after a hard hit: no grip, no throttle, the car spins and slides to a stop.
+    if (now < f.stunUntil) { f.vx *= BUMPER.slide; f.vy *= BUMPER.slide; f.heading = wrapAngle(f.heading + BUMPER.spinRate * dt); return; }
     const throttle = Math.min(1, Math.hypot(input.x, input.y));
     if (throttle > .1) {
       const diff = wrapAngle(Math.atan2(input.y, input.x) - f.heading);
@@ -31,23 +34,23 @@ export const bumperMayhem = ringModule({
     f.vx += hx * push; f.vy += hy * push;
     // Tyres grip sideways, so cars slide only a little.
     const forward = f.vx * hx + f.vy * hy, side = -f.vx * hy + f.vy * hx;
-    const keptSide = side * (1 - BUMPER.grip);
-    f.vx = (hx * forward - hy * keptSide) * BUMPER.drag; f.vy = (hy * forward + hx * keptSide) * BUMPER.drag;
+    const keptSide = side * (1 - BUMPER.grip), drag = boost || throttle > .1 ? BUMPER.drag : BUMPER.coast;
+    f.vx = (hx * forward - hy * keptSide) * drag; f.vy = (hy * forward + hx * keptSide) * drag;
+    // Above the limit (after a knock or the turbo) the car slows down smoothly instead of stopping dead.
     const limit = boost ? BUMPER.turboSpeed : BUMPER.maxSpeed, speed = Math.hypot(f.vx, f.vy);
-    if (speed > limit) { f.vx *= limit / speed; f.vy *= limit / speed; }
+    if (speed > limit) { const k = Math.max(limit / speed, BUMPER.overspeed); f.vx *= k; f.vy *= k; }
   },
   action(f, now) { f.actionUntil = now + BUMPER.turboMs; },
   collide(a, b, now) {
     const { nx, ny, closing } = bounce(a, b, BUMPER.body, BUMPER.restitution, now, now < a.shieldUntil, now < b.shieldUntil);
     if (closing <= BUMPER.hard) return undefined;
-    // The rammer (who pushed harder) launches the other car and keeps little speed itself.
+    // The rammer (who pushed harder) launches the other car along the contact and nearly stops itself.
     const victim = b.lastHitBy === a.id && b.lastHitAt === now ? b : a, hitter = victim === a ? b : a, sign = victim === b ? 1 : -1;
-    const kick = closing * BUMPER.kick * (turbo(hitter, now) ? BUMPER.turboKick : 1);
-    victim.vx += nx * sign * kick; victim.vy += ny * sign * kick;
-    const speed = Math.hypot(victim.vx, victim.vy);
-    if (speed > BUMPER.maxKnock) { victim.vx *= BUMPER.maxKnock / speed; victim.vy *= BUMPER.maxKnock / speed; }
-    victim.stunUntil = now + Math.min(BUMPER.stunMax, closing * BUMPER.stunMs);
-    hitter.vx *= .5; hitter.vy *= .5;
+    const kick = Math.min(BUMPER.maxKnock, closing * BUMPER.kick * (turbo(hitter, now) ? BUMPER.turboKick : 1));
+    const ux = nx * sign, uy = ny * sign, along = victim.vx * ux + victim.vy * uy;
+    if (along < kick) { victim.vx += ux * (kick - along); victim.vy += uy * (kick - along); }
+    victim.stunUntil = now + Math.min(BUMPER.stunMax, BUMPER.stunBase + closing * BUMPER.stunMs);
+    hitter.vx *= BUMPER.hitterKeeps; hitter.vy *= BUMPER.hitterKeeps;
     return victim;
   },
   obstacles: () => [0, 1].map(i => ({ id: i, x: Math.cos(i * Math.PI) * BUMPER.orbit, y: Math.sin(i * Math.PI) * BUMPER.orbit, r: BUMPER.postRadius, angle: i * Math.PI })),
