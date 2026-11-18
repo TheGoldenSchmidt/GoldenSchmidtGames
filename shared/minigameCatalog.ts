@@ -9,8 +9,8 @@ import { COURSE_IDS } from "./matches/parcoursCourses";
  */
 export type PlayableMiniId = ArenaId | MatchId;
 export const FIRST_GEN_LABEL = "1st Generation Minigames";
-/** Match games moved to the first generation; they stay playable but are not "new". */
-export const FIRST_GEN_MATCH_IDS: readonly MatchId[] = ["hooks", "chaosrun"];
+/** Match games moved to the first generation; they stay playable but are not "new" (Wippenwerk: its seesaws now are part of Kreiselkurs). */
+export const FIRST_GEN_MATCH_IDS: readonly MatchId[] = ["hooks", "chaosrun", "wippenwerk"];
 /**
  * The obstacle runs count as one entry in the random draw ("Hindernis-Parcours"):
  * the bag holds the first run as placeholder and the draw picks one run.

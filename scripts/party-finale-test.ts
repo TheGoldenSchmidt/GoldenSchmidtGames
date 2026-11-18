@@ -118,7 +118,7 @@ for (let n = 0; n < 5000 && full.phase !== "finished"; n++) {
   if (full.phase === "moving") { full = settleMovement(full); continue; }
   if (full.phase === "mini-intro") { for (const p of full.players) if (!full.mini!.runs[p.id].ready) full = act(full, p.id, { type: "ready" }, now += 100); continue; }
   if (full.phase === "mini-play") { for (const p of full.players) if (!full.mini!.runs[p.id].done && full.phase === "mini-play") full = act(full, p.id, { type: "finish" }, now += 100); continue; }
-  const action: PartyAction = full.phase === "turn" ? { type: "roll" } : full.phase === "path" ? { type: "path", destination: partyPaths(full, activePartyPlayer(full)).at(-1)! } : full.phase === "trophy" ? { type: "trophy", buy: true } : full.phase === "gift" ? { type: "gift", accept: false } : full.phase === "shop" ? { type: "shop" } : { type: "next" };
+  const action: PartyAction = full.phase === "turn" ? { type: "roll" } : full.phase === "path" ? { type: "path", destination: partyPaths(full, activePartyPlayer(full)).at(-1)! } : full.phase === "trophy" ? { type: "trophy", buy: true } : full.phase === "gift" ? { type: "gift", accept: false } : full.phase === "duel" ? { type: "duel" } : full.phase === "shop" ? { type: "shop" } : { type: "next" };
   full = act(full, player, action, now += 100);
 }
 assert.equal(full.phase, "finished"); assert.equal(full.bonus!.length, 3); assert.ok(full.finalStretch);

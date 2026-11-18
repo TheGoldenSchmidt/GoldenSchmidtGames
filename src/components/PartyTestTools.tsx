@@ -11,7 +11,7 @@ export function PartyTestTools({room,onUpdate}:{room:RoomState;onUpdate:(room:Ro
   return <details className="party-test-tools" ref={panel}><summary>Testpartie mit Bots <span>Startwert {room.partyTest!.seed}</span></summary>
     <div className="party-test-tools__body"><p>Deine Bots spielen selbstständig. Hier kannst du gezielt etwas ausprobieren.</p>
       <label>Minispiel auswählen<select value={selected} onChange={e=>setSelected(e.target.value as PlayableMiniId)}>{PLAYABLE_MINI_IDS.map(id=><option key={id} value={id}>{miniName(id)}</option>)}</select></label>
-      <div className="party-test-actions"><button disabled={busy} onClick={()=>send("mini",selected)}>Minispiel starten</button>{room.partyGame?.mini&&<button disabled={busy} onClick={()=>send("mini",room.partyGame!.mini!.id)}>Minispiel wiederholen</button>}<button disabled={busy} onClick={()=>send("skip-bots")}>Bot-Züge überspringen</button></div>
+      <div className="party-test-actions"><button disabled={busy} onClick={()=>send("mini",selected)}>Minispiel starten</button>{room.partyGame?.mini&&<button disabled={busy} onClick={()=>send("mini",room.partyGame!.mini!.id)}>Minispiel wiederholen</button>}<button disabled={busy} onClick={()=>send("skip-bots")}>Bot-Züge überspringen</button>{room.partyGame&&(room.partyGame.mode??"party")==="party"&&<button disabled={busy} onClick={()=>send("duel")}>Duellfeld testen</button>}</div>
       <details><summary>Partie zurücksetzen</summary><p>Beginnt dieselbe Testpartie von vorn. Der aktuelle Spielstand wird ersetzt.</p><button disabled={busy} onClick={()=>send("restart")}>Testpartie neu starten</button></details>
       {error&&<p role="alert" className="error-message">{error}</p>}
     </div>

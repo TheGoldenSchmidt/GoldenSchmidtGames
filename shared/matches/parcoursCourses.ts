@@ -33,7 +33,14 @@ export interface Box {
 }
 /** Bar rotating about a vertical axis; `y0…y1` is its height band; it starts turning at `from` ms. */
 export interface Sweeper { x: number; z: number; y0: number; y1: number; length: number; speed: number; phase: number; from?: number }
-export interface DoorRow { z: number; doors: number[]; real: number }
+export interface DoorRow { z: number; doors: number[]; real: number; /** Door centres (x). */ xs: number[] }
+/**
+ * Doors with a lane behind each: the front door (real or solid), the lane floor
+ * (carries or is a trapdoor) and an exit door (real or solid: a dead end).
+ * `through` lanes lead on, `dead` lanes end at a solid exit, `trap` lanes drop
+ * the racer; the remaining front doors stay shut.
+ */
+export interface LaneRow { z: number; exitZ: number; lanes: { front: number; exit: number; floor: number; x: number }[]; through: number; dead: number; trap: number }
 export interface TileRow { z: number; tiles: number[] }
 export interface Course {
   /** Local, untimed practice world; never part of the minigame pool. */
@@ -43,6 +50,8 @@ export interface Course {
   /** Respawn lines (z, floor height y); racers return to the last one they passed. */
   checkpoints: { z: number; y: number; x?:number }[];
   doorRows: DoorRow[]; tileRows: TileRow[]; seesaws: number;
+  /** Door rows with lanes behind them (dead ends and trapdoors); their doors are part of the door count. */
+  laneRows?: LaneRow[];
   /** Rising goo: height at match time t (ms) is start + rate · max(0, t − delay)/1000. */
   goo?: { start: number; rate: number; delay: number };
   winds: Wind[];
@@ -60,49 +69,90 @@ function stairs(z0: number, z1: number, from: number, to: number, x0 = -5, x1 = 
   const steps = Math.max(1, Math.ceil(Math.abs(to - from) / .3)), depth = (z1 - z0) / steps;
   return Array.from({ length: steps }, (_, i) => ({ x0, x1, y0: from - 1, y1: from + (to - from) * (i + 1) / steps, z0: z0 + i * depth, z1: z0 + (i + 1) * depth, look: "step" as Look }));
 }
-/** A wall across the course with five door panels; `real` of them break open. */
-function doorRow(boxes: Box[], rows: DoorRow[], z: number, real: number, first: number, y = 0) {
-  const doors: number[] = [];
-  for (let i = 0; i < 5; i++) {
-    const cx = -4 + i * 2;
-    boxes.push({ x0: cx - .8, x1: cx + .8, y0: y, y1: y + 2.4, z0: z, z1: z + .4, look: "door", door: first + i });
-    doors.push(first + i);
+/**
+ * A wall across the course from `x0` to `x1` with `count` door panels and posts
+ * between them; door indices start at `first`. Returns the door centres.
+ */
+function doorWall(boxes: Box[], z: number, count: number, first: number, x0 = -5, x1 = 5, y = 0) {
+  const pitch = (x1 - x0) / count, post = .4, xs: number[] = [], doors: number[] = [];
+  for (let i = 0; i < count; i++) {
+    const cx = x0 + pitch * (i + .5);
+    boxes.push({ x0: cx - pitch / 2 + post / 2, x1: cx + pitch / 2 - post / 2, y0: y, y1: y + 2.4, z0: z, z1: z + .4, look: "door", door: first + i });
+    xs.push(cx); doors.push(first + i);
     // Posts flush with the doors: no niche to get stuck in when moving along the row.
-    if (i < 4) boxes.push({ x0: cx + .8, x1: cx + 1.2, y0: y, y1: y + 3, z0: z, z1: z + .4, look: "wall" });
+    if (i < count - 1) boxes.push({ x0: cx + pitch / 2 - post / 2, x1: cx + pitch / 2 + post / 2, y0: y, y1: y + 3, z0: z, z1: z + .4, look: "wall" });
   }
-  boxes.push({ x0: -5.4, x1: -4.8, y0: y, y1: y + 3, z0: z, z1: z + .4, look: "wall" }, { x0: 4.8, x1: 5.4, y0: y, y1: y + 3, z0: z, z1: z + .4, look: "wall" });
-  rows.push({ z, doors, real });
+  boxes.push({ x0: x0 - .6, x1: x0 + post / 2, y0: y, y1: y + 3, z0: z, z1: z + .4, look: "wall" }, { x0: x1 - post / 2, x1: x1 + .6, y0: y, y1: y + 3, z0: z, z1: z + .4, look: "wall" });
+  return { xs, doors };
+}
+/** A wall across the course with door panels; `real` of them break open. */
+function doorRow(boxes: Box[], rows: DoorRow[], z: number, real: number, first: number, count = 5, x0 = -5, x1 = 5) {
+  const { xs, doors } = doorWall(boxes, z, count, first, x0, x1);
+  rows.push({ z, doors, real, xs });
+  return first + count;
+}
+/**
+ * Door row with a lane behind every door: front doors at `z`, lanes `depth`
+ * metres long (walls between them, floor as secret tiles), exit doors at the
+ * end. Uses `count` doors twice (front and exit) and `count` tiles.
+ */
+function laneRow(boxes: Box[], rows: LaneRow[], z: number, depth: number, count: number, firstDoor: number, firstTile: number, mix: { through: number; dead: number; trap: number }, x0 = -6, x1 = 6) {
+  const front = doorWall(boxes, z, count, firstDoor, x0, x1), exitZ = z + .4 + depth, exit = doorWall(boxes, exitZ, count, firstDoor + count, x0, x1), pitch = (x1 - x0) / count;
+  for (let i = 0; i < count; i++) {
+    const cx = front.xs[i];
+    // The lane floor looks like any floor; only the authority knows whether it carries.
+    boxes.push({ x0: cx - pitch / 2, x1: cx + pitch / 2, y0: -.4, y1: 0, z0: z + .4, z1: exitZ, look: "floor", tile: firstTile + i });
+    if (i < count - 1) boxes.push({ x0: cx + pitch / 2 - .2, x1: cx + pitch / 2 + .2, y0: 0, y1: 2.4, z0: z + .4, z1: exitZ, look: "wall" });
+  }
+  boxes.push({ x0: x0 - .6, x1: x0 + .2, y0: 0, y1: 2.4, z0: z + .4, z1: exitZ, look: "wall" }, { x0: x1 - .2, x1: x1 + .6, y0: 0, y1: 2.4, z0: z + .4, z1: exitZ, look: "wall" });
+  rows.push({ z, exitZ, lanes: front.xs.map((x, i) => ({ front: front.doors[i], exit: exit.doors[i], floor: firstTile + i, x })), ...mix });
+  return { door: firstDoor + 2 * count, tile: firstTile + count };
 }
 
 function tuerenlotto(): Course {
-  const boxes: Box[] = [floor(-2, 44)], doorRows: DoorRow[] = [];
-  doorRow(boxes, doorRows, 9, 3, 0);
-  // Pushers sweep across between the first two rows.
-  boxes.push({ x0: -1.2, x1: 1.2, y0: 0, y1: 1.4, z0: 13, z1: 14.2, look: "pusher", move: { axis: "x", amp: 3.4, period: 2600, phase: 0 } });
-  boxes.push({ x0: -1.2, x1: 1.2, y0: 0, y1: 1.4, z0: 17, z1: 18.2, look: "pusher", move: { axis: "x", amp: 3.4, period: 2200, phase: Math.PI } });
-  doorRow(boxes, doorRows, 22, 2, 5);
-  // A trench to jump (or dive) over.
-  boxes[0] = floor(-2, 27.5); boxes.push(floor(29.2, 52));
-  doorRow(boxes, doorRows, 34, 2, 10);
-  boxes.push(...stairs(39, 43, 0, 1.2), floor(43, 52, 1.2, -5, 5, "finish"));
-  return { id: "tuerenlotto", name: "Türenlotto", width: 10, finishZ: 48, finishY: 1.2, killY: -8, boxes, sweepers: [], checkpoints: [{ z: 1, y: 0 }, { z: 12, y: 0 }, { z: 25, y: 0 }, { z: 30.5, y: 0 }], doorRows, tileRows: [], seesaws: 0, winds: [] };
+  const boxes: Box[] = [], doorRows: DoorRow[] = [], laneRows: LaneRow[] = [], W = 6;
+  // Floors leave out the lanes (their floors are secret tiles) and a trench to jump.
+  boxes.push(floor(-2, 20.4, 0, -W, W), floor(24.4, 30, 0, -W, W), floor(31.8, 48.4, 0, -W, W), floor(52.4, 58, 0, -W, W));
+  let door = doorRow(boxes, doorRows, 8, 3, 0, 6, -W, W), tile = 0;
+  // Pushers sweep across between the first rows.
+  boxes.push({ x0: -1.2, x1: 1.2, y0: 0, y1: 1.4, z0: 12, z1: 13.2, look: "pusher", move: { axis: "x", amp: 4.2, period: 2600, phase: 0 } });
+  boxes.push({ x0: -1.2, x1: 1.2, y0: 0, y1: 1.4, z0: 15.5, z1: 16.7, look: "pusher", move: { axis: "x", amp: 4.2, period: 2200, phase: Math.PI } });
+  // Six lanes: two lead on, one is a dead end, one drops through a trapdoor, two front doors stay shut.
+  ({ door, tile } = laneRow(boxes, laneRows, 20, 4, 6, door, tile, { through: 2, dead: 1, trap: 1 }, -W, W));
+  door = doorRow(boxes, doorRows, 36, 2, door, 6, -W, W);
+  // A low spinning bar between the rows.
+  ({ door, tile } = laneRow(boxes, laneRows, 48, 4, 6, door, tile, { through: 1, dead: 2, trap: 1 }, -W, W));
+  boxes.push(...stairs(58, 61, 0, 1.2, -W, W), floor(61, 68, 1.2, -W, W, "finish"));
+  return { id: "tuerenlotto", name: "Türenlotto", width: 12, finishZ: 64, finishY: 1.2, killY: -8, boxes,
+    sweepers: [{ x: 0, z: 42, y0: .15, y1: .6, length: 5.4, speed: 1.5, phase: 0 }],
+    checkpoints: [{ z: 1, y: 0 }, { z: 14, y: 0 }, { z: 26, y: 0 }, { z: 33, y: 0 }, { z: 45.5, y: 0 }, { z: 54, y: 0 }], doorRows, laneRows, tileRows: [], seesaws: 0, winds: [] };
 }
 
+/** Spinning bars of every kind, moving islands, two seesaws and a stirring machine at the end. */
 function kreiselkurs(): Course {
-  const boxes: Box[] = [floor(-2, 26.5), floor(36, 54)];
+  const boxes: Box[] = [floor(-2, 30), floor(39.6, 41), floor(52.8, 72)];
   // Moving islands over the gap.
-  for (const [z0, z1, phase] of [[27.2, 29.4, 0], [30.2, 32.4, 2], [33.2, 35.4, 4]] as const) boxes.push({ x0: -1.6, x1: 1.6, y0: -1, y1: 0, z0, z1, look: "floor", move: { axis: "x", amp: 2.6, period: 3200, phase } });
-  boxes.push(...stairs(48, 50, 0, .6), floor(50, 56, .6, -5, 5, "finish"));
+  for (const [z0, z1, phase] of [[30.6, 32.8, 0], [33.6, 35.8, 2], [36.6, 38.8, 4]] as const) boxes.push({ x0: -1.6, x1: 1.6, y0: -1, y1: 0, z0, z1, look: "floor", move: { axis: "x", amp: 2.6, period: 3200, phase } });
+  // Two quick seesaws over the void.
+  [[41.2, 46.4], [46.8, 52.6]].forEach(([z0, z1], i) => boxes.push({ x0: -2.4, x1: 2.4, y0: -.5, y1: 0, z0, z1, look: "seesaw", seesaw: i }));
+  boxes.push(...stairs(68, 70, 0, .6), floor(70, 76, .6, -5, 5, "finish"));
   const sweepers: Sweeper[] = [
-    // Low bars: jump over them.
-    { x: 0, z: 10, y0: .15, y1: .6, length: 4.6, speed: 1.7, phase: 0 },
-    // High bars: duck under them.
-    { x: 0, z: 19, y0: 1, y1: 1.4, length: 4.6, speed: -1.4, phase: .8 },
-    // Pair: one low, one high, turning against each other.
-    { x: -2.4, z: 42, y0: .15, y1: .6, length: 2.5, speed: 2.1, phase: 0 },
-    { x: 2.4, z: 42, y0: 1, y1: 1.4, length: 2.5, speed: -2.1, phase: 1.6 }
+    // One long low bar: jump.
+    { x: 0, z: 9, y0: .15, y1: .6, length: 4.6, speed: 1.6, phase: 0 },
+    // Twins turning against each other.
+    { x: -2.5, z: 17, y0: .15, y1: .6, length: 2.3, speed: 2.2, phase: 0 },
+    { x: 2.5, z: 17, y0: .15, y1: .6, length: 2.3, speed: -2.2, phase: 1.2 },
+    // Cross: a low and a high bar on the same post at different speeds – jump or duck.
+    { x: 0, z: 25, y0: .15, y1: .6, length: 4.6, speed: 1.3, phase: 0 },
+    { x: 0, z: 25, y0: 1, y1: 1.4, length: 4.6, speed: -1, phase: 1.6 },
+    // Stirring machine: three short fast bars side by side, then one high bar to duck under.
+    { x: -3.3, z: 57.5, y0: .15, y1: .6, length: 1.5, speed: 3, phase: 0 },
+    { x: 0, z: 57.5, y0: .15, y1: .6, length: 1.5, speed: -3, phase: .8 },
+    { x: 3.3, z: 57.5, y0: .15, y1: .6, length: 1.5, speed: 3, phase: 1.6 },
+    { x: 0, z: 63.5, y0: 1, y1: 1.4, length: 4.6, speed: 1.6, phase: 0 }
   ];
-  return { id: "kreiselkurs", name: "Kreiselkurs", width: 10, finishZ: 54, finishY: .6, killY: -8, boxes, sweepers, checkpoints: [{ z: 1, y: 0 }, { z: 15, y: 0 }, { z: 24, y: 0 }, { z: 37, y: 0 }], doorRows: [], tileRows: [], seesaws: 0, winds: [] };
+  return { id: "kreiselkurs", name: "Kreiselkurs", width: 10, finishZ: 73, finishY: .6, killY: -8, boxes, sweepers,
+    checkpoints: [{ z: 1, y: 0 }, { z: 13, y: 0 }, { z: 21, y: 0 }, { z: 29, y: 0 }, { z: 40, y: 0 }, { z: 53.5, y: 0 }, { z: 60.5, y: 0 }], doorRows: [], tileRows: [], seesaws: 2, winds: [] };
 }
 
 function wippenwerk(): Course {
@@ -127,9 +177,13 @@ function glibberflut(): Course {
   boxes.push(...stairs(27, 31, 3.2, 4.7));
   for (const [z0, z1] of [[31, 33], [34.1, 36.1], [37.2, 39.2]]) boxes.push(floor(z0, z1, 4.7, -3, 3));
   boxes.push({ ...floor(40.3, 48, 4.7), look: "belt", belt: -3.8 }, ...stairs(48, 53, 4.7, 6.2));
-  boxes.push({ x0: -5, x1: 5, y0: -1, y1: 7.9, z0: 53, z1: 60, look: "ledge" });
-  boxes[boxes.length - 1] = { ...boxes[boxes.length - 1], look: "finish" };
-  return { id: "glibberflut", name: "Glibberflut", width: 10, finishZ: 57, finishY: 7.9, killY: -8, boxes, sweepers: [], checkpoints: [{ z: 1, y: 0 }, { z: 20, y: 3.2 }, { z: 31.5, y: 4.7 }, { z: 49, y: 5 }], doorRows: [], tileRows: [], seesaws: 0, winds: [], goo: { start: -1.4, rate: .28, delay: 4000 } };
+  boxes.push({ x0: -5, x1: 5, y0: -1, y1: 7.9, z0: 53, z1: 62, look: "ledge" });
+  // Upper deck: rolling logs, stairs, a narrow beam with a pusher, then the last wall.
+  for (const [z, phase, period] of [[55.5, 0, 2400], [58.5, 2.2, 2000]] as const) boxes.push({ x0: -.9, x1: .9, y0: 7.9, y1: 8.45, z0: z, z1: z + .7, look: "roller", move: { axis: "x", amp: 4, period, phase } });
+  boxes.push(...stairs(62, 66, 7.9, 9.1), floor(66, 74, 9.1, -1.1, 1.1), floor(74, 76, 9.1, -5, 5));
+  boxes.push({ x0: -.6, x1: .6, y0: 9.1, y1: 10.3, z0: 69.5, z1: 70.5, look: "pusher", move: { axis: "x", amp: 1.6, period: 1800, phase: 0 } });
+  boxes.push({ x0: -5, x1: 5, y0: -1, y1: 10.8, z0: 76, z1: 84, look: "finish" });
+  return { id: "glibberflut", name: "Glibberflut", width: 10, finishZ: 80, finishY: 10.8, killY: -8, boxes, sweepers: [], checkpoints: [{ z: 1, y: 0 }, { z: 20, y: 3.2 }, { z: 31.5, y: 4.7 }, { z: 49, y: 5 }, { z: 54, y: 7.9 }, { z: 66.5, y: 9.1 }], doorRows: [], tileRows: [], seesaws: 0, winds: [], goo: { start: -1.4, rate: .34, delay: 3500 } };
 }
 
 function geisterpfad(): Course {
@@ -205,14 +259,16 @@ function standhaft(): Course {
   return { id: "standhaft", name: "Standhaft", width: 12.5, finishZ: 1e9, finishY: 0, killY: -6, boxes,
     // Both bars rest between the start places and begin to turn after three seconds.
     sweepers: [{ x: 0, z: 5, y0: .15, y1: .6, length: 6.5, speed: 1, phase: .5 + Math.PI / 6, from: 3000 }, { x: 0, z: 5, y0: 1, y1: 1.4, length: 6.5, speed: -.7, phase: .5 + Math.PI / 2, from: 20000 }],
-    checkpoints: [{ z: 5, y: 0 }], doorRows: [], tileRows: [], seesaws: 0, winds: [], elimination: true, limitMs: 90000, knock: .5 };
+    checkpoints: [{ z: 5, y: 0 }], doorRows: [], tileRows: [], seesaws: 0, winds: [], elimination: true, limitMs: 90000, knock: .6 };
 }
 
 /** The obstacle runs (one entry in the random draw). */
-export const COURSE_IDS = ["tuerenlotto", "kreiselkurs", "wippenwerk", "glibberflut", "geisterpfad", "fallklappen", "windkanal", "kletterwand"] as const;
+export const COURSE_IDS = ["tuerenlotto", "kreiselkurs", "glibberflut", "geisterpfad", "fallklappen", "windkanal", "kletterwand"] as const;
+/** Runs that are no longer drawn as obstacle run (Wippenwerk: its seesaws now are a part of Kreiselkurs); still playable directly. */
+export const RETIRED_COURSE_IDS = ["wippenwerk"] as const;
 /** Finals in the same engine (own entries in the draw). */
 export const FINAL_IDS = ["standhaft"] as const;
-export type CourseId = typeof COURSE_IDS[number] | typeof FINAL_IDS[number] | "proberaum";
+export type CourseId = typeof COURSE_IDS[number] | typeof RETIRED_COURSE_IDS[number] | typeof FINAL_IDS[number] | "proberaum";
 const BUILDERS: Record<CourseId, () => Course> = { proberaum, tuerenlotto, kreiselkurs, wippenwerk, glibberflut, geisterpfad, fallklappen, windkanal, kletterwand, standhaft };
 const cache = new Map<CourseId, Course>();
 /** The (immutable, cached) course of a run. */

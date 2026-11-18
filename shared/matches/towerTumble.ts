@@ -12,7 +12,7 @@ import { emit, hash, inputOfPlayer, presence, rank, shuffled, type MatchModule, 
  */
 export const TW = {
   baseHalf: 2.5, baseDepth: 1.2, laneHalf: 6, goal: 16, holdMs: 2000,
-  fall: 2.2, fastFall: 12, move: 16, spawnGap: 4.5, spawnDelay: 300, lostY: -6,
+  fall: 2.2, fastFall: 12, move: 16, spawnGap: 7, spawnDelay: 300, lostY: -6,
   gravity: 18, substeps: 3, iterations: 12, friction: .9, bias: .2, slop: .01,
   sleepSpeed: .08, sleepMs: 400, settleSpeed: .5, regular: 120000
 } as const;

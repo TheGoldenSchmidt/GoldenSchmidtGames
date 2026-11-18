@@ -34,7 +34,8 @@ function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
   }
   for (const p of s.players) {
     const r = g.runners[p.id], before = prev.runners?.[p.id];
-    if (!r?.alive) continue;
+    // Out, or in the lava until the return.
+    if (!r?.alive || r.respawnAt) continue;
     const x = before?.alive ? lerp(before.x, r.x, f.alpha) : r.x, y = before?.alive ? lerp(before.y, r.y, f.alpha) : r.y;
     // Runners on other floors appear as faint ghosts; a falling runner shrinks into the floor below.
     ctx.globalAlpha = r.floor === floor ? 1 : .3;
@@ -82,6 +83,7 @@ function LavaControls({ io, view, viewer, active, world }: MatchControlsProps) {
     <Stick disabled={!active} onMove={move} />
     <div className="lava-buttons">
       <ActionButton icon="⇉" label="Schubsen" tone="pink" charge={charge(me?.shoveReady ?? 0, FL.shoveCooldown)} disabled={off} onPress={() => io.press("b")} />
+      <ActionButton icon="⇗" label="Hechten" tone="cyan" charge={charge(me?.diveReady ?? 0, FL.diveCooldown)} disabled={off} onPress={() => io.command(1)} />
       <ActionButton icon="⤒" label="Springen" tone="gold" charge={charge(me?.jumpReady ?? 0, FL.jumpCooldown)} disabled={off} onPress={() => io.press("a")} />
     </div>
   </>;
@@ -93,11 +95,13 @@ export const floorIsLavaClient: MatchClient = {
   // 2.5D presentation; the canvas above stays as fallback without WebGL.
   world: () => import("../../three/lavaWorld").then(m => m.createLavaWorld),
   banner(view, viewer) {
-    const g = view.game as LavaGame, last = g.history.at(-1);
+    const g = view.game as LavaGame, last = g.history.at(-1), me = g.runners[viewer];
+    // In the lava for a moment: the return is announced (the canvas hides the figure meanwhile).
+    if (g.phase === "play" && me?.alive && me.respawnAt) return { title: "In der Lava!", text: `Ein Leben weg – gleich bist du zurück (${me.lives} übrig)` };
     if (g.phase === "play" || view.done) return undefined;
     return { title: last?.tiebreak ? "Stechrunde vorbei" : `Durchgang ${g.round} vorbei`, text: last?.winners.includes(viewer) ? "Du stehst am längsten!" : `+${last?.points[viewer] ?? 0} Punkte für dich` };
   },
-  quiet: ["jump", "dash", "drop"],
+  quiet: ["jump", "dash", "drop", "dive", "back"],
   Controls: LavaControls,
   status(view, viewer) {
     const g = view.game as LavaGame, me = g.runners[viewer];
@@ -106,6 +110,7 @@ export const floorIsLavaClient: MatchClient = {
   },
   sound(event, viewer) {
     if (event.kind === "jump" || event.kind === "drop") return event.ids.includes(viewer) ? "bounce" : undefined;
+    if (event.kind === "dive") return event.ids.includes(viewer) ? "power" : undefined;
     if (event.kind === "hit" || event.kind === "out") return event.ids[0] === viewer ? "fail" : event.ids[1] === viewer ? "win" : "hit";
     if (event.kind === "shove") return event.ids[0] === viewer ? "hit" : event.ids[1] === viewer ? "bounce" : undefined;
     if (event.kind === "result") return event.ids.includes(viewer) ? "win" : "score";

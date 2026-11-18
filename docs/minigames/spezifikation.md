@@ -172,17 +172,17 @@ Stabilitätserkennung, Turmhöhe und Zugverwaltung.
 Spielfeld tödliche Lichtspuren. Während sich die Arena verkleinert, müssen
 die Spieler immer schwierigere Wege finden.
 
-**Steuerung:** Richtungswechsel per Wischgeste oder zwei Richtungstasten.
+**Steuerung:** Stick zeigt die gewünschte Richtung, zwei Haltetasten lenken
+voll nach links oder rechts (seit Nov. 2026; vorher Wischen auf einem Raster).
 
 **Mechanik und Regeln:**
 
 - Alle Gleiter bewegen sich automatisch mit gleicher Geschwindigkeit auf
-  einem Raster.
-- Spieler können ausschließlich um 90 Grad abbiegen.
-- Sofortige 180-Grad-Wenden sind verboten.
+  einem freien Feld (30 × 48 Einheiten) und lenken stufenlos mit begrenzter
+  Lenkrate (kein Raster, keine 90-Grad-Schritte).
 - Jede Bewegung hinterlässt eine dauerhaft blockierende Lichtspur.
 - Kollision mit Wand, eigener Spur oder fremder Spur bedeutet Ausscheiden.
-- Nach 12 Sekunden beginnt die Arena schrittweise zu schrumpfen.
+- Nach 14 Sekunden beginnt die Arena stetig zu schrumpfen.
 - Drei Durchgänge werden gespielt.
 - Für jeden überlebten Gegner gibt es +1 Punkt.
 - Der letzte Überlebende erhält zusätzlich 3 Punkte.
@@ -190,8 +190,9 @@ die Spieler immer schwierigere Wege finden.
 
 **Sieg:** Höchste Gesamtpunktzahl nach 3 Durchgängen.
 
-**Technik:** Deterministische Rasterbewegung, belegte Felder, synchrone
-Kollisionen und Arenaverkleinerung.
+**Technik:** Deterministische Bewegung im festen 50-ms-Schritt, Spuren als
+Polylinien (in der Sicht kompakt als Zeichenkette), synchrone Kollisionen und
+Arenaverkleinerung.
 
 ## 6. Arrow Masters – Bogenschützen-Turnier
 

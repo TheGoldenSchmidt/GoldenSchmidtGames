@@ -18,6 +18,7 @@ async function playUntil(session: Session, done: (game: PartyGame) => boolean) {
     else if (game.phase === "trophy") await session.action({ type: "trophy", buy: true });
     else if (game.phase === "shop") await session.action({ type: "shop" });
     else if (game.phase === "gift") await session.action({ type: "gift", accept: false });
+    else if (game.phase === "duel") await session.action({ type: "duel" });
     else if (game.phase === "summary" || game.phase === "mini-result") await session.action({ type: "next" });
     else if (game.phase === "mini-intro") { for (const id of session.ids) if (!game.mini!.runs[id].ready) await session.action({ type: "ready" }, id); }
     else if (game.phase === "mini-play") {

@@ -33,8 +33,29 @@ for (const id of ["sumo", "bumpercars"] as const) {
     const v = put(s, "p0", s.game.radius - .1, 0); v.vx = 6; v.lastHitBy = "p1"; v.lastHitAt = s.time;
     step(s, 100);
     assert.equal(v.out, true); assert.equal(v.lives, 2); assert.equal(s.game.fighters.p1.ringOuts, 1);
-    step(s, 2000);
-    assert.equal(v.out, false); assert.ok(v.shieldUntil > s.time && Math.hypot(v.x, v.y) < s.game.radius - 1, "Respawn mit Schutz innen");
+    const p2 = s.game.fighters.p2, fresh = make(id, 3);
+    if (id === "bumpercars") {
+      // Bumper Mayhem: until the restart everyone stands still; then all are back on their own start places.
+      act(s, "p2", { x: 1 }); step(s, 600);
+      assert.ok(Math.hypot(p2.x + 3, p2.y + 3) < .2 && p2.actionAt < 0, "Pause nach dem Ring-Out: niemand fährt, keine Aktion");
+      step(s, 1400);
+      assert.equal(v.out, false); assert.ok(v.shieldUntil > s.time && Math.hypot(v.x, v.y) < s.game.radius - 1, "Respawn mit Schutz innen");
+      // (Bumper Mayhem's turning posts may already nudge a car in the step after the restart.)
+      for (const pid of ["p0", "p1", "p2"]) { const f = s.game.fighters[pid], start = fresh.game.fighters[pid]; assert.ok(Math.hypot(f.x - start.x, f.y - start.y) < .15, `${pid} wieder auf dem Startplatz`); }
+      assert.ok(s.events.some(e => e.kind === "reset"));
+    } else {
+      // Sumo with three: the others keep playing; only the fallen one returns, on a free spot with protection.
+      send(s, "p2", { x: 1 }); step(s, 600);
+      assert.ok(Math.hypot(p2.x + 3, p2.y + 3) > .5, "Die anderen spielen weiter"); assert.equal(s.game.resetAt, undefined);
+      step(s, 1400);
+      assert.equal(v.out, false); assert.ok(v.shieldUntil > s.time && Math.hypot(v.x, v.y) < s.game.radius - 1, "Respawn mit Schutz innen");
+      assert.ok(!s.events.some(e => e.kind === "reset"), "Kein Neustart für alle");
+      // One on one: everyone back on the start places.
+      const d = make(id, 2), fall = put(d, "p0", d.game.radius - .1, 0); fall.vx = 6; put(d, "p1", -1, 0);
+      step(d, 100); assert.ok(d.game.resetAt !== undefined, "Zu zweit: Neustart");
+      step(d, 2100); const start = make(id, 2);
+      for (const pid of ["p0", "p1"]) assert.ok(Math.hypot(d.game.fighters[pid].x - start.game.fighters[pid].x, d.game.fighters[pid].y - start.game.fighters[pid].y) < 1e-6, `${pid} im Duell auf dem Startplatz`);
+    }
     const late = put(s, "p0", s.game.radius - .1, 0); late.vx = 6; late.lastHitBy = "p1"; late.lastHitAt = s.time - 3100;
     step(s, 100);
     assert.equal(s.game.fighters.p1.ringOuts, 1, "Alte Berührung zählt nicht");
@@ -85,7 +106,8 @@ for (const id of ["sumo", "bumpercars"] as const) {
   const at = s.game.fighters.p0.actionAt;
   act(s, "p0", { x: 1 }); step(s, 50);
   assert.equal(s.game.fighters.p0.actionAt, at, "Abklingzeit");
-  step(s, SUMO.cooldown); act(s, "p0", { x: 1 });
+  // The victim flew out: the restart from the start places comes first, then the cooldown is over.
+  step(s, SUMO.cooldown + 400); act(s, "p0", { x: 1 });
   assert.ok(s.game.fighters.p0.actionAt > at);
   const t = make("sumo", 2);
   put(t, "p0", -1.2, 0, 0); put(t, "p1", 0, 0).shieldUntil = 99999;

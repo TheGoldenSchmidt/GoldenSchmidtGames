@@ -107,7 +107,7 @@ test("Quick Draw: Fehlstart vor dem Signal und Übung gegen Bots", async ({ page
   } finally { session.close(); }
 });
 
-test("Light Trails: Wischen und Abbiegetasten lenken den eigenen Gleiter", async ({ page }, testInfo) => {
+test("Light Trails: Stick und Halteknöpfe lenken den eigenen Gleiter stufenlos", async ({ page }, testInfo) => {
   await page.emulateMedia({ reducedMotion: "no-preference" });
   const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "trails" });
   try {
@@ -117,15 +117,19 @@ test("Light Trails: Wischen und Abbiegetasten lenken den eigenen Gleiter", async
     await matchStarted(page);
     const rider = async () => ((await session.state()).partyGame!.mini!.match as MatchState<TrailsGame>).game.riders[session.ids[0]];
     const start = await rider();
-    const zone = page.getByRole("group", { name: "Wischen, um abzubiegen" });
-    const box = (await zone.boundingBox())!;
-    // Echte Wischgeste: senkrecht zur Fahrtrichtung.
-    const vertical = start.dir === 1 || start.dir === 3, cx = box.x + box.width / 2, cy = box.y + box.height / 3;
+    // Stick towards the field centre: the heading changes smoothly (not by 90°).
+    const stick = (await page.getByRole("group", { name: "Bewegungsstick" }).boundingBox())!;
+    const cx = stick.x + stick.width / 2, cy = stick.y + stick.height / 2, dx = 15 - start.x, dy = 24 - start.y, n = Math.hypot(dx, dy) || 1;
     await page.mouse.move(cx, cy); await page.mouse.down();
-    await page.mouse.move(vertical ? cx : cx + 60, vertical ? cy + 60 : cy, { steps: 4 }); await page.mouse.up();
-    await expect.poll(async () => (await rider()).path.length, { timeout: 3000 }).toBeGreaterThan(1);
-    await page.getByRole("button", { name: "Links", exact: true }).tap();
-    await expect.poll(async () => (await rider()).path.length, { timeout: 3000 }).toBeGreaterThan(2);
+    await page.mouse.move(cx + dx / n * 40, cy + dy / n * 40, { steps: 3 });
+    await expect.poll(async () => Math.abs(Math.atan2(Math.sin((await rider()).a - start.a), Math.cos((await rider()).a - start.a))), { timeout: 3000 }).toBeGreaterThan(.3);
+    await page.mouse.up();
+    // Holding "Links" turns left for as long as it is held.
+    const left = (await page.getByRole("button", { name: "Links", exact: true }).boundingBox())!;
+    const before = (await rider()).a;
+    await page.mouse.move(left.x + left.width / 2, left.y + left.height / 2); await page.mouse.down();
+    await expect.poll(async () => Math.atan2(Math.sin(before - (await rider()).a), Math.cos(before - (await rider()).a)), { timeout: 3000 }).toBeGreaterThan(.3);
+    await page.mouse.up();
     await page.screenshot({ path: testInfo.outputPath("trails.png") });
     await session.action({ type: "finish" }, session.ids[1]);
     await expect(page.getByRole("heading", { name: "Euer Ergebnis", exact: true })).toBeVisible();
@@ -221,9 +225,22 @@ for (const motion of ["no-preference", "reduce"] as const) test(`Tank Trouble �
     await page.mouse.move(stick.x + stick.width / 2, stick.y + stick.height / 2 - 45, { steps: 3 });
     await expect.poll(async () => { const input = await own(); return forward(input.x, input.y); }, { timeout: 3000 }).toBeGreaterThan(.9);
     await page.mouse.up();
-    // Swiping on the upper left turns the camera.
+    // Swiping on the upper right turns the camera – also while the left thumb holds the stick.
     const stage = (await page.locator(".match-stage").boundingBox())!;
-    expect(Math.abs(await swipeCamera(page, { x: stage.x + 30, y: stage.y + stage.height * .2 }, 100))).toBeGreaterThan(.4);
+    expect(Math.abs(await swipeCamera(page, { x: stage.x + stage.width - 130, y: stage.y + stage.height * .2 }, 100))).toBeGreaterThan(.4);
+    {
+      const pad = (await page.getByRole("group", { name: "Bewegungsstick" }).boundingBox())!, client = await page.context().newCDPSession(page);
+      const sx = pad.x + pad.width / 2, sy = pad.y + pad.height / 2, cx = stage.x + stage.width - 130, cy = stage.y + stage.height * .2;
+      const touch = (type: "touchStart" | "touchMove" | "touchEnd", points: { x: number; y: number; id: number }[]) => client.send("Input.dispatchTouchEvent", { type, touchPoints: points.map(p => ({ x: p.x, y: p.y, id: p.id })) });
+      const before = Number(await world.getAttribute("data-yaw"));
+      await touch("touchStart", [{ x: sx, y: sy, id: 1 }]);
+      await touch("touchMove", [{ x: sx, y: sy - 40, id: 1 }]);
+      await touch("touchStart", [{ x: sx, y: sy - 40, id: 1 }, { x: cx, y: cy, id: 2 }]);
+      for (let k = 1; k <= 6; k++) await touch("touchMove", [{ x: sx, y: sy - 40, id: 1 }, { x: cx + k * 18, y: cy, id: 2 }]);
+      await expect.poll(async () => { const input = await own(); return Math.hypot(input.x, input.y); }, { timeout: 3000 }).toBeGreaterThan(.5);
+      await touch("touchEnd", []);
+      expect(Math.abs(Number(await world.getAttribute("data-yaw")) - before)).toBeGreaterThan(.3);
+    }
     // Drag up on the right half = aim ahead; release fires.
     const aim = (await page.getByRole("group", { name: "Zielen und schießen" }).boundingBox())!;
     await page.mouse.move(aim.x + aim.width / 2, aim.y + aim.height / 2); await page.mouse.down();
@@ -275,7 +292,7 @@ for (const motion of ["no-preference", "reduce"] as const) test(`Bomb Arena 2.5D
   } finally { session.close(); }
 });
 
-for (const [miniId, name] of [["bombs", "Bomb Arena"], ["tanks", "Tank Trouble"], ["lava", "Floor is Lava"], ["sumo", "Sumo Smash"], ["chaosrun", "Chaos Run"]] as const) test(`${name} 2.5D mit sechs Figuren: alle stehen im Feld, Zeichenaufwand bleibt begrenzt`, async ({ page }, testInfo) => {
+for (const [miniId, name] of [["bombs", "Bomb Arena"], ["tanks", "Tank Trouble"], ["lava", "Floor is Lava"], ["sumo", "Sumo Smash"], ["bumpercars", "Bumper Mayhem"], ["chaosrun", "Chaos Run"]] as const) test(`${name} 2.5D mit sechs Figuren: alle stehen im Feld, Zeichenaufwand bleibt begrenzt`, async ({ page }, testInfo) => {
   await page.emulateMedia({ reducedMotion: "no-preference" });
   const six = ["alpha_rick_prime", "alpha_morty_smith", "alpha_summer_smith", "alpha_eric_cartman", "alpha_korvo", "alpha_mr_poopybutthole"] as const;
   const session = await onlineSession(page, false, [...six], false, "free-minigame", { miniId });
@@ -284,8 +301,9 @@ for (const [miniId, name] of [["bombs", "Bomb Arena"], ["tanks", "Tank Trouble"]
     for (const other of session.ids.slice(1)) await session.action({ type: "ready" }, other);
     await matchStarted(page);
     const world = page.locator(".match-world");
-    // Sumo Smash and Chaos Run use the rigged characters: six different looks (body, skin, hair) instead of the chosen figures.
-    await expect.poll(async () => { const looks = Object.values(JSON.parse(await world.getAttribute("data-figures") ?? "{}")) as string[]; return miniId === "sumo" || miniId === "chaosrun" ? new Set(looks).size : looks.sort(); }, { timeout: 20000 }).toEqual(miniId === "sumo" || miniId === "chaosrun" ? 6 : [...six].sort());
+    // Sumo Smash, Bumper Mayhem and Chaos Run use the rigged characters: six different looks (body, skin, hair) instead of the chosen figures.
+    const rigged = miniId === "sumo" || miniId === "bumpercars" || miniId === "chaosrun";
+    await expect.poll(async () => { const looks = Object.values(JSON.parse(await world.getAttribute("data-figures") ?? "{}")) as string[]; return rigged ? new Set(looks).size : looks.sort(); }, { timeout: 20000 }).toEqual(rigged ? 6 : [...six].sort());
     // Measure while all figures are still on the field (in Floor is Lava idle players soon sink).
     await expect.poll(async () => Number(await world.getAttribute("data-draw-calls")), { timeout: 5000 }).toBeGreaterThan(40);
     const calls = Number(await world.getAttribute("data-draw-calls")), triangles = Number(await world.getAttribute("data-triangles"));
@@ -297,7 +315,7 @@ for (const [miniId, name] of [["bombs", "Bomb Arena"], ["tanks", "Tank Trouble"]
   } finally { session.close(); }
 });
 
-for (const [miniId, name] of [["bombs", "Bomb Arena"], ["tanks", "Tank Trouble"], ["lava", "Floor is Lava"], ["sumo", "Sumo Smash"], ["chaosrun", "Chaos Run"]] as const) test(`${name} ohne WebGL: die 2D-Fläche übernimmt, das Spiel läuft bis zum Ergebnis`, async ({ page }) => {
+for (const [miniId, name] of [["bombs", "Bomb Arena"], ["tanks", "Tank Trouble"], ["lava", "Floor is Lava"], ["sumo", "Sumo Smash"], ["bumpercars", "Bumper Mayhem"], ["chaosrun", "Chaos Run"]] as const) test(`${name} ohne WebGL: die 2D-Fläche übernimmt, das Spiel läuft bis zum Ergebnis`, async ({ page }) => {
   await page.addInitScript(() => {
     const original = HTMLCanvasElement.prototype.getContext;
     HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, kind: string, ...rest: unknown[]) {
@@ -361,8 +379,8 @@ for (const motion of ["no-preference", "reduce"] as const) test(`Floor is Lava 2
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down();
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2 - 40, { steps: 3 });
     await expect.poll(async () => Math.hypot((await me()).x - start.x, (await me()).y - start.y), { timeout: 4000 }).toBeGreaterThan(.4);
-    await page.getByRole("button", { name: "Springen", exact: true }).tap();
-    await expect.poll(async () => (await me()).airUntil, { timeout: 3000 }).toBeGreaterThan(0);
+    // Tap again while the figure is still in the lava (it returns after a second) or dropping a floor.
+    await expect.poll(async () => { const r = await me(); if (r.airUntil > 0) return true; await page.getByRole("button", { name: "Springen", exact: true }).tap(); return false; }, { timeout: 6000, intervals: [300] }).toBe(true);
     await page.screenshot({ path: testInfo.outputPath(`lava-3d-jump-${motion}.png`) });
     await page.mouse.up();
     // After landing: the shove starts a dash and its cooldown.

@@ -71,6 +71,26 @@ Münz- und Ereignisfelder wirken weiterhin beim Landen, nicht beim Vorbeilaufen.
 Die Clients zeigen denselben Weg und Zeitpunkt. Reduzierte Bewegung kann die
 Animation verkürzen, zieht die serverseitige Wirkung aber nicht vor.
 
+## Duellfelder
+
+Die vier früheren Aussichtsfelder (8, 18, 27 und 31) sind in der Inselparty
+**Duellfelder** (⚔). Wer dort landet, fordert eine andere Person mit eigenen
+Münzen heraus und nennt einen Einsatz von 1 bis 10 Münzen, höchstens so viel,
+wie beide besitzen; Verzichten ist möglich. Beide zahlen den Einsatz sofort in
+den Pott. Danach spielen nur die beiden ein Match-Minispiel aus dem Duell-Pool
+(Quick Draw, Sumo Smash, Bumper Mayhem, Neon Pong 1v1, Tank Trouble, Light
+Trails; nicht zweimal hintereinander dasselbe). Alle anderen schauen auf ihrem
+Handy live zu. Die alleinige Erstplatzierte erhält den ganzen Pott (doppelter
+Einsatz); bei Gleichstand oder ohne gewertete Teilnahme bekommen beide ihren
+Einsatz zurück. Duelle vergeben keine 10/4/2-Münzen und zählen nicht als
+Minispielsieg; das Schutzschild wirkt nicht gegen den eigenen Einsatz. Ohne
+eigene Münzen oder ohne möglichen Gegner wirkt das Feld nicht. Läuft die
+Online-Frist ab oder pausiert die herausfordernde Person, entfällt das Duell.
+Nach dem Ergebnis geht der Zug mit der Zusammenfassung weiter. Bots fordern
+die reichste Person mit bis zu 5 Münzen heraus. Roll It Up! behält an diesen
+Stellen schlichte Felder. In Testpartien mit Bots setzt das Testwerkzeug
+„Duellfeld testen“ die eigene Figur direkt auf Feld 8.
+
 ## Trophäenstand, letzte Runden und Bonus-Trophäen
 
 Der Trophäenstand beginnt an Shop 6. Nach jedem Kauf zieht er zufällig zu einem
@@ -170,6 +190,10 @@ das Match. Details: [Konzept](minigames/konzept.md).
 
 ## Tests
 
+`test:rules` prüft in `scripts/party-duel-test.ts` die Duellfelder (Einsatzgrenzen,
+Pott, Zuschauen, Unentschieden, Verzicht, Frist, Bots); `test:online` spielt
+dabei ein Duell über den Socket, `tests/browser/party-duel.spec.ts` den Ablauf
+auf dem Handy in beiden Bewegungseinstellungen.
 `test:rules` prüft in `scripts/party-finale-test.ts` den wechselnden
 Trophäenstand, die Schlussrunden mit Rückenwind und die Bonus-Trophäen samt
 Gleichständen. `tests/browser/party-finale.spec.ts` spielt eine Partie mit zwei

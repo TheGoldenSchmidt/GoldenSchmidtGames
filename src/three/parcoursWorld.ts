@@ -2,7 +2,7 @@ import { PRACTICE_STATIONS } from "../../shared/matches/proberaumCourse";
 import { PRACTICE_LOOPS, PRACTICE_SHOTS } from "../matches/practiceAnimations";
 import * as T from "three";
 import { blinkOpen, blinkWarn, boxAt, course, gooAt, sweeperAngle, type Box, type Look } from "../../shared/matches/parcoursCourses";
-import { shownRacer, type ParcoursGame } from "../../shared/matches/parcours";
+import { PC, shownRacer, type ParcoursGame } from "../../shared/matches/parcours";
 import { followCamera, takeCameraTurn, type ChaseLocal, type MatchWorld, type MatchWorldFrame } from "../matches/client";
 import { ChaseCamera, Debris, Impact } from "./matchScene";
 import { riggedFigure, type CharacterKit, type RiggedFigure } from "./riggedFigure";
@@ -20,11 +20,11 @@ const FIGURE_H = 1.6;
 const COLOR = {
   sky: 0x1d2466, fog: 0x2b3790, floor: 0xffd166, side: 0xd9893c, wall: 0x6544e8, door: 0xff86c8, pusher: 0xe3263b,
   belt: 0x3a3f66, stripe: 0xfff9ed, step: 0xffe3a3, seesaw: 0x57e4cb, tile: 0xbfe6ff, tileGood: 0x7be38f, roller: 0xb23a48,
-  ledge: 0xffb347, finish: 0xfff9ed, trap: 0xffe3a3, hold: 0xc98bff, warn: 0xff6a1f, wind: 0xbfe6ff, ink: 0x24133f, goo: 0x8dff5a, bar: 0xff5f8f, post: 0xfff9ed, own: 0xffe44e, flag: 0x57e4cb
+  ledge: 0xffb347, finish: 0xfff9ed, trap: 0xffe3a3, hold: 0xc98bff, warn: 0xff6a1f, shut: 0x4a2a5c, wind: 0xbfe6ff, ink: 0x24133f, goo: 0x8dff5a, bar: 0xff5f8f, post: 0xfff9ed, own: 0xffe44e, flag: 0x57e4cb
 } as const;
 const LOOK_COLOR: Record<Look, number> = { floor: COLOR.floor, wall: COLOR.wall, door: COLOR.door, pusher: COLOR.pusher, belt: COLOR.belt, step: COLOR.step, seesaw: COLOR.seesaw, tile: COLOR.tile, roller: COLOR.roller, ledge: COLOR.ledge, finish: COLOR.finish, trap: COLOR.trap, hold: COLOR.hold };
 
-interface RacerView { fig: RiggedFigure; ring: T.Mesh; loop: string }
+interface RacerView { fig: RiggedFigure; ring: T.Mesh; loop: string; air: boolean; pose: string }
 
 export function createParcoursWorld(host: HTMLElement, read: () => MatchWorldFrame, onError: () => void, chars: CharacterKit): MatchWorld {
   const kit = new SceneKit(host, onError), world = new T.Group();
@@ -63,12 +63,13 @@ export function createParcoursWorld(host: HTMLElement, read: () => MatchWorldFra
   // Finals have no finish line; the course length follows the boxes.
   const end = Math.max(...c.boxes.map(b => b.z1));
   if (!c.elimination && !c.practice) {
-    for (let k = 0; k < 10; k++) kit.box(world, k % 2 ? COLOR.finish : COLOR.ink, -4.5 + k, c.finishY + .02, -c.finishZ, 1, .02, .5);
-    for (const side of [-1, 1]) kit.box(world, COLOR.post, side * 5.2, c.finishY + 1.6, -c.finishZ, .3, 3.2, .3);
-    kit.box(world, COLOR.door, 0, c.finishY + 3.3, -c.finishZ, 10.7, .4, .4);
+    const half = c.width / 2;
+    for (let k = 0; k < c.width; k++) kit.box(world, k % 2 ? COLOR.finish : COLOR.ink, -half + .5 + k, c.finishY + .02, -c.finishZ, 1, .02, .5);
+    for (const side of [-1, 1]) kit.box(world, COLOR.post, side * (half + .2), c.finishY + 1.6, -c.finishZ, .3, 3.2, .3);
+    kit.box(world, COLOR.door, 0, c.finishY + 3.3, -c.finishZ, c.width + .7, .4, .4);
   }
   // Checkpoint flags along the left edge.
-  for (const cp of (c.practice?[]:c.checkpoints.slice(1))) { kit.cylinder(world, COLOR.post, -5.3, cp.y + 1, -cp.z, .05, 2); kit.box(world, COLOR.flag, -5, cp.y + 1.8, -cp.z, .55, .35, .03); }
+  for (const cp of (c.practice?[]:c.checkpoints.slice(1))) { kit.cylinder(world, COLOR.post, -c.width / 2 - .3, cp.y + 1, -cp.z, .05, 2); kit.box(world, COLOR.flag, -c.width / 2, cp.y + 1.8, -cp.z, .55, .35, .03); }
 
   const meshFor = (b: Box) => { const m = kit.box(world, LOOK_COLOR[b.look], 0, 0, 0, b.x1 - b.x0, b.y1 - b.y0, b.z1 - b.z0); m.castShadow = true; m.receiveShadow = true; return m; };
   c.boxes.forEach(b => {
@@ -78,8 +79,8 @@ export function createParcoursWorld(host: HTMLElement, read: () => MatchWorldFra
       const plank = kit.box(pivot, COLOR.seesaw, 0, -(b.y1 - b.y0) / 2, 0, b.x1 - b.x0, b.y1 - b.y0, b.z1 - b.z0); plank.castShadow = true; plank.receiveShadow = true;
       kit.box(world, COLOR.ink, (b.x0 + b.x1) / 2, b.y0 - 1.5, -(b.z0 + b.z1) / 2, .4, 3, .4);
       seesaws.set(b.seesaw, pivot);
-    } else if (b.door !== undefined) { const m = meshFor(b); m.position.copy(W((b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2, (b.z0 + b.z1) / 2)); doors.set(b.door, m); }
-    else if (b.tile !== undefined) { const m = meshFor(b); m.position.copy(W((b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2, (b.z0 + b.z1) / 2)); tiles.set(b.tile, m); }
+    } else if (b.door !== undefined) { const m = meshFor(b); m.material = (m.material as T.MeshStandardMaterial).clone(); m.position.copy(W((b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2, (b.z0 + b.z1) / 2)); doors.set(b.door, m); }
+    else if (b.tile !== undefined) { const m = meshFor(b); m.material = (m.material as T.MeshStandardMaterial).clone(); m.userData.look = b.look; m.position.copy(W((b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2, (b.z0 + b.z1) / 2)); tiles.set(b.tile, m); }
     else if (b.blink) { const m = meshFor(b); m.position.copy(W((b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2, (b.z0 + b.z1) / 2)); m.material = (m.material as T.MeshStandardMaterial).clone(); blinking.push({ b, mesh: m, base: new T.Color(LOOK_COLOR[b.look]) }); }
     else if (b.move) dynamic.push({ b, mesh: meshFor(b) });
   });
@@ -119,7 +120,7 @@ export function createParcoursWorld(host: HTMLElement, read: () => MatchWorldFra
   const dust = new Debris(world, 80, new T.MeshStandardMaterial({ color: 0xfff9ed, roughness: 1 })), impact = new Impact(world, kit);
   const warnColor = new T.Color(COLOR.warn), views = new Map<string, RacerView>(), chaseCam = new ChaseCamera(kit, c.practice?6.2:4.4, c.practice?4:2.8, 2.6, .9), target = new T.Vector3();
   let lastPreview=0,lastTravel=-1;
-  let shownId = "", frame = 0, last = performance.now(), lastSeq = 0, fresh = true, doorState = "", tileState = "";
+  let shownId = "", frame = 0, last = performance.now(), lastSeq = 0, fresh = true, respawning = false, doorState = "", tileState = "";
 
   const viewFor = (id: string, style: number, chosen: string | undefined, own: boolean): RacerView => {
     let v = views.get(id);
@@ -128,12 +129,14 @@ export function createParcoursWorld(host: HTMLElement, read: () => MatchWorldFra
     world.add(fig.group);
     const ring = kit.mesh(world, new T.TorusGeometry(.42, own ? .06 : .04, 6, 28), own ? COLOR.own : PLAYER_COLORS[style % PLAYER_COLORS.length], 0, 0, 0);
     ring.rotation.x = Math.PI / 2; ring.castShadow = false;
-    v = { fig, ring, loop: "" }; views.set(id, v); return v;
+    v = { fig, ring, loop: "", air: false, pose: "run" }; views.set(id, v); return v;
   };
   const loop = (v: RacerView, state: Parameters<RiggedFigure["setLoop"]>[0], speed?: number) => { if (v.loop !== state || speed !== undefined) { v.fig.setLoop(state, speed); v.loop = state; } };
 
   const animate = (time: number) => {
-    const f = read(), s = f.cur, g = s.game as ParcoursGame, prev = f.prev.game as ParcoursGame, reduced = f.reduced, dt = Math.min(.05, (time - last) / 1000), t = f.simTime;
+    const f = read(), s = f.cur, g = s.game as ParcoursGame, prev = f.prev.game as ParcoursGame, reduced = f.reduced, dt = Math.min(.05, (time - last) / 1000);
+    // Obstacles at the same moment as the (interpolated) racers, so what touches on screen touches in the rules.
+    const t = f.prev.time + (s.time - f.prev.time) * f.alpha;
     last = time;
     // Moving parts follow the shared time functions.
     for (const { b, mesh } of dynamic) { const bb = boxAt(b, t); mesh.position.copy(W((bb.x0 + bb.x1) / 2, (bb.y0 + bb.y1) / 2, (bb.z0 + bb.z1) / 2)); }
@@ -156,11 +159,21 @@ export function createParcoursWorld(host: HTMLElement, read: () => MatchWorldFra
     if (!reduced) for (const { mesh, b } of stripes) { const len = b.z1 - b.z0, along = -mesh.position.z - b.z0 + (b.belt ?? 0) * dt; mesh.position.z = -(b.z0 + ((along % len) + len) % len); }
     // Doors that broke burst; tiles show what is known.
     if (g.doors !== doorState) {
-      [...g.doors].forEach((d, i) => { const m = doors.get(i); if (!m) return; if (d === "1" && m.visible) { m.visible = false; if (!reduced && doorState) dust.burst(m.position.x, m.position.y, m.position.z, time, { count: 10, speed: 2.4, up: 2.5, size: .16, color: COLOR.door }); } });
+      [...g.doors].forEach((d, i) => {
+        const m = doors.get(i); if (!m) return;
+        if (d === "1" && m.visible) { m.visible = false; if (!reduced && doorState) dust.burst(m.position.x, m.position.y, m.position.z, time, { count: 10, speed: 2.4, up: 2.5, size: .16, color: COLOR.door }); }
+        // Tried and solid: dark, so everyone knows this one stays shut.
+        (m.material as T.MeshStandardMaterial).color.setHex(d === "2" ? COLOR.shut : COLOR.door);
+      });
       doorState = g.doors;
     }
     if (g.tiles !== tileState) {
-      [...g.tiles].forEach((state, i) => { const m = tiles.get(i); if (!m) return; m.visible = state !== "2"; (m.material as T.MeshStandardMaterial).color.setHex(state === "1" ? COLOR.tileGood : COLOR.tile); });
+      [...g.tiles].forEach((state, i) => {
+        const m = tiles.get(i); if (!m) return;
+        m.visible = state !== "2";
+        // Hidden-path plates show what is known; lane floors (trapdoors) look like any floor.
+        if (m.userData.look === "tile") (m.material as T.MeshStandardMaterial).color.setHex(state === "1" ? COLOR.tileGood : COLOR.tile);
+      });
       tileState = g.tiles;
     }
     // Events: animations and feedback.
@@ -168,9 +181,11 @@ export function createParcoursWorld(host: HTMLElement, read: () => MatchWorldFra
       if (e.seq <= lastSeq) continue;
       const v = views.get(e.ids[0]), r = g.racers[e.ids[0]];
       if (!v) continue;
-      if (e.kind === "jump") v.fig.play("jumpStart");
-      else if (e.kind === "dive") v.fig.play("dash");
-      else if (e.kind === "land") v.fig.play("land");
+      // The take-off crouch is skipped (the jump already started) and played faster: a jump lasts only ~0.7 s.
+      if (e.kind === "jump") v.fig.play("jumpStart", 1.6, .22);
+      else if (e.kind === "dive") v.fig.play("dash", 1.3);
+      else if (e.kind === "land") v.fig.play("land", 2.2, .1);
+      else if (e.kind === "shove") v.fig.play("hitLight");
       else if (e.kind === "hit") { v.fig.play("hit"); if (r && !reduced) dust.burst(r.x, r.y + .8, -r.z, time, { count: 6, speed: 1.6, up: 2, size: .08, life: 450 }); if (e.ids[0] === f.viewer && r) impact.hit(r.x, -r.z, time, reduced, .5); }
       else if (e.kind === "door" && r && e.ids[0] === f.viewer) impact.hit(r.x, -r.z, time, reduced, .4);
       else if (e.kind === "finish") v.fig.play("cheer");
@@ -187,16 +202,27 @@ export function createParcoursWorld(host: HTMLElement, read: () => MatchWorldFra
       const hidden = !!r.respawnAt || r.pose === "out";
       v.fig.group.visible = !hidden; v.ring.visible = !hidden && r.grounded;
       v.fig.group.position.set(x, y, -z); v.ring.position.set(x, y + .03, -z);
-      v.fig.group.rotation.y = r.pose === "done" ? 0 : Math.PI - r.face;
+      // Hanging and climbing: facing the wall.
+      const face = (r.pose === "hang" || r.pose === "climb") && r.hang ? Math.atan2(-r.hang.nx, -r.hang.nz) : r.face;
+      v.fig.group.rotation.y = r.pose === "done" ? 0 : Math.PI - face;
       const speed = Math.hypot(r.vx, r.vz);
+      // Touching down ends the jump animation at once; a slow landing gets a short knee bend.
+      const airborne = !r.grounded && (r.pose === "air" || r.pose === "stun");
+      if (v.air && r.grounded) { v.fig.stopShot(); if (speed < 2 && r.pose === "run") v.fig.play("land", 2.6, .1); }
+      v.air = airborne;
+      // The climb animation runs while the rules lift the racer up the wall.
+      if (r.pose === "climb" && v.pose !== "climb") v.fig.stopShot();
+      v.pose = r.pose;
       if(c.practice && p.id===f.viewer && f.local.practiceLoop!==undefined){
         loop(v,PRACTICE_LOOPS[f.local.practiceLoop]?.clip??"idle");
         if(f.local.practiceShotSeq && f.local.practiceShotSeq!==lastPreview){lastPreview=f.local.practiceShotSeq;v.fig.play(PRACTICE_SHOTS[f.local.practiceShot]?.clip??"cheer");}
       }
       else if (r.pose === "done") loop(v, "dance");
-      else if (r.pose === "hang" || r.grab) loop(v, "push");
+      else if (r.pose === "climb") loop(v, "climb", .67 / (PC.climbMs / 1000) * .9);
+      else if (r.pose === "hang") loop(v, "hang");
+      else if (r.grab) loop(v, "push");
       else if (r.pose === "dive" || r.pose === "prone") loop(v, "slide");
-      else if (r.duck) loop(v, "slide");
+      else if (r.duck) loop(v, speed > .5 ? "crouchWalk" : "crouch", speed / 2);
       else if (!r.grounded) loop(v, "air");
       else if (speed > 4) loop(v, "sprint", speed / 6.4);
       else if (speed > .6) loop(v, "jog", speed / 3.5);
@@ -212,7 +238,10 @@ export function createParcoursWorld(host: HTMLElement, read: () => MatchWorldFra
     if (mine) {
       const before = prev.racers?.[mine.id], a = before && Math.hypot(before.x - mine.x, before.z - mine.z) < 3 ? f.alpha : 1;
       target.set(before ? before.x + (mine.x - before.x) * a : mine.x, before ? before.y + (mine.y - before.y) * a : mine.y, -(before ? before.z + (mine.z - before.z) * a : mine.z));
-      const moving = Math.hypot(mine.vx, mine.vz) > 1 && (mine.pose === "run" || mine.pose === "air");
+      // The camera looks along the start direction (and again after a respawn); afterwards only a swipe turns it.
+      // Watching someone else, it follows that racer's heading.
+      if (mine.respawnAt) respawning = true; else if (respawning) { respawning = false; fresh = true; }
+      const moving = !ownCam && Math.hypot(mine.vx, mine.vz) > 1 && (mine.pose === "run" || mine.pose === "air");
       if (ownCam) takeCameraTurn(local, d => chaseCam.turn(d));
       chaseCam.tune(f.local as ChaseLocal);
       chaseCam.update(target, moving || fresh ? mine.face : undefined, dt, reduced, 1.4);

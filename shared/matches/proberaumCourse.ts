@@ -36,7 +36,7 @@ export function proberaum(): Course {
   boxes.push(floor(7,13,53,56,3.7,"ledge"));
   return {id:"proberaum",name:"Die Übungsinsel",practice:true,width:32,finishZ:60,finishY:0,killY:-7,
     boxes,sweepers:[{x:-10,z:23,y0:.15,y1:.6,length:4.5,speed:1.4,phase:0},{x:-10,z:28,y0:1,y1:1.4,length:4.5,speed:-1.1,phase:0}],
-    checkpoints:PRACTICE_STATIONS.map(s=>({x:s.x,z:s.z,y:0})),doorRows:[{z:49,doors:[0,1],real:1}],tileRows:[],seesaws:1,
+    checkpoints:PRACTICE_STATIONS.map(s=>({x:s.x,z:s.z,y:0})),doorRows:[{z:49,doors:[0,1],real:1,xs:[-11.5,-7.5]}],tileRows:[],seesaws:1,
     winds:[{x0:8,x1:12,y0:0,y1:6,z0:34,z1:44,vx:2.4,vz:0,period:5000,phase:0,on:.7}],
     goo:{start:-3,rate:0,delay:0}};
 }

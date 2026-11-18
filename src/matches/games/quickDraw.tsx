@@ -1,4 +1,4 @@
-import type { QuickDrawGame, QuickDrawRound } from "../../../shared/matches/quickDraw";
+import { FAKE_WORDS, type QuickDrawGame, type QuickDrawRound } from "../../../shared/matches/quickDraw";
 import type { MatchState } from "../../../shared/matches/types";
 import { TapZone } from "../controls";
 import { playerColor, type MatchClient, type MatchFrame } from "../client";
@@ -53,8 +53,30 @@ function scene(ctx: CanvasRenderingContext2D, w: number, h: number, horizon: num
   if (flash > 0) { ctx.fillStyle = `rgba(255,255,255,${flash * .55})`; ctx.fillRect(0, 0, w, h); }
 }
 
-function decoy(ctx: CanvasRenderingContext2D, kind: string, progress: number, w: number, horizon: number) {
-  if (kind === "crow") {
+/** The red signal board; fake boards use exactly the same look with another word. */
+function signalBoard(ctx: CanvasRenderingContext2D, x: number, y: number, word: string, pulse: number) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(pulse, pulse);
+  ctx.fillStyle = "#e3263b"; ctx.strokeStyle = "#fff9ed"; ctx.lineWidth = 5;
+  const width = Math.max(220, word.length * 26 + 30);
+  ctx.beginPath(); ctx.roundRect(-width / 2, -38, width, 76, 16); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = "#fff9ed"; ctx.font = `900 ${word.length > 6 ? 36 : 48}px 'Trebuchet MS', sans-serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(word, 0, 3);
+  ctx.restore();
+}
+
+function decoy(ctx: CanvasRenderingContext2D, kind: string, progress: number, w: number, h: number, horizon: number, reduced: boolean, word?: number) {
+  if (kind === "fake") {
+    // Same board, same flash and pulse as the real signal – only the word differs.
+    const pulse = reduced ? 1 : 1 + Math.max(0, .25 - progress * .9);
+    if (!reduced && progress < .25) { ctx.fillStyle = `rgba(255,255,255,${(1 - progress / .25) * .55})`; ctx.fillRect(0, 0, w, h); }
+    signalBoard(ctx, w / 2, horizon * .5, FAKE_WORDS[word ?? 0] ?? FAKE_WORDS[0], pulse);
+  } else if (kind === "flash") {
+    if (progress < .3) { ctx.fillStyle = `rgba(255,255,255,${(reduced ? .35 : 1 - progress / .3) * .55})`; ctx.fillRect(0, 0, w, h); }
+  } else if (kind === "bang") {
+    // A puff of smoke behind the saloon on the right: someone else fired.
+    const r = 8 + progress * 22;
+    ctx.fillStyle = `rgba(255,249,237,${.7 * (1 - progress)})`; ctx.beginPath(); ctx.arc(w * .86, horizon - h * .19, r, 0, Math.PI * 2); ctx.fill();
+    if (progress < .15) { ctx.fillStyle = "#ffe44e"; ctx.beginPath(); ctx.arc(w * .86, horizon - h * .19, 7, 0, Math.PI * 2); ctx.fill(); }
+  } else if (kind === "crow") {
     const x = -40 + progress * (w + 80), y = horizon * .35 + Math.sin(progress * 12) * 8;
     ctx.fillStyle = "#1b0f22"; ctx.beginPath(); ctx.ellipse(x, y, 11, 6, 0, 0, Math.PI * 2); ctx.fill();
     const wing = Math.sin(progress * 40) * 9;
@@ -82,7 +104,7 @@ function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
   if (signal && f.local[shownKey(r)] === undefined) f.local[shownKey(r)] = f.t;
   const sinceSignal = signal ? f.t - f.local[shownKey(r)] : -1;
   scene(ctx, w, h, horizon, signal && !f.reduced && sinceSignal < 160 ? 1 - sinceSignal / 160 : 0);
-  for (const d of r.decoys) { const p = (s.time - d.at) / 600; if (p >= 0 && p <= 1 && r.resolvedAt === undefined) decoy(ctx, d.kind, p, w, horizon); }
+  for (const d of r.decoys) { const p = (s.time - d.at) / (d.kind === "fake" ? 750 : 600); if (p >= 0 && p <= 1 && r.resolvedAt === undefined) decoy(ctx, d.kind, p, w, h, horizon, f.reduced, d.word); }
   const others = s.players.filter(p => p.id !== f.viewer && r.participants.includes(p.id));
   const size = Math.min(1.35, w / Math.max(2, others.length) / 46);
   others.forEach((p, i) => {
@@ -111,11 +133,7 @@ function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
   if (r.resolvedAt === undefined && signal) {
     const pulse = f.reduced ? 1 : 1 + Math.max(0, .25 - sinceSignal / 800);
-    ctx.save(); ctx.translate(w / 2, horizon * .5); ctx.scale(pulse, pulse);
-    ctx.fillStyle = "#e3263b"; ctx.strokeStyle = "#fff9ed"; ctx.lineWidth = 5;
-    ctx.beginPath(); ctx.roundRect(-110, -38, 220, 76, 16); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = "#fff9ed"; ctx.font = "900 48px 'Trebuchet MS', sans-serif"; ctx.fillText("ZIEH!", 0, 3);
-    ctx.restore();
+    signalBoard(ctx, w / 2, horizon * .5, "ZIEH!", pulse);
   } else if (r.resolvedAt === undefined) {
     ctx.fillStyle = "#fff9edcc"; ctx.font = "800 17px 'Trebuchet MS', sans-serif";
     ctx.fillText(me && r.shots[me.id]?.early ? "Fehlstart – warte auf die Nächste" : "Ruhig … noch nicht ziehen", w / 2, h * .66);
@@ -149,6 +167,8 @@ export const quickDrawClient: MatchClient = {
   },
   sound(event, viewer) {
     if (event.kind === "signal") return "go";
+    // Decoys sound like the real thing: a fake board plays the signal tone, a distant shot the shot.
+    if (event.kind === "decoy") return event.text === "fake" ? "go" : event.text === "bang" ? "shot" : undefined;
     if (event.kind === "shot") return "shot";
     if (event.kind === "false") return event.ids.includes(viewer) ? "fail" : undefined;
     if (event.kind === "result") return event.ids.includes(viewer) ? "win" : "tick";

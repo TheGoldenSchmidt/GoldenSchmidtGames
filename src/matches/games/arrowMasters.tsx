@@ -1,4 +1,4 @@
-import { AM, SLOTS, launch, trajectory, type ArrowGame } from "../../../shared/matches/arrowMasters";
+import { AM, ARROW_KINDS, SLOTS, launch, trajectory, type ArrowGame, type ArrowKind } from "../../../shared/matches/arrowMasters";
 import { AimPad } from "../controls";
 import { lerp, playerColor, type MatchClient, type MatchFrame } from "../client";
 
@@ -41,14 +41,16 @@ function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
   // Own aim: short preview of the launch arc (without wind).
   const me = g.archers[f.viewer];
   if (g.phase === "aim" && me?.aim) {
-    ctx.fillStyle = "#24133f";
-    for (const [x, y] of trajectory(launch(me), me.aim.angle, me.aim.power, 0, .35, 10)) { ctx.beginPath(); ctx.arc(X(x), Y(y), 2.5, 0, Math.PI * 2); ctx.fill(); }
+    ctx.fillStyle = me.kind === "heavy" ? "#6b2a10" : "#24133f";
+    // The triple shot shows its fan.
+    for (const turn of me.kind === "triple" ? [-AM.tripleSpread, 0, AM.tripleSpread] : [0])
+      for (const [x, y] of trajectory(launch(me), me.aim.angle + turn, me.aim.power, 0, .35, 10)) { ctx.beginPath(); ctx.arc(X(x), Y(y), me.kind === "heavy" ? 3.5 : 2.5, 0, Math.PI * 2); ctx.fill(); }
   }
   for (const [i, arrow] of g.arrows.entries()) {
     const before = prev.arrows?.[i], x = before && before.owner === arrow.owner ? lerp(before.x, arrow.x, f.alpha) : arrow.x, y = before && before.owner === arrow.owner ? lerp(before.y, arrow.y, f.alpha) : arrow.y;
     const angle = Math.atan2(-arrow.vy, arrow.vx), p = s.players.find(q => q.id === arrow.owner);
     ctx.save(); ctx.translate(X(x), Y(y)); ctx.rotate(angle);
-    ctx.strokeStyle = "#3b2a1a"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-scale * .6, 0); ctx.lineTo(0, 0); ctx.stroke();
+    ctx.strokeStyle = arrow.kind === "heavy" ? "#1b0f22" : "#3b2a1a"; ctx.lineWidth = arrow.kind === "heavy" ? 4 : 2; ctx.beginPath(); ctx.moveTo(-scale * .6, 0); ctx.lineTo(0, 0); ctx.stroke();
     ctx.fillStyle = p ? playerColor(p.style) : "#fff"; ctx.fillRect(-scale * .6, -3, scale * .18, 6);
     ctx.restore();
   }
@@ -66,12 +68,23 @@ export const arrowMastersClient: MatchClient = {
   render,
   quiet: ["fire"],
   Controls({ io, view, viewer, active }) {
-    const g = view.game as ArrowGame, can = active && g.phase === "aim" && !(g.tiebreak && !g.tiebreak.includes(viewer));
-    return <div className="arrow-aim-area"><AimPad label="Bogen spannen und zielen" radius={130}
-      onAim={(x, y) => { if (can) io.set({ ax: x, ay: y }, true); }}
-      onRelease={() => io.set({ ax: 0, ay: 0 }, true)}>
-      <span className="arrow-aim-hint" aria-hidden="true">Hier ziehen: entgegen der Schussrichtung</span>
-    </AimPad></div>;
+    const g = view.game as ArrowGame, can = active && g.phase === "aim" && !(g.tiebreak && !g.tiebreak.includes(viewer)), me = g.archers[viewer];
+    const label: Record<ArrowKind, string> = { normal: "Pfeil", triple: "Dreifach", heavy: "Schwer" };
+    return <>
+      {!g.tiebreak && me && <div className="arrow-kinds" role="group" aria-label="Pfeilart">
+        {ARROW_KINDS.map((kind, i) => {
+          const left = kind === "normal" ? undefined : me.specials?.[kind] ?? 0;
+          return <button key={kind} type="button" aria-pressed={(me.kind ?? "normal") === kind} disabled={!can || left === 0} onClick={() => io.command(i)}>
+            {label[kind]}{left !== undefined && <small>{left}×</small>}
+          </button>;
+        })}
+      </div>}
+      <div className="arrow-aim-area"><AimPad label="Bogen spannen und zielen" radius={130}
+        onAim={(x, y) => { if (can) io.set({ ax: x, ay: y }, true); }}
+        onRelease={() => io.set({ ax: 0, ay: 0 }, true)}>
+        <span className="arrow-aim-hint" aria-hidden="true">Hier ziehen: entgegen der Schussrichtung</span>
+      </AimPad></div>
+    </>;
   },
   status(view) {
     const g = view.game as ArrowGame;

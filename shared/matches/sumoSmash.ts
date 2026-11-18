@@ -10,11 +10,11 @@ const dashing = (f: Fighter, now: number) => now < f.actionUntil;
 
 export const sumoSmash = ringModule({
   id: "sumo", name: "Sumo Smash",
-  instruction: "Bewege deinen Sumo mit dem Stick. Der Stoß-Knopf schiebt dich nach vorn; wer getroffen wird, fliegt zurück. Danach braucht der Stoß 2,5 Sekunden. Wer aus dem Ring fällt, verliert eines von 3 Leben; wer den Ring-Out verursacht, bekommt +2. Ab Sekunde 40 schrumpft der Ring. Letzter im Ring gewinnt, nach 75 Sekunden zählen Leben, dann Ring-Outs.",
+  instruction: "Bewege deinen Sumo mit dem Stick. Der Stoß-Knopf schiebt dich nach vorn; wer getroffen wird, fliegt zurück. Danach braucht der Stoß 2,5 Sekunden. Wer aus dem Ring fällt, verliert eines von 3 Leben; wer den Ring-Out verursacht, bekommt +2. Im Duell zu zweit stellen sich danach beide wieder auf ihre Startplätze, sonst kehrt nur die herausgefallene Person zurück. Ab Sekunde 40 schrumpft der Ring. Letzter im Ring gewinnt, nach 75 Sekunden zählen Leben, dann Ring-Outs.",
   controls: "Stick: bewegen · Knopf: Stoß nach vorn.",
   look: { icon: "◍", action: "Schieb sie vom Podest", hint: "Stick bewegen · Knopf Stoß", goal: "Als Letzter im Ring stehen" },
   radius: 5.5, minRadius: 3.2, shrinkFrom: 40000, shrinkTo: 75000,
-  body: SUMO.body, lives: 3, respawn: 2000, shield: 1500, credit: 3000,
+  body: SUMO.body, lives: 3, respawn: 2000, restart: "duel", shield: 1500, credit: 3000,
   regular: 75000, suddenMax: 20000, suddenRadius: 3, actionCooldown: SUMO.cooldown,
   drive(f, input, dt, now) {
     if (Math.hypot(input.x, input.y) > .1) f.heading = Math.atan2(input.y, input.x);

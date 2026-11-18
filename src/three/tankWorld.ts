@@ -67,7 +67,7 @@ export function createTankWorld(host: HTMLElement, read: () => MatchWorldFrame, 
   const impact = new Impact(world, kit);
   const debris = new Debris(world, 120, new T.MeshStandardMaterial({ roughness: .8 }));
   const tanks = new Map<string, TankView>(), powers = new Map<number, T.Group>();
-  let edges = "", lastSeq = 0, frame = 0, aspect = 0, lastFrame = performance.now();
+  let edges = "", lastSeq = 0, frame = 0, aspect = 0, lastFrame = performance.now(), camFresh = true, wasAlive = false;
 
   const rebuildWalls = (g: TankGame, time: number, reduced: boolean) => {
     const before = edges ? new Map(wallRects(JSON.parse(edges) as Pick<TankGame, "h" | "v">).map(r => [`${r.axis}${r.index}`, r])) : undefined;
@@ -215,10 +215,14 @@ export function createTankWorld(host: HTMLElement, read: () => MatchWorldFrame, 
     if (chase && me) {
       const before = prev.tanks?.[f.viewer], smooth = before && before.alive && me.alive ? f.alpha : 1;
       target.set(wx(before ? before.x + (me.x - before.x) * smooth : me.x), 0, wz(before ? before.y + (me.y - before.y) * smooth : me.y));
-      // The camera swings behind the hull, which turns with the driving direction.
+      // The camera starts (and restarts after a respawn) behind the hull; afterwards only a swipe turns it,
+      // so steering with the stick never swings the view.
+      if (me.alive && !wasAlive) camFresh = true;
+      wasAlive = me.alive;
       takeCameraTurn(f.local as ChaseLocal, d => chaseCam.turn(d));
       chaseCam.tune(f.local as ChaseLocal);
-      chaseCam.update(target, headingOf(Math.cos(me.angle), Math.sin(me.angle)), Math.min(.05, (time - lastFrame) / 1000), reduced, 2.2);
+      chaseCam.update(target, camFresh ? headingOf(Math.cos(me.angle), Math.sin(me.angle)) : undefined, Math.min(.05, (time - lastFrame) / 1000), reduced, 2.2);
+      camFresh = false;
       followCamera(f.local as ChaseLocal, f.input, chaseCam.yaw);
     }
     lastFrame = time;

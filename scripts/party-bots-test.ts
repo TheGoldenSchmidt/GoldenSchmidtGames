@@ -14,12 +14,15 @@ for(const id of ACTION_MINI_IDS){
 const players=Array.from({length:6},(_,i)=>({id:`bot${i}`,name:`Bot ${i}`,bot:true}));
 let now=1000,g=createPartyGame(players,{rounds:5},true,42,now);
 const driver=new PartyBotDriver();
-let rounds=new Set<number>(),minis=new Set<string>();
+let rounds=new Set<number>(),minis=new Set<string>(),duels=new Set<string>();
 for(let n=0;n<12000&&g.phase!=="finished";n++){
-  now+=50;g=tickParty(driver.step(g,now,true),now);rounds.add(g.round);if(g.mini)minis.add(g.mini.id);
+  now+=50;g=tickParty(driver.step(g,now,true),now);rounds.add(g.round);
+  // Duels on duel fields are counted apart from the round minigames.
+  if(g.duel)duels.add(`${g.round}:${g.turn}:${g.duel.challenger}`);else if(g.mini)minis.add(g.mini.id);
 }
 assert.equal(g.phase,"finished","Bots spielen eine vollständige Partie bis zur Siegerehrung");
 assert.equal(rounds.size,5);assert.equal(minis.size,6);assert.ok(g.winners.length>0);
+assert.ok(duels.size>0,"Bots fordern auf Duellfeldern heraus");
 assert.ok(g.players.every(p=>p.coins>=0&&p.wins>=0));
 const paused={...g,phase:"turn" as const,pausedAt:now};assert.equal(driver.step(paused,now+1000),paused);
 const fresh=boardGame([{id:"human",name:"Du"},{id:"bot",name:"Bot",bot:true}],{rounds:5},true,9,now);

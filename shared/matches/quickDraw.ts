@@ -6,7 +6,13 @@ import { activePlayers, emit, hash, presence, rank, random, type MatchModule, ty
  * seeing the signal and tapping; the authority clamps that value to what its
  * own clock and the measured round trip allow.
  */
-export type DecoyKind = "crow" | "lamp" | "sign";
+/**
+ * Decoys before the signal: a crow, a flickering lamp, a "WARTE" sign, a fake
+ * signal board in exactly the style of the real one ("fake", with a word from
+ * `FAKE_WORDS`), a white flash like the real one, and a shot in the distance.
+ */
+export type DecoyKind = "crow" | "lamp" | "sign" | "fake" | "flash" | "bang";
+export const FAKE_WORDS = ["NICHT ZIEHEN!", "ZIEH… NICHT!", "ZIEGE!", "ZIEL!", "ZIEHT NICHT!"] as const;
 export interface QuickDrawShot { at: number; reaction: number | null; early: boolean }
 export interface QuickDrawRound {
   index: number;
@@ -14,7 +20,7 @@ export interface QuickDrawRound {
   startAt: number;
   /** Hidden from devices until reached. */
   signalAt?: number;
-  decoys: { at: number; kind: DecoyKind }[];
+  decoys: { at: number; kind: DecoyKind; word?: number }[];
   participants: string[];
   shots: Record<string, QuickDrawShot>;
   resolvedAt?: number;
@@ -46,12 +52,13 @@ function newRound(s: MatchState<QuickDrawGame>, kind: QuickDrawRound["kind"], pa
   const g = s.game, startAt = s.time;
   const signalAt = startAt + QD.minDelay + Math.round(random(s) * (QD.maxDelay - QD.minDelay) / 50) * 50;
   const decoys: QuickDrawRound["decoys"] = [];
-  const count = random(s) < .35 ? 0 : random(s) < .65 ? 1 : 2;
-  const kinds: DecoyKind[] = ["crow", "lamp", "sign"];
+  const roll = random(s), count = roll < .15 ? 0 : roll < .5 ? 1 : roll < .85 ? 2 : 3;
+  const kinds: DecoyKind[] = ["crow", "lamp", "sign", "fake", "fake", "flash", "bang"];
   for (let i = 0; i < count; i++) {
-    const earliest = startAt + 700, latest = signalAt - 650;
+    const earliest = startAt + 600, latest = signalAt - 450;
     if (latest <= earliest) break;
-    decoys.push({ at: earliest + Math.round(random(s) * (latest - earliest) / 50) * 50, kind: kinds[Math.floor(random(s) * kinds.length)] });
+    const kind = kinds[Math.floor(random(s) * kinds.length)];
+    decoys.push({ at: earliest + Math.round(random(s) * (latest - earliest) / 50) * 50, kind, ...(kind === "fake" ? { word: Math.floor(random(s) * FAKE_WORDS.length) } : {}) });
   }
   decoys.sort((a, b) => a.at - b.at);
   g.rounds.push({ index: g.rounds.length + 1, kind, startAt, signalAt, decoys, participants, shots: {}, winners: [], points: {} });
@@ -115,7 +122,7 @@ export const quickDraw: MatchModule<QuickDrawGame> = {
   id: "quickdraw",
   meta: {
     name: "Quick Draw", seconds: 120, players: [2, 3, 4, 5, 6], hz: 20,
-    instruction: "Warte auf das rote »ZIEH!« und tippe dann so schnell wie möglich. Wer vorher tippt, begeht einen Fehlstart. Krähen, Lampen und Schilder sind Täuschungen. Zu zweit: Wer zuerst 3 Duelle gewinnt, siegt. Ab drei Personen: 5 Durchgänge, die drei Schnellsten erhalten 3, 2 und 1 Punkt.",
+    instruction: "Warte auf das rote »ZIEH!« und tippe dann so schnell wie möglich. Wer vorher tippt, begeht einen Fehlstart. Achtung, Täuschungen: Krähen, Lampen, Schilder, ein Blitz, ein Schuss in der Ferne und rote Tafeln, die genauso aussehen wie das Signal, aber etwas anderes sagen (»NICHT ZIEHEN!«, »ZIEGE!« …). Nur »ZIEH!« gilt. Zu zweit: Wer zuerst 3 Duelle gewinnt, siegt. Ab drei Personen: 5 Durchgänge, die drei Schnellsten erhalten 3, 2 und 1 Punkt.",
     controls: "Tippe irgendwo auf die Straße, um zu ziehen.",
     look: { icon: "✶", action: "Zieh, sobald das Signal kommt", hint: "Tippe erst beim roten »ZIEH!«", goal: "Schnellster gültiger Schuss" }
   },
@@ -130,7 +137,7 @@ export const quickDraw: MatchModule<QuickDrawGame> = {
     const r = current(s);
     if (r.resolvedAt === undefined) {
       if (r.signalAt !== undefined && s.time >= r.signalAt && s.time - 50 < r.signalAt) emit(s, "signal", "ZIEH!", r.participants);
-      for (const decoy of r.decoys) if (s.time >= decoy.at && s.time - 50 < decoy.at) emit(s, "decoy", "", []);
+      for (const decoy of r.decoys) if (s.time >= decoy.at && s.time - 50 < decoy.at) emit(s, "decoy", decoy.kind, []);
       const everyone = live(s, r).every(id => r.shots[id]);
       // In a duel a false start decides the round at once.
       const duelDecided = r.kind === "duel" && r.participants.some(id => r.shots[id]?.early);
@@ -187,9 +194,9 @@ export const quickDraw: MatchModule<QuickDrawGame> = {
     const r = current(s);
     if (r.resolvedAt !== undefined || !r.participants.includes(id) || r.shots[id]) return {};
     const seed = hash(`${id}:${r.index}`);
-    // Bots sometimes flinch at a decoy, otherwise react within 220–480 ms.
+    // Bots sometimes flinch at a decoy (more often at a fake signal), otherwise react within 220–480 ms.
     const flinch = r.decoys.find(d => s.time >= d.at && s.time - d.at < 200);
-    if (flinch && seed % 100 < 6) return { command: -1 };
+    if (flinch && seed % 100 < (flinch.kind === "fake" ? 15 : 6)) return { command: -1 };
     if (r.signalAt === undefined) return {};
     const delay = 220 + seed % 260;
     return s.time - r.signalAt >= delay ? { command: s.time - r.signalAt } : {};
