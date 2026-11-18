@@ -71,6 +71,9 @@ function render(skin: Skin) {
     if (g.resetAt !== undefined && !s.done) {
       ctx.fillStyle = "#24133fcc"; ctx.fillRect(0, h / 2 - 28, w, 56); ctx.fillStyle = "#fff9ed"; ctx.font = "900 18px 'Trebuchet MS', sans-serif";
       ctx.fillText(`Ring-Out! Alle zurück auf die Startplätze – ${Math.max(0, Math.ceil((g.resetAt - f.simTime) / 1000))} s`, w / 2, h / 2);
+    } else if (me && me.alive && me.out && !s.done) {
+      ctx.fillStyle = "#24133fcc"; ctx.fillRect(0, h / 2 - 28, w, 56); ctx.fillStyle = "#fff9ed"; ctx.font = "900 18px 'Trebuchet MS', sans-serif";
+      ctx.fillText(`Ring-Out! Zurück in ${Math.max(0, Math.ceil((me.respawnAt - f.simTime) / 1000))} s`, w / 2, h / 2);
     } else if (g.sudden && f.simTime - g.sudden.start < 1500) {
       ctx.fillStyle = "#ff86c8"; ctx.font = "900 24px 'Trebuchet MS', sans-serif"; ctx.fillText("SUDDEN DEATH", w / 2, 36);
     }
@@ -117,7 +120,9 @@ export const sumoClient: MatchClient = {
 /** After a ring-out everyone waits for the restart from the start places. */
 function ringBanner(view: MatchState, viewer: string) {
   const g = view.game as RingGame, me = g.fighters[viewer];
-  if (g.resetAt === undefined || view.done) return undefined;
+  if (view.done) return undefined;
+  // Without a restart for everyone (Sumo with more than two left) only the fallen one waits.
+  if (g.resetAt === undefined) return me?.out && me.alive ? { title: "Ring-Out!", text: `Zurück in ${Math.max(0, Math.ceil((me.respawnAt - view.time) / 1000))} s` } : undefined;
   const left = `${Math.max(0, Math.ceil((g.resetAt - view.time) / 1000))} s`;
   return me?.out ? { title: "Ring-Out!", text: me.alive ? `Neustart in ${left}` : "Du schaust zu" } : { title: "Ring-Out!", text: `Alle zurück auf die Startplätze – ${left}` };
 }

@@ -16,7 +16,7 @@ export const bumperMayhem = ringModule({
   controls: "Stick: Fahrtrichtung · Knopf: Turbo.",
   look: { icon: "⛐", action: "Rammen erlaubt!", hint: "Stick lenken · Knopf Turbo", goal: "Als Letzter auf der Fläche" },
   radius: 6, minRadius: 3.4, shrinkFrom: 45000, shrinkTo: 75000,
-  body: BUMPER.body, lives: 3, respawn: 2000, shield: 1500, credit: 3000,
+  body: BUMPER.body, lives: 3, respawn: 2000, restart: "all", shield: 1500, credit: 3000,
   regular: 75000, suddenMax: 20000, suddenRadius: 3.4, actionCooldown: BUMPER.cooldown,
   drive(f, input, dt, now) {
     // Spun out after a hard hit: no grip, no throttle, the car spins and slides.

@@ -178,6 +178,14 @@ Gefühl auf echten Handys ist für die umgesetzten Punkte weiter ungeprüft.
 | Quick Draw | Mehr täuschende Effekte, z. B. „Don't shoot“ im Signalstil | **umgesetzt**: rote Tafeln im exakt gleichen Stil wie „ZIEH!“ (inkl. Blitz und Ton) mit „NICHT ZIEHEN!“, „ZIEH… NICHT!“, „ZIEGE!“, „ZIEL!“, „ZIEHT NICHT!“; dazu weißer Blitz und Schuss in der Ferne; bis zu drei Täuschungen je Runde |
 | Bomb Arena | Bomben und Gegner als Hindernisse, man kann eingesperrt werden | **umgesetzt**: Gegner blockieren wie Bomben (eigenes und Zielfeld); Respawn nur auf freie Startfelder |
 
+Nachbesserungen danach:
+
+| Spiel | Rückmeldung | Stand |
+| --- | --- | --- |
+| Tank Trouble – Turmsicht | Kamera rechts oben drehen, damit gleichzeitig gelenkt werden kann | **umgesetzt**: Wischfeld oben rechts, Zielfläche untere rechte Hälfte; Playwright prüft Stick und Kamera mit zwei Fingern gleichzeitig |
+| Floor is Lava | Am Rand herunterfallen; nach dem Sturz kein Respawn | **umgesetzt**: kein Geländer mehr – über den Rand (auch geschubst) geht es direkt in die Lava. Ursache des fehlenden Respawns: Die Figur wurde sofort und unsichtbar auf eine Platte gesetzt, die unter ihr gleich zerbröselte, und war nach 1,2 s endgültig raus. Jetzt fällt sie sichtbar in die Lava, kommt nach 1 s von oben auf eine sichere Platte abseits des einstürzenden Rands zurück, und während des Schutzes (1,5 s) bröseln Platten unter ihr nicht |
+| Sumo Smash | Neustart aller nur im 1-gegen-1 | **umgesetzt**: Neustart von den Startplätzen nur, wenn zwei übrig sind; mit mehr Kämpfern kehrt nur die herausgefallene Figur nach 2 s auf einen freien Platz zurück. Bumper Mayhem behält den Neustart für alle (`restart` in `RingRules`) |
+
 Alle Punkte sind mit Regeltests und Playwright `phone` geprüft; Gefühl auf echten Handys
 (Kamera, Klettern, Lenkung in Light Trails) ist offen.
 
