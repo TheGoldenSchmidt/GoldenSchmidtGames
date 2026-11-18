@@ -11,7 +11,21 @@ export const BOARD = Array.from({ length: 34 }, (_, id) => {
   return { id, type, next, x, y };
 });
 
-export interface PartyBoardState { mode?: import("./party").PartyGame["mode"] }
+export interface PartyBoardState { mode?: import("./party").PartyGame["mode"]; round?: number; opening?: boolean; options?: { rounds: number } }
+
+/** Inselparty only: the last three rounds double the plus and minus fields. */
+export const FINAL_ROUNDS = 3;
+export const TROPHY_SHOPS = [6, 15, 24] as const;
+export function isFinalStretch(game: PartyBoardState) {
+  return (game.mode ?? "party") === "party" && !game.opening && game.options !== undefined && game.round !== undefined && game.round > game.options.rounds - FINAL_ROUNDS;
+}
+export const fieldCoins = (game: PartyBoardState) => isFinalStretch(game) ? 6 : 3;
+/** Field label with its current effect (the plus and minus fields change in the last rounds). */
+export function fieldLabel(game: PartyBoardState, type: Field) {
+  if (type === "coin") return `+${fieldCoins(game)} Münzen`;
+  if (type === "bad") return `−${fieldCoins(game)} Münzen`;
+  return FIELD_LABELS[type];
+}
 export interface Collector { position: number; supplies?: number[] }
 export const BAUSCHALE = { id: "bauschale", name: "Die Bauschale" } as const;
 
@@ -48,7 +62,7 @@ export function fieldName(game: PartyBoardState, id: number) {
     const station = stationAt(id);
     if (station) return station.name;
   }
-  return FIELD_LABELS[partyBoard(game)[id].type];
+  return fieldLabel(game, partyBoard(game)[id].type);
 }
 
 /** Deterministic route up to the next decision. Purchases are never assumed. */

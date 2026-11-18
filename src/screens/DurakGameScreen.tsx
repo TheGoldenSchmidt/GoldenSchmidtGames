@@ -189,7 +189,7 @@ export function DurakGameScreen({ profile, localNames, localCharacters, initialR
       <header className="game-header durak-header">
         <Brand compact />
         <span className="game-header__mode">{online ? `Online · ${room!.code}` : "Lokal"}</span>
-        <button className="text-button" onClick={onExit}>Beenden</button>
+        {!(game.phase === "finished" && onLobby) && <button className="text-button" onClick={onExit}>Beenden</button>}
       </header>
 
       <section className="durak-status">

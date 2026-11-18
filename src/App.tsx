@@ -28,6 +28,7 @@ export default function App() {
   const [reconnecting, setReconnecting] = useState(Boolean(session));
   const [needsPairing, setNeedsPairing] = useState(session?.nearby?.role === "guest");
   const joinedSocket = useRef<string | undefined>(undefined);
+  const lobbyRequest = useRef(0);
   const [view, setView] = useState<View>("home");
   const [showProfile, setShowProfile] = useState(false);
   const [online, setOnline] = useState(navigator.onLine);
@@ -35,10 +36,12 @@ export default function App() {
   const [localNames, setLocalNames] = useState<string[]>([]);
   const [localCharacters,setLocalCharacters]=useState<CharacterId[]>([]);
   const [localGameId, setLocalGameId] = useState<GameId>("qwixx");
+  const [testGameId, setTestGameId] = useState<GameId>("party");
   const [localDurakCheatMode, setLocalDurakCheatMode] = useState(false);
   const [playIntro, setPlayIntro] = useState(false);
   const [resumeError,setResumeError]=useState("");
   const [canResumeParty,setCanResumeParty]=useState(false);
+  const [lobbyError,setLobbyError]=useState("");
 
   useEffect(() => {
     const updateOnline = () => setOnline(navigator.onLine);
@@ -52,9 +55,17 @@ export default function App() {
   }, []);
 
   useEffect(()=>{
-    const closed=({code}:{code:string})=>{if(session?.code===code){clearActiveSession(session,true);setSession(undefined);}if(readPartySave<PartySavedSession>(PARTY_ONLINE_SAVE)?.code===code){localStorage.removeItem(PARTY_ONLINE_SAVE);setCanResumeParty(false);}};
+    const closed=({code,reason}:{code:string;reason?:string})=>{
+      if(session?.code===code){clearActiveSession(session,true);setSession(undefined);}
+      if(readPartySave<PartySavedSession>(PARTY_ONLINE_SAVE)?.code===code){localStorage.removeItem(PARTY_ONLINE_SAVE);setCanResumeParty(false);}
+      // The host ended the party from the lobby: everyone returns to the start menu.
+      if(reason==="closed"&&room?.code===code){
+        joinedSocket.current=undefined;socket.disconnect();setRoom(undefined);setView("home");
+        setResumeError(room.hostId===profile.id?"":"Der Host hat die Party beendet.");
+      }
+    };
     socket.on("party:closed",closed);return()=>{socket.off("party:closed",closed);};
-  },[session]);
+  },[session,room?.code,room?.hostId,profile.id]);
   useEffect(()=>{
     // Another player returned to the lobby: follow them.
     if(view!=="game-online")return;
@@ -73,6 +84,8 @@ export default function App() {
     check();window.addEventListener("focus",check);window.addEventListener("online",check);
     return()=>{cancelled=true;window.removeEventListener("focus",check);window.removeEventListener("online",check);};
   },[view,profile.id,online,session]);
+
+  useEffect(()=>{if(view!=="game-online")setLobbyError("");},[view]);
 
   const openOnlineGame = useCallback((nextRoom: RoomState, intro = true) => {
     setRoom(nextRoom);
@@ -166,8 +179,10 @@ export default function App() {
     setShowProfile(false);
   }
 
-  function leaveOnline() {
-    clearActiveSession(session);
+  function leaveOnline(closed=false) {
+    lobbyRequest.current++;
+    setLobbyError("");
+    clearActiveSession(session,closed);
     setSession(undefined);
     joinedSocket.current = undefined;
     socket.disconnect();
@@ -176,10 +191,32 @@ export default function App() {
     setView("home");
   }
 
-  function backToLobby() {
-    socket.timeout(8000).emit("room:lobby",(err:Error|null,response:{ok:boolean;data?:RoomState;error?:string})=>{
-      if(err||!response?.ok||!response.data)return leaveOnline();
-      keepSession(response.data);setRoom(response.data);setView("room");
+  // Returning to the lobby never drops the player out of the room. A lost connection or a
+  // paused host phone is retried; otherwise the session is rejoined, which shows the end
+  // screen again (or the lobby if another player was faster) and keeps the room.
+  function backToLobby(attempt=0,request=++lobbyRequest.current) {
+    setLobbyError("");
+    socket.timeout(8000).emit("room:lobby",(err:Error|null,response?:{ok:boolean;data?:RoomState;error?:string;retryable?:boolean})=>{
+      if(request!==lobbyRequest.current)return; // Left the room or asked again meanwhile.
+      if(!err&&response?.ok&&response.data){keepSession(response.data);setRoom(response.data);setView("room");return;}
+      if((err||response?.retryable)&&attempt<4){window.setTimeout(()=>{if(request===lobbyRequest.current)backToLobby(attempt+1,request);},1500);return;}
+      setLobbyError(response?.error&&!response.retryable?`${response.error} Tippe erneut auf „Zurück zur Lobby“.`:"Die Lobby ist gerade nicht erreichbar. Die Verbindung wird wiederhergestellt.");
+      if(session){joinedSocket.current=undefined;setSession({...session});}
+    });
+  }
+
+  function leaveLobby(done:(error?:string)=>void) {
+    socket.timeout(8000).emit("room:leave",(err:Error|null,response?:{ok:boolean;error?:string})=>{
+      // Without an answer the seat stays reserved for a rejoin, as when the app is closed.
+      if(!err&&response&&!response.ok)return done(response.error);
+      leaveOnline();
+    });
+  }
+
+  function closeParty(done:(error?:string)=>void) {
+    socket.timeout(8000).emit("room:close",(err:Error|null,response?:{ok:boolean;error?:string})=>{
+      if(err||!response?.ok)return done(response?.error??"Die Party konnte nicht beendet werden. Prüfe die Verbindung und versuche es erneut.");
+      leaveOnline(true);
     });
   }
 
@@ -200,7 +237,7 @@ export default function App() {
     {session.nearby?.role === "guest" && (needsPairing
       ? <GuestPair expectedTable={session.nearby.table} onOffer={()=>{}}/>
       : <p>Die Partie wartet auf das Host-Handy. Dort die App wieder öffnen.</p>)}
-    <button className="button button--secondary" onClick={leaveOnline}>Zum Startmenü</button>
+    <button className="button button--secondary" onClick={()=>leaveOnline()}>Zum Startmenü</button>
   </section></main>;
 
   return (
@@ -224,7 +261,7 @@ export default function App() {
       )}
       {view === "local-setup" && (
         <LocalSetupScreen
-          onTest={() => setView("test")}
+          onTest={gameId => { setTestGameId(gameId); setView("test"); }}
           onBack={() => setView("home")}
           onStart={(gameId, names, options) => {
             setLocalGameId(gameId);
@@ -240,7 +277,7 @@ export default function App() {
         <OnlineEntryScreen onBack={() => setView("home")} onSelect={setView} />
       )}
       {(view === "host" || view === "join" || view === "test") && (
-        <RoomEntryForm key={view} mode={view}
+        <RoomEntryForm key={view} mode={view} testGameId={testGameId}
           profile={profile}
           onBack={() => { socket.disconnect(); setView(view === "test" ? "local-setup" : "online-entry"); }}
           onCharacterChange={id=>updateProfile({...profile,characterId:id})}
@@ -257,7 +294,9 @@ export default function App() {
         <RoomScreen
           profile={profile}
           initialRoom={room}
-          onBack={leaveOnline}
+          onBack={()=>leaveOnline()}
+          onLeave={leaveLobby}
+          onClose={closeParty}
           onGameStart={openOnlineGame}
         />
       )}
@@ -272,13 +311,14 @@ export default function App() {
       {view === "game-online" && room && (
         <GameIntro gameId={room.config.gameId} players={room.players.filter(player => player.connected)} enabled={playIntro&&!isMinigameMode(room.config.gameId)}>
           {room.config.gameId === "qwixx"
-            ? <QwixxGameScreen profile={profile} initialRoom={room} onExit={leaveOnline} onLobby={backToLobby} />
-            : room.config.gameId === "durak" ? <DurakGameScreen profile={profile} initialRoom={room} onExit={leaveOnline} onLobby={backToLobby} />
-            : room.config.gameId === "kribbeln" ? <KribbelnGameScreen profile={profile} initialRoom={room} onExit={leaveOnline} onLobby={backToLobby} />
-            : isPartyMode(room.config.gameId) && <PartyGameScreen profile={profile} initialRoom={room} onExit={leaveOnline} onLobby={room.partyTest ? undefined : backToLobby}/>}
+            ? <QwixxGameScreen profile={profile} initialRoom={room} onExit={()=>leaveOnline()} onLobby={()=>backToLobby()} />
+            : room.config.gameId === "durak" ? <DurakGameScreen profile={profile} initialRoom={room} onExit={()=>leaveOnline()} onLobby={()=>backToLobby()} />
+            : room.config.gameId === "kribbeln" ? <KribbelnGameScreen profile={profile} initialRoom={room} onExit={()=>leaveOnline()} onLobby={()=>backToLobby()} />
+            : isPartyMode(room.config.gameId) && <PartyGameScreen profile={profile} initialRoom={room} onExit={()=>leaveOnline()} onLobby={room.partyTest ? undefined : ()=>backToLobby()}/>}
         </GameIntro>
       )}
       {view==="game-online" && room && !room.partyTest && session?.nearby?.role==="host" && <HostInvite code={room.code}/>}
+      {view==="game-online" && lobbyError && <p className="error-message lobby-return-error" role="alert">{lobbyError}</p>}
       {showProfile && (
         <ProfileDialog profile={profile} onSave={updateProfile} onClose={() => setShowProfile(false)} />
       )}

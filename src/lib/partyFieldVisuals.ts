@@ -1,4 +1,4 @@
-import type { Field } from "../../shared/partyBoard";
+import { fieldCoins, isFinalStretch, type Field, type PartyBoardState } from "../../shared/partyBoard";
 
 /** One visual vocabulary for the 3D board, 2D map, legend and route previews. */
 export const FIELD_VISUALS={
@@ -19,3 +19,17 @@ export const FIELD_HELP: Record<Field,string> = {
   event:"Eine Überraschung für dich oder die ganze Gruppe.",gift:"Hier wartet ein zufälliges Item auf dich.",
   shop:"Kaufe ein Item für deinen nächsten Zug.",safe:"Hier kannst du die Aussicht genießen. Keine weiteren Effekte."
 };
+
+/** Field explanation for map pop-ups; plus and minus fields name their current amount. */
+export function fieldHelp(game:PartyBoardState,type:Field) {
+  const amount=fieldCoins(game),doubled=isFinalStretch(game)?" In den letzten Runden zählt das Feld doppelt.":"";
+  return {
+    start:"Beim Passieren bekommst du 3 Münzen.",
+    coin:`Beim Landen bekommst du ${amount} Münzen.${doubled}`,
+    bad:`Beim Landen verlierst du bis zu ${amount} Münzen. Ein Schild schützt dich.${doubled}`,
+    event:"Eine Überraschung für dich oder die ganze Gruppe.",
+    gift:"Hier wartet ein zufälliges Item auf dich.",
+    shop:"Kaufe ein Item für deinen nächsten Zug.",
+    safe:"Hier kannst du die Aussicht genießen."
+  }[type];
+}

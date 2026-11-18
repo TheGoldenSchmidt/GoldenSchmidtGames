@@ -19,10 +19,26 @@ try{
  room=await act(room.partyGame!.order[0],"next");room=await act(room.partyGame!.order[0],"roll");const oldArrival=room.partyGame!.movement!.arriveAt;
  returned.disconnect();await new Promise(r=>setTimeout(r,1200));const activeGuest=await connect();room=await request(activeGuest,"room:join",{code,playerId:"guest",partyToken:guestToken});assert.ok(room.partyGame!.movement!.arriveAt>=oldArrival+1100,"Rejoin shifts the pending arrival by the connection pause");assert.equal(room.partyGame!.players.every(p=>p.position===0),true,"Pause cannot trigger the destination early");
  await assert.rejects(request(activeGuest,"party:action",{token:guestToken,phaseId:room.partyGame!.phaseId,seq:(room.partyGame!.seq.guest??0)+1,action:{type:"abort"}}));
+ await assert.rejects(request(host,"room:close"),/läuft noch/);await assert.rejects(request(activeGuest,"room:leave"),/läuft noch/,"Während der Partie bleibt der Platz für die Rückkehr reserviert");
  const ended=await request(host,"party:action",{token,phaseId:room.partyGame!.phaseId,seq:(room.partyGame!.seq.host??0)+1,action:{type:"abort"}});assert.equal(ended.partyGame!.phase,"aborted");
  const lobby=await request(host,"room:lobby");assert.equal(lobby.phase,"lobby");assert.equal(lobby.partyGame,undefined);assert.equal(lobby.players.every(p=>!p.ready),true,"Die Partie endet in der Lobby desselben Raums");
  assert.equal((await request(activeGuest,"room:lobby")).phase,"lobby","Zweites Zurückkehren ist idempotent");
  await assert.rejects(request(host,"party:action",{token,phaseId:1,seq:99,action:{type:"abort"}}),"Nach der Rückkehr gibt es keine Partie mehr");
  assert.equal((await request<{available:boolean}>(watcher,"party:session-status",{code,playerId:"host",partyToken:token})).available,false);assert.equal((await (await fetch(`http://127.0.0.1:${port}/api/health`)).json() as {rooms:number}).rooms,1);
+ // Waiting lobby: guests may leave for good, only the host ends the party for everyone.
+ await assert.rejects(request(activeGuest,"room:close"),/Nur der Host/);
+ const hostSeesLeave=new Promise<RoomState>(r=>{const seen=(next:RoomState)=>{if(next.players.length===1){host.off("room:updated",seen);r(next);}};host.on("room:updated",seen);});
+ await request(activeGuest,"room:leave");assert.deepEqual((await hostSeesLeave).players.map(p=>p.id),["host"],"Der Platz wird sofort frei");
+ await assert.rejects(request(activeGuest,"qwixx:state"),/keinem Raum/);
+ await assert.rejects(request(await connect(),"room:join",{code,playerId:"guest",partyToken:guestToken,resumeOnly:true}),/läuft bereits/,"Der alte Schlüssel öffnet den Platz nicht wieder");
+ const third=await connect();await request(third,"room:join",{code,playerId:"third",name:"Dritte",characterId:"alpha_korvo"});
+ await request(host,"room:leave");room=await request(third,"qwixx:state");assert.equal(room.hostId,"third","Verlässt der Host die Lobby, übernimmt ein Mitspieler");assert.deepEqual(room.players.map(p=>p.id),["third"]);
+ const fourth=await connect();await request(fourth,"room:join",{code,playerId:"fourth",name:"Vierte",characterId:"alpha_korvo"});
+ const closedFor=new Promise<{code:string;reason:string}>(r=>fourth.once("party:closed",r));
+ await assert.rejects(request(fourth,"room:close"),/Nur der Host/);
+ await request(third,"room:close");assert.deepEqual(await closedFor,{code,reason:"closed"});
+ await assert.rejects(request(fourth,"qwixx:state"),/keinem Raum/);
+ await assert.rejects(request(await connect(),"room:join",{code,playerId:"fifth",name:"Fünfte",characterId:"alpha_korvo"}),/geschlossen/);
+ assert.equal((await (await fetch(`http://127.0.0.1:${port}/api/health`)).json() as {rooms:number}).rooms,0,"Beendete Party ist für alle geschlossen");
  console.log("Raumlebenszyklus: Status ohne Beitritt, echte Wiederaufnahme, Host-Rechte, Schließen, Watcher und Token-Ungültigkeit geprüft.");
 }finally{sockets.forEach(s=>s.disconnect());await server.close();}

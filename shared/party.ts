@@ -2,7 +2,7 @@ import { ACTION_MINI_IDS, advanceArena, ARENA_META, createArena, isArenaId, NEUT
 import { advanceMatch, createMatch, finishMatch, isMatchId, MATCH_IDS, MATCH_MODULES, matchStandings, neutralizeMatch, publicMatch, removeMatchPlayer, setMatchControl, type MatchId } from "./matches/framework";
 import type { MatchState } from "./matches/types";
 import { isParcoursRun, miniEligible, miniPool, parcoursRuns, type PlayableMiniId } from "./minigameCatalog";
-import { partyBoard, partyPaths, FIELD_LABELS, hasFullSet, stationAt, JAYSPOT } from "./partyBoard";
+import { partyBoard, partyPaths, fieldCoins, fieldLabel, FINAL_ROUNDS, hasFullSet, isFinalStretch, stationAt, JAYSPOT, TROPHY_SHOPS } from "./partyBoard";
 import { characterId, type CharacterId } from "./characters";
 import { checkMinigameSetup, isMinigameMode, minigameOptions, placeMinigameBet, type MinigameCompetition, type MinigameMode, type MinigameOptions } from "./minigameModes";
 export type PartyTempo = "slow" | "normal" | "fast";
@@ -18,7 +18,7 @@ export const ITEMS: Record<Item, { name: string; price: number; icon: string; de
   compass: { name: "Reisekompass", price: 6, icon: "✥", description: "Vor dem Wurf zu einem Shop reisen" }
 };
 export const ITEM_IDS = Object.keys(ITEMS) as Item[];
-export { BOARD, FIELD_ICONS, FIELD_LABELS, type Field } from "./partyBoard";
+export { BOARD, FIELD_ICONS, FIELD_LABELS, FINAL_ROUNDS, fieldLabel, isFinalStretch, TROPHY_SHOPS, type Field } from "./partyBoard";
 export const MINI_IDS = ["targets", "colors", "memory", "timing", "trail", "risk"] as const;
 export type MiniId = typeof MINI_IDS[number] | ArenaId | MatchId | "words" | "bridge";
 export const MINIS: Record<MiniId, { name: string; seconds: number; instruction: string }> = {
@@ -35,7 +35,7 @@ export const MINIS: Record<MiniId, { name: string; seconds: number; instruction:
 };
 export const SYMBOLS = ["☀", "☂", "♣", "★", "♥", "⚓"];
 export const COLORS = ["Rot", "Blau", "Grün", "Gelb"];
-export interface PartyPlayer { id: string; name: string; characterId?: CharacterId; bot?: boolean; position: number; supplies?: number[]; coins: number; trophies: number; wins: number; items: Item[]; shield: boolean; passive: boolean }
+export interface PartyPlayer { id: string; name: string; characterId?: CharacterId; bot?: boolean; position: number; supplies?: number[]; coins: number; trophies: number; wins: number; items: Item[]; shield: boolean; passive: boolean; walked?: number; lost?: number }
 export interface MiniRun { ready: boolean; done: boolean; score: number; attempts: number; cursor: number; opened: number[]; matched: number[]; blockedUntil: number; bank: number; loot: number; feedback: string; lastInput: number }
 export interface PartyMini { id: MiniId; startAt: number; runs: Record<string, MiniRun>; cards: number[]; prompts: number[]; words: number[]; targets: number[]; trail: number[]; risk: number[]; reports: Record<string, number>; confirms: Record<string, boolean>; material: Record<string, boolean>; arenaSeed?:number; arena?:ArenaState; match?: MatchState }
 export type PartyPhase = "turn" | "moving" | "path" | "trophy" | "supply" | "shop" | "gift" | "summary" | "mini-bet" | "mini-intro" | "mini-play" | "analog-confirm" | "mini-result" | "finished" | "aborted";
@@ -44,6 +44,10 @@ export interface PartyGame {
   competition?: MinigameCompetition;
   serverTime?: number;
   opening:boolean;movement?:{destination:number;departAt:number;arriveAt:number};
+  /** Inselparty: help for the last places when the last rounds begin. */
+  finalStretch?: { round: number; help: { id: string; item?: Item; coins?: number }[] };
+  /** Inselparty: bonus trophies awarded at the end; they count like bought trophies. */
+  bonus?: { id: BonusTrophyId; winners: string[]; value: number }[];
   version: 1; options: PartyOptions; online: boolean; players: PartyPlayer[]; order: string[]; round: number; turn: number;
   phase: PartyPhase; phaseId: number; deadline: number; rng: number; steps: number; dice: number[]; path: number[];
   itemUsed: boolean; boost: number; double: boolean; trophyField: number; trophyBought: boolean; offered?: Item;
@@ -70,7 +74,22 @@ function log(g: PartyGame, message: string) { g.log = [...g.log.slice(-11),messa
 export function activePartyPlayer(g: PartyGame) { return g.players.find(p => p.id === g.order[g.turn])!; }
 function progress(g: PartyGame, p: PartyPlayer) { return g.mode === 'roll-it-up' ? p.supplies?.length ?? 0 : p.trophies; }
 export function partyStanding(g: PartyGame) { return [...g.players].sort((a,b) => progress(g,b)-progress(g,a) || b.coins-a.coins || b.wins-a.wins); }
-function finishParty(g:PartyGame,now:number){const first=partyStanding(g)[0];g.winners=g.players.filter(p=>p.trophies===first.trophies&&p.coins===first.coins&&p.wins===first.wins).map(p=>p.id);phase(g,"finished",now);}
+export type BonusTrophyId = "minis" | "walker" | "unlucky";
+export const BONUS_TROPHIES: { id: BonusTrophyId; name: string; label: string; stat: (p: PartyPlayer) => number }[] = [
+  { id: "minis", name: "Minispiel-Ass", label: "Meiste Minispielsiege", stat: p => p.wins },
+  { id: "walker", name: "Weltenbummler", label: "Meiste gelaufene Felder", stat: p => p.walked ?? 0 },
+  { id: "unlucky", name: "Pechvogel", label: "Meiste verlorene Münzen", stat: p => p.lost ?? 0 }
+];
+/** Every player with the highest value receives the bonus trophy; nobody receives it for a value of 0. */
+function awardBonusTrophies(g:PartyGame){
+  g.bonus=BONUS_TROPHIES.map(({id,name,stat})=>{
+    const value=Math.max(...g.players.map(stat)),winners=value>0?g.players.filter(p=>stat(p)===value):[];
+    for(const p of winners)p.trophies++;
+    if(winners.length)log(g,`Bonus-Trophäe ${name}: ${winners.map(p=>p.name).join(" & ")}.`);
+    return {id,winners:winners.map(p=>p.id),value};
+  });
+}
+function finishParty(g:PartyGame,now:number){if((g.mode??"party")==="party"&&!g.bonus)awardBonusTrophies(g);const first=partyStanding(g)[0];g.winners=g.players.filter(p=>p.trophies===first.trophies&&p.coins===first.coins&&p.wins===first.wins).map(p=>p.id);phase(g,"finished",now);}
 function phase(g: PartyGame, next: PartyPhase, now: number) {
   g.phase = next; g.phaseId++;
   g.deadline = 0;
@@ -96,7 +115,7 @@ export function createPartyGame(players: {id:string;name:string;characterId?:Cha
   }
   return g;
 }
-function lose(g: PartyGame, p: PartyPlayer, amount: number) { if (p.shield) { p.shield=false; log(g,`${p.name}: Schutzschild wehrt den Verlust ab.`); return 0; } const n=Math.min(amount,p.coins); p.coins-=n; return n; }
+function lose(g: PartyGame, p: PartyPlayer, amount: number) { if (p.shield) { p.shield=false; log(g,`${p.name}: Schutzschild wehrt den Verlust ab.`); return 0; } const n=Math.min(amount,p.coins); p.coins-=n; p.lost=(p.lost??0)+n; return n; }
 function addItem(p: PartyPlayer, item: Item, replace?: number) {
   if (p.items.length<3) p.items.push(item);
   else { if (!Number.isInteger(replace) || replace!<0 || replace!>=3) throw new Error("Wähle ein Item zum Ersetzen."); p.items[replace!]=item; }
@@ -112,9 +131,9 @@ function event(g: PartyGame) {
 }
 function land(g: PartyGame, now:number) {
   const p=activePartyPlayer(g), field=partyBoard(g)[p.position];
-  log(g,`${p.name}: ${g.mode==="roll-it-up" && field.id===0?"Start":FIELD_LABELS[field.type]}.`);
-  if(field.type==="coin") p.coins+=3;
-  if(field.type==="bad") lose(g,p,3);
+  log(g,`${p.name}: ${g.mode==="roll-it-up" && field.id===0?"Start":fieldLabel(g,field.type)}.`);
+  if(field.type==="coin") p.coins+=fieldCoins(g);
+  if(field.type==="bad") lose(g,p,fieldCoins(g));
   if(field.type==="event") event(g);
   if(field.type==="gift") g.offered=ITEM_IDS[Math.floor(random(g)*5)];
   if(g.offered) phase(g,"gift",now); else phase(g,field.type==="shop"?"shop":"summary",now);
@@ -148,7 +167,17 @@ function arrive(g:PartyGame,now:number){
   } else if(p.position===g.trophyField&&!g.trophyBought&&p.coins>=20)phase(g,"trophy",now);
   else move(g,now);
 }
-function step(g:PartyGame,destination:number) {const p=activePartyPlayer(g);p.position=destination;g.path.push(destination);g.steps--;if(destination===0){p.coins+=3;log(g,`${p.name} passiert ${g.mode==="roll-it-up"?"das Startfeld":"den Hafen"}: +3 Münzen.`);}}
+function step(g:PartyGame,destination:number) {const p=activePartyPlayer(g);p.position=destination;p.walked=(p.walked??0)+1;g.path.push(destination);g.steps--;if(destination===0){p.coins+=3;log(g,`${p.name} passiert ${g.mode==="roll-it-up"?"das Startfeld":"den Hafen"}: +3 Münzen.`);}}
+/** After a purchase the trophy stand moves to one of the two other shops, drawn by the room's random state. */
+function moveTrophy(g:PartyGame){const others=TROPHY_SHOPS.filter(field=>field!==g.trophyField);g.trophyField=others[Math.floor(random(g)*others.length)];log(g,`Der Trophäenstand zieht weiter zu Feld ${g.trophyField}.`);}
+/** The last three rounds begin: every last-placed player receives a random item, or its price in coins with a full inventory. */
+function startFinalStretch(g:PartyGame){
+  const last=partyStanding(g).at(-1)!,tied=g.players.filter(p=>p.trophies===last.trophies&&p.coins===last.coins&&p.wins===last.wins);
+  const help=tied.map(p=>{const item=ITEM_IDS[Math.floor(random(g)*ITEM_IDS.length)];if(p.items.length<3){p.items.push(item);return {id:p.id,item};}p.coins+=ITEMS[item].price;return {id:p.id,coins:ITEMS[item].price};});
+  g.finalStretch={round:g.round,help};
+  log(g,`Die letzten ${FINAL_ROUNDS} Runden beginnen: Plus- und Minusfelder zählen doppelt.`);
+  for(const entry of help){const p=g.players.find(q=>q.id===entry.id)!;log(g,`Rückenwind für ${p.name}: ${entry.item?ITEMS[entry.item].name:`+${entry.coins} Münzen`}.`);}
+}
 function startTurn(g:PartyGame,now:number) {g.itemUsed=false;g.double=false;g.boost=0;g.trophyBought=false;g.dice=[];g.path=[];g.offered=undefined;phase(g,"turn",now);log(g,`${activePartyPlayer(g).name} ist am Zug.`);}
 function selectMini(g:PartyGame,now:number,forceDigital=false) {
   const active=g.players.filter(p=>!p.passive).length;
@@ -330,7 +359,7 @@ export function applyPartyAction(current:PartyGame,id:string,action:PartyAction,
     }
     move(g, now);
   }
-  else if(action.type==="trophy"&&g.phase==="trophy"){if(action.buy){if(p.coins<20)throw new Error("Nicht genug Münzen.");p.coins-=20;p.trophies++;g.trophyBought=true;g.trophyField=({6:15,15:24,24:6} as Record<number,number>)[g.trophyField];log(g,`${p.name} kauft eine Trophäe!`);}move(g,now);}
+  else if(action.type==="trophy"&&g.phase==="trophy"){if(action.buy){if(p.coins<20)throw new Error("Nicht genug Münzen.");p.coins-=20;p.trophies++;g.trophyBought=true;log(g,`${p.name} kauft eine Trophäe!`);moveTrophy(g);}move(g,now);}
   else if(action.type==="shop"&&g.phase==="shop"){if(action.item){if(!ITEM_IDS.includes(action.item)||p.coins<ITEMS[action.item].price)throw new Error("Nicht genug Münzen oder ungültiges Item.");addItem(p,action.item,action.replace);p.coins-=ITEMS[action.item].price;}phase(g,"summary",now);}
   else if(action.type==="gift"&&g.phase==="gift"){if(action.accept&&g.offered)addItem(p,g.offered,action.replace);g.offered=undefined;phase(g,"summary",now);}
   else if(action.type==="next"&&g.phase==="summary"){g.turn++;if(g.turn===g.order.length){g.turn=0;selectMini(g,now);}else startTurn(g,now);}
@@ -345,7 +374,7 @@ export function applyPartyAction(current:PartyGame,id:string,action:PartyAction,
   }if(["words","bridge"].includes(g.mini!.id))throw new Error("Analoge Aufgaben laufen bis zum Zeitende.");if(!g.online&&id!==g.players[g.localMiniIndex].id)throw new Error("Nicht dein Versuch.");const actor=g.mini?.arena?.actors.find(a=>a.id===id);if(actor){actor.finished=true;actor.vx=0;actor.vz=0;actor.inputUntil=0;}finishRun(g,id,now);}
   else if(action.type==="report"&&(g.phase==="mini-play"||g.phase==="analog-confirm")){if(!g.mini||!["words","bridge"].includes(g.mini.id)||now<g.deadline&&g.phase==="mini-play")throw new Error("Die Aufgabe läuft noch.");if(!Number.isInteger(action.score)||action.score<0||action.score>200)throw new Error("Bitte 0–200 ganze Punkte eintragen.");g.mini.reports[id]=action.score;g.mini.runs[id].score=action.score;g.mini.confirms={};finishRun(g,id,now);}
   else if(action.type==="confirm"&&g.phase==="analog-confirm"){if(!action.accept)selectMini(g,now,true);else{g.mini!.confirms[id]=true;if(!g.online||g.players.filter(p=>!p.passive).every(p=>g.mini!.confirms[p.id]))rewardMini(g,now);}}
-  else if(action.type==="next"&&g.phase==="mini-result"){if(g.competition){g.round++;selectMini(g,now);}else if(g.opening){g.opening=false;g.mini=undefined;g.turn=0;startTurn(g,now);}else if(g.mode!=="roll-it-up"&&g.round===g.options.rounds){finishParty(g,now);}else{g.round++;g.turn=0;g.mini=undefined;startTurn(g,now);}}
+  else if(action.type==="next"&&g.phase==="mini-result"){if(g.competition){g.round++;selectMini(g,now);}else if(g.opening){g.opening=false;g.mini=undefined;g.turn=0;startTurn(g,now);}else if(g.mode!=="roll-it-up"&&g.round===g.options.rounds){finishParty(g,now);}else{g.round++;g.turn=0;g.mini=undefined;if(isFinalStretch(g)&&g.round===g.options.rounds-FINAL_ROUNDS+1)startFinalStretch(g);startTurn(g,now);}}
   else throw new Error("Diese Aktion passt nicht zur aktuellen Spielphase.");
   return g;
 }

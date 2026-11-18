@@ -2,14 +2,13 @@ import { fieldName, JAYSPOT, partyBoard } from "../../shared/partyBoard";
 import { mapObjective, objectiveHint } from "./RollItUp";
 import { preloadFigures } from "../figures/catalog";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { activePartyPlayer, FIELD_LABELS, type PartyGame } from "../../shared/party";
+import { activePartyPlayer, FIELD_LABELS, fieldLabel, type PartyGame } from "../../shared/party";
 import type { BoardFrame } from "../three/boardWorld";
 import { PartyMapFallback } from "./PartyMapFallback";
 import { PartyPanel } from "./PartyPanel";
-import { FIELD_VISUALS } from "../lib/partyFieldVisuals";
+import { FIELD_VISUALS, fieldHelp } from "../lib/partyFieldVisuals";
 
 export const FIGURES=["●","▲","■","◆","✚","★"];
-const HELP={start:"Beim Passieren bekommst du 3 Münzen.",coin:"Beim Landen bekommst du 3 Münzen.",bad:"Beim Landen verlierst du bis zu 3 Münzen. Ein Schild schützt dich.",event:"Eine Überraschung für dich oder die ganze Gruppe.",gift:"Hier wartet ein zufälliges Item auf dich.",shop:"Kaufe ein Item für deinen nächsten Zug.",safe:"Hier kannst du die Aussicht genießen."};
 interface Props {
   game:PartyGame;now?:number;rolling?:boolean;onTravelChange?:(moving:boolean)=>void;
   roster?:ReactNode;tools?:ReactNode;interactionBlocked?:boolean;
@@ -41,7 +40,7 @@ export function PartyBoard({game,now=Date.now(),rolling=false,onTravelChange,ros
   },[flat]);
   useEffect(()=>{setSelected(undefined);setDetail(current=>current==="field"?undefined:current);},[turn,game.dice.join()]);
   useEffect(()=>{onTravelChange?.(game.phase==="moving");},[game.phase,onTravelChange]);
-  const caption=<div className={`party-map-caption party-map-caption--${board[inspected].type}`} role="status"><strong>Feld {inspected}: {fieldName(game,inspected)}</strong><span>{objectiveHint(game,inspected)}{inspected!==JAYSPOT&&HELP[board[inspected].type]}</span></div>;
+  const caption=<div className={`party-map-caption party-map-caption--${board[inspected].type}`} role="status"><strong>Feld {inspected}: {fieldName(game,inspected)}</strong><span>{objectiveHint(game,inspected)}{inspected!==JAYSPOT&&fieldHelp(game,board[inspected].type)}</span></div>;
   return <section className={`party-board-wrap party-board-3d ${flat?"is-overview":""}`} aria-label={tray?"Bauschalenkarte":"Inselkarte"}>
     <div className="party-board-toolbar">
       <div className="party-map-objective">{mapObjective(game)}</div>
@@ -65,7 +64,7 @@ export function PartyBoard({game,now=Date.now(),rolling=false,onTravelChange,ros
     {detail==="fields"&&<PartyPanel title="Felder und Figuren" onClose={()=>setDetail(undefined)}>
       {caption}<p className="party-camera-hint">Feld oder Figur auswählen, um die Feldinfo zu lesen. Dein Kartenausschnitt bleibt erhalten.</p>
       <div className="party-map-players" aria-label="Figur auf der Karte finden">{game.players.map(player=><button key={player.id} onClick={()=>inspect(positions[player.id])}>{player.name}<small>Feld {positions[player.id]}</small></button>)}</div>
-      <div className="party-field-legend" aria-label="Feldarten">{Object.entries(FIELD_LABELS).map(([type,label])=>{const look=FIELD_VISUALS[type as keyof typeof FIELD_VISUALS];return <span key={type}><i aria-hidden="true" style={{backgroundColor:look.color,color:look.ink}}>{look.symbol}</i>{tray&&type==="start"?"Start":label}</span>;})}</div>
+      <div className="party-field-legend" aria-label="Feldarten">{(Object.keys(FIELD_LABELS) as (keyof typeof FIELD_LABELS)[]).map(type=>{const look=FIELD_VISUALS[type];return <span key={type}><i aria-hidden="true" style={{backgroundColor:look.color,color:look.ink}}>{look.symbol}</i>{tray&&type==="start"?"Start":fieldLabel(game,type)}</span>;})}</div>
       <div className="party-field-list">{board.map(field=><button key={field.id} aria-pressed={selected===field.id} aria-label={`Feld ${field.id}: ${fieldName(game,field.id)}${!tray&&field.id===game.trophyField?", Trophäenstand":""}`} onClick={()=>inspect(field.id)}>{field.id} {fieldName(game,field.id)}</button>)}</div>
     </PartyPanel>}
     <div className="party-position-announcements" aria-label="Figurenpositionen">{game.players.map(player=><output key={player.id} className="party-player-position" data-player={player.id} data-field={positions[player.id]}>{player.name}: Feld {positions[player.id]}</output>)}</div>

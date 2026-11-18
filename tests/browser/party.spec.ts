@@ -5,9 +5,10 @@ import { onlineSession, toArenaMini, practiceSession } from "./party-session";
 // Independent rooms allow the expanded arena palette to be evenly sharded in CI.
 test.describe.configure({mode:"parallel"});
 
-test("Partyinsel wird ausschließlich online angeboten",async({page})=>{
+test("Partyinsel lokal nur allein mit Bots, kein gemeinsames Handy",async({page})=>{
   await page.goto("/");await page.getByRole("button",{name:/Lokal spielen/}).click();
-  await expect(page.getByRole("button",{name:/Inselparty/})).toHaveCount(0);
+  await expect(page.getByRole("button",{name:/^Inselparty/})).toHaveCount(1);
+  await expect(page.getByRole("button",{name:/^Inselparty/})).toHaveAccessibleName(/1–5 Bots/);
   await page.getByRole("button", {name:/^Qwixx /}).click();
   await expect(page.getByRole("button",{name:"Qwixx starten",exact:true})).toBeVisible();
 });
