@@ -1,3 +1,4 @@
+import { proberaum } from "./proberaumCourse";
 /**
  * Hindernis-Parcours: fixed course geometry per run. Everything here is pure
  * data shared by the authority, bots and rendering; random parts (which doors
@@ -35,10 +36,12 @@ export interface Sweeper { x: number; z: number; y0: number; y1: number; length:
 export interface DoorRow { z: number; doors: number[]; real: number }
 export interface TileRow { z: number; tiles: number[] }
 export interface Course {
+  /** Local, untimed practice world; never part of the minigame pool. */
+  practice?: boolean;
   id: string; name: string; width: number; finishZ: number; finishY: number; killY: number;
   boxes: Box[]; sweepers: Sweeper[];
   /** Respawn lines (z, floor height y); racers return to the last one they passed. */
-  checkpoints: { z: number; y: number }[];
+  checkpoints: { z: number; y: number; x?:number }[];
   doorRows: DoorRow[]; tileRows: TileRow[]; seesaws: number;
   /** Rising goo: height at match time t (ms) is start + rate · max(0, t − delay)/1000. */
   goo?: { start: number; rate: number; delay: number };
@@ -209,8 +212,8 @@ function standhaft(): Course {
 export const COURSE_IDS = ["tuerenlotto", "kreiselkurs", "wippenwerk", "glibberflut", "geisterpfad", "fallklappen", "windkanal", "kletterwand"] as const;
 /** Finals in the same engine (own entries in the draw). */
 export const FINAL_IDS = ["standhaft"] as const;
-export type CourseId = typeof COURSE_IDS[number] | typeof FINAL_IDS[number];
-const BUILDERS: Record<CourseId, () => Course> = { tuerenlotto, kreiselkurs, wippenwerk, glibberflut, geisterpfad, fallklappen, windkanal, kletterwand, standhaft };
+export type CourseId = typeof COURSE_IDS[number] | typeof FINAL_IDS[number] | "proberaum";
+const BUILDERS: Record<CourseId, () => Course> = { proberaum, tuerenlotto, kreiselkurs, wippenwerk, glibberflut, geisterpfad, fallklappen, windkanal, kletterwand, standhaft };
 const cache = new Map<CourseId, Course>();
 /** The (immutable, cached) course of a run. */
 export function course(id: CourseId): Course {

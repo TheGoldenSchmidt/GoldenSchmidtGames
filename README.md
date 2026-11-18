@@ -34,6 +34,12 @@ Die App verwendet ein eigenes festes digitales Aufgabenblatt und eine dokumentie
 
 Die aktuelle Kribbeln-Aufgabe wird als Mengenbild mit Würfeln, Farbgruppen oder Summenziel dargestellt. Ein Würfelbecher lässt sich mit Finger oder Maus schütteln und per Swipe nach unten auswerfen; alternativ gibt es den Würfeln-Knopf oder eine ausdrücklich freigegebene Handybewegung mit Schütteln und anschließendem Kippen. Die sechs Würfel behalten durchgehend ihre festen Farbseiten und fliegen aus dem Becher auf den Tisch. Behaltene Würfel bleiben auch für die anderen Online-Spieler liegen. Beschriftungen, Aufgabenzähler und Summe erscheinen nach dem Landen. Reduzierte Bewegung zeigt das Ergebnis sofort. Die Ansicht nutzt auf dem PC zwei Spalten und auf dem Handy einen kompakten Spieltisch. Mehr dazu in [Kribbeln: Aufgabe und Wurf](docs/kribbeln-visuals.md).
 
+## Proberaum: Die Übungsinsel
+
+Unter **Lokal spielen → Proberaum** liegt eine frei begehbare Übungsinsel für Figuren- und Hindernismechaniken. Neun Stationen bündeln Freifläche mit Übungsfigur, Kletterstufen, Sprungkacheln, niedrige/hohe Drehbalken, Wippe und Fahrplattform, Förderband und Schieber, Windsteg, Türen/Fallklappen sowie wechselnde Griffe und Glibber. Stick, Springen, Hechten, Festhalten und Ducken verwenden die vorhandene Parcours-Physik. Ein Sturz setzt die Figur zurück; die Übung endet nicht automatisch.
+
+Die Stationsliste erlaubt direkte Sprünge; Pause, Stationsstart und Raum-Reset erleichtern Wiederholungen. Das Werkzeugmenü enthält die animierten Parcoursfiguren, Messwerte und eine ausdrücklich von der Physik getrennte Animationsvorschau. Der Raum läuft nur auf dem eigenen Smartphone, auch offline nach vollständigem Laden der App; er ist kein Eintrag im Minispielpool. Ohne WebGL bleibt die 2D-Ansicht bedienbar, die Animationsvorschau benötigt 3D. Eigene Spielsysteme wie Panzer, Pong oder Tower Tumble sind nicht Teil dieses Proberaums.
+
 ## Zwei Hostingarten
 
 Beim Erstellen eines Raums wählt der Host **Über das Internet** (Node-Server) oder **Dieses Handy**. Alle verfügbaren Spiele verwenden dieselbe Raum- und Regellogik. Die Auswahl gilt für diesen Raum; laufende Partien wechseln ihre Hostingart nicht.

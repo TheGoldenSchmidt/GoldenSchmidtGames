@@ -211,3 +211,9 @@ unkritisch, auf echten Handys aber **nicht gemessen**.
   Auf einem Handy-Host mit sechs Geräten und auf Render Free (0,1 CPU) ist das
   **nicht gemessen**; falls es weiter ruckelt, als Nächstes Teilschritte
   (3 → 2) senken oder ruhende Turmteile einfrieren.
+
+## Lokaler Proberaum
+
+`shared/matches/proberaumCourse.ts` beschreibt die zusammenhängende Übungsinsel; `course("proberaum")` verwendet denselben Parcours-Kern. Die Kennung steht ausdrücklich nicht in `MATCH_IDS`, `COURSE_IDS` oder im Zufallspool. `shared/proberaum.ts` steuert ausschließlich die lokale Übung mit geprüften Eingaben und 50-ms-Schritten. Der `practice`-Schalter unterdrückt Rennende und Ausscheiden durch Glibber; Rückkehrpunkte dürfen zusätzlich eine x-Koordinate haben. Normale Parcours behalten ihre bisherigen Regeln.
+
+`PracticeWorldScreen` ist ein eigener, verzögert geladener Einstieg aus der lokalen Spielauswahl. Er nutzt die bestehenden Touch-Steuerelemente, `parcoursWorld` und dessen 2D-Ersatzdarstellung. Geöffnete Werkzeuge, Pause und Animationsvorschau halten die Simulation an; beim App-Wechsel werden Eingaben neutralisiert. Die Vorschau nutzt die tatsächlichen Animationsclips der Parcoursfiguren und verändert keine Physik. Es werden keine Räume angelegt und keine Online-Spielstände geändert.

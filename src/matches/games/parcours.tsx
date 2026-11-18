@@ -10,7 +10,7 @@ const LOOK_FILL: Record<Look, string> = { floor: "#ffd166", wall: "#6544e8", doo
 function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
   const s = f.cur, g = s.game as ParcoursGame, prev = f.prev.game as ParcoursGame, c = course(g.course), { w, h } = f, t = f.simTime;
   const me = g.racers[f.viewer] ?? Object.values(g.racers)[0], scale = w / 12.5, camZ = me ? me.z : 0;
-  const X = (x: number) => w / 2 + x * scale, Y = (z: number) => h * .7 - (z - camZ) * scale;
+  const X = (x: number) => w / 2 + (x-(c.practice?me?.x??0:0)) * scale, Y = (z: number) => h * .7 - (z - camZ) * scale;
   ctx.fillStyle = "#1d2466"; ctx.fillRect(0, 0, w, h);
   // Lower boxes first, so walls and doors cover the floor.
   const boxes = c.boxes.map((b, i) => ({ b, i, bb: boxAt(b, t) })).sort((p, q) => p.bb.y1 - q.bb.y1);
@@ -22,7 +22,7 @@ function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
     ctx.fillRect(X(bb.x0), Y(bb.z1), (bb.x1 - bb.x0) * scale, (bb.z1 - bb.z0) * scale);
     if (b.y1 - (b.y0 + (b.look === "floor" || b.look === "finish" || b.look === "belt" ? 1 : 0)) > 1) { ctx.strokeStyle = "#24133f"; ctx.lineWidth = 2; ctx.strokeRect(X(bb.x0), Y(bb.z1), (bb.x1 - bb.x0) * scale, (bb.z1 - bb.z0) * scale); }
   }
-  for (let k = 0; k < 10; k++) { ctx.fillStyle = k % 2 ? "#fff9ed" : "#24133f"; ctx.fillRect(X(-5 + k), Y(c.finishZ) - 4, scale, 8); }
+  for (let k = 0; k < (c.practice?0:10); k++) { ctx.fillStyle = k % 2 ? "#fff9ed" : "#24133f"; ctx.fillRect(X(-5 + k), Y(c.finishZ) - 4, scale, 8); }
   for (const sw of c.sweepers) {
     const a = sweeperAngle(sw, t), dx = Math.cos(a) * sw.length, dz = Math.sin(a) * sw.length;
     ctx.strokeStyle = sw.y1 <= .8 ? "#ff5f8f" : "#ffe44e"; ctx.lineWidth = Math.max(4, scale * .35); ctx.setLineDash(sw.y1 <= .8 ? [] : [8, 6]);

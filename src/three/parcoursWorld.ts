@@ -1,3 +1,5 @@
+import { PRACTICE_STATIONS } from "../../shared/matches/proberaumCourse";
+import { PRACTICE_LOOPS, PRACTICE_SHOTS } from "../matches/practiceAnimations";
 import * as T from "three";
 import { blinkOpen, blinkWarn, boxAt, course, gooAt, sweeperAngle, type Box, type Look } from "../../shared/matches/parcoursCourses";
 import { shownRacer, type ParcoursGame } from "../../shared/matches/parcours";
@@ -31,6 +33,16 @@ export function createParcoursWorld(host: HTMLElement, read: () => MatchWorldFra
   kit.camera.fov = 58; kit.camera.near = .1; kit.camera.far = 120; kit.camera.updateProjectionMatrix();
   const first = read(), g0 = first.cur.game as ParcoursGame, c = course(g0.course);
   const W = (x: number, y: number, z: number) => new T.Vector3(x, y, -z);
+  if(c.practice){
+    kit.scene.background=new T.Color(0x8ed8f4);kit.scene.fog=new T.Fog(0x8ed8f4,28,75);
+    for(const [i,station] of PRACTICE_STATIONS.entries()){
+      const sign=document.createElement("canvas");sign.width=512;sign.height=128;const ctx=sign.getContext("2d")!;
+      ctx.fillStyle="#211c53";ctx.fillRect(0,0,512,128);ctx.fillStyle="#ffd777";ctx.font="bold 30px sans-serif";ctx.textAlign="center";ctx.fillText(station.name,256,76);
+      const texture=new T.CanvasTexture(sign),sprite=new T.Sprite(new T.SpriteMaterial({map:texture}));sprite.position.copy(W(station.x+2.5,2.5,station.z+1));sprite.scale.set(2.4,.6,1);world.add(sprite);
+      kit.cylinder(world,i%2?0x57e4cb:0xffd166,station.x,.015,-station.z,1.2,.03).castShadow=false;
+    }
+  }
+
 
   // Static boxes: one instanced mesh per look; moving, door, tile and seesaw boxes get their own meshes.
   const unit = new T.BoxGeometry(1, 1, 1), dummy = new T.Object3D();
@@ -41,7 +53,7 @@ export function createParcoursWorld(host: HTMLElement, read: () => MatchWorldFra
     statics.set(b.look, [...(statics.get(b.look) ?? []), b]);
   }
   for (const [look, list] of statics) {
-    const mesh = new T.InstancedMesh(unit, new T.MeshStandardMaterial({ color: LOOK_COLOR[look], roughness: .7 }), list.length);
+    const mesh = new T.InstancedMesh(unit, new T.MeshStandardMaterial({ color: c.practice&&look==="floor"?0x82b95d:LOOK_COLOR[look], roughness: .7 }), list.length);
     list.forEach((b, i) => { dummy.position.copy(W((b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2, (b.z0 + b.z1) / 2)); dummy.scale.set(b.x1 - b.x0, b.y1 - b.y0, b.z1 - b.z0); dummy.updateMatrix(); mesh.setMatrixAt(i, dummy.matrix); });
     mesh.castShadow = look !== "floor" && look !== "finish"; mesh.receiveShadow = true; world.add(mesh);
     // Belts: bright stripes that run with the belt.
@@ -50,13 +62,13 @@ export function createParcoursWorld(host: HTMLElement, read: () => MatchWorldFra
   // Chequered finish line and a gate.
   // Finals have no finish line; the course length follows the boxes.
   const end = Math.max(...c.boxes.map(b => b.z1));
-  if (!c.elimination) {
+  if (!c.elimination && !c.practice) {
     for (let k = 0; k < 10; k++) kit.box(world, k % 2 ? COLOR.finish : COLOR.ink, -4.5 + k, c.finishY + .02, -c.finishZ, 1, .02, .5);
     for (const side of [-1, 1]) kit.box(world, COLOR.post, side * 5.2, c.finishY + 1.6, -c.finishZ, .3, 3.2, .3);
     kit.box(world, COLOR.door, 0, c.finishY + 3.3, -c.finishZ, 10.7, .4, .4);
   }
   // Checkpoint flags along the left edge.
-  for (const cp of c.checkpoints.slice(1)) { kit.cylinder(world, COLOR.post, -5.3, cp.y + 1, -cp.z, .05, 2); kit.box(world, COLOR.flag, -5, cp.y + 1.8, -cp.z, .55, .35, .03); }
+  for (const cp of (c.practice?[]:c.checkpoints.slice(1))) { kit.cylinder(world, COLOR.post, -5.3, cp.y + 1, -cp.z, .05, 2); kit.box(world, COLOR.flag, -5, cp.y + 1.8, -cp.z, .55, .35, .03); }
 
   const meshFor = (b: Box) => { const m = kit.box(world, LOOK_COLOR[b.look], 0, 0, 0, b.x1 - b.x0, b.y1 - b.y0, b.z1 - b.z0); m.castShadow = true; m.receiveShadow = true; return m; };
   c.boxes.forEach(b => {
@@ -83,7 +95,7 @@ export function createParcoursWorld(host: HTMLElement, read: () => MatchWorldFra
   // Wind: fans on the side the wind comes from, arrows on the floor that light up while it blows.
   const fans = c.winds.map(w => {
     const along = Math.abs(w.vx) > Math.abs(w.vz), group = new T.Group(), y = Math.max(w.y0, 0) + 1.2;
-    const x = along ? (w.vx > 0 ? -5.6 : 5.6) : (w.x0 + w.x1) / 2, z = along ? (w.z0 + w.z1) / 2 : (w.vz < 0 ? w.z1 + .6 : w.z0 - .6);
+    const x = along ? (w.vx > 0 ? (c.practice?w.x0-.6:-5.6) : (c.practice?w.x1+.6:5.6)) : (w.x0 + w.x1) / 2, z = along ? (w.z0 + w.z1) / 2 : (w.vz < 0 ? w.z1 + .6 : w.z0 - .6);
     group.position.copy(W(x, y + (along ? 0 : 1.2), z)); world.add(group);
     const rotor = new T.Group(); group.add(rotor);
     const ring = kit.mesh(group, new T.TorusGeometry(1, .08, 8, 28), COLOR.post, 0, 0, 0);
@@ -105,7 +117,8 @@ export function createParcoursWorld(host: HTMLElement, read: () => MatchWorldFra
   const deep = kit.box(world, 0x141a4d, 0, c.killY + 1, -end / 2, 80, .2, end + 60); deep.castShadow = false;
 
   const dust = new Debris(world, 80, new T.MeshStandardMaterial({ color: 0xfff9ed, roughness: 1 })), impact = new Impact(world, kit);
-  const warnColor = new T.Color(COLOR.warn), views = new Map<string, RacerView>(), chaseCam = new ChaseCamera(kit, 4.4, 2.8, 2.6, .9), target = new T.Vector3();
+  const warnColor = new T.Color(COLOR.warn), views = new Map<string, RacerView>(), chaseCam = new ChaseCamera(kit, c.practice?6.2:4.4, c.practice?4:2.8, 2.6, .9), target = new T.Vector3();
+  let lastPreview=0,lastTravel=-1;
   let shownId = "", frame = 0, last = performance.now(), lastSeq = 0, fresh = true, doorState = "", tileState = "";
 
   const viewFor = (id: string, style: number, chosen: string | undefined, own: boolean): RacerView => {
@@ -176,7 +189,11 @@ export function createParcoursWorld(host: HTMLElement, read: () => MatchWorldFra
       v.fig.group.position.set(x, y, -z); v.ring.position.set(x, y + .03, -z);
       v.fig.group.rotation.y = r.pose === "done" ? 0 : Math.PI - r.face;
       const speed = Math.hypot(r.vx, r.vz);
-      if (r.pose === "done") loop(v, "dance");
+      if(c.practice && p.id===f.viewer && f.local.practiceLoop!==undefined){
+        loop(v,PRACTICE_LOOPS[f.local.practiceLoop]?.clip??"idle");
+        if(f.local.practiceShotSeq && f.local.practiceShotSeq!==lastPreview){lastPreview=f.local.practiceShotSeq;v.fig.play(PRACTICE_SHOTS[f.local.practiceShot]?.clip??"cheer");}
+      }
+      else if (r.pose === "done") loop(v, "dance");
       else if (r.pose === "hang" || r.grab) loop(v, "push");
       else if (r.pose === "dive" || r.pose === "prone") loop(v, "slide");
       else if (r.duck) loop(v, "slide");
@@ -189,6 +206,7 @@ export function createParcoursWorld(host: HTMLElement, read: () => MatchWorldFra
 
     // Chase camera behind the own racer; after the finish, when out or as a spectator: the chosen or leading racer.
     const local = f.local as ChaseLocal & { watch?: number }, mine = shownRacer(g, s.players, f.viewer, local.watch), ownCam = mine?.id === f.viewer;
+    if(c.practice && (f.local.practiceTravel??0)!==lastTravel){lastTravel=f.local.practiceTravel??0;chaseCam.reset();fresh=true;}
     if (mine && mine.id !== shownId) { shownId = mine.id; fresh = true; }
     host.dataset.watch = mine?.id ?? "";
     if (mine) {
@@ -206,6 +224,7 @@ export function createParcoursWorld(host: HTMLElement, read: () => MatchWorldFra
     dust.update(time);
     impact.update(time, reduced);
     kit.render();
+    if(c.practice)host.dataset.ready="true";
     host.dataset.figures = JSON.stringify(Object.fromEntries([...views].map(([id, v]) => [id, v.fig.group.userData.characterId])));
     frame = requestAnimationFrame(animate);
   };
