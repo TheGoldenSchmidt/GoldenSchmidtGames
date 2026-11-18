@@ -1,6 +1,6 @@
 import {boardGame,settleMovement} from "./party-fixtures";
 import assert from "node:assert/strict";
-import { activePartyPlayer, applyPartyAction as act, BOARD, createPartyGame, createPartyPractice, ITEM_IDS, ITEMS, MINI_IDS, partyMiniResults, partyOptions, partyStanding, publicParty, tickParty, type PartyGame, type PartyAction, type MiniId } from "../shared/party";
+import { activePartyPlayer, applyPartyAction as act, BOARD, createPartyGame, duelTargets, createPartyPractice, ITEM_IDS, ITEMS, MINI_IDS, partyMiniResults, partyOptions, partyStanding, publicParty, tickParty, type PartyGame, type PartyAction, type MiniId } from "../shared/party";
 import { ACTION_MINI_IDS } from "../shared/partyArena";
 
 const players=[{id:"a",name:"Ada"},{id:"b",name:"Ben"}];
@@ -46,7 +46,7 @@ for(let count=2;count<=6;count++)for(let rounds=5;rounds<=15;rounds++){
   let game=createPartyGame(Array.from({length:count},(_,i)=>({id:`p${i}`,name:`P${i}`})),{rounds},true,count*100+rounds,now);
   let actions=0;
   while(game.phase!=="finished"&&actions++<5000){const player=activePartyPlayer(game).id;let a:PartyAction;
-    switch(game.phase){case "moving":game=tickParty(game,now=Math.max(now,game.movement!.arriveAt));continue;case "turn":a={type:"roll"};break;case "path":a={type:"path",destination:BOARD[activePartyPlayer(game).position].next[actions%2]??BOARD[activePartyPlayer(game).position].next[0]};break;case "trophy":a={type:"trophy",buy:true};break;case "shop":a={type:"shop"};break;case "gift":a={type:"gift",accept:true,replace:0};break;case "summary":case "mini-result":a={type:"next"};break;
+    switch(game.phase){case "moving":game=tickParty(game,now=Math.max(now,game.movement!.arriveAt));continue;case "turn":a={type:"roll"};break;case "path":a={type:"path",destination:BOARD[activePartyPlayer(game).position].next[actions%2]??BOARD[activePartyPlayer(game).position].next[0]};break;case "trophy":a={type:"trophy",buy:true};break;case "shop":a={type:"shop"};break;case "gift":a={type:"gift",accept:true,replace:0};break;case "duel":{const target=duelTargets(game)[0];a=actions%3&&target?{type:"duel",target:target.id,stake:Math.min(2,target.max)}:{type:"duel"};break;}case "summary":case "mini-result":a={type:"next"};break;
     case "mini-intro":for(const p of game.players)if(!game.mini!.runs[p.id].ready)game=act(game,p.id,{type:"ready"},now+=100);continue;
     case "mini-play":for(const p of game.players)if(!game.mini!.runs[p.id].done)game=act(game,p.id,{type:"finish"},now+=100);continue;
     default:throw new Error(`Unerwartete Phase ${game.phase}`);}

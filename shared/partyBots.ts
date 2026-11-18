@@ -2,7 +2,7 @@ import { hasFullSet, partyPaths } from "./partyBoard";
 import { availableBets } from "./minigameModes";
 import { botMatchInput } from "./matches/framework";
 import {COMMAND_ZONES,DUO_SWITCHES,GOLF_GATES,HEX_PLATFORMS,hexCue,photoSpot,saysCue,wallHoles,wallCellPoint} from "./arenaChallenges";
-import { activePartyPlayer, applyPartyAction, applyPartyControl, ITEMS, tickParty, type PartyAction, type PartyGame } from "./party";
+import { activePartyPlayer, applyPartyAction, applyPartyControl, duelTargets, ITEMS, tickParty, type PartyAction, type PartyGame } from "./party";
 import { bridgeCenter, clamp, DASH_BLOCKS, HURDLES, TILT_HOLES, type ArenaActor, type ArenaInput, type ArenaState } from "./partyArena";
 
 /** Bots kennen nur die sichtbare Arena und senden normale Eingaben. */
@@ -56,6 +56,8 @@ export function botBoardAction(g:PartyGame):PartyAction|undefined {
   if(g.phase==="supply")return {type:"supply",buy:true};
   if(g.phase==="trophy")return {type:"trophy",buy:p.coins>=20};
   if(g.phase==="gift")return {type:"gift",accept:true,replace:0};
+  // Duels: challenge the richest player for up to 5 coins.
+  if(g.phase==="duel"){const options=duelTargets(g).sort((a,b)=>g.players.find(q=>q.id===b.id)!.coins-g.players.find(q=>q.id===a.id)!.coins);return options.length?{type:"duel",target:options[0].id,stake:Math.min(5,options[0].max)}:{type:"duel"};}
   if(g.phase==="shop")return {type:"shop",item:p.coins>=25&&p.items.length<3&&p.coins>=ITEMS.double.price?"double":undefined};
   if(g.phase==="summary"||g.phase==="mini-result")return {type:"next"};
 }

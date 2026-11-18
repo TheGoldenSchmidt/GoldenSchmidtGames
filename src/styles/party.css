@@ -174,3 +174,8 @@
 }
 @media(max-width:359px) { .party-header { gap:8px; padding-inline:12px; }.party-header strong { font-size:1.1rem; }.party-header small { font-size:.55rem; }.party-map-tools small { display:none; }.party-mini-score { gap:7px; }.party-mini-progress { gap:2px; }.party-mini-heading h2 { font-size:1.3rem; }.party-arena { padding:13px; }.party-target-grid { gap:8px; }.party-target-grid button { min-height:67px; }.party-trail { gap:4px; }.party-trail > span { width:36px; font-size:1.4rem; }.party-mini-intro h1 { font-size:1.9rem; }.party-awards li { gap:7px; padding-inline:9px; }.party-avatar { width:35px; height:39px; }.party-map-caption { font-size:.6rem; } }
 @media(prefers-reduced-motion:reduce) { .party-screen *, .party-overlay * { animation:none!important; transition:none!important; scroll-behavior:auto!important; }.party-pawn { transition:none; } }
+/* Duel: who plays whom for how much (intro and result). */
+.party-duel-headline { display:grid; gap:3px; max-width:46ch; margin:10px auto; padding:9px 12px; border-radius:14px; background:#efe4ff; color:#2e1a5c; }
+.party-duel-headline strong { font-size:.95rem; }
+.party-duel-headline span { font-size:.72rem; }
+.party-duel-result .party-awards li > b { color:#2e1a5c; }

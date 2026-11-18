@@ -1,9 +1,10 @@
-export type Field = "start" | "coin" | "bad" | "event" | "gift" | "shop" | "safe";
-export const FIELD_LABELS: Record<Field, string> = { start: "Hafen", coin: "+3 Münzen", bad: "−3 Münzen", event: "Ereignis", gift: "Geschenk", shop: "Shop", safe: "Aussicht" };
-export const FIELD_ICONS: Record<Field, string> = { start: "⚑", coin: "+", bad: "−", event: "?", gift: "◇", shop: "▣", safe: "·" };
+/** `duel` fields (Inselparty) start a 1v1 duel for coins; Roll It Up keeps them as plain `safe` fields. */
+export type Field = "start" | "coin" | "bad" | "event" | "gift" | "shop" | "duel" | "safe";
+export const FIELD_LABELS: Record<Field, string> = { start: "Hafen", coin: "+3 Münzen", bad: "−3 Münzen", event: "Ereignis", gift: "Geschenk", shop: "Shop", duel: "Duell", safe: "Aussicht" };
+export const FIELD_ICONS: Record<Field, string> = { start: "⚑", coin: "+", bad: "−", event: "?", gift: "◇", shop: "▣", duel: "⚔", safe: "·" };
 export const BOARD = Array.from({ length: 34 }, (_, id) => {
   const has = (numbers: number[]) => numbers.includes(id);
-  const type: Field = id === 0 ? "start" : has([1,3,7,9,11,14,17,20,23,25,28]) ? "coin" : has([5,13,19,26,32]) ? "bad" : has([4,10,16,22,29,33]) ? "event" : has([2,12,21,30]) ? "gift" : has([6,15,24]) ? "shop" : "safe";
+  const type: Field = id === 0 ? "start" : has([1,3,7,9,11,14,17,20,23,25,28]) ? "coin" : has([5,13,19,26,32]) ? "bad" : has([4,10,16,22,29,33]) ? "event" : has([2,12,21,30]) ? "gift" : has([6,15,24]) ? "shop" : "duel";
   const next = id === 8 ? [9,28] : id === 18 ? [19,31] : id === 30 ? [12] : id === 33 ? [22] : id === 27 ? [0] : [id + 1];
   const angle = ((id / 28) * Math.PI * 2) - Math.PI / 2;
   const branch: Record<number, [number, number]> = { 28:[61,32],29:[55,40],30:[48,47],31:[39,66],32:[44,57],33:[51,61] };
@@ -46,7 +47,8 @@ const forks: Record<number, number[]> = {8:[9,30],18:[19,32],29:[0],31:[12,JAYSP
 const bowlBoard = Array.from({ length: JAYSPOT + 1 }, (_, id) => {
   const angle = id * Math.PI / 15 - Math.PI / 2;
   const [x, y] = hillside[id - 30] ?? [50 + 39 * Math.cos(angle), 50 + 39 * Math.sin(angle)];
-  return {id, x, y, type: BOARD[id]?.type ?? "safe", next: forks[id] ?? [id + 1]};
+  const type = BOARD[id]?.type;
+  return {id, x, y, type: !type || type === "duel" ? "safe" as const : type, next: forks[id] ?? [id + 1]};
 });
 export function partyBoard(game: PartyBoardState) {
   return game.mode === "roll-it-up" ? bowlBoard : BOARD;

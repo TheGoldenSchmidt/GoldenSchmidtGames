@@ -34,6 +34,7 @@ try{
     if(g.phase==="turn")await command({type:"roll"});
     else if(g.phase==="path")await command({type:"path",destination:p.position===8?9:19});
     else if(g.phase==="gift")await command({type:"gift",accept:false});
+    else if(g.phase==="duel")await command({type:"duel"});
     else if(g.phase==="shop")await command({type:"shop"});
     else if(g.phase==="trophy")await command({type:"trophy",buy:false});
     else await command({type:"next"});
@@ -58,6 +59,7 @@ try{
       if(g.phase==="turn")await command({type:"roll"});
       else if(g.phase==="path")await command({type:"path",destination:p.position===8?9:19});
       else if(g.phase==="gift")await command({type:"gift",accept:false});
+      else if(g.phase==="duel")await command({type:"duel"});
       else if(g.phase==="shop")await command({type:"shop"});
       else if(g.phase==="trophy")await command({type:"trophy",buy:false});
       else await command({type:"next"});
@@ -89,12 +91,15 @@ try{
   const pausedTime=room.partyGame!.mini!.arena!.time;
   await new Promise(resolve=>setTimeout(resolve,200));room=await request(host,"qwixx:state");assert.equal(room.partyGame!.mini!.arena!.time,pausedTime,"Echtzeit-Physik pausiert mit dem Raum");
   const arenaRejoin=await connect();room=await request(arenaRejoin,"room:join",{characterId:"alpha_rick_prime",code:room.code,playerId:b,name:"Ben",partyToken:guestToken});byId[b]=arenaRejoin;assert.equal(room.partyGame!.pausedAt,0);
+  let duels=0;
   for(let count=0;count<400&&room.partyGame!.phase!=="finished";count++){
     const g=room.partyGame!,p=activePartyPlayer(g);
     if(g.phase==="moving"){await new Promise(r=>setTimeout(r,300));room=await request(host,"qwixx:state");continue;}
     if(g.phase==="turn")await command({type:"roll"});
     else if(g.phase==="path")await command({type:"path",destination:p.position===8?9:19});
     else if(g.phase==="gift")await command({type:"gift",accept:false});
+    // Duels over the socket: challenge with one coin when possible (the others watch).
+    else if(g.phase==="duel"){const other=g.players.find(q=>q.id!==p.id&&q.coins>0);if(other&&p.coins>0){await command({type:"duel",target:other.id,stake:1});duels++;}else await command({type:"duel"});}
     else if(g.phase==="shop")await command({type:"shop"});
     else if(g.phase==="trophy")await command({type:"trophy",buy:true});
     else if(g.phase==="summary"||g.phase==="mini-result")await command({type:"next"});
@@ -106,6 +111,7 @@ try{
     }else throw new Error(`Unerwartete Phase ${g.phase}`);
   }
   assert.equal(room.partyGame!.phase,"finished");assert.ok(room.partyGame!.winners.length>0);
+  console.log(`Inselparty online: ${duels} Duell(e) über den Socket gespielt.`);
   // Rooms stay open after the game: members with their key come back to the end screen,
   // strangers and wrong keys are refused; after "Zurück zur Lobby" the old game session is gone.
   assert.equal((await request<{available:boolean}>(host,"party:session-status",{code:room.code,playerId:a,partyToken:hostToken})).available,true);

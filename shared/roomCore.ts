@@ -2,7 +2,7 @@ import { getGame, isPartyMode } from "./games";
 import { checkMinigameSetup, isMinigameMode, minigameOptions, type MinigameOptions } from "./minigameModes";
 import { isPlayableMini, miniPool, type PlayableMiniId } from "./minigameCatalog";
 import { MATCH_MODULES, publicMatch, type MatchId } from "./matches/framework";
-import { applyPartyAction, applyPartyControl, createPartyGame, neutralizePartyInputs, partyOptions, publicParty, selectPartyTestMini, shiftPartyClock, tickParty, type PartyAction, type PartyOptions } from "./party";
+import { applyPartyAction, applyPartyControl, createPartyGame, neutralizePartyInputs, partyOptions, publicParty, selectPartyTestMini, shiftPartyClock, startPartyTestDuel, tickParty, type PartyAction, type PartyOptions } from "./party";
 import { CHARACTERS, characterId, isCharacterId } from "./characters";
 import { PartyBotDriver } from "./partyBots";
 import { publicArena, type ArenaInput } from "./partyArena";
@@ -341,6 +341,7 @@ hub.onPeer((socket) => {
       try{room.partyGame=selectPartyTestMini(g,payload.miniId as PlayableMiniId);}catch(error){return callback({ok:false,error:error instanceof Error?error.message:"Minispiel nicht verfügbar."});}
     }
     else if(payload.command==="skip-bots")room.partyGame=botDrivers.get(room.code)!.skipTurns(g,Date.now());
+    else if(payload.command==="duel"){try{room.partyGame=startPartyTestDuel(g,member.playerId);}catch(error){return callback({ok:false,error:error instanceof Error?error.message:"Testduell nicht möglich."});}}
     else return callback({ok:false,error:"Unbekanntes Testwerkzeug."});
     room.partyTest.commandSeq=seq;
     broadcast(room);callback({ok:true,data:publicRoom(room,member.playerId)});closePartyRoom(room);

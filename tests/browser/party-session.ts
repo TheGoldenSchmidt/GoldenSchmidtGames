@@ -47,7 +47,7 @@ export async function toMini(session:Awaited<ReturnType<typeof onlineSession>>) 
   for(let step=0;step<180;step++){
     const room=await session.state(),g=room.partyGame!,p=activePartyPlayer(g);
     if(g.phase==="mini-intro")return room;
-    const actions:Partial<Record<typeof g.phase,PartyAction>>={turn:{type:"roll"},path:{type:"path",destination:BOARD[p.position].next[0]},gift:{type:"gift",accept:false},shop:{type:"shop"},trophy:{type:"trophy",buy:true},summary:{type:"next"},"mini-result":{type:"next"}};
+    const actions:Partial<Record<typeof g.phase,PartyAction>>={turn:{type:"roll"},path:{type:"path",destination:BOARD[p.position].next[0]},gift:{type:"gift",accept:false},duel:{type:"duel"},shop:{type:"shop"},trophy:{type:"trophy",buy:true},summary:{type:"next"},"mini-result":{type:"next"}};
     if(g.phase==="moving"){await new Promise(r=>setTimeout(r,250));continue;}
     const action=actions[g.phase];if(!action)throw new Error(g.phase);await session.action(action);
   }
