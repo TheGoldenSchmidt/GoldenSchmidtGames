@@ -8,21 +8,23 @@ const LOOK_FILL: Record<Look, string> = { floor: "#ffd166", wall: "#6544e8", doo
 
 /** Canvas fallback: the course from above around the own racer, forward is up. */
 function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
-  const s = f.cur, g = s.game as ParcoursGame, prev = f.prev.game as ParcoursGame, c = course(g.course), { w, h } = f, t = f.simTime;
-  const me = g.racers[f.viewer] ?? Object.values(g.racers)[0], scale = w / 12.5, camZ = me ? me.z : 0;
+  // Obstacles at the moment of the interpolated racers (same as the 3D world).
+  const s = f.cur, g = s.game as ParcoursGame, prev = f.prev.game as ParcoursGame, c = course(g.course), { w, h } = f, t = f.prev.time + (s.time - f.prev.time) * f.alpha;
+  const me = g.racers[f.viewer] ?? Object.values(g.racers)[0], scale = w / (c.width + 2.5), camZ = me ? me.z : 0;
   const X = (x: number) => w / 2 + x * scale, Y = (z: number) => h * .7 - (z - camZ) * scale;
   ctx.fillStyle = "#1d2466"; ctx.fillRect(0, 0, w, h);
   // Lower boxes first, so walls and doors cover the floor.
   const boxes = c.boxes.map((b, i) => ({ b, i, bb: boxAt(b, t) })).sort((p, q) => p.bb.y1 - q.bb.y1);
   for (const { b, bb } of boxes) {
     if (b.door !== undefined && g.doors[b.door] === "1") continue;
+    if (b.door !== undefined && g.doors[b.door] === "2") { ctx.fillStyle = "#4a2a5c"; ctx.fillRect(X(bb.x0), Y(bb.z1), (bb.x1 - bb.x0) * scale, (bb.z1 - bb.z0) * scale); continue; }
     if (b.tile !== undefined && g.tiles[b.tile] === "2") continue;
     if (blinkOpen(b, t)) continue;
     ctx.fillStyle = b.tile !== undefined && g.tiles[b.tile] === "1" ? "#7be38f" : blinkWarn(b, t) ? "#ff6a1f" : LOOK_FILL[b.look];
     ctx.fillRect(X(bb.x0), Y(bb.z1), (bb.x1 - bb.x0) * scale, (bb.z1 - bb.z0) * scale);
     if (b.y1 - (b.y0 + (b.look === "floor" || b.look === "finish" || b.look === "belt" ? 1 : 0)) > 1) { ctx.strokeStyle = "#24133f"; ctx.lineWidth = 2; ctx.strokeRect(X(bb.x0), Y(bb.z1), (bb.x1 - bb.x0) * scale, (bb.z1 - bb.z0) * scale); }
   }
-  for (let k = 0; k < 10; k++) { ctx.fillStyle = k % 2 ? "#fff9ed" : "#24133f"; ctx.fillRect(X(-5 + k), Y(c.finishZ) - 4, scale, 8); }
+  for (let k = 0; k < c.width; k++) { ctx.fillStyle = k % 2 ? "#fff9ed" : "#24133f"; ctx.fillRect(X(-c.width / 2 + k), Y(c.finishZ) - 4, scale, 8); }
   for (const sw of c.sweepers) {
     const a = sweeperAngle(sw, t), dx = Math.cos(a) * sw.length, dz = Math.sin(a) * sw.length;
     ctx.strokeStyle = sw.y1 <= .8 ? "#ff5f8f" : "#ffe44e"; ctx.lineWidth = Math.max(4, scale * .35); ctx.setLineDash(sw.y1 <= .8 ? [] : [8, 6]);
@@ -94,7 +96,8 @@ export const parcoursClient: MatchClient = {
     const mine = event.ids[0] === viewer;
     if (event.kind === "jump" || event.kind === "climb") return mine ? "bounce" : undefined;
     if (event.kind === "dive" || event.kind === "grab") return mine ? "power" : undefined;
-    if (event.kind === "hit" || event.kind === "fall") return mine ? "fail" : undefined;
+    if (event.kind === "hit" || event.kind === "fall" || event.kind === "shove") return mine ? "fail" : undefined;
+    if (event.kind === "solid") return mine ? "tick" : undefined;
     if (event.kind === "out") return mine ? "fail" : "score";
     if (event.kind === "door") return mine ? "boom" : undefined;
     if (event.kind === "tile") return mine ? "fail" : "tick";

@@ -169,4 +169,14 @@ for (const count of [2, 4, 6]) {
   g = tickParty(g, g.deadline + 1);
   assert.equal(g.phase, "finished"); assert.deepEqual(g.winners, [], "Ohne Eingaben keine Teilnahme");
 }
+// Täuschende Signaltafeln: kommen vor, tragen ein anderes Wort, liegen vor dem Signal und bleiben bis dahin verborgen.
+{
+  const fakes = Array.from({ length: 40 }, (_, seed) => createMatch("quickdraw", [{ id: "a", style: 0 }, { id: "b", style: 1 }], seed + 1) as MatchState<QuickDrawGame>)
+    .flatMap(m => m.game.rounds[0].decoys.filter(d => d.kind === "fake").map(d => ({ d, m })));
+  assert.ok(fakes.length > 3, "Falsche Signaltafeln kommen vor");
+  for (const { d, m } of fakes) {
+    assert.ok(d.word !== undefined && d.at < m.game.rounds[0].signalAt! - 400);
+    assert.equal((publicMatch(m, "a").game as QuickDrawGame).rounds[0].decoys.length, 0, "Vorab unsichtbar");
+  }
+}
 console.log("Quick Draw erfolgreich: verdecktes Signal, Täuschungen, Duell bis 3, Gruppe 3/2/1 mit 4 und 6 Spielern, Stechen, Fehlstarts, Latenzprüfung, Abbruch, Zeitablauf, Neustart und Bots.");

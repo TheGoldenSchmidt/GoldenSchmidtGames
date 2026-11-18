@@ -1,104 +1,96 @@
 import assert from "node:assert/strict";
 import { advanceMatch, botMatchInput, createMatch, matchStandings, publicMatch, removeMatchPlayer, setMatchControl } from "../shared/matches/framework";
-import { LT, occupied, type Rider, type TrailsGame } from "../shared/matches/lightTrails";
-import { NEUTRAL_MATCH_INPUT, type MatchState } from "../shared/matches/types";
+import { decodeTrail, encodeTrail, LT, type Rider, type TrailsGame } from "../shared/matches/lightTrails";
+import { NEUTRAL_MATCH_INPUT, type MatchInput, type MatchState } from "../shared/matches/types";
 import { createPartyGame, partyMiniResults, tickParty } from "../shared/party";
 import { PartyBotDriver } from "../shared/partyBots";
 
 type LTS = MatchState<TrailsGame>;
 const make = (count: number, seed = 4) => createMatch("trails", Array.from({ length: count }, (_, i) => ({ id: `p${i}`, style: i })), seed) as LTS;
 const seq = new Map<string, number>();
-function command(s: LTS, id: string, n: number) {
+function send(s: LTS, id: string, values: Partial<MatchInput> = {}) {
   const p = s.players.find(q => q.id === id)!, next = (seq.get(`${s.seed}${id}`) ?? 0) + 1; seq.set(`${s.seed}${id}`, next);
-  return setMatchControl(s, id, { ...NEUTRAL_MATCH_INPUT, cn: p.usedN + 1, n }, next, s.time);
+  return setMatchControl(s, id, { ...NEUTRAL_MATCH_INPUT, ca: p.usedA, cb: p.usedB, cn: p.usedN, ...values }, next, s.time);
 }
-/** Puts riders on chosen cells for exact collision scenarios (authoritative fixture). */
+/** Puts riders on chosen spots for exact scenarios (authoritative fixture). */
 function place(s: LTS, layout: Record<string, [number, number, number]>) {
-  for (const [id, [x, y, dir]] of Object.entries(layout)) Object.assign(s.game.riders[id], { x, y, dir, path: [[x, y]], queue: [], alive: true } satisfies Partial<Rider>);
+  for (const [id, [x, y, a]] of Object.entries(layout)) Object.assign(s.game.riders[id], { x, y, a, pts: [x, y], lastA: a, alive: true } satisfies Partial<Rider>);
 }
-const tick = (s: LTS, moves = 1) => advanceMatch(s, s.game.roundStart + (s.game.move + moves) * LT.moveMs);
+const run = (s: LTS, ms: number, each?: () => void) => { const end = s.time + ms; while (s.time < end && !s.done) { each?.(); advanceMatch(s, s.time + 50); } };
 
-// Faire Startplätze: innerhalb der Arena, verschieden, je Durchgang rotiert.
+// Faire Startplätze: im Feld, verschieden, Blick entlang des Rings; je Durchgang rotiert.
 for (const count of [2, 3, 4, 5, 6]) {
-  const s = make(count), cells = new Set(Object.values(s.game.riders).map(r => `${r.x},${r.y}`));
-  assert.equal(cells.size, count);
-  assert.ok(Object.values(s.game.riders).every(r => r.x >= 3 && r.y >= 4 && r.x <= LT.cols - 4 && r.y <= LT.rows - 5));
+  const s = make(count), riders = Object.values(s.game.riders);
+  assert.equal(new Set(riders.map(r => `${r.x.toFixed(2)},${r.y.toFixed(2)}`)).size, count);
+  assert.ok(riders.every(r => r.x >= 5 && r.y >= 6 && r.x <= LT.w - 5 && r.y <= LT.h - 6));
 }
 
-// Gleichmäßige Bewegung, nur 90-Grad-Kurven, keine Wende, höchstens zwei vorgemerkte Kurven.
+// Stetige Bewegung: gleiche Geschwindigkeit, Stick dreht höchstens mit der Lenkrate, Halteknöpfe lenken voll, ohne Eingabe geradeaus.
 {
-  const s = make(2);
-  place(s, { p0: [5, 10, 1], p1: [15, 25, 3] });
-  tick(s, 2);
-  assert.deepEqual([s.game.riders.p0.x, s.game.riders.p0.y], [7, 10]);
-  command(s, "p0", 3); // Wende verboten
-  command(s, "p0", 1); // gleiche Richtung ignoriert
-  assert.equal(s.game.riders.p0.queue.length, 0);
-  command(s, "p0", 4); command(s, "p0", 4); command(s, "p0", 4); // links, links (U-Turn über zwei Schritte), dritte verworfen
-  assert.deepEqual(s.game.riders.p0.queue, [0, 3]);
-  tick(s); assert.deepEqual([s.game.riders.p0.x, s.game.riders.p0.y, s.game.riders.p0.dir], [7, 9, 0]);
-  tick(s); assert.deepEqual([s.game.riders.p0.x, s.game.riders.p0.y, s.game.riders.p0.dir], [6, 9, 3]);
-  assert.deepEqual(s.game.riders.p0.path, [[5, 10], [7, 10], [7, 9]], "Spur als Eckpunkte");
-  assert.ok(occupied(s.game).has(10 * LT.cols + 6), "Spur blockiert dauerhaft");
-  // Öffentliche Sicht verbirgt die vorgemerkten Kurven anderer Spieler.
-  command(s, "p0", 0);
-  assert.deepEqual((publicMatch(s, "p1").game as TrailsGame).riders.p0.queue, []);
-  assert.deepEqual((publicMatch(s, "p0").game as TrailsGame).riders.p0.queue, [0]);
+  const s = make(2); place(s, { p0: [8, 30, 0], p1: [22, 10, Math.PI] });
+  run(s, 1000, () => { send(s, "p0"); send(s, "p1"); });
+  const r = s.game.riders.p0;
+  assert.ok(Math.abs(r.y - (30 - LT.speed)) < .01 && Math.abs(r.x - 8) < 1e-9, "Geradeaus mit fester Geschwindigkeit");
+  // Stick nach rechts: dreht stufenlos, nicht in einem Sprung.
+  send(s, "p0", { x: 1 }); run(s, 100, () => { send(s, "p0", { x: 1 }); send(s, "p1"); });
+  assert.ok(r.a > .2 && r.a < LT.turn * .15 + 1e-9, `Dreht stufenlos (${r.a})`);
+  run(s, 600, () => { send(s, "p0", { x: 1 }); send(s, "p1"); });
+  assert.ok(Math.abs(r.a - Math.PI / 2) < 1e-6, "Hält die Stickrichtung");
+  // Links halten: volle Lenkrate.
+  const a = r.a; run(s, 200, () => { send(s, "p0", { ha: true }); send(s, "p1"); });
+  assert.ok(Math.abs(a - r.a - LT.turn * .2) < .02, "Volle Lenkung beim Halten");
+  assert.ok(r.pts.length > 4, "Kurven hinterlassen Spurpunkte");
+  // Öffentliche Sicht: Spur als kurze Zeichenkette, keine Zahlenliste.
+  const view = publicMatch(s, "p1").game as TrailsGame;
+  assert.equal((view.riders.p0 as Partial<Rider>).pts, undefined);
+  const decoded = decodeTrail(view.trails!.p0);
+  assert.equal(decoded.length, r.pts.length); assert.ok(decoded.every((v, i) => Math.abs(v - r.pts[i]) <= .026));
+  assert.ok(view.trails!.p0.length === r.pts.length * 2);
+  assert.equal(decodeTrail(encodeTrail([0, 1.25, 47.95])).map(v => Math.round(v * 100) / 100).join(), "0,1.25,47.95");
 }
 
-// Kollisionen: Wand, eigene und fremde Spur, Kopf-an-Kopf gleichzeitig mit gleichem Rang.
+// Kollisionen: Wand, fremde Spur, eigene Spur nach einer Schleife, Kopf an Kopf gleichzeitig mit gleichem Rang.
 {
-  const s = make(3);
-  place(s, { p0: [0, 5, 3], p1: [10, 10, 1], p2: [13, 10, 3] });
-  tick(s);
+  const s = make(3); place(s, { p0: [1, 20, -Math.PI / 2], p1: [10, 10, Math.PI / 2], p2: [20, 40, 0] });
+  run(s, 300, () => s.players.forEach(p => send(s, p.id)));
   assert.equal(s.game.riders.p0.alive, false, "Wand");
-  assert.equal(s.game.riders.p1.alive && s.game.riders.p2.alive, true);
-  tick(s);
-  assert.equal(s.game.riders.p1.alive && s.game.riders.p2.alive, false, "Beide in dasselbe Feld");
-  assert.equal(s.game.riders.p1.diedAt, s.game.riders.p2.diedAt);
-  assert.equal(s.game.phase, "pause");
-  // p0 schied einen Zug früher aus: p1 und p2 bekommen je +1, kein Überlebensbonus.
-  assert.deepEqual(s.game.history[0].points, { p0: 0, p1: 1, p2: 1 });
-  assert.equal(s.game.history[0].survivor, undefined);
+  const t = make(2, 9); place(t, { p0: [10, 30, 0], p1: [2, 20, Math.PI / 2] });
+  // p1 crosses p0's path first; p0 then runs into p1's trail.
+  run(t, 1600, () => t.players.forEach(p => send(t, p.id)));
+  assert.equal(t.game.riders.p0.alive, false, "Fremde Spur"); assert.equal(t.game.riders.p1.alive, true);
+  const u = make(2, 10); place(u, { p0: [15, 30, 0], p1: [3, 5, Math.PI] });
+  // Holding right: a full loop back into the own trail (the newest stretch never counts).
+  run(u, 400, () => u.players.forEach(p => send(u, p.id)));
+  assert.equal(u.game.riders.p0.alive, true, "Kein Crash mit der eigenen frischen Spur");
+  run(u, 2600, () => { send(u, "p0", { hb: true }); send(u, "p1"); });
+  assert.equal(u.game.riders.p0.alive, false, "Eigene Spur nach einer Schleife");
+  const v = make(3, 11); place(v, { p0: [10, 20, Math.PI / 2], p1: [16, 20, -Math.PI / 2], p2: [25, 44, 0] });
+  run(v, 600, () => v.players.forEach(p => send(v, p.id)));
+  assert.equal(v.game.riders.p0.alive || v.game.riders.p1.alive, false, "Kopf an Kopf");
+  assert.equal(v.game.riders.p0.diedAt, v.game.riders.p1.diedAt);
+  run(v, 100, () => v.players.forEach(p => send(v, p.id)));
+  assert.equal(v.game.phase, "pause");
+  assert.deepEqual(v.game.history[0].points, { p0: 0, p1: 0, p2: 2 + LT.survivorBonus }, "Gleichzeitig: gleicher Rang");
 }
+
+// Schrumpfen ab 14 s: der Rand wächst stetig, wer zu nah am Rand fährt, scheidet aus.
 {
-  const s = make(2);
-  place(s, { p0: [5, 5, 1], p1: [10, 20, 0] });
-  for (const n of [5, 5, 5, 5]) { command(s, "p0", n); tick(s); } // vierte Rechtskurve führt in die eigene Spur
+  const s = make(2, 12);
+  // Fixture: p0 drives down close to the left wall, p1 down the middle.
+  s.game.roundStart = s.time - LT.shrinkAfter + 200; place(s, { p0: [1, 5, Math.PI], p1: [15, 3, Math.PI] });
+  run(s, 100, () => s.players.forEach(p => send(s, p.id)));
+  assert.equal(s.game.border, 0, "Vor 14 s kein Schrumpfen");
+  run(s, 2500, () => s.players.forEach(p => send(s, p.id)));
+  assert.ok(s.game.border > .5, `Rand wächst (${s.game.border})`);
+  assert.equal(s.game.riders.p0.alive, false, "Rand erwischt den Gleiter");
+}
+
+// Drei Durchgänge, Punkte, Aufgeben zählt als Ausscheiden, Ausgeschiedene starten nicht neu.
+{
+  const s = make(3); place(s, { p0: [1, 10, -Math.PI / 2], p1: [10, 10, Math.PI], p2: [20, 10, Math.PI] });
+  run(s, 200, () => s.players.forEach(p => send(s, p.id)));
   assert.equal(s.game.riders.p0.alive, false);
-  assert.deepEqual(s.game.history[0], { points: { p0: 0, p1: 1 + LT.survivorBonus }, survivor: "p1" });
-  // Gegenseitiger Platztausch ist ebenfalls ein Zusammenstoß.
-  const t = make(2, 9);
-  place(t, { p0: [8, 8, 1], p1: [9, 8, 3] });
-  tick(t);
-  assert.equal(t.game.riders.p0.alive || t.game.riders.p1.alive, false);
-  const u = make(2, 10);
-  place(u, { p0: [8, 8, 1], p1: [12, 20, 0] });
-  u.game.riders.p1.path = [[9, 4], [9, 12]]; // fremde Spur quer im Weg
-  tick(u);
-  assert.equal(u.game.riders.p0.alive, false, "Fremde Spur");
-}
-
-// Schrumpfen ab 12 s, Spieler auf dem neuen Wandring scheiden im selben Schritt aus.
-{
-  const t = make(2, 12);
-  place(t, { p0: [0, 20, 2], p1: [10, 3, 1] });
-  // Fixture: die Runde läuft bereits knapp 12 Sekunden.
-  t.game.roundStart = t.time - LT.shrinkAfter + LT.moveMs; t.game.move = Math.floor(LT.shrinkAfter / LT.moveMs) - 1;
-  advanceMatch(t, t.time + LT.moveMs - 50);
-  assert.equal(t.game.border, 0, "Vor 12 s kein Schrumpfen");
-  advanceMatch(t, t.time + LT.moveMs);
-  assert.equal(t.game.border, 1);
-  assert.equal(t.game.riders.p0.alive, false, "Ring schließt über dem Gleiter");
-}
-
-// Drei Durchgänge, Punkte und Gesamtsieg; Aufgeben zählt als Ausscheiden.
-{
-  const s = make(3);
-  place(s, { p0: [2, 10, 3], p1: [10, 10, 1], p2: [10, 20, 1] });
-  tick(s, 3); // p0 in die Wand
-  tick(s);
-  removeMatchPlayer(s, "p1"); // Aufgeben einen Zug später
+  removeMatchPlayer(s, "p1");
   assert.equal(s.game.phase, "pause");
   assert.deepEqual(s.game.history[0].points, { p0: 0, p1: 1, p2: 2 + LT.survivorBonus });
   advanceMatch(s, s.time + LT.pause + 50);
@@ -120,12 +112,15 @@ for (const count of [2, 4, 6]) {
   assert.ok(results.every(r => r.participated));
   assert.deepEqual(g.winners, results.filter(r => r.place === 1).map(r => r.player.id));
 }
-// Bots allein: Ergebnisse sind deterministisch bei gleichem Startwert.
+// Bots allein: deterministisch bei gleichem Startwert; Rechenzeit und Sichtgröße bleiben klein.
 {
-  const run = () => { const s = make(4, 77); for (let t = 50, n = 0; !s.done && t < 200000; t += 50) { for (const p of s.players) setMatchControl(s, p.id, botMatchInput(s, p.id), ++n, t); advanceMatch(s, t); } return s; };
-  const a = run(), b = run();
-  assert.deepEqual(a.game.history, b.game.history);
-  assert.equal(a.game.history.length, LT.rounds);
-  assert.deepEqual(matchStandings(a), matchStandings(b));
+  let maxView = 0;
+  const play = () => { const s = make(6, 77); const t0 = performance.now(); for (let t = 50, n = 0; !s.done && t < 200000; t += 50) { for (const p of s.players) setMatchControl(s, p.id, botMatchInput(s, p.id), ++n, t); advanceMatch(s, t); if (t % 2000 === 0) maxView = Math.max(maxView, JSON.stringify(publicMatch(s, "p0")).length); } return { s, ms: performance.now() - t0 }; };
+  const a = play(), b = play();
+  assert.deepEqual(a.s.game.history, b.s.game.history);
+  assert.equal(a.s.game.history.length, LT.rounds);
+  assert.deepEqual(matchStandings(a.s), matchStandings(b.s));
+  console.log(`Light Trails mit 6 Bots: ${Math.round(a.ms)} ms Rechenzeit für ${Math.round(a.s.time / 1000)} s Spiel, größte Sicht ${maxView} Zeichen`);
+  assert.ok(maxView < 16000, `Sicht bleibt klein (${maxView})`);
 }
-console.log("Light Trails erfolgreich: Startplätze, Rasterbewegung, 90°-Kurven, Kollisionen inkl. gleichzeitiger Crashs, Schrumpfen, Punkte, Aufgeben, 3 Durchgänge, Bots mit 2/4/6 Spielern und Determinismus.");
+console.log("Light Trails erfolgreich: Startplätze, stetige Bewegung mit Stick und Halteknöpfen, kompakte Spur in der Sicht, Kollisionen (Wand, fremde und eigene Spur, Kopf an Kopf), Schrumpfen, Punkte, Aufgeben, 3 Durchgänge, Bots mit 2/4/6 Spielern und Determinismus.");

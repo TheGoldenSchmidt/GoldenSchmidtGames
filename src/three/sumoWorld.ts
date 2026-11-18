@@ -23,7 +23,7 @@ export function createSumoWorld(host: HTMLElement, read: () => MatchWorldFrame, 
   const kit = new SceneKit(host, onError), world = new T.Group();
   kit.scene.add(world);
   kit.scene.background = new T.Color(COLOR.sky); kit.scene.fog = new T.Fog(COLOR.sky, 30, 70);
-  kit.camera.fov = 30; kit.camera.updateProjectionMatrix();
+  kit.camera.fov = 30; kit.camera.near = .5; kit.camera.updateProjectionMatrix();
 
   // Clouds below and around the floating ring.
   for (let i = 0; i < 14; i++) {
@@ -33,8 +33,9 @@ export function createSumoWorld(host: HTMLElement, read: () => MatchWorldFrame, 
   }
   // Dohyo: wooden base, clay top, the playable disc lighter than the shrinking outside.
   kit.cylinder(world, COLOR.base, 0, -.55, 0, START_RADIUS + .7, 1.1);
-  kit.cylinder(world, COLOR.outside, 0, -.03, 0, START_RADIUS + .55, .06).castShadow = false;
-  const disc = kit.cylinder(world, COLOR.clay, 0, 0, 0, 1, .04); disc.castShadow = false; disc.scale.set(START_RADIUS, .04, START_RADIUS);
+  // The playable disc sits clearly above the outside ring (no shared surface: no flicker at a distance).
+  kit.cylinder(world, COLOR.outside, 0, -.06, 0, START_RADIUS + .55, .06).castShadow = false;
+  const disc = kit.cylinder(world, COLOR.clay, 0, -.01, 0, 1, .04); disc.castShadow = false; disc.scale.set(START_RADIUS, .04, START_RADIUS);
   const rope = kit.mesh(world, new T.TorusGeometry(1, .02, 8, 96), COLOR.rope, 0, .05, 0); rope.rotation.x = Math.PI / 2; rope.castShadow = false;
   for (const side of [-1, 1]) kit.box(world, COLOR.line, side * .6, .03, 0, .08, .02, 1.1).castShadow = false;
 
@@ -59,7 +60,8 @@ export function createSumoWorld(host: HTMLElement, read: () => MatchWorldFrame, 
     views.set(id, v); return v;
   };
 
-  const lerpPos = (f: Fighter, before: Fighter | undefined, alpha: number) => before && !before.out ? [before.x + (f.x - before.x) * alpha, before.y + (f.y - before.y) * alpha] as const : [f.x, f.y] as const;
+  // Jumps (restart on the start places) are not interpolated.
+  const lerpPos = (f: Fighter, before: Fighter | undefined, alpha: number) => before && !before.out && Math.hypot(f.x - before.x, f.y - before.y) < 1.5 ? [before.x + (f.x - before.x) * alpha, before.y + (f.y - before.y) * alpha] as const : [f.x, f.y] as const;
 
   const animate = (time: number) => {
     const frameData = read(), s = frameData.cur, g = s.game as RingGame, prev = frameData.prev.game as RingGame, reduced = frameData.reduced;
@@ -72,6 +74,8 @@ export function createSumoWorld(host: HTMLElement, read: () => MatchWorldFrame, 
       if (e.seq <= lastSeq) continue;
       const v = views.get(e.ids[0]), fighter = g.fighters[e.ids[0]];
       if (e.kind === "action") v?.fig.play("dash");
+      // Restart after a ring-out: everyone drops back onto the start places.
+      else if (e.kind === "reset") for (const view of views.values()) { if (!view.wasOut) { view.backAt = time; view.fig.play("land", 1.6, .1); } }
       else if (e.kind === "strike" && v && fighter) {
         v.fig.play("hit");
         if (!reduced) dust.burst(fighter.x, .2, fighter.y, time, { count: 8, speed: 1.8, up: 2.4, size: .1, life: 600 });

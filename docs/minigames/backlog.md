@@ -36,7 +36,7 @@ Ergebnis, automatisch getestet) · **blockiert**.
 | 11 | Tower Tumble | `tower` | 2–6 | P4 | fertig | Regeln (`tower-tumble-test`), Browser `phone` |
 | 12 | Hook Wars | `hooks` | 2–6 | P4 | fertig, seit Nov. 2026 bei den 1st Generation Minigames | Regeln (`hook-wars-test`), Browser `phone` |
 | 13 | Tank Trouble – Turmsicht | `tankview` | 2–6 | P2 | fertig (Nov. 2026, Gerätetest offen) | Regeln (`tank-view-test`), Browser `phone` |
-| 14–21 | Hindernis-Parcours: Türenlotto, Kreiselkurs, Wippenwerk, Glibberflut, Geisterpfad, Fallklappen, Windkanal, Kletterwand (im Zufallspool ein Eintrag) | `tuerenlotto`, `kreiselkurs`, `wippenwerk`, `glibberflut`, `geisterpfad`, `fallklappen`, `windkanal`, `kletterwand` | 2–6 | P2 | fertig (Nov. 2026, Gerätetest und Balance offen) | Regeln (`parcours-test`), Browser `phone` |
+| 14–21 | Hindernis-Parcours: Türenlotto, Kreiselkurs, Glibberflut, Geisterpfad, Fallklappen, Windkanal, Kletterwand (im Zufallspool ein Eintrag); Wippenwerk seit der dritten Rückmelderunde bei den 1st Generation Minigames | `tuerenlotto`, `kreiselkurs`, `wippenwerk`, `glibberflut`, `geisterpfad`, `fallklappen`, `windkanal`, `kletterwand` | 2–6 | P2 | fertig (Nov. 2026, Gerätetest und Balance offen) | Regeln (`parcours-test`), Browser `phone` |
 | 22 | Standhaft (Finale) | `standhaft` | 2–6 | P2 | fertig (Nov. 2026, Gerätetest offen) | Regeln (`parcours-test`), Browser `phone` |
 
 „Fertig“ heißt: in Lobby, Zufallspool, Übung (gegen Bots), Bot-Testraum,
@@ -157,6 +157,30 @@ geprüft; echte Funknetze nicht.
 
 Gefühl auf echten Handys ist für die umgesetzten Punkte weiter ungeprüft.
 
+## Rückmeldung aus der dritten Runde (Nov. 2026)
+
+| Spiel | Rückmeldung | Stand |
+| --- | --- | --- |
+| Alle mit Verfolgerkamera (Parcours, Floor is Lava, Turmsicht) | Kamera dreht beim Laufen mit | **umgesetzt**: Kamera steht nach Start, Respawn bzw. neuem Durchgang hinter der Figur und dreht danach nur per Wischen; der Stick bleibt kamerarelativ |
+| Standhaft, Kreiselkurs, Geisterpfad | Umgehauen ohne Treffer; Balken fahren durch die Figur | **umgesetzt**: Hindernisse werden zum selben Zeitpunkt wie die (interpolierten) Figuren gezeichnet (vorher ≈ 50 ms voraus); engere Trefferzone (0,48 m); Balken sind fest: Wer getroffen wird, fliegt vor dem Balken her und nach außen weg und wird während der Schutzzeit weitergeschoben statt durchfahren; ruhende Balken blockieren nur. Schieber und Walzen stoßen weg („Weggeschoben!“). Seitenkontakte rechnen mit runder Figur (kein Hängenbleiben an bündigen Ecken) |
+| Kreiselkurs | Kollision katastrophal, stark ausarbeiten | **umgesetzt**: neue, längere Strecke (73 m) mit Einzelbalken, gegenläufigem Zwillingspaar, Kreuz aus hohem und niedrigem Balken, wandernden Inseln, zwei flinken Wippen und einem Rührwerk aus drei schnellen Kurzbalken |
+| Kletterwand | Hochglitschen statt Klettern, Animation unpassend | **umgesetzt**: Hochziehen ist eine 0,62-s-Bewegung (erst die Wand hoch, dann auf die Kante) mit Kletteranimation `ClimbUp_1m` (Quaternius UAL 2); Hängen mit eigener Pose, Figur blickt zur Wand. An hohe Kanten springen und den Stick zur Wand drücken genügt (Festhalten-Knopf weiter möglich); an Gräben greift nur der Knopf. Wände, Pfosten und Türen sind nicht erkletterbar |
+| Windkanal (alle Läufe) | Sprungpose bleibt nach der Landung | **umgesetzt**: Absprung ohne Ausholphase und schneller abgespielt, Landung beendet die Sprunganimation sofort; Ducken mit Hockanimation statt Rutschen |
+| Glibberflut | Etwas schwieriger und länger | **umgesetzt**: 80 statt 57 m, zusätzliches Oberdeck mit Walzen, schmalem Steg mit Schieber und dritter Kante; Glibber steigt schneller (0,34 m/s ab 3,5 s) |
+| Wippenwerk | Wippen zu träge, kein eigenes Spiel wert | **umgesetzt**: Wippen reagieren schneller und kräftiger; Wippenwerk zu den 1st Generation Minigames verschoben (weiter direkt wählbar), zwei Wippen sind jetzt Teil des Kreiselkurses |
+| Türenlotto | Länger, mehr Reihen und Türen, Sackgassen und Falltüren | **umgesetzt**: vier Reihen mit je sechs Türen auf 12 m Breite (64 m); zwei Reihen mit Gängen hinter den Türen: Gänge führen weiter, enden an einem massiven Ausgang (Sackgasse) oder haben eine Falltür als Boden. Massive Türen werden nach dem Antesten für alle dunkel markiert |
+| Tower Tumble | Steine höher starten lassen; Kamera im Ziel nach unten | **umgesetzt**: Start 7 statt 4,5 Einheiten über dem Turm; Kamera lief bei hohen Türmen in die falsche Richtung (Vorzeichenfehler), jetzt folgt sie nach oben |
+| Arrow Masters | Mehr Möglichkeiten beim Schuss, evtl. Ego-Perspektive | **teilweise**: je einmal pro Partie Dreifachpfeil (Fächer aus drei Pfeilen) und schwerer Pfeil (vom Wind unbeeinflusst, Treffer −2); Wahl verdeckt bis zum Abschuss. Ego-Perspektive **offen** (eigener 3D-Umbau, für ein stärkeres Modell vorgemerkt) |
+| Bumper Mayhem | 2.5D; nach Ring-Out alle auf die Startplätze | **umgesetzt**, siehe 2.5D-Tabelle; Reset gemeinsam mit Sumo |
+| Sumo Smash | Ring flackert; nach Ring-Out alle auf die Startplätze | **umgesetzt**: Spielfläche liegt sichtbar über dem Außenring (vorher 0,8 mm Abstand: Z-Fighting). Nach jedem Ring-Out halten alle 2 s an und starten dann von ihren eigenen Startplätzen (mit kurzem Schutz) |
+| Floor is Lava | Nach dem Tod aufrecht spawnen; Gegner der Etage darüber nicht zeigen; Hechten | **umgesetzt**: Respawn ohne Umfall-Animation; Figuren auf höheren Etagen sind für Lebende unsichtbar; neuer Knopf Hechten (flach über zwei Platten, danach 0,45 s liegen, alle 3,5 s) |
+| Light Trails | Größeres Feld, stetige statt 90°-Bewegung | **umgesetzt**: freies Feld 30 × 48 statt Raster 21 × 33, Lenkrate 3,3 rad/s; Stick zeigt die Richtung, ⟲/⟳ halten lenkt voll; Spur als kompakte Zeichenkette in der Sicht (6 Bots: größte Sicht ≈ 3 KB, ≈ 10 ms Rechenzeit je Spielsekunde) |
+| Quick Draw | Mehr täuschende Effekte, z. B. „Don't shoot“ im Signalstil | **umgesetzt**: rote Tafeln im exakt gleichen Stil wie „ZIEH!“ (inkl. Blitz und Ton) mit „NICHT ZIEHEN!“, „ZIEH… NICHT!“, „ZIEGE!“, „ZIEL!“, „ZIEHT NICHT!“; dazu weißer Blitz und Schuss in der Ferne; bis zu drei Täuschungen je Runde |
+| Bomb Arena | Bomben und Gegner als Hindernisse, man kann eingesperrt werden | **umgesetzt**: Gegner blockieren wie Bomben (eigenes und Zielfeld); Respawn nur auf freie Startfelder |
+
+Alle Punkte sind mit Regeltests und Playwright `phone` geprüft; Gefühl auf echten Handys
+(Kamera, Klettern, Lenkung in Light Trails) ist offen.
+
 ## 2.5D-Fassungen
 
 | Spiel | Stand |
@@ -167,6 +191,7 @@ Gefühl auf echten Handys ist für die umgesetzten Punkte weiter ungeprüft.
 | Chaos Run | **umgesetzt**, Gerätetest offen: animierte Figuren in eigenen Spuren, Verfolgerkamera; [figuren-rigged.md](figuren-rigged.md) |
 | Figurenwahl | **umgesetzt**: elf animierte Figuren wählbar (inkl. MC Goldie, Lil Schmidt, Kiki Komet, Bolt, Glubschi), in allen 3D-Szenen sichtbar; [figuren-rigged.md](figuren-rigged.md) |
 | Tank Trouble | **umgesetzt**, Gerätetest offen: Panzer mit Figur in der Luke, Ziellaser, 2D-Rückfall; Stand in [plan-2-5d.md](plan-2-5d.md#tank-trouble-zweites-spiel-umgesetzt) |
+| Bumper Mayhem | **umgesetzt** (dritte Rückmelderunde), Gerätetest offen: nächtliche Autoscooter-Halle (`src/three/bumperWorld.ts`), Wagen in Spielerfarbe mit Stromabnehmer-Mast, Funke flackert beim Turbo, animierte Figur am Steuer (Fahranimation), drehende Goldpfosten, Kampfspiel-Kamera wie Sumo, 2D-Rückfall; sechs Wagen ≈ 180 Zeichenaufrufe |
 
 ## Nächste Schritte
 

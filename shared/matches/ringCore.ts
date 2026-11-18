@@ -22,6 +22,8 @@ export interface RingGame {
   sudden?: { ids: string[]; start: number };
   winner?: string;
   decided: boolean;
+  /** After a ring-out everyone freezes and returns to their start places at this time. */
+  resetAt?: number;
 }
 export interface RingRules {
   id: string; name: string; instruction: string; controls: string; look: MatchModule["meta"]["look"];
@@ -41,21 +43,26 @@ export interface RingRules {
 }
 
 const spawnPoint = (i: number, count: number, r: number) => { const a = (i / count) * Math.PI * 2 - Math.PI / 2; return { x: Math.cos(a) * r, y: Math.sin(a) * r, heading: a + Math.PI }; };
+/** Start place of a seat: on a circle inside the current ring. */
+const startPlace = (s: MatchState<RingGame>, rules: RingRules, seat: number) => spawnPoint(seat, s.players.length, Math.min(rules.radius * .55, s.game.radius * .6));
 
-function respawn(s: MatchState<RingGame>, rules: RingRules, f: Fighter) {
-  const g = s.game, others = Object.values(g.fighters).filter(o => o.alive && !o.out && o.id !== f.id);
-  // The free spot on a small circle farthest from everyone else.
-  let best = { x: 0, y: 0, heading: 0 }, score = -1;
-  for (let i = 0; i < 8; i++) {
-    const p = spawnPoint(i, 8, Math.min(1.6, g.radius * .4)), d = others.length ? Math.min(...others.map(o => dist(o.x, o.y, p.x, p.y))) : 9;
-    if (d > score + 1e-9) { best = p; score = d; }
-  }
-  Object.assign(f, { x: best.x, y: best.y, heading: best.heading, vx: 0, vy: 0, out: false, stunUntil: 0, shieldUntil: s.time + rules.shield, lastHitBy: undefined, lastHitAt: -9999 });
+/** Everyone still in the match back to their own start place, standing still, briefly protected. */
+function resetAll(s: MatchState<RingGame>, rules: RingRules) {
+  const g = s.game;
+  g.resetAt = undefined;
+  s.players.forEach((p, seat) => {
+    const f = g.fighters[p.id];
+    if (!f?.alive || p.gone) return;
+    Object.assign(f, startPlace(s, rules, seat), { vx: 0, vy: 0, out: false, stunUntil: 0, actionUntil: 0, shieldUntil: s.time + rules.shield, lastHitBy: undefined, lastHitAt: -9999 });
+  });
+  emit(s, "reset", "Alle zurück auf die Startplätze!", []);
 }
 
 function ringOut(s: MatchState<RingGame>, rules: RingRules, f: Fighter) {
   const g = s.game;
   f.out = true; f.lives--; f.respawnAt = s.time + rules.respawn; f.vx = 0; f.vy = 0;
+  // A ring-out ends the exchange: everyone stops and starts again from the start places.
+  g.resetAt ??= s.time + rules.respawn;
   const by = f.lastHitBy && s.time - f.lastHitAt <= rules.credit && g.fighters[f.lastHitBy] ? f.lastHitBy : undefined;
   if (by && by !== f.id) g.fighters[by].ringOuts++;
   if (f.lives <= 0) { f.alive = false; f.outAt = s.time; }
@@ -72,7 +79,7 @@ function decide(s: MatchState<RingGame>) {
   const bestOuts = Math.max(...byLives.map(f => f.ringOuts)), top = byLives.filter(f => f.ringOuts === bestOuts);
   if (top.length === 1) { g.winner = top[0].id; g.decided = true; s.done = true; return; }
   if (g.sudden) { g.decided = true; s.done = true; return; }
-  g.sudden = { ids: top.map(f => f.id), start: s.time };
+  g.sudden = { ids: top.map(f => f.id), start: s.time }; g.resetAt = undefined;
   for (const f of Object.values(g.fighters)) if (!top.includes(f)) { f.alive = false; f.outAt ??= s.time; f.out = true; }
   top.forEach((f, i) => { f.lives = 1; Object.assign(f, spawnPoint(i, top.length, 1.4), { vx: 0, vy: 0, out: false, stunUntil: 0, shieldUntil: s.time + 800 }); });
   emit(s, "sudden", "Sudden Death!", top.map(f => f.id));
@@ -97,10 +104,18 @@ export function ringModule(rules: RingRules): MatchModule<RingGame> {
       // Edge: shrink linearly between the two times; sudden death uses a small fixed ring.
       g.radius = g.sudden ? rules.suddenRadius : s.time <= rules.shrinkFrom ? rules.radius : rules.radius - (rules.radius - rules.minRadius) * Math.min(1, (s.time - rules.shrinkFrom) / (rules.shrinkTo - rules.shrinkFrom));
       rules.moveObstacles?.(g, s.time);
+      // After a ring-out everyone in the ring stops until the restart from the start places.
+      if (g.resetAt !== undefined) {
+        if (s.time < g.resetAt) {
+          for (const f of Object.values(g.fighters)) if (f.alive && !f.out) { f.vx *= .6; f.vy *= .6; f.x += f.vx * dt; f.y += f.vy * dt; }
+          if (g.sudden ? s.time - g.sudden.start >= rules.suddenMax : s.time >= rules.regular) decide(s);
+          return;
+        }
+        resetAll(s, rules);
+      }
       for (const p of s.players) {
         const f = g.fighters[p.id];
-        if (!f.alive) continue;
-        if (f.out) { if (s.time >= f.respawnAt && !p.gone) respawn(s, rules, f); continue; }
+        if (!f.alive || f.out) continue;
         rules.drive(f, inputOfPlayer(s, p), dt, s.time);
         f.x += f.vx * dt; f.y += f.vy * dt;
       }
@@ -125,7 +140,7 @@ export function ringModule(rules: RingRules): MatchModule<RingGame> {
     },
     press(s, p: MatchPlayer, kind) {
       const f = s.game.fighters[p.id];
-      if (kind !== "a" || !f?.alive || f.out || s.time - f.actionAt < rules.actionCooldown) return;
+      if (kind !== "a" || !f?.alive || f.out || s.game.resetAt !== undefined || s.time - f.actionAt < rules.actionCooldown) return;
       f.actionAt = s.time;
       rules.action(f, s.time);
       emit(s, "action", "", [p.id]);
@@ -143,7 +158,7 @@ export function ringModule(rules: RingRules): MatchModule<RingGame> {
     view() { /* everything is public */ },
     bot(s, id) {
       const f = s.game.fighters[id];
-      if (!f?.alive || f.out) return {};
+      if (!f?.alive || f.out || s.game.resetAt !== undefined) return {};
       const intent = rules.bot(s, f), jitter = (hash(`${id}:${Math.floor(s.time / 900)}`) % 100) / 100 - .5;
       return { x: Math.max(-1, Math.min(1, intent.x + jitter * .2)), y: Math.max(-1, Math.min(1, intent.y - jitter * .2)), pressA: intent.act };
     }

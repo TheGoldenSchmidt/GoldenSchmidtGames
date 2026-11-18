@@ -12,7 +12,7 @@ const turbo = (f: Fighter, now: number) => now < f.actionUntil;
 
 export const bumperMayhem = ringModule({
   id: "bumpercars", name: "Bumper Mayhem",
-  instruction: "Lenke dein Autoscooter-Fahrzeug mit dem Stick in die gewünschte Richtung, es beschleunigt von selbst. Der Turbo macht dich kurz viel schneller und deine Rammstöße härter (alle 4 Sekunden). Wer hart gerammt wird, schleudert ohne Kontrolle davon. Ramme Gegner über den Rand: +2 pro Ring-Out. Drehende Pfosten werfen alle zurück. Jeder hat 3 Leben, ab Sekunde 45 schrumpft die Arena. Letzter gewinnt, nach 75 Sekunden zählen Leben, dann Ring-Outs.",
+  instruction: "Lenke dein Autoscooter-Fahrzeug mit dem Stick in die gewünschte Richtung, es beschleunigt von selbst. Der Turbo macht dich kurz viel schneller und deine Rammstöße härter (alle 4 Sekunden). Wer hart gerammt wird, schleudert ohne Kontrolle davon. Ramme Gegner über den Rand: +2 pro Ring-Out; danach fahren alle von ihren Startplätzen neu los. Drehende Pfosten werfen alle zurück. Jeder hat 3 Leben, ab Sekunde 45 schrumpft die Arena. Letzter gewinnt, nach 75 Sekunden zählen Leben, dann Ring-Outs.",
   controls: "Stick: Fahrtrichtung · Knopf: Turbo.",
   look: { icon: "⛐", action: "Rammen erlaubt!", hint: "Stick lenken · Knopf Turbo", goal: "Als Letzter auf der Fläche" },
   radius: 6, minRadius: 3.4, shrinkFrom: 45000, shrinkTo: 75000,

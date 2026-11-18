@@ -15,7 +15,9 @@ export const FL = {
   ringAt: [16000, 23000] as const, roundMax: 30000, pause: 2600, rounds: 3, winBonus: 3,
   tiebreakMax: 25000,
   /** Shove: short dash in facing direction; a hit victim slides without control. */
-  shoveMs: 220, shoveSpeed: 6, shoveCooldown: 2500, knock: 6.5, slideMs: 350, slide: .92, pushCredit: 1500
+  shoveMs: 220, shoveSpeed: 6, shoveCooldown: 2500, knock: 6.5, slideMs: 350, slide: .92, pushCredit: 1500,
+  /** Dive: a long flat lunge in facing direction (over two-tile gaps), then a moment on the belly. */
+  diveMs: 480, diveSpeed: 6.6, proneMs: 450, diveCooldown: 3500
 } as const;
 export interface Runner {
   id: string; x: number; y: number;
@@ -26,6 +28,8 @@ export interface Runner {
   shoveUntil: number; shoveReady: number; slideUntil: number;
   /** Who shoved this runner last and when ("" = nobody). */
   pushedBy: string; pushedAt: number;
+  /** Dive: airborne until `diveUntil`, then lying until `proneUntil`; next dive from `diveReady`. */
+  diveUntil?: number; proneUntil?: number; diveReady?: number;
 }
 export interface LavaGame {
   round: number;
@@ -88,7 +92,7 @@ function lava(s: MatchState<LavaGame>, r: Runner) {
   r.lives--;
   // A recent shove is credited in the event (second id); points still follow survival.
   const by = r.pushedBy && s.time - r.pushedAt <= FL.pushCredit ? [r.id, r.pushedBy] : [r.id];
-  Object.assign(r, { slideUntil: 0, shoveUntil: 0, pushedBy: "", pushedAt: -1e9 });
+  Object.assign(r, { slideUntil: 0, shoveUntil: 0, pushedBy: "", pushedAt: -1e9, diveUntil: 0, proneUntil: 0 });
   if (r.lives <= 0) { r.alive = false; r.outAt = s.time; emit(s, "out", by.length > 1 ? "Reingeschubst!" : "In die Lava!", by); return; }
   // Safe respawn on the lowest floor that still has an intact inner tile, farthest from the others there.
   let best = -1, score = -1;
@@ -108,8 +112,8 @@ export const floorIsLava: MatchModule<LavaGame> = {
   id: "lava",
   meta: {
     name: "Floor is Lava", seconds: (FL.rounds * (FL.roundMax + FL.pause) + FL.tiebreakMax + FL.pause) / 1000 + 2, players: [2, 3, 4, 5, 6], hz: 20,
-    instruction: "Drei Etagen über der Lava: Jede Platte, die du betrittst, zerbröselt nach 0,8 Sekunden. Stehst du über einem Loch, fällst du eine Etage tiefer – erst ein Loch in der untersten Etage führt in die Lava. Mit dem Schubser rempelst du andere auf bröselnde Platten (alle 2,5 Sekunden; wer springt, weicht aus). Platten mit leuchtender Rune kommen nach 2,5 Sekunden zurück. Mit dem Sprungknopf überspringst du kleine Lücken (alle 3 Sekunden). Lava kostet ein Leben, du hast 2 pro Durchgang. Ab Sekunde 16 verschwindet auf allen Etagen der Rand. +1 für jede Person, die vor dir fällt, +3 für den Durchgangssieg. Drei Durchgänge.",
-    controls: "Stick: laufen (oben = von der Kamera weg) · Knöpfe: springen und schubsen · oben rechts: Übersicht.",
+    instruction: "Drei Etagen über der Lava: Jede Platte, die du betrittst, zerbröselt nach 0,8 Sekunden. Stehst du über einem Loch, fällst du eine Etage tiefer – erst ein Loch in der untersten Etage führt in die Lava. Mit dem Schubser rempelst du andere auf bröselnde Platten (alle 2,5 Sekunden; wer springt, weicht aus). Platten mit leuchtender Rune kommen nach 2,5 Sekunden zurück. Mit dem Sprungknopf überspringst du kleine Lücken (alle 3 Sekunden), mit Hechten fliegst du flach über zwei Platten weit, liegst danach aber kurz am Boden (alle 3,5 Sekunden). Lava kostet ein Leben, du hast 2 pro Durchgang. Ab Sekunde 16 verschwindet auf allen Etagen der Rand. +1 für jede Person, die vor dir fällt, +3 für den Durchgangssieg. Drei Durchgänge.",
+    controls: "Stick: laufen (oben = von der Kamera weg) · Knöpfe: springen, hechten und schubsen · oben rechts: Übersicht.",
     look: { icon: "♨", action: "Bleib in Bewegung, Etage für Etage", hint: "Stick laufen · springen · schubsen", goal: "Am längsten über der Lava bleiben" }
   },
   create(s) {
@@ -133,8 +137,11 @@ export const floorIsLava: MatchModule<LavaGame> = {
       const r = g.runners[p.id];
       if (!r?.alive) continue;
       const input = inputOfPlayer(s, p), speed = FL.speed * (grounded(s, r) ? 1 : FL.airSpeed), stick = Math.hypot(input.x, input.y);
-      if (stick > .2) { r.fx = input.x / stick; r.fy = input.y / stick; }
-      if (s.time < r.slideUntil) { r.vx *= FL.slide; r.vy *= FL.slide; }
+      // A dive keeps its direction until the runner is up again.
+      if (stick > .2 && s.time >= (r.proneUntil ?? 0)) { r.fx = input.x / stick; r.fy = input.y / stick; }
+      if (s.time < (r.diveUntil ?? 0)) { r.vx = r.fx * FL.diveSpeed; r.vy = r.fy * FL.diveSpeed; }
+      else if (s.time < (r.proneUntil ?? 0)) { r.vx *= .5; r.vy *= .5; }
+      else if (s.time < r.slideUntil) { r.vx *= FL.slide; r.vy *= FL.slide; }
       else if (s.time < r.shoveUntil) { r.vx = r.fx * FL.shoveSpeed; r.vy = r.fy * FL.shoveSpeed; }
       else { r.vx += (input.x * speed - r.vx) * FL.inertia; r.vy += (input.y * speed - r.vy) * FL.inertia; }
       r.x = clamp(r.x + r.vx * dt, FL.radius, FL.cols - FL.radius); r.y = clamp(r.y + r.vy * dt, FL.radius, FL.rows - FL.radius);
@@ -176,7 +183,7 @@ export const floorIsLava: MatchModule<LavaGame> = {
         if (r.floor >= FL.floors - 1) lava(s, r);
         else {
           // Through the hole onto the floor below; airborne until the landing.
-          r.floor++; r.dropUntil = r.airUntil = s.time + FL.dropMs; r.slideUntil = 0; r.shoveUntil = 0;
+          r.floor++; r.dropUntil = r.airUntil = s.time + FL.dropMs; r.slideUntil = 0; r.shoveUntil = 0; r.diveUntil = 0; r.proneUntil = 0;
           emit(s, "drop", "Eine Etage tiefer!", [r.id]);
         }
       }
@@ -184,15 +191,25 @@ export const floorIsLava: MatchModule<LavaGame> = {
     const left = Object.values(g.runners).filter(r => r.alive);
     if (left.length <= 1 || roundTime >= (g.tiebreak ? FL.tiebreakMax : FL.roundMax)) endRound(s);
   },
-  press(s, p: MatchPlayer, kind) {
+  press(s, p: MatchPlayer, kind, _at, value) {
     const g = s.game, r = g.runners[p.id];
+    if (kind === "n") {
+      // Command 1 = dive.
+      if (value !== 1 || g.phase !== "play" || !r?.alive || s.time < (r.diveReady ?? 0) || !grounded(s, r) || s.time < r.slideUntil || s.time < (r.proneUntil ?? 0)) return;
+      // The stick of the same packet sets the direction.
+      const stick = Math.hypot(p.input.x, p.input.y);
+      if (stick > .2) { r.fx = p.input.x / stick; r.fy = p.input.y / stick; }
+      r.airUntil = r.diveUntil = s.time + FL.diveMs; r.proneUntil = s.time + FL.diveMs + FL.proneMs; r.diveReady = s.time + FL.diveCooldown; r.shoveUntil = 0;
+      emit(s, "dive", "", [p.id]);
+      return;
+    }
     if (kind === "b") {
-      if (g.phase !== "play" || !r?.alive || s.time < r.shoveReady || !grounded(s, r) || s.time < r.slideUntil) return;
+      if (g.phase !== "play" || !r?.alive || s.time < r.shoveReady || !grounded(s, r) || s.time < r.slideUntil || s.time < (r.proneUntil ?? 0)) return;
       r.shoveUntil = s.time + FL.shoveMs; r.shoveReady = s.time + FL.shoveCooldown;
       emit(s, "dash", "", [p.id]);
       return;
     }
-    if (kind !== "a" || g.phase !== "play" || !r?.alive || s.time < r.jumpReady || !grounded(s, r)) return;
+    if (kind !== "a" || g.phase !== "play" || !r?.alive || s.time < r.jumpReady || !grounded(s, r) || s.time < (r.proneUntil ?? 0)) return;
     r.airUntil = s.time + FL.jumpMs; r.jumpReady = s.time + FL.jumpCooldown;
     emit(s, "jump", "", [p.id]);
   },
@@ -223,6 +240,9 @@ export const floorIsLava: MatchModule<LavaGame> = {
     const victim = Object.values(g.runners).find(o => o.alive && o.id !== id && o.floor === me.floor && dist(o.x, o.y, me.x, me.y) < 1.1 && ((o.x - me.x) * me.fx + (o.y - me.y) * me.fy) / (dist(o.x, o.y, me.x, me.y) || 1) > .7);
     const shove = !!victim && s.time >= me.shoveReady && grounded(s, me) && hash(`${id}:${Math.floor(s.time / 400)}`) % 3 === 0;
     const aim = shove && victim ? { x: victim.x - me.x, y: victim.y - me.y } : { x: dx / d, y: dy / d };
-    return { x: aim.x, y: aim.y, pressA: s.time >= me.jumpReady && grounded(s, me) && (crumbling || gapAhead && d > .8), pressB: shove };
+    const escape = grounded(s, me) && (crumbling || gapAhead && d > .8), jump = escape && s.time >= me.jumpReady;
+    // Without a jump ready, a dive gets away from a crumbling tile.
+    const dive = escape && !jump && s.time >= (me.diveReady ?? 0) && s.time >= (me.proneUntil ?? 0);
+    return { x: aim.x, y: aim.y, pressA: jump, pressB: shove && !dive, ...(dive ? { command: 1 } : {}) };
   }
 };

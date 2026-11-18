@@ -32,6 +32,20 @@ for (let seed = 1; seed < 30; seed++) {
   assert.ok(s.game.cells.includes("2"));
 }
 
+// Andere Spieler versperren den Weg: man kann zwischen Spieler, Bombe und Wand eingesperrt werden.
+{
+  const s = make(2); clear(s);
+  put(s, "p0", 1, 1); put(s, "p1", 3, 1);
+  send(s, "p0", { x: 1 }); step(s, BA.moveMs * 3);
+  assert.equal(s.game.bombers.p0.cx, 2, "Bleibt vor dem anderen Spieler stehen"); assert.equal(s.game.bombers.p1.cx, 3);
+  // Boxed in: border wall on the left, pillar on the right, a player above, a bomb below.
+  put(s, "p0", 1, 2); put(s, "p1", 1, 1); s.game.bombs.push({ id: 99, x: 1, y: 3, owner: "p1", at: s.time + 1e6, range: 1, passFor: [] });
+  for (const dir of [{ x: 1 }, { x: -1 }, { y: 1 }, { y: -1 }]) {
+    send(s, "p0", dir); step(s, BA.moveMs * 2);
+    const b = s.game.bombers.p0; assert.deepEqual([b.cx, b.cy, b.tx, b.ty], [1, 2, 1, 2], `Eingesperrt (${JSON.stringify(dir)})`);
+  }
+}
+
 // Bewegung: ein Feld pro Schritt, Mauern und Bomben blockieren, eigene Bombe darf verlassen werden, Umkehren.
 {
   const s = make(2); clear(s);

@@ -29,6 +29,31 @@ function solve(s: AS, id: string, gx: number, gy: number) {
   return best;
 }
 
+// Pfeilarten: Dreifachpfeil fliegt als Fächer, schwerer Pfeil ignoriert Wind und kostet zwei Trefferpunkte; je einmal pro Partie, Wahl bleibt verdeckt.
+{
+  const choose = (s: AS, id: string, value: number) => { const p = s.players.find(q => q.id === id)!; const own = seqs.get(s) ?? new Map<string, number>(); seqs.set(s, own); const n = (own.get(id) ?? 0) + 1; own.set(id, n); setMatchControl(s, id, { ...NEUTRAL_MATCH_INPUT, ...p.input, cn: p.usedN + 1, n: value }, n, s.time); };
+  const s = make();
+  aim(s, "p0", .8, .7); choose(s, "p0", 1);
+  assert.equal(s.game.archers.p0.kind, "triple");
+  assert.equal((publicMatch(s, "p1").game as ArrowGame).archers.p0.kind, undefined, "Wahl bleibt verdeckt");
+  toFlight(s);
+  assert.equal(s.game.arrows.filter(a => a.owner === "p0").length, 3, "Drei Pfeile"); assert.equal(s.game.archers.p0.specials!.triple, 0);
+  toEnd(s); advanceMatch(s, s.game.phaseStart + AM.resultMs);
+  choose(s, "p0", 1); assert.equal(s.game.archers.p0.kind, "normal", "Dreifach nur einmal");
+  // Heavy arrow: same aim in strong wind lands where the windless arc would.
+  const t = make(2, 5); t.game.wind = AM.wind;
+  aim(t, "p0", .8, .7); choose(t, "p0", 2); toFlight(t);
+  const heavy = t.game.arrows.find(a => a.owner === "p0")!;
+  assert.equal(heavy.kind, "heavy"); const vx = heavy.vx; advanceMatch(t, t.time + 200);
+  assert.ok(Math.abs(heavy.vx - vx) < 1e-9 || heavy.done, "Wind schiebt den schweren Pfeil nicht");
+  // A heavy hit costs two points of health.
+  // (Windless, so the solved arc is also the heavy arrow's arc apart from its lower speed: a direct hit is checked if it lands.)
+  const u = make(2, 6), target = u.game.archers.p1; u.game.wind = 0;
+  const shot = solve(u, "p0", target.x, target.y + AM.bodyH / 2);
+  aim(u, "p0", shot.angle, Math.min(1, shot.power / AM.heavySpeed)); choose(u, "p0", 2); toFlight(u); toEnd(u);
+  if (u.game.arrows.find(a => a.owner === "p0")?.hit === "p1") assert.equal(u.game.archers.p1.hp, AM.hp - AM.heavyDamage, "Schwerer Treffer: −2");
+}
+
 // Zielphase: 10 s, eigenes Zielen verdeckt, letztes Zielen zählt, ohne Zielen kein Schuss.
 {
   const s = make();

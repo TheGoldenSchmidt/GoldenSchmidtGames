@@ -35,7 +35,8 @@ export const CLIPS = {
   Jump_Start: "jumpStart", Jump_Loop: "air", Jump_Land: "land",
   Hit_Chest: "hitLight", Hit_Knockback: "hit", Shield_Dash: "dash",
   Slide_Start: "slideStart", Slide_Loop: "slide", Dance_Loop: "dance", Yes: "cheer", Roll: "roll",
-  Punch_Jab: "punch", Death01: "death"
+  Punch_Jab: "punch", Death01: "death",
+  ClimbUp_1m: "climb", Crouch_Idle_Loop: "crouch", Crouch_Fwd_Loop: "crouchWalk", Driving_Loop: "drive"
 };
 const HAIRSTYLES = ["Hair_Buzzed", "Hair_BuzzedFemale", "Hair_SimpleParted", "Hair_Long", "Hair_Buns", "Hair_Beard"];
 

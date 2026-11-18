@@ -18,12 +18,20 @@ export const PC = {
   dive: 9.6, diveUp: 4.2, airDiveUp: 2.6, proneMs: 450,
   hangMin: .9, hangMax: 2.15, hangReach: .45, hangDrop: 1.55, hangMaxMs: 4000,
   grabRange: 1.05, tether: 1.1, grabSlow: .45, grabSelf: .6, grabMs: 2000, grabCooldown: 1500,
-  knock: 8.5, knockUp: 4.5, stunMs: 650, hitGuard: 800, barRadius: .22,
+  knock: 8.5, knockUp: 4.5, stunMs: 650, hitGuard: 800,
+  /** Contact distance between a spinning bar's centre line and a racer (bar half thickness + slim body). */
+  barReach: .48,
+  /** Extra speed away from the bar's axis when hit (flung outwards). */
+  fling: 3,
+  /** Pull-up from hanging onto the top. */
+  climbMs: 620,
+  /** Moving boxes faster than this (m/s, towards the racer) shove instead of only blocking. */
+  shoveSpeed: 1.2, shoveStunMs: 320,
   respawnMs: 1100, finishGrace: 20000, maxMs: 120000, substeps: 3,
-  tiltGain: .16, tiltMax: .42, tiltRate: 2, tiltSlide: .55
+  tiltGain: .3, tiltMax: .5, tiltRate: 5.5, tiltSlide: .8
 } as const;
 
-export type Pose = "run" | "air" | "dive" | "prone" | "hang" | "stun" | "done" | "out";
+export type Pose = "run" | "air" | "dive" | "prone" | "hang" | "climb" | "stun" | "done" | "out";
 export interface Racer {
   id: string; x: number; y: number; z: number; vx: number; vy: number; vz: number;
   /** Facing (radians): 0 = forward along the course, positive towards +x. */
@@ -40,6 +48,8 @@ export interface Racer {
   /** Racer this one holds on to. */
   grab?: string; grabSince: number; grabReady: number;
   checkpoint: number; best: number; falls: number; respawnAt: number; hitUntil: number;
+  /** Height of the last ground stood on (pushing into a wall only grabs edges above it). */
+  standY?: number;
   finishAt?: number; outAt?: number;
 }
 export interface ParcoursGame {
@@ -47,7 +57,7 @@ export interface ParcoursGame {
   racers: Record<string, Racer>;
   /** Arrival order. */
   order: string[];
-  /** Public door state per panel: "1" = broken open. */
+  /** Public door state per panel: "1" = broken open, "2" = tried and solid. */
   doors: string;
   /** Public hidden-path state per tile: "0" unknown, "1" carries, "2" gave way. */
   tiles: string;
@@ -70,6 +80,7 @@ export function surfaceAt(b: Box, bb: { x0: number; x1: number; y1: number }, g:
 export function solid(b: Box, g: ParcoursGame, t: number) {
   if (b.blink && blinkOpen(b, t)) return false;
   if (b.door !== undefined) return g.doors[b.door] !== "1";
+  if (b.tile !== undefined && b.look !== "tile") return g.secretTiles ? g.secretTiles[b.tile] === "1" : g.tiles[b.tile] !== "2";
   if (b.tile !== undefined) return g.secretTiles ? g.secretTiles[b.tile] === "1" : g.tiles[b.tile] !== "2";
   return true;
 }
@@ -87,15 +98,27 @@ function moveRacer(s: MatchState<ParcoursGame>, c: Course, p: MatchPlayer, r: Ra
   if (r.respawnAt) { if (t >= r.respawnAt) respawn(c, r, slot, t); else return; }
   const input = inputOfPlayer(s, p), mx = input.x, mz = -input.y, mag = Math.min(1, Math.hypot(mx, mz)), grabHeld = input.ha;
 
-  // Hanging on a ledge: hold on, pull up (jump or stick towards the wall) or let go.
+  // Pulling up: first up the wall, then onto the top – a short movement, not a jump.
+  if (r.pose === "climb" && r.hang) {
+    const b = c.boxes[r.hang.box], bb = boxAt(b, t), { nx, nz } = r.hang, k = (t - r.hang.since) / PC.climbMs;
+    if (!solid(b, g, t)) { Object.assign(r, { pose: "air", vx: nx * 1.2, vz: nz * 1.2, vy: 0, hang: undefined }); return; }
+    const low = bb.y1 - PC.hangDrop, edge = (out: number) => { if (nz) r.z = nz < 0 ? bb.z0 + out : bb.z1 - out; else r.x = nx < 0 ? bb.x0 + out : bb.x1 - out; };
+    r.vx = r.vy = r.vz = 0;
+    if (k < .7) { r.y = low + (bb.y1 - low) * (k / .7); edge(-R); }
+    else if (k < 1) { r.y = bb.y1; edge(-R + (2 * R + .1) * (k - .7) / .3); }
+    else {
+      Object.assign(r, { pose: "run", y: bb.y1, grounded: true, ground: r.hang.box, lastGround: t, hang: undefined, jumpAt: -1e9 });
+      edge(R + .1);
+    }
+    return;
+  }
+  // Hanging on a ledge: hold on (button or stick into the wall), pull up (jump or stick towards the wall) or let go.
   if (r.pose === "hang" && r.hang) {
-    const b = c.boxes[r.hang.box], bb = boxAt(b, t), { nx, nz } = r.hang;
-    if (!grabHeld || t - r.hang.since > PC.hangMaxMs || !solid(b, g, t)) {
+    const b = c.boxes[r.hang.box], bb = boxAt(b, t), { nx, nz } = r.hang, into = mx * -nx + mz * -nz > .3;
+    if ((!grabHeld && !into) || t - r.hang.since > PC.hangMaxMs || !solid(b, g, t)) {
       Object.assign(r, { pose: "air", vx: nx * 1.2, vz: nz * 1.2, vy: 0, hang: undefined });
-    } else if (t - r.jumpAt <= PC.buffer || mx * -nx + mz * -nz > .3) {
-      // Pull up onto the top, one step away from the edge.
-      Object.assign(r, { pose: "run", y: bb.y1, vx: 0, vy: 0, vz: 0, grounded: true, ground: r.hang.box, lastGround: t, hang: undefined, jumpAt: -1e9 });
-      if (nz) r.z = nz < 0 ? bb.z0 + R + .1 : bb.z1 - R - .1; else r.x = nx < 0 ? bb.x0 + R + .1 : bb.x1 - R - .1;
+    } else if (t - r.jumpAt <= PC.buffer || into) {
+      r.pose = "climb"; r.hang = { ...r.hang, since: t }; r.jumpAt = -1e9;
       emit(s, "climb", "", [r.id]);
     } else {
       r.y = bb.y1 - PC.hangDrop; r.vx = r.vy = r.vz = 0;
@@ -141,13 +164,13 @@ function moveRacer(s: MatchState<ParcoursGame>, c: Course, p: MatchPlayer, r: Ra
   // Wind drifts racers (a bit more in the air).
   if (c.winds.length) { const w = windAt(c, r.x, r.y + .8, r.z, t), k = r.grounded ? 1 : 1.3; r.x += w.vx * k * h; r.z += w.vz * k * h; }
   r.vy -= PC.gravity * h;
-  const prevY = r.y;
+  const prevY = r.y, prevX = r.x, prevZ = r.z;
   r.x += r.vx * h; r.y += r.vy * h; r.z += r.vz * h;
 
   // Collisions with the course boxes.
   const wasGrounded = r.grounded, top = r.y + height(r);
   r.grounded = false;
-  let wall: { box: number; nx: number; nz: number } | undefined;
+  let wall = { box: -1, nx: 0, nz: 0 };
   c.boxes.forEach((b, i) => {
     // Cheap reject by the static z range first (boxes move by at most 4 m, never along z here).
     if (b.z1 + 4 < r.z - R || b.z0 - 4 > r.z + R) return;
@@ -157,29 +180,51 @@ function moveRacer(s: MatchState<ParcoursGame>, c: Course, p: MatchPlayer, r: Ra
     if (surface < r.y - .001) return;
     if (!solid(b, g, t)) {
       // A hidden-path tile that does not carry gives way under the racer.
-      if (b.tile !== undefined && g.tiles[b.tile] === "0" && prevY >= surface - .3 && r.y < surface) { g.tiles = g.tiles.slice(0, b.tile) + "2" + g.tiles.slice(b.tile + 1); emit(s, "tile", "Geisterplatte!", [r.id]); }
+      if (b.tile !== undefined && g.tiles[b.tile] === "0" && prevY >= surface - .3 && r.y < surface) { g.tiles = g.tiles.slice(0, b.tile) + "2" + g.tiles.slice(b.tile + 1); emit(s, "tile", b.look === "tile" ? "Geisterplatte!" : "Falltür!", [r.id]); }
       return;
     }
     // Landing on top (also small steps and slopes).
     // Landing needs the feet above the top a sub-step ago; walking up steps needs ground contact.
     if (r.vy <= .01 && (prevY >= surface - .05 || (wasGrounded && surface - r.y <= PC.step))) {
-      r.y = surface; r.vy = 0; r.grounded = true; r.ground = i; r.lastGround = t;
+      r.y = surface; r.vy = 0; r.grounded = true; r.ground = i; r.lastGround = t; r.standY = surface;
       if (b.tile !== undefined && g.tiles[b.tile] === "0") g.tiles = g.tiles.slice(0, b.tile) + "1" + g.tiles.slice(b.tile + 1);
       return;
     }
     // Head against the underside.
     if (r.vy > 0 && prevY + height(r) <= bb.y0 + .08) { r.y = bb.y0 - height(r); r.vy = 0; return; }
     if (top <= bb.y0 + .02) return;
-    // Side contact: real doors break, everything else pushes the racer out.
-    if (b.door !== undefined && g.secretDoors?.[b.door] === "1") {
-      g.doors = g.doors.slice(0, b.door) + "1" + g.doors.slice(b.door + 1);
-      emit(s, "door", "Tür auf!", [r.id]);
-      return;
+    // Side contact: real doors break, solid ones are marked as tried, everything else pushes the racer out.
+    if (b.door !== undefined && g.secretDoors) {
+      if (g.secretDoors[b.door] === "1") {
+        g.doors = g.doors.slice(0, b.door) + "1" + g.doors.slice(b.door + 1);
+        emit(s, "door", "Tür auf!", [r.id]);
+        return;
+      }
+      if (g.doors[b.door] === "0") { g.doors = g.doors.slice(0, b.door) + "2" + g.doors.slice(b.door + 1); emit(s, "solid", "Massiv!", [r.id]); }
     }
-    const ox = Math.min(r.x + R - bb.x0, bb.x1 - (r.x - R)), oz = Math.min(r.z + R - bb.z0, bb.z1 - (r.z - R));
-    const mid = { x: (bb.x0 + bb.x1) / 2, z: (bb.z0 + bb.z1) / 2 };
-    if (ox < oz) { const nx = r.x < mid.x ? -1 : 1; r.x = nx < 0 ? bb.x0 - R : bb.x1 + R; if (r.vx * nx < 0) r.vx = 0; wall = { box: i, nx, nz: 0 }; }
-    else { const nz = r.z < mid.z ? -1 : 1; r.z = nz < 0 ? bb.z0 - R : bb.z1 + R; if (r.vz * nz < 0) r.vz = 0; wall = { box: i, nx: 0, nz }; }
+    // The racer is round: beside a corner it slides around it instead of snagging on flush boxes.
+    const cx = Math.max(bb.x0, Math.min(bb.x1, r.x)), cz = Math.max(bb.z0, Math.min(bb.z1, r.z)), ex = r.x - cx, ez = r.z - cz, gap = Math.hypot(ex, ez);
+    if (gap >= R) return;
+    if (gap > 1e-6) {
+      const nx = ex / gap, nz = ez / gap, into = r.vx * nx + r.vz * nz;
+      r.x = cx + nx * R; r.z = cz + nz * R;
+      if (into < 0) { r.vx -= into * nx; r.vz -= into * nz; }
+      wall = Math.abs(nx) > Math.abs(nz) ? { box: i, nx: Math.sign(nx), nz: 0 } : { box: i, nx: 0, nz: Math.sign(nz) };
+    } else {
+      // Centre inside the box (fast or moving parts): out along the axis the racer came from, else the smaller overlap.
+      const ox = Math.min(r.x + R - bb.x0, bb.x1 - (r.x - R)), oz = Math.min(r.z + R - bb.z0, bb.z1 - (r.z - R));
+      const mid = { x: (bb.x0 + bb.x1) / 2, z: (bb.z0 + bb.z1) / 2 };
+      const fromZ = prevZ <= bb.z0 || prevZ >= bb.z1, fromX = prevX <= bb.x0 || prevX >= bb.x1;
+      if (fromX && !fromZ || (fromX === fromZ && ox < oz)) { const nx = r.x < mid.x ? -1 : 1; r.x = nx < 0 ? bb.x0 - R : bb.x1 + R; if (r.vx * nx < 0) r.vx = 0; wall = { box: i, nx, nz: 0 }; }
+      else { const nz = r.z < mid.z ? -1 : 1; r.z = nz < 0 ? bb.z0 - R : bb.z1 + R; if (r.vz * nz < 0) r.vz = 0; wall = { box: i, nx: 0, nz }; }
+    }
+    // A pusher or roller running into the racer shoves it away instead of only blocking it.
+    const push = b.move ? boxSpeed(b, t) : 0, along = wall.nx * (b.move?.axis === "x" ? push : 0) + wall.nz * (b.move?.axis === "z" ? push : 0);
+    if (along > PC.shoveSpeed && r.pose !== "stun" && t >= r.hitUntil) {
+      const k = Math.max(3.5, Math.min(6, along * .8));
+      Object.assign(r, { vx: wall.nx * k, vz: wall.nz * k, vy: 2, pose: "stun", until: t + PC.shoveStunMs, hitUntil: t + PC.hitGuard, grounded: false, ground: -1, grab: undefined, duck: false });
+      emit(s, "shove", "Weggeschoben!", [r.id]);
+    }
   });
   if (r.grounded) {
     r.airDive = false;
@@ -187,19 +232,21 @@ function moveRacer(s: MatchState<ParcoursGame>, c: Course, p: MatchPlayer, r: Ra
     else if (r.pose === "air") r.pose = "run";
   } else if (r.pose === "run") r.pose = "air";
 
-  // Holding on to a ledge: falling past a wall whose edge is within reach.
-  if (grabHeld && !r.grounded && r.vy <= .5 && (r.pose === "air" || r.pose === "dive")) {
+  // Holding on to a ledge: falling past a wall whose edge is within reach, holding on or pushing into the wall.
+  if (!r.grounded && r.vy <= .5 && (r.pose === "air" || r.pose === "dive")) {
     const ledge = ledgeFor(c, g, r, t, wall);
-    if (ledge) { Object.assign(r, { pose: "hang", hang: { ...ledge, since: t }, vx: 0, vy: 0, vz: 0, airDive: false }); emit(s, "grab", "Festgehalten!", [r.id]); }
+    const up = ledge && boxAt(c.boxes[ledge.box], t).y1 > (r.standY ?? r.y) + PC.step + .3;
+    if (ledge && (grabHeld || (up && mx * -ledge.nx + mz * -ledge.nz > .5))) { Object.assign(r, { pose: "hang", hang: { ...ledge, since: t }, vx: 0, vy: 0, vz: 0, airDive: false }); emit(s, "grab", "Festgehalten!", [r.id]); }
   }
 }
 
 /** A wall edge the racer can hold on to: top between hip and above the head, racer right at its side. */
-function ledgeFor(c: Course, g: ParcoursGame, r: Racer, t: number, touched?: { box: number; nx: number; nz: number }) {
-  const candidates = touched ? [touched.box, ...c.boxes.keys()] : [...c.boxes.keys()];
+function ledgeFor(c: Course, g: ParcoursGame, r: Racer, t: number, touched: { box: number; nx: number; nz: number }) {
+  const candidates = touched.box >= 0 ? [touched.box, ...c.boxes.keys()] : [...c.boxes.keys()];
   for (const i of candidates) {
     const b = c.boxes[i];
-    if (b.seesaw !== undefined || b.tile !== undefined || !solid(b, g, t)) continue;
+    // Walls, door posts and doors are not for climbing (no way round the doors over the top).
+    if (b.seesaw !== undefined || b.tile !== undefined || b.door !== undefined || b.look === "wall" || b.move || !solid(b, g, t)) continue;
     const bb = boxAt(b, t), rise = bb.y1 - r.y;
     if (rise < PC.hangMin || rise > PC.hangMax) continue;
     const reach = R + PC.hangReach;
@@ -215,35 +262,64 @@ function ledgeFor(c: Course, g: ParcoursGame, r: Racer, t: number, touched?: { b
   return undefined;
 }
 
-/** Spinning bars knock racers away unless they jump over low ones or duck under high ones. */
+/** Speed of a moving box along its axis at time `t` (m/s). */
+function boxSpeed(b: Box, t: number) {
+  const m = b.move;
+  return m ? m.amp * Math.cos(2 * Math.PI * t / m.period + m.phase) * 2 * Math.PI * 1000 / m.period : 0;
+}
+
+/**
+ * Spinning bars are solid: they knock racers away unless they jump over low
+ * ones or duck under high ones. A hit flings the racer ahead of the bar and
+ * outwards; while it is still knocked the bar keeps pushing it (never passes
+ * through). Resting bars only block.
+ */
 function sweep(s: MatchState<ParcoursGame>, c: Course, r: Racer, t: number) {
-  if (t < r.hitUntil || r.pose === "hang") return;
+  if (r.pose === "hang" || r.pose === "climb") return;
   for (const sw of c.sweepers) {
-    if (Math.abs(r.z - sw.z) > sw.length + 1) continue;
-    const a = sweeperAngle(sw, t), dx = Math.cos(a), dz = Math.sin(a);
-    const u = Math.max(-sw.length, Math.min(sw.length, (r.x - sw.x) * dx + (r.z - sw.z) * dz));
-    const px = sw.x + dx * u, pz = sw.z + dz * u;
-    if (Math.hypot(r.x - px, r.z - pz) > R + PC.barRadius) continue;
+    if (Math.abs(r.z - sw.z) > sw.length + 1 || Math.abs(r.x - sw.x) > sw.length + 1) continue;
     if (r.y >= sw.y1 || r.y + height(r) <= sw.y0) continue;
-    // Pushed along the bar's motion at the contact point.
-    const vx = -dz * u * sw.speed, vz = dx * u * sw.speed, n = Math.hypot(vx, vz);
-    // Near the axis the bar barely moves: push straight away from it instead.
-    const ax = r.x - px, az = r.z - pz, an = Math.hypot(ax, az) || 1;
-    const [kx, kz] = n > .2 ? [vx / n, vz / n] : [ax / an || 1, az / an];
-    const k = c.knock ?? 1;
-    Object.assign(r, { vx: kx * PC.knock * k, vz: kz * PC.knock * k, vy: PC.knockUp * Math.max(.6, k), pose: "stun", until: t + PC.stunMs, hitUntil: t + PC.hitGuard, grounded: false, ground: -1, grab: undefined, duck: false });
-    emit(s, "hit", "Umgehauen!", [r.id]);
-    return;
+    const a = sweeperAngle(sw, t), dx = Math.cos(a), dz = Math.sin(a);
+    const along = (r.x - sw.x) * dx + (r.z - sw.z) * dz, u = Math.max(-sw.length, Math.min(sw.length, along));
+    const px = sw.x + dx * u, pz = sw.z + dz * u, ox = r.x - px, oz = r.z - pz, d = Math.hypot(ox, oz);
+    if (d > PC.barReach) continue;
+    const omega = t >= (sw.from ?? 0) ? sw.speed : 0;
+    // Velocity of the bar at the contact point (perpendicular to the bar).
+    const bvx = -dz * u * omega, bvz = dx * u * omega, bv = Math.hypot(bvx, bvz);
+    // Push direction: ahead of the bar where it moves, otherwise straight away from it.
+    const beyond = Math.abs(along) > sw.length;
+    const [lx, lz] = !beyond && bv > .3 ? [bvx / bv, bvz / bv] : d > 1e-6 ? [ox / d, oz / d] : [-dz, dx];
+    r.x = px + lx * (PC.barReach + .01); r.z = pz + lz * (PC.barReach + .01);
+    if (bv <= .3) { const into = r.vx * lx + r.vz * lz; if (into < 0) { r.vx -= into * lx; r.vz -= into * lz; } continue; }
+    const k = c.knock ?? 1, rx = r.x - sw.x, rz = r.z - sw.z, rn = Math.hypot(rx, rz) || 1;
+    if (t >= r.hitUntil) {
+      const speed = Math.max(PC.knock * k, bv * 1.3);
+      Object.assign(r, { vx: lx * speed + rx / rn * PC.fling * k, vz: lz * speed + rz / rn * PC.fling * k, vy: PC.knockUp * Math.max(.6, k), pose: "stun", until: t + PC.stunMs, hitUntil: t + PC.hitGuard, grounded: false, ground: -1, grab: undefined, duck: false });
+      emit(s, "hit", "Umgehauen!", [r.id]);
+      return;
+    }
+    // Already knocked: the bar keeps carrying the racer in front of it.
+    const ahead = r.vx * lx + r.vz * lz, want = bv * 1.15;
+    if (ahead < want) { r.vx += lx * (want - ahead); r.vz += lz * (want - ahead); }
   }
 }
 
 function startGame(s: MatchState<ParcoursGame>, id: CourseId): ParcoursGame {
-  const c = course(id), doorCount = c.doorRows.reduce((n, row) => n + row.doors.length, 0), tileCount = c.tileRows.reduce((n, row) => n + row.tiles.length, 0);
+  const c = course(id), lanes = c.laneRows ?? [];
+  const doorCount = c.doorRows.reduce((n, row) => n + row.doors.length, 0) + lanes.reduce((n, row) => n + row.lanes.length * 2, 0);
+  const tileCount = c.tileRows.reduce((n, row) => n + row.tiles.length, 0) + lanes.reduce((n, row) => n + row.lanes.length, 0);
   const secretDoors = Array<string>(doorCount).fill("0");
   for (const row of c.doorRows) for (const door of shuffled(s, row.doors).slice(0, row.real)) secretDoors[door] = "1";
   const secretTiles = Array<string>(tileCount).fill("0");
   let col = randomInt(s, 0, 4);
   for (const row of c.tileRows) { secretTiles[row.tiles[col]] = "1"; col = Math.max(0, Math.min(4, col + randomInt(s, -1, 1))); }
+  // Lanes: some lead on, some end at a solid exit, some drop through the floor, the rest stay shut.
+  for (const row of lanes) shuffled(s, row.lanes).forEach((lane, i) => {
+    const through = i < row.through, dead = !through && i < row.through + row.dead, trap = !through && !dead && i < row.through + row.dead + row.trap;
+    secretDoors[lane.front] = through || dead || trap ? "1" : "0";
+    secretDoors[lane.exit] = through ? "1" : "0";
+    secretTiles[lane.floor] = trap ? "0" : "1";
+  });
   const g: ParcoursGame = { course: id, racers: {}, order: [], doors: "0".repeat(doorCount), tiles: "0".repeat(tileCount), tilt: Array(c.seesaws).fill(0), secretDoors: secretDoors.join(""), secretTiles: secretTiles.join("") };
   s.players.forEach((p, i) => {
     const r: Racer = { id: p.id, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, face: 0, pose: "run", grounded: true, ground: -1, duck: false, until: 0, jumpAt: -1e9, diveAt: -1e9, airDive: false, lastGround: 0, grabSince: 0, grabReady: 0, checkpoint: 0, best: 0, falls: 0, respawnAt: 0, hitUntil: 0 };
@@ -253,16 +329,16 @@ function startGame(s: MatchState<ParcoursGame>, id: CourseId): ParcoursGame {
 }
 
 const FINAL_INSTRUCTION = "Stick zum Laufen (oben = von der Kamera weg), Springen über den niedrigen Balken, Ducken unter dem hohen, Hechten und Festhalten wie im Parcours. Wer fällt, scheidet aus. Wer zuletzt steht, gewinnt; nach 90 Sekunden gewinnen alle, die noch stehen.";
-const INSTRUCTION = "Lauf selbst durch den Parcours: Stick zum Laufen und Lenken (oben = von der Kamera weg). Springen über Lücken und niedrige Balken, Hechten für einen weiten Satz nach vorn, Festhalten (halten) an Kanten zum Hochziehen oder an anderen, um sie zu bremsen, Ducken (halten) unter hohen Balken durch. Wer fällt, startet am letzten Kontrollpunkt. Die Reihenfolge im Ziel entscheidet, sonst der Fortschritt.";
+const INSTRUCTION = "Lauf selbst durch den Parcours: Stick zum Laufen und Lenken (oben = von der Kamera weg). Springen über Lücken und niedrige Balken, Hechten für einen weiten Satz nach vorn, Festhalten (halten) an anderen, um sie zu bremsen, Ducken (halten) unter hohen Balken durch. An hohe Kanten springst du und drückst den Stick zur Wand: Du hältst dich fest und kletterst hoch. Wer fällt, startet am letzten Kontrollpunkt. Die Reihenfolge im Ziel entscheidet, sonst der Fortschritt.";
 const GOALS: Record<CourseId, { icon: string; action: string; extra: string }> = {
-  tuerenlotto: { icon: "▥", action: "Welche Tür geht auf?", extra: "Drei Türreihen: Nur manche Türen brechen auf, die anderen sind massiv. Dazwischen Schieber und ein Graben." },
-  kreiselkurs: { icon: "✣", action: "Über und unter Balken", extra: "Drehende Balken: über niedrige springen, unter hohen ducken. Dazwischen wandernde Inseln über dem Abgrund." },
+  tuerenlotto: { icon: "▥", action: "Welche Tür geht auf?", extra: "Vier Reihen mit je sechs Türen: Nur manche brechen auf, die anderen sind massiv. Hinter manchen offenen Türen wartet ein Gang mit massivem Ausgang (Sackgasse) oder eine Falltür. Dazwischen Schieber, ein Drehbalken und ein Graben." },
+  kreiselkurs: { icon: "✣", action: "Über und unter Balken", extra: "Drehende Balken in allen Varianten: über niedrige springen, unter hohen ducken, am Kreuz beides. Dazu wandernde Inseln, zwei flinke Wippen und am Ende ein Rührwerk aus schnellen Kurzbalken. Wer getroffen wird, fliegt nach vorn und außen weg." },
   wippenwerk: { icon: "⚖", action: "Balance und Kanten", extra: "Wippen neigen sich unter Gewicht, rollende Walzen musst du überspringen, zum Schluss eine Wand zum Festhalten und Hochziehen." },
-  glibberflut: { icon: "♒", action: "Nach oben, schnell!", extra: "Aufstieg über Treppen, Förderbänder gegen die Laufrichtung und Kanten, während von unten Glibber steigt. Wer erwischt wird, scheidet aus." },
+  glibberflut: { icon: "♒", action: "Nach oben, schnell!", extra: "Langer Aufstieg über Treppen, Förderbänder gegen die Laufrichtung, drei Kanten, rollende Walzen und einen schmalen Steg, während von unten Glibber steigt. Wer erwischt wird, scheidet aus." },
   geisterpfad: { icon: "◌", action: "Finde den Pfad", extra: "Nur ein unsichtbarer Pfad aus Platten trägt; was einmal betreten wurde, bleibt für alle sichtbar." },
   fallklappen: { icon: "▦", action: "Achte aufs Warnlicht", extra: "Zwei Felder aus Klappen über dem Abgrund: Jede Klappe öffnet sich in ihrem eigenen Takt, kurz vorher glüht sie orange." },
   windkanal: { icon: "≋", action: "Gegen den Wind", extra: "Schmale Stege, Seitenwind, der die Richtung wechselt, Trittsteine im Dauerwind und zum Schluss Gegenwind auf der Rampe." },
-  kletterwand: { icon: "⌸", action: "Halt dich fest", extra: "Vier Stufen, jede zu hoch zum Springen: festhalten und hochziehen. Die Griffblöcke verschwinden zwischendurch – wähle einen, der bleibt." },
+  kletterwand: { icon: "⌸", action: "Halt dich fest", extra: "Vier Stufen, jede zu hoch zum Springen: Spring an die Kante und drück den Stick zur Wand (oder halte Festhalten), dann kletterst du hoch. Die Griffblöcke verschwinden zwischendurch – wähle einen, der bleibt." },
   standhaft: { icon: "♛", action: "Bleib stehen", extra: "Finale auf Klappen unter zwei Drehbalken: Erst öffnet sich der äußere Ring, später auch die Mitte." }
 };
 
@@ -398,9 +474,23 @@ function parcoursBot(s: MatchState<ParcoursGame>, c: Course, id: string) {
     const sweepers = sweeperDanger(c, r, t);
     return { x: d > .3 ? dx / d : 0, y: d > .3 ? -dz / d : 0, pressA: sweepers.jump && r.grounded, hb: sweepers.duck };
   }
-  // Doors ahead: an opened one, otherwise a guess that changes now and then.
+  // Doors ahead: an opened one, otherwise a guess among the untried ones that changes now and then.
   const row = c.doorRows.find(dr => dr.z > r.z - .5 && dr.z - r.z < 7);
-  if (row) { const open = row.doors.find(d => g.doors[d] === "1"); tx = -4 + 2 * row.doors.indexOf(open ?? row.doors[salt % 5]); }
+  if (row) {
+    const open = row.doors.findIndex(d => g.doors[d] === "1"), untried = row.doors.map((_, i) => i).filter(i => g.doors[row.doors[i]] !== "2");
+    tx = row.xs[open >= 0 ? open : untried[salt % Math.max(1, untried.length)] ?? 0];
+  }
+  // Lanes: back out of a dead end, otherwise prefer lanes known to lead on, then open ones, then untried doors.
+  const lanes = (c.laneRows ?? []).find(lr => lr.exitZ + .5 > r.z - .3 && lr.z - r.z < 7);
+  if (lanes) {
+    const pitch = Math.abs(lanes.lanes[1].x - lanes.lanes[0].x), here = lanes.lanes.find(l => Math.abs(l.x - r.x) < pitch / 2);
+    if (here && r.z > lanes.z + .2 && r.z < lanes.exitZ + .3) { tx = here.x; if (g.doors[here.exit] === "2") mz = -1; }
+    else {
+      const worth = (l: typeof lanes.lanes[number]) => g.tiles[l.floor] === "2" || g.doors[l.front] === "2" || g.doors[l.exit] === "2" ? 0 : g.doors[l.exit] === "1" ? 3 : g.doors[l.front] === "1" ? 2 : 1;
+      const best = Math.max(...lanes.lanes.map(worth)), picks = lanes.lanes.filter(l => worth(l) === best);
+      tx = picks[salt % picks.length].x;
+    }
+  }
   // Hidden path: a tile known to carry, otherwise a guess that is not known to fail.
   const tiles = c.tileRows.find(tr => tr.z + 1.8 > r.z + .2 && tr.z - r.z < 2.5);
   if (tiles) { const safe = tiles.tiles.find(i => g.tiles[i] === "1"), maybe = tiles.tiles.filter(i => g.tiles[i] !== "2"); const pick = safe ?? maybe[salt % Math.max(1, maybe.length)] ?? tiles.tiles[2]; tx = -3.6 + 1.8 * tiles.tiles.indexOf(pick); }

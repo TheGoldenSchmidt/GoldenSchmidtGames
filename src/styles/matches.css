@@ -92,9 +92,11 @@ body:has(.party-screen--playing .match-game) { padding-block:0; }
   .match-action:active:not(:disabled) { transform:none; }
 }
 
-/* Light Trails: swipe anywhere, turn buttons at the lower corners. */
+/* Light Trails: stick and hold buttons at the bottom. */
 .match-game--trails .match-controls { align-items:flex-end; }
-.match-game--trails .match-action { width:72px; height:72px; position:relative; z-index:1; }
+.match-game--trails .match-action { width:72px; height:72px; position:relative; z-index:1; -webkit-touch-callout:none; }
+/* Light Trails: stick left (direction), the two hold buttons side by side on the right. */
+.trails-buttons { display:flex; gap:10px; }
 .match-preview--trails { background:radial-gradient(circle at 50% 50%, #2b1f5a, #07051a); color:#57e4cb; }
 
 /* Neon Pong: the lower half is a horizontal touch slider. */
@@ -118,13 +120,24 @@ body:has(.party-screen--playing .match-game) { padding-block:0; }
 /* Arrow Masters: the arena sits on top, the lower part is the bowstring. */
 .arrow-aim-area { position:absolute; left:0; right:0; bottom:0; top:52%; pointer-events:auto; }
 .arrow-aim-area .match-aim-pad { border-top:2px dashed #24133f44; }
+/* Arrow kind: a small segmented choice above the bowstring area. */
+.arrow-kinds { position:absolute; left:50%; top:calc(52% - 46px); transform:translateX(-50%); display:flex; gap:6px; pointer-events:auto; z-index:2; }
+.arrow-kinds button { min-height:38px; padding:0 12px; border-radius:999px; border:2px solid #24133f; background:#fff9ed; color:#24133f; font-weight:900; font-size:.8rem; display:flex; align-items:center; gap:4px; }
+.arrow-kinds button small { font-size:.68rem; opacity:.75; }
+.arrow-kinds button[aria-pressed="true"] { background:#ffe44e; box-shadow:0 3px 0 #24133f; }
+.arrow-kinds button:disabled { opacity:.45; }
+.arrow-kinds button:focus-visible { outline:3px solid #24133f; outline-offset:2px; }
 .arrow-aim-hint { position:absolute; left:50%; bottom:16px; transform:translateX(-50%); padding:4px 12px; border-radius:999px; background:#24133fcc; color:#ffe44e; font-size:.72rem; font-weight:800; white-space:nowrap; pointer-events:none; }
 .match-preview--arrows { background:linear-gradient(#8fd3ff, #d8f1ff 60%, #6fa84a 60%); color:#e3263b; }
 /* Tower Tumble: left thumb moves (arrows), right thumb turns and drops; one row keeps the tower base free. */
 .tower-arrows,.tower-buttons { display:flex; gap:8px; }
 .match-game--tower .match-controls .match-action { width:72px; height:72px; -webkit-touch-callout:none; }
 @media (max-width:360px) { .match-game--tower .match-controls { gap:6px; padding:10px; } .match-game--tower .match-controls .match-action { width:64px; height:64px; } }
-.lava-buttons { display:flex; flex-direction:column; gap:10px; }
+/* Floor is Lava: jump on the thumb's home position, dive beside it, shove above. */
+.lava-buttons { display:grid; grid-template-columns:repeat(2, 70px); grid-template-areas:". push" "dive jump"; gap:8px; }
+.lava-buttons > :nth-child(1) { grid-area:push; }
+.lava-buttons > :nth-child(2) { grid-area:dive; }
+.lava-buttons > :nth-child(3) { grid-area:jump; }
 /* Hindernis-Parcours: stick left, four actions in a 2×2 block on the right (jump on the thumb's home position). */
 .parcours-buttons { display:grid; grid-template-columns:repeat(2, 68px); gap:8px; }
 .match-controls .parcours-buttons .match-action { width:68px; height:68px; -webkit-touch-callout:none; }
@@ -145,7 +158,7 @@ body:has(.party-screen--playing .match-game) { padding-block:0; }
 /* Floor is Lava: banner in the temple theme (basalt with an ember edge). */
 .match-game--lava .match-banner { background:#2a0f0ae6; border-color:#ff6a1f; }
 .match-game--lava .match-banner b { color:#ffd166; }
-.match-game--lava .lava-buttons .match-action { width:76px; height:76px; }
+.match-game--lava .lava-buttons .match-action { width:70px; height:70px; }
 .match-preview--tower { background:linear-gradient(#ffd166, #ff86c8); color:#24133f; }
 /* Hook Wars: stick bottom left, the right half fires and holds the hook. */
 .match-game--hooks .match-controls { justify-content:flex-start; }

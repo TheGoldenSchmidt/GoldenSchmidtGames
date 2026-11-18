@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { advanceMatch, botMatchInput, createMatch, matchStandings, publicMatch, removeMatchPlayer, setMatchControl, type MatchId } from "../shared/matches/framework";
 import { PC, shownRacer, type ParcoursGame, type Racer } from "../shared/matches/parcours";
-import { BLINK_WARN, blinkOpen, blinkWarn, course, COURSE_IDS, FINAL_IDS, gooAt, sweeperAngle, windAt, type CourseId } from "../shared/matches/parcoursCourses";
+import { BLINK_WARN, blinkOpen, blinkWarn, course, COURSE_IDS, FINAL_IDS, gooAt, RETIRED_COURSE_IDS, sweeperAngle, windAt, type CourseId } from "../shared/matches/parcoursCourses";
 import { NEUTRAL_MATCH_INPUT, type MatchInput, type MatchState } from "../shared/matches/types";
 import { createPartyGame, partyMiniResults, tickParty } from "../shared/party";
 import { PartyBotDriver } from "../shared/partyBots";
 
 type PS = MatchState<ParcoursGame>;
-const ALL = [...COURSE_IDS, ...FINAL_IDS];
+const ALL = [...COURSE_IDS, ...RETIRED_COURSE_IDS, ...FINAL_IDS];
 const make = (id: CourseId, count = 2, seed = 4) => createMatch(id as MatchId, Array.from({ length: count }, (_, i) => ({ id: `p${i}`, style: i })), seed) as PS;
 const seqs = new Map<string, number>();
 /** Sends held input plus optional taps (a = jump, b = dive). */
@@ -48,14 +48,14 @@ for (const id of ALL) {
 // Graben (Türenlotto): ohne Sprung hinein und zurück zum Kontrollpunkt, mit Sprung darüber.
 {
   const s = make("tuerenlotto"); park(s); const r = s.game.racers.p0, c = course("tuerenlotto");
-  put(r, 0, 0, 26, { checkpoint: 2 });
-  run(s, 1500, () => send(s, "p0", forward));
+  put(r, 0, 0, 27.5, { checkpoint: 2 });
+  run(s, 1800, () => send(s, "p0", forward));
   assert.ok(r.respawnAt > 0 || r.falls > 0, "In den Graben gefallen");
   run(s, PC.respawnMs + 200, () => send(s, "p0"));
   assert.ok(Math.abs(r.z - c.checkpoints[2].z) < .5 && r.respawnAt === 0, `Zurück am Kontrollpunkt (${r.z})`);
   put(r, 0, 0, 26.2, { checkpoint: 2 }); r.falls = 0;
-  run(s, 1500, () => send(s, "p0", forward, r.z > 26.9 && r.grounded ? "a" : undefined));
-  assert.equal(r.falls, 0, "Über den Graben gesprungen"); assert.ok(r.z > 29.5);
+  run(s, 1500, () => send(s, "p0", forward, r.z > 29.3 && r.grounded ? "a" : undefined));
+  assert.equal(r.falls, 0, "Über den Graben gesprungen"); assert.ok(r.z > 32);
 }
 
 // Hechten: weiter Satz nach vorn, danach kurz am Boden; nur einmal pro Sprung.
@@ -76,7 +76,7 @@ for (const id of ALL) {
 
 // Drehbalken: niedrige umhauen, Sprung darüber; hohe umhauen, Ducken darunter.
 {
-  const c = course("kreiselkurs"), low = c.sweepers[0], high = c.sweepers[1];
+  const c = course("kreiselkurs"), low = c.sweepers[0], high = c.sweepers.findLast(sw => sw.y0 >= 1)!;
   const at = (s: PS, sw: typeof low, ahead = 0) => { const a = sweeperAngle(sw, s.time + 50 + ahead); return { x: sw.x + Math.cos(a) * 2.5, z: sw.z + Math.sin(a) * 2.5 }; };
   const s = make("kreiselkurs"); park(s); const r = s.game.racers.p0;
   let p = at(s, low); put(r, p.x, 0, p.z); run(s, 50, () => send(s, "p0"));
@@ -92,16 +92,26 @@ for (const id of ALL) {
   assert.ok(e.duck && e.pose !== "stun", "Geduckt unter dem hohen Balken durch");
 }
 
-// Festhalten: an zu hoher Kante hängen und hochziehen; ohne Festhalten kommt man nicht hoch.
+// Festhalten: an zu hoher Kante hängen und hochklettern (Festhalten oder Stick zur Wand); sonst kommt man nicht hoch.
 {
   const s = make("wippenwerk"); park(s); const r = s.game.racers.p0, c = course("wippenwerk"), wall = c.boxes.find(b => b.look === "ledge")!;
-  put(r, 0, 0, wall.z0 - .8);
-  run(s, 1500, () => send(s, "p0", forward, r.grounded ? "a" : undefined));
+  put(r, 0, 0, wall.z0 - .4);
+  run(s, 1500, () => send(s, "p0", {}, r.grounded ? "a" : undefined));
   assert.ok(r.z < wall.z0 && r.y < 1, "Zu hoch zum Springen");
-  put(r, 0, 0, wall.z0 - .8); send(s, "p0", { ...forward, ha: true }, "a");
+  // Springen und den Stick zur Wand drücken: festhalten, dann klettern (dauert einen Moment, kein Sprung nach oben).
+  put(r, 0, 0, wall.z0 - .8); send(s, "p0", forward, "a");
+  let hung = false, climbed = false, maxY = 0;
+  run(s, 1800, () => { hung ||= r.pose === "hang"; climbed ||= r.pose === "climb"; if (r.pose === "climb") maxY = Math.max(maxY, r.y); send(s, "p0", forward); });
+  assert.ok(hung || climbed, "Hält sich an der Kante"); assert.ok(climbed, "Klettert hoch");
+  assert.ok(r.grounded && Math.abs(r.y - wall.y1) < .01 && r.z > wall.z0, "Oben angekommen");
+  assert.ok(maxY <= wall.y1 + .03, "Kein Hochspringen über die Kante");
+  // Mit Festhalten hängen bleiben, mit dem Stick zur Wand hochklettern.
+  put(r, 0, 0, wall.z0 - .8); send(s, "p0", { ha: true }, "a");
   run(s, 800, () => send(s, "p0", { ha: true }));
   assert.equal(r.pose, "hang", "Hängt an der Kante");
-  run(s, 200, () => send(s, "p0", { ...forward, ha: true }));
+  run(s, 100, () => send(s, "p0", { ...forward, ha: true }));
+  assert.equal(r.pose, "climb", "Klettern beginnt");
+  run(s, PC.climbMs + 100, () => send(s, "p0", { ...forward, ha: true }));
   assert.ok(r.grounded && Math.abs(r.y - wall.y1) < .01 && r.z > wall.z0, "Hochgezogen");
   // Loslassen lässt fallen.
   put(r, 0, 0, wall.z0 - .8); send(s, "p0", { ha: true }, "a"); run(s, 800, () => send(s, "p0", { ha: true }));
@@ -126,9 +136,9 @@ for (const id of ALL) {
   const s = make("tuerenlotto"); park(s); const r = s.game.racers.p0, c = course("tuerenlotto"), row = c.doorRows[0];
   for (const dr of c.doorRows) assert.equal(dr.doors.filter(d => s.game.secretDoors![d] === "1").length, dr.real);
   const real = row.doors.find(d => s.game.secretDoors![d] === "1")!, fake = row.doors.find(d => s.game.secretDoors![d] === "0")!;
-  const xOf = (d: number) => -4 + 2 * row.doors.indexOf(d);
+  const xOf = (d: number) => row.xs[row.doors.indexOf(d)];
   put(r, xOf(fake), 0, row.z - 1.5); run(s, 1200, () => send(s, "p0", forward));
-  assert.ok(r.z < row.z && s.game.doors[fake] === "0", "Scheintür hält");
+  assert.ok(r.z < row.z && s.game.doors[fake] === "2", "Scheintür hält und ist als massiv markiert");
   put(r, xOf(real), 0, row.z - 1.5); run(s, 1200, () => send(s, "p0", forward));
   assert.equal(s.game.doors[real], "1"); assert.ok(r.z > row.z + .4, "Durch die echte Tür");
   assert.equal((publicMatch(s, "p1").game as ParcoursGame).doors[real], "1", "Offene Tür sehen alle");
@@ -195,12 +205,64 @@ for (const id of ALL) {
   assert.ok(f.boxes.every(b => !blinkOpen(b, 11000)), "Finale: erst nach 12 s öffnet sich etwas");
 }
 
-// Kanten über Sprunghöhe: ohne Festhalten kein Hochrutschen (auch nicht an der Kletterwand).
+// Kanten über Sprunghöhe: Springen allein bringt nicht hoch (auch nicht an der Kletterwand), zur Wand drücken schon.
 {
   const s = make("kletterwand"); park(s); const r = s.game.racers.p0, hold = course("kletterwand").boxes.find(b => b.look === "hold" && b.y1 < 2)!;
-  put(r, (hold.x0 + hold.x1) / 2, 0, hold.z0 - .8);
-  run(s, 1500, () => send(s, "p0", forward, r.grounded ? "a" : undefined));
+  put(r, (hold.x0 + hold.x1) / 2, 0, hold.z0 - .4);
+  run(s, 1500, () => send(s, "p0", {}, r.grounded ? "a" : undefined));
   assert.ok(r.y < 1, `Ohne Festhalten nicht hoch (${r.y})`);
+  // A moment in which the hold stays for the whole climb.
+  let t = 0; while ([0, 500, 1000, 1500, 2000].some(d => blinkOpen(hold, t + d))) t += 50;
+  s.time = t; put(r, (hold.x0 + hold.x1) / 2, 0, hold.z0 - .6); send(s, "p0", forward, "a");
+  run(s, 1800, () => send(s, "p0", forward));
+  assert.ok(r.grounded && Math.abs(r.y - hold.y1) < .02, `Hochgeklettert (${r.y})`);
+}
+
+// Drehbalken sind fest: wer getroffen wird, fliegt vor dem Balken her und nach außen; der Balken fährt nicht durch.
+{
+  const c = course("standhaft"), bar = c.sweepers[0], s = make("standhaft"); park(s, "p1"); put(s.game.racers.p1, -5, 0, 0);
+  const r = s.game.racers.p0; s.time = 4000;
+  const a = sweeperAngle(bar, s.time + 50), ux = Math.cos(a), uz = Math.sin(a), side = bar.speed > 0 ? 1 : -1;
+  // Just ahead of the bar at 3 m from the axis.
+  put(r, bar.x + ux * 3 - uz * .4 * side, 0, bar.z + uz * 3 + ux * .4 * side);
+  const from = Math.hypot(r.x - bar.x, r.z - bar.z);
+  let minGap = Infinity, hit = false;
+  run(s, 900, () => {
+    hit ||= r.pose === "stun";
+    const b = sweeperAngle(bar, s.time), along = (r.x - bar.x) * Math.cos(b) + (r.z - bar.z) * Math.sin(b);
+    if (Math.abs(along) < bar.length && r.y < bar.y1) minGap = Math.min(minGap, Math.hypot(r.x - bar.x - Math.cos(b) * along, r.z - bar.z - Math.sin(b) * along));
+    s.players.forEach(p => send(s, p.id));
+  });
+  assert.ok(hit, "Getroffen"); assert.ok(minGap >= PC.barReach - .05, `Balken fährt nicht durch (${minGap})`);
+  assert.ok(Math.hypot(r.x - bar.x, r.z - bar.z) > from + .5 || r.pose === "out", "Nach außen geschleudert");
+}
+
+// Schieber schieben: wer vor einem fahrenden Schieber steht, wird weggestoßen.
+{
+  const c = course("tuerenlotto"), pusher = c.boxes.find(b => b.look === "pusher")!, s = make("tuerenlotto"); park(s);
+  const r = s.game.racers.p0;
+  // A moment in which the pusher moves fast towards +x, the racer right in front of it.
+  let t = 0; while (Math.cos(2 * Math.PI * t / pusher.move!.period + pusher.move!.phase) < .9) t += 50;
+  s.time = t; const x1 = pusher.x1 + pusher.move!.amp * Math.sin(2 * Math.PI * (t + 50) / pusher.move!.period + pusher.move!.phase);
+  put(r, x1 + .3, 0, (pusher.z0 + pusher.z1) / 2); run(s, 100, () => send(s, "p0"));
+  assert.ok(s.events.some(e => e.kind === "shove" && e.ids[0] === "p0"), "Weggeschoben"); assert.ok(r.vx > 2 || r.x > x1 + 1, `Stoß nach außen (${r.vx})`);
+}
+
+// Gänge im Türenlotto: je Reihe die geplanten Arten; Falltür lässt fallen, massiver Ausgang wird markiert.
+{
+  const s = make("tuerenlotto"); park(s); const r = s.game.racers.p0, c = course("tuerenlotto"), sec = s.game;
+  for (const row of c.laneRows!) {
+    const kind = row.lanes.map(l => sec.secretDoors![l.front] === "0" ? "shut" : sec.secretTiles![l.floor] === "0" ? "trap" : sec.secretDoors![l.exit] === "1" ? "through" : "dead");
+    assert.equal(kind.filter(k => k === "through").length, row.through); assert.equal(kind.filter(k => k === "dead").length, row.dead); assert.equal(kind.filter(k => k === "trap").length, row.trap);
+  }
+  const row = c.laneRows![0], trap = row.lanes.find(l => sec.secretTiles![l.floor] === "0")!, dead = row.lanes.find(l => sec.secretDoors![l.front] === "1" && sec.secretTiles![l.floor] === "1" && sec.secretDoors![l.exit] === "0")!;
+  put(r, trap.x, 0, row.z - 1.2); run(s, 1400, () => send(s, "p0", forward));
+  assert.equal(sec.tiles[trap.floor], "2", "Falltür gibt nach"); assert.ok(r.falls > 0 || r.respawnAt > 0 || r.y < -1, "Durch die Falltür gefallen");
+  assert.ok(s.events.some(e => e.kind === "tile" && e.text === "Falltür!"));
+  run(s, PC.respawnMs + 200, () => send(s, "p0"));
+  put(r, dead.x, 0, row.z - 1.2); run(s, 2000, () => send(s, "p0", forward));
+  assert.equal(sec.doors[dead.front], "1"); assert.equal(sec.doors[dead.exit], "2", "Sackgasse: Ausgang massiv und markiert");
+  assert.ok(r.z < row.exitZ && r.z > row.z, "Steht in der Sackgasse");
 }
 
 // Wind: treibt seitlich, nur solange er bläst; Gegenwind bremst auf der Rampe.
@@ -259,4 +321,4 @@ for (const id of ALL) {
   const a = play(false), b = play(true);
   assert.deepEqual(a.game.order, b.game.order, `${id}: deterministisch auch nach Neustart`); assert.equal(a.time, b.time);
 }
-console.log("Hindernis-Parcours erfolgreich (8 Läufe und Finale): Start und Geheimnisse, Klappen mit Warnung, Kanten ohne Hochrutschen, Wind, Finale mit Ausscheiden, Zuschauen, Laufen, Sprunghöhe, Graben und Kontrollpunkt, Hechten, Drehbalken (Springen und Ducken), Festhalten an Kanten und an anderen, Türen, Geisterplatten, Wippen, Förderband, Glibber, Zielreihenfolge und Zielschluss, Aufgeben, Bots in allen Läufen, JSON-Neustart und Determinismus.");
+console.log("Hindernis-Parcours erfolgreich (8 Läufe und Finale; Drehbalken fest, Schieber stoßen, Gänge mit Sackgassen und Falltüren, Klettern): Start und Geheimnisse, Klappen mit Warnung, Kanten ohne Hochrutschen, Wind, Finale mit Ausscheiden, Zuschauen, Laufen, Sprunghöhe, Graben und Kontrollpunkt, Hechten, Drehbalken (Springen und Ducken), Festhalten an Kanten und an anderen, Türen, Geisterplatten, Wippen, Förderband, Glibber, Zielreihenfolge und Zielschluss, Aufgeben, Bots in allen Läufen, JSON-Neustart und Determinismus.");

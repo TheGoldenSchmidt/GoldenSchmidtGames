@@ -12,7 +12,7 @@ import { clothing, clothSurface, type Garment } from "./garments";
  * primitives on the same 65-bone skeleton. All share the clips of the Universal
  * Animation Library 1 and 2 (built by scripts/assets/build-characters.mjs).
  */
-export type LoopState = "idle" | "jog" | "sprint" | "push" | "air" | "slide" | "dance";
+export type LoopState = "idle" | "jog" | "sprint" | "push" | "air" | "slide" | "dance" | "climb" | "hang" | "crouch" | "crouchWalk" | "drive";
 export type OneShot = "dash" | "hit" | "hitLight" | "jumpStart" | "land" | "slideStart" | "cheer" | "roll" | "punch" | "death";
 const ONE_SHOTS: readonly string[] = ["dash", "hit", "hitLight", "jumpStart", "land", "slideStart", "cheer", "roll", "punch", "death"];
 
@@ -95,7 +95,9 @@ export function loadCharacterKit(): Promise<CharacterKit> {
     const names = ["body_m_light.jpg", "body_m_dark.jpg", "body_f_light.jpg", "body_f_dark.jpg", "hair_1.jpg", "hair_2.jpg", "eye.jpg"];
     const loaded = await Promise.all([...names.map(n => texture(n)), texture("outfit_m.png", false), texture("outfit_f.png", false)]);
     const textures = Object.fromEntries([...names, "outfit_m.png", "outfit_f.png"].map((n, i) => [n, loaded[i]]));
-    ready = { bodies: { m, f }, hairs: Object.fromEntries(HAIRS.map((h, i) => [h, hairs[i]])), rig: anims.scene, clips: anims.animations, textures };
+    // Holding on to a ledge: one frame of the climbing cycle (one hand high, feet on the wall).
+    const climb = anims.animations.find(c => c.name === "climb"), hang = climb ? T.AnimationUtils.subclip(climb, "hang", 10, 11, 30) : undefined;
+    ready = { bodies: { m, f }, hairs: Object.fromEntries(HAIRS.map((h, i) => [h, hairs[i]])), rig: anims.scene, clips: hang ? [...anims.animations, hang] : anims.animations, textures };
     return ready;
   })().catch(error => { pending = undefined; throw error; });
   return pending;
@@ -108,7 +110,10 @@ export interface RiggedFigure {
   /** Height of the scaled figure in world units. */
   height: number;
   setLoop(state: LoopState, speed?: number): void;
-  play(action: OneShot): void;
+  /** One-shot action; `speed` scales its playback, `from` skips its start (seconds). */
+  play(action: OneShot, speed?: number, from?: number): void;
+  /** Ends a running one-shot early and fades back to the loop (e.g. on landing). */
+  stopShot(): void;
   update(dt: number): void;
   dispose(): void;
 }
@@ -563,17 +568,23 @@ export function riggedFigure(kit: CharacterKit, chosen: unknown, slot: number, c
   return {
     group, height,
     setLoop(state, speed = 1) {
-      const current = actions.get(loop)!, next = actions.get(state)!;
-      next.timeScale = state === "jog" || state === "sprint" ? Math.max(.6, Math.min(1.8, speed)) : 1;
+      const current = actions.get(loop)!, next = actions.get(state) ?? actions.get("idle")!;
+      next.timeScale = state === "jog" || state === "sprint" || state === "crouchWalk" ? Math.max(.6, Math.min(1.8, speed)) : state === "climb" ? Math.max(.4, Math.min(2.5, speed)) : 1;
       if (state === loop) return;
       loop = state;
       if (!shot) fadeTo(next, current); else current.fadeOut(FADE);
     },
-    play(name) {
+    play(name, speed = 1, from = 0) {
       const action = actions.get(name);
       if (!action) return;
-      const from = shot ?? actions.get(loop);
-      shot = action; fadeTo(action, from);
+      const before = shot ?? actions.get(loop);
+      shot = action; fadeTo(action, before);
+      action.timeScale = speed; action.time = Math.min(from, action.getClip().duration);
+    },
+    stopShot() {
+      if (!shot) return;
+      const ended = shot; shot = undefined;
+      fadeTo(actions.get(loop)!, ended);
     },
     // Body animations explain actions (running, being hit), so they also run with reduced motion.
     update(dt) { mixer.update(dt); },

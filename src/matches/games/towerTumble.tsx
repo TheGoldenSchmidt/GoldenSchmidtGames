@@ -63,7 +63,8 @@ function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
     const wanted = Math.max(0, focus - (h / scale) * .45), dt = Math.min(.1, Math.max(0, (f.t - (local.towerT ?? f.t)) / 1000));
     // Same glide on 60 Hz and 120 Hz screens: the follow speed depends on time, not on frames.
     local.towerCam = f.reduced || local.towerCam === undefined ? wanted : lerp(local.towerCam, wanted, 1 - Math.exp(-dt * 5)); local.towerT = f.t;
-    const floor = h * .72 / scale - local.towerCam;
+    // Raising the camera moves the world down on screen: the focus stays in the upper part, also at the finish line.
+    const floor = h * .72 / scale + local.towerCam;
     const X = (x: number) => cx + x * scale, Y = (y: number) => (floor - y) * scale;
     // Height marks every 2 m and the checkered finish line.
     ctx.font = "800 11px 'Trebuchet MS', sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "middle";

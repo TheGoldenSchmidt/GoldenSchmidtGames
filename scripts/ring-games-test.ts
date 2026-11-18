@@ -33,8 +33,15 @@ for (const id of ["sumo", "bumpercars"] as const) {
     const v = put(s, "p0", s.game.radius - .1, 0); v.vx = 6; v.lastHitBy = "p1"; v.lastHitAt = s.time;
     step(s, 100);
     assert.equal(v.out, true); assert.equal(v.lives, 2); assert.equal(s.game.fighters.p1.ringOuts, 1);
-    step(s, 2000);
+    // Until the restart everyone stands still; then all are back on their own start places.
+    const p2 = s.game.fighters.p2; act(s, "p2", { x: 1 }); step(s, 600);
+    assert.ok(Math.hypot(p2.x + 3, p2.y + 3) < .2 && p2.actionAt < 0, "Pause nach dem Ring-Out: niemand fährt, keine Aktion");
+    step(s, 1400);
     assert.equal(v.out, false); assert.ok(v.shieldUntil > s.time && Math.hypot(v.x, v.y) < s.game.radius - 1, "Respawn mit Schutz innen");
+    const fresh = make(id, 3);
+    // (Bumper Mayhem's turning posts may already nudge a car in the step after the restart.)
+    for (const pid of ["p0", "p1", "p2"]) { const f = s.game.fighters[pid], start = fresh.game.fighters[pid]; assert.ok(Math.hypot(f.x - start.x, f.y - start.y) < .15, `${pid} wieder auf dem Startplatz`); }
+    assert.ok(s.events.some(e => e.kind === "reset"));
     const late = put(s, "p0", s.game.radius - .1, 0); late.vx = 6; late.lastHitBy = "p1"; late.lastHitAt = s.time - 3100;
     step(s, 100);
     assert.equal(s.game.fighters.p1.ringOuts, 1, "Alte Berührung zählt nicht");
@@ -85,7 +92,8 @@ for (const id of ["sumo", "bumpercars"] as const) {
   const at = s.game.fighters.p0.actionAt;
   act(s, "p0", { x: 1 }); step(s, 50);
   assert.equal(s.game.fighters.p0.actionAt, at, "Abklingzeit");
-  step(s, SUMO.cooldown); act(s, "p0", { x: 1 });
+  // The victim flew out: the restart from the start places comes first, then the cooldown is over.
+  step(s, SUMO.cooldown + 400); act(s, "p0", { x: 1 });
   assert.ok(s.game.fighters.p0.actionAt > at);
   const t = make("sumo", 2);
   put(t, "p0", -1.2, 0, 0); put(t, "p1", 0, 0).shieldUntil = 99999;

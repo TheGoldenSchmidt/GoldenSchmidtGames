@@ -107,7 +107,7 @@ test("Quick Draw: Fehlstart vor dem Signal und Übung gegen Bots", async ({ page
   } finally { session.close(); }
 });
 
-test("Light Trails: Wischen und Abbiegetasten lenken den eigenen Gleiter", async ({ page }, testInfo) => {
+test("Light Trails: Stick und Halteknöpfe lenken den eigenen Gleiter stufenlos", async ({ page }, testInfo) => {
   await page.emulateMedia({ reducedMotion: "no-preference" });
   const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "trails" });
   try {
@@ -117,15 +117,19 @@ test("Light Trails: Wischen und Abbiegetasten lenken den eigenen Gleiter", async
     await matchStarted(page);
     const rider = async () => ((await session.state()).partyGame!.mini!.match as MatchState<TrailsGame>).game.riders[session.ids[0]];
     const start = await rider();
-    const zone = page.getByRole("group", { name: "Wischen, um abzubiegen" });
-    const box = (await zone.boundingBox())!;
-    // Echte Wischgeste: senkrecht zur Fahrtrichtung.
-    const vertical = start.dir === 1 || start.dir === 3, cx = box.x + box.width / 2, cy = box.y + box.height / 3;
+    // Stick towards the field centre: the heading changes smoothly (not by 90°).
+    const stick = (await page.getByRole("group", { name: "Bewegungsstick" }).boundingBox())!;
+    const cx = stick.x + stick.width / 2, cy = stick.y + stick.height / 2, dx = 15 - start.x, dy = 24 - start.y, n = Math.hypot(dx, dy) || 1;
     await page.mouse.move(cx, cy); await page.mouse.down();
-    await page.mouse.move(vertical ? cx : cx + 60, vertical ? cy + 60 : cy, { steps: 4 }); await page.mouse.up();
-    await expect.poll(async () => (await rider()).path.length, { timeout: 3000 }).toBeGreaterThan(1);
-    await page.getByRole("button", { name: "Links", exact: true }).tap();
-    await expect.poll(async () => (await rider()).path.length, { timeout: 3000 }).toBeGreaterThan(2);
+    await page.mouse.move(cx + dx / n * 40, cy + dy / n * 40, { steps: 3 });
+    await expect.poll(async () => Math.abs(Math.atan2(Math.sin((await rider()).a - start.a), Math.cos((await rider()).a - start.a))), { timeout: 3000 }).toBeGreaterThan(.3);
+    await page.mouse.up();
+    // Holding "Links" turns left for as long as it is held.
+    const left = (await page.getByRole("button", { name: "Links", exact: true }).boundingBox())!;
+    const before = (await rider()).a;
+    await page.mouse.move(left.x + left.width / 2, left.y + left.height / 2); await page.mouse.down();
+    await expect.poll(async () => Math.atan2(Math.sin(before - (await rider()).a), Math.cos(before - (await rider()).a)), { timeout: 3000 }).toBeGreaterThan(.3);
+    await page.mouse.up();
     await page.screenshot({ path: testInfo.outputPath("trails.png") });
     await session.action({ type: "finish" }, session.ids[1]);
     await expect(page.getByRole("heading", { name: "Euer Ergebnis", exact: true })).toBeVisible();
@@ -275,7 +279,7 @@ for (const motion of ["no-preference", "reduce"] as const) test(`Bomb Arena 2.5D
   } finally { session.close(); }
 });
 
-for (const [miniId, name] of [["bombs", "Bomb Arena"], ["tanks", "Tank Trouble"], ["lava", "Floor is Lava"], ["sumo", "Sumo Smash"], ["chaosrun", "Chaos Run"]] as const) test(`${name} 2.5D mit sechs Figuren: alle stehen im Feld, Zeichenaufwand bleibt begrenzt`, async ({ page }, testInfo) => {
+for (const [miniId, name] of [["bombs", "Bomb Arena"], ["tanks", "Tank Trouble"], ["lava", "Floor is Lava"], ["sumo", "Sumo Smash"], ["bumpercars", "Bumper Mayhem"], ["chaosrun", "Chaos Run"]] as const) test(`${name} 2.5D mit sechs Figuren: alle stehen im Feld, Zeichenaufwand bleibt begrenzt`, async ({ page }, testInfo) => {
   await page.emulateMedia({ reducedMotion: "no-preference" });
   const six = ["alpha_rick_prime", "alpha_morty_smith", "alpha_summer_smith", "alpha_eric_cartman", "alpha_korvo", "alpha_mr_poopybutthole"] as const;
   const session = await onlineSession(page, false, [...six], false, "free-minigame", { miniId });
@@ -284,8 +288,9 @@ for (const [miniId, name] of [["bombs", "Bomb Arena"], ["tanks", "Tank Trouble"]
     for (const other of session.ids.slice(1)) await session.action({ type: "ready" }, other);
     await matchStarted(page);
     const world = page.locator(".match-world");
-    // Sumo Smash and Chaos Run use the rigged characters: six different looks (body, skin, hair) instead of the chosen figures.
-    await expect.poll(async () => { const looks = Object.values(JSON.parse(await world.getAttribute("data-figures") ?? "{}")) as string[]; return miniId === "sumo" || miniId === "chaosrun" ? new Set(looks).size : looks.sort(); }, { timeout: 20000 }).toEqual(miniId === "sumo" || miniId === "chaosrun" ? 6 : [...six].sort());
+    // Sumo Smash, Bumper Mayhem and Chaos Run use the rigged characters: six different looks (body, skin, hair) instead of the chosen figures.
+    const rigged = miniId === "sumo" || miniId === "bumpercars" || miniId === "chaosrun";
+    await expect.poll(async () => { const looks = Object.values(JSON.parse(await world.getAttribute("data-figures") ?? "{}")) as string[]; return rigged ? new Set(looks).size : looks.sort(); }, { timeout: 20000 }).toEqual(rigged ? 6 : [...six].sort());
     // Measure while all figures are still on the field (in Floor is Lava idle players soon sink).
     await expect.poll(async () => Number(await world.getAttribute("data-draw-calls")), { timeout: 5000 }).toBeGreaterThan(40);
     const calls = Number(await world.getAttribute("data-draw-calls")), triangles = Number(await world.getAttribute("data-triangles"));
@@ -297,7 +302,7 @@ for (const [miniId, name] of [["bombs", "Bomb Arena"], ["tanks", "Tank Trouble"]
   } finally { session.close(); }
 });
 
-for (const [miniId, name] of [["bombs", "Bomb Arena"], ["tanks", "Tank Trouble"], ["lava", "Floor is Lava"], ["sumo", "Sumo Smash"], ["chaosrun", "Chaos Run"]] as const) test(`${name} ohne WebGL: die 2D-Fläche übernimmt, das Spiel läuft bis zum Ergebnis`, async ({ page }) => {
+for (const [miniId, name] of [["bombs", "Bomb Arena"], ["tanks", "Tank Trouble"], ["lava", "Floor is Lava"], ["sumo", "Sumo Smash"], ["bumpercars", "Bumper Mayhem"], ["chaosrun", "Chaos Run"]] as const) test(`${name} ohne WebGL: die 2D-Fläche übernimmt, das Spiel läuft bis zum Ergebnis`, async ({ page }) => {
   await page.addInitScript(() => {
     const original = HTMLCanvasElement.prototype.getContext;
     HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, kind: string, ...rest: unknown[]) {

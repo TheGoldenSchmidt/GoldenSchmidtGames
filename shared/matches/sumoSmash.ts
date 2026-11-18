@@ -10,7 +10,7 @@ const dashing = (f: Fighter, now: number) => now < f.actionUntil;
 
 export const sumoSmash = ringModule({
   id: "sumo", name: "Sumo Smash",
-  instruction: "Bewege deinen Sumo mit dem Stick. Der Stoß-Knopf schiebt dich nach vorn; wer getroffen wird, fliegt zurück. Danach braucht der Stoß 2,5 Sekunden. Wer aus dem Ring fällt, verliert eines von 3 Leben; wer den Ring-Out verursacht, bekommt +2. Ab Sekunde 40 schrumpft der Ring. Letzter im Ring gewinnt, nach 75 Sekunden zählen Leben, dann Ring-Outs.",
+  instruction: "Bewege deinen Sumo mit dem Stick. Der Stoß-Knopf schiebt dich nach vorn; wer getroffen wird, fliegt zurück. Danach braucht der Stoß 2,5 Sekunden. Wer aus dem Ring fällt, verliert eines von 3 Leben; wer den Ring-Out verursacht, bekommt +2. Danach stellen sich alle wieder auf ihre Startplätze. Ab Sekunde 40 schrumpft der Ring. Letzter im Ring gewinnt, nach 75 Sekunden zählen Leben, dann Ring-Outs.",
   controls: "Stick: bewegen · Knopf: Stoß nach vorn.",
   look: { icon: "◍", action: "Schieb sie vom Podest", hint: "Stick bewegen · Knopf Stoß", goal: "Als Letzter im Ring stehen" },
   radius: 5.5, minRadius: 3.2, shrinkFrom: 40000, shrinkTo: 75000,

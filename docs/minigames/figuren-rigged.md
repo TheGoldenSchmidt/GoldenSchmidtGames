@@ -31,7 +31,7 @@ Ergebnis in `public/models/` (im PWA-Cache, zusammen ≈ 2,8 MB):
 | --- | --- |
 | `body_m.glb`, `body_f.glb` | gehäutete Körper ohne Texturen, mit Kleidungsbereichen je Eckpunkt (≈ 720 KB je Körper) |
 | `hair_*.glb` | sechs Frisuren/Bart am selben Skelett (55–224 KB) |
-| `anims.glb` | 17 Animationen auf einem nackten Skelett (≈ 600 KB); das Skelett trägt auch Bolt und Glubschi |
+| `anims.glb` | 21 Animationen auf einem nackten Skelett (≈ 750 KB): dazu seit Nov. 2026 Klettern (`ClimbUp_1m`, daraus beim Laden auch die Hängepose), Hocken (stehend und gehend) und Fahren (`Driving_Loop` für Bumper Mayhem); das Skelett trägt auch Bolt und Glubschi |
 | `tex/body_<m|f>_<light|dark>.jpg` | Haut/Kleidung 512 px |
 | `tex/outfit_<m|f>.png` | Maske der Kleidung (grau, ungesättigt) |
 | `tex/hair_1.jpg`, `hair_2.jpg`, `eye.jpg` | Haar (graustufig) und Augen |
@@ -86,8 +86,10 @@ Knochennamen eindeutig.
   zu einem Netz zusammengefasst (gemischte Sechsergruppe in der klassischen Arena:
   257 statt 393 Zeichenaufrufe).
 - `AnimationMixer` mit weichen Übergängen: Dauerzustände (stehen, joggen,
-  sprinten, schieben, Luft, rutschen, tanzen) und Einmal-Aktionen (Dash,
-  Treffer, Schlag, Absprung, Landung, Rutschbeginn, Jubel, Niederlage).
+  sprinten, schieben, Luft, rutschen, tanzen, klettern, hängen, hocken, fahren) und Einmal-Aktionen (Dash,
+  Treffer, Schlag, Absprung, Landung, Rutschbeginn, Jubel, Niederlage). Einmal-Aktionen
+  lassen sich schneller und ab einem Versatz abspielen und vorzeitig beenden (`stopShot`,
+  z. B. bei der Landung: `Jump_Start` dauert 1,33 s, ein Sprung nur ≈ 0,7 s).
   Körperanimationen laufen auch bei reduzierter Bewegung, weil sie Aktionen
   erklären; Wackeln, Funken und Wippen entfallen dort.
 - Größe aus der Stehpose (ohne Antennen, Hörner, Kontur); Figuren blicken
@@ -122,6 +124,16 @@ und weiter zurück. Sechs Läufer: 112 Zeichenaufrufe, ≈ 207 000 Dreiecke.
 Playwright `phone`: beide Spiele mit Figuren, Bedienung, beiden
 Bewegungseinstellungen, sechs Spielern und Rückfall ohne WebGL;
 Produktionsprüfung: Figurendateien im PWA-Cache und ausgeliefert.
+
+## Gewählte klassische Figuren in Skelett-Szenen
+
+Sumo Smash, Bumper Mayhem, Chaos Run und der Hindernis-Parcours brauchen
+Körperaktionen (Schieben, Klettern, Hechten, Fahren), die es nur als
+Skelettanimationen gibt. Die 13 klassischen Figuren (`alpha_*`) sind starre
+Einzelteil-Modelle ohne Skelett mit wenigen eigenen Clips (Angriff, Treffer,
+Niederlage, Sprung) und berechneter Beinbewegung. Wer eine klassische Figur
+gewählt hat, erscheint dort deshalb als einer der sechs Basis-Menschen in der
+Spielerfarbe. Die übrigen 3D-Szenen zeigen klassische Figuren über den Adapter.
 
 ## Offen
 

@@ -70,6 +70,22 @@ for (const count of [2, 4, 6]) {
   assert.ok(s.game.runners.p0.airUntil > before);
 }
 
+// Hechten: flach über zwei Lücken weit, danach kurz liegen (keine Steuerung), Abklingzeit 3,5 s.
+{
+  const s = make(2); noRegen(s); park(s, "p1"); put(s, "p1", 7.5, 11.5);
+  put(s, "p0", 1.5, 6.5);
+  hole(s, [at(2.5, 6.5), at(3.5, 6.5)]);
+  send(s, "p0", { x: 1, cn: s.players[0].usedN + 1, n: 1 }); step(s, 50);
+  assert.ok((s.game.runners.p0.diveUntil ?? 0) > s.time, "Hechtet");
+  step(s, FL.diveMs);
+  const r = s.game.runners.p0;
+  assert.equal(r.lives, FL.lives, "Über die Lücke gehechtet"); assert.ok(r.x > 4, `Weite ${r.x - 1.5}`);
+  const x = r.x; send(s, "p0", { x: -1 }); step(s, FL.proneMs - 100);
+  assert.ok(Math.abs(r.x - x) < .4, "Liegt kurz, keine Steuerung");
+  send(s, "p0", { x: 1, cn: s.players[0].usedN + 1, n: 1 }); step(s, 50);
+  assert.ok((r.diveUntil ?? 0) < s.time, "Abklingzeit");
+}
+
 // Lava ohne Sprung: Leben weg, sicherer Respawn mit kurzem Schutz; zweites Leben → raus.
 {
   const s = make(2); noRegen(s);
@@ -223,4 +239,4 @@ for (const count of [2, 4, 6]) {
   const a = play(), b = play();
   assert.deepEqual(a.game.points, b.game.points); assert.equal(a.time, b.time);
 }
-console.log("Floor is Lava erfolgreich: Startplätze, Etagen (Durchfallen, Lava nur unten, Respawn, getrennte Kontakte, Randeinsturz), Plattenzustände, Regeneration, Sprung über Lücken, Abklingzeit, Lava, sicherer Respawn, Randabbruch, Zeitablauf mit geteilter Platzierung, gleichzeitiges Ausscheiden, Stechrunde, Schubser (Stoß, Abklingzeit, Rutschen, Gutschrift, Ausweichen, Schutz), Aufgeben, Bots und Determinismus.");
+console.log("Floor is Lava erfolgreich: Startplätze, Etagen (Durchfallen, Lava nur unten, Respawn, getrennte Kontakte, Randeinsturz), Plattenzustände, Regeneration, Sprung über Lücken, Abklingzeit, Hechten mit Liegen, Lava, sicherer Respawn, Randabbruch, Zeitablauf mit geteilter Platzierung, gleichzeitiges Ausscheiden, Stechrunde, Schubser (Stoß, Abklingzeit, Rutschen, Gutschrift, Ausweichen, Schutz), Aufgeben, Bots und Determinismus.");

@@ -105,7 +105,7 @@ function hit(s: MatchState<BombGame>, b: Bomber, by: string | undefined) {
   if (b.lives > 0) {
     // Safe respawn: the spawn farthest from bombs and flames.
     const danger = (x: number, y: number) => Math.min(99, ...g.bombs.map(o => Math.abs(o.x - x) + Math.abs(o.y - y)), ...g.flames.map(f => Math.abs(f.x - x) + Math.abs(f.y - y)));
-    const options = SPAWNS.filter(([x, y]) => at(g, x, y) === "0");
+    const options = SPAWNS.filter(([x, y]) => at(g, x, y) === "0" && !Object.values(g.bombers).some(o => o.id !== b.id && o.alive && ((o.cx === x && o.cy === y) || (o.tx === x && o.ty === y))));
     const [x, y] = options.length ? [...options].sort((a, c) => danger(c[0], c[1]) - danger(a[0], a[1]))[0] : [b.cx, b.cy];
     Object.assign(b, { cx: x, cy: y, tx: x, ty: y, progress: 0, invulnUntil: s.time + BA.invulnMs });
     emit(s, "hit", "Getroffen! Sicherer Neustart", [b.id]);
@@ -145,7 +145,9 @@ function explode(s: MatchState<BombGame>, first: Bomb) {
 function moveBomber(s: MatchState<BombGame>, p: MatchPlayer, b: Bomber, dt: number) {
   const g = s.game, input = inputOfPlayer(s, p), moveMs = Math.max(BA.minMoveMs, BA.moveMs - b.speed * BA.speedStep);
   const wanted: number = Math.hypot(input.x, input.y) < .35 ? -1 : Math.abs(input.x) > Math.abs(input.y) ? (input.x > 0 ? 1 : 3) : (input.y > 0 ? 2 : 0);
-  const free = (x: number, y: number) => at(g, x, y) === "0" && !g.bombs.some(o => o.x === x && o.y === y && !o.passFor.includes(b.id));
+  // Bombs and other players block the way (you can be boxed in); a fresh own bomb can be left.
+  const occupied = (x: number, y: number) => Object.values(g.bombers).some(o => o.id !== b.id && o.alive && ((o.cx === x && o.cy === y) || (o.tx === x && o.ty === y)));
+  const free = (x: number, y: number) => at(g, x, y) === "0" && !g.bombs.some(o => o.x === x && o.y === y && !o.passFor.includes(b.id)) && !occupied(x, y);
   let budget = dt * 1000 / moveMs;
   for (let guard = 0; guard < 3 && budget > 1e-9; guard++) {
     const moving = b.tx !== b.cx || b.ty !== b.cy;
@@ -182,7 +184,7 @@ export const bombArena: MatchModule<BombGame> = {
   id: "bombs",
   meta: {
     name: "Bomb Arena", seconds: (BA.rounds * (BA.roundMax + BA.pause) + BA.suddenMax + BA.pause) / 1000 + 2, players: [2, 3, 4, 5, 6], hz: 20,
-    instruction: "Lauf mit dem Stick durch die Bombenfabrik und lege mit dem Knopf Bomben. Nach 2 Sekunden explodieren sie kreuzförmig, sprengen Kisten und zünden andere Bomben. Du hast 2 Leben pro Durchgang. Ein gegnerischer K.o. bringt +2, der Durchgangssieg +3. Ab Sekunde 25 schließt sich die Arena. Zwei Durchgänge; bei Gleichstand entscheidet Sudden Death.",
+    instruction: "Lauf mit dem Stick durch die Bombenfabrik und lege mit dem Knopf Bomben. Nach 2 Sekunden explodieren sie kreuzförmig, sprengen Kisten und zünden andere Bomben. Bomben und andere Spieler versperren den Weg – wer nicht aufpasst, wird eingesperrt. Du hast 2 Leben pro Durchgang. Ein gegnerischer K.o. bringt +2, der Durchgangssieg +3. Ab Sekunde 25 schließt sich die Arena. Zwei Durchgänge; bei Gleichstand entscheidet Sudden Death.",
     controls: "Stick: laufen · Knopf: Bombe legen.",
     look: { icon: "✹", action: "Sprenge dir den Weg frei", hint: "Stick laufen · Knopf Bombe", goal: "K.o. +2 · Durchgangssieg +3" }
   },

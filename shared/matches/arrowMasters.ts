@@ -9,10 +9,25 @@ export const AM = {
   width: 20, height: 14, gravity: 9.8, maxSpeed: 16, minPower: .2,
   aimMs: 10000, flightMs: 4000, resultMs: 2600, rounds: 5, hp: 3, wind: 3,
   hitPoints: 2, defeatBonus: 1, targetPoints: 1, substeps: 8,
-  bodyW: .7, bodyH: 1.3, targetR: .55
+  bodyW: .7, bodyH: 1.3, targetR: .55,
+  /** Fan of the triple shot (radians between arrows), speed factor and damage of the heavy arrow. */
+  tripleSpread: .09, heavySpeed: .92, heavyDamage: 2
 } as const;
-export interface Archer { id: string; x: number; y: number; hp: number; down: boolean; aim?: { angle: number; power: number } }
-export interface Arrow { owner: string; x: number; y: number; vx: number; vy: number; done: boolean; hit?: string; best: number }
+/**
+ * Arrow kinds: the normal arrow, a triple shot (three arrows in a narrow fan)
+ * and a heavy arrow (wind cannot push it, a hit costs two health points).
+ * Triple and heavy can be used once per match each.
+ */
+export type ArrowKind = "normal" | "triple" | "heavy";
+export const ARROW_KINDS: readonly ArrowKind[] = ["normal", "triple", "heavy"];
+export interface Archer {
+  id: string; x: number; y: number; hp: number; down: boolean; aim?: { angle: number; power: number };
+  /** Kind chosen for this round (secret until the arrows fly). */
+  kind?: ArrowKind;
+  /** Special arrows still available in this match. */
+  specials?: { triple: number; heavy: number };
+}
+export interface Arrow { owner: string; x: number; y: number; vx: number; vy: number; done: boolean; hit?: string; best: number; kind?: ArrowKind }
 export interface ArrowGame {
   round: number;
   phase: "aim" | "flight" | "result" | "done";
@@ -45,7 +60,7 @@ function startRound(s: MatchState<ArrowGame>, tiebreak?: string[]) {
   // New positions after every shot: a fresh deterministic deal of the spots.
   const spots = shuffled(s, SLOTS.map((_, i) => i));
   s.players.forEach((p, i) => { const a = g.archers[p.id], [x, y] = SLOTS[spots[i]]; Object.assign(a, { x, y }); });
-  for (const a of Object.values(g.archers)) { a.aim = undefined; a.down = false; a.hp = AM.hp; }
+  for (const a of Object.values(g.archers)) { a.aim = undefined; a.down = false; a.hp = AM.hp; a.kind = "normal"; }
   emit(s, "round", tiebreak ? "Präzisions-Stechen!" : `Runde ${g.round} von ${AM.rounds}: neue Plätze, zielen!`, []);
 }
 
@@ -55,8 +70,14 @@ function fire(s: MatchState<ArrowGame>) {
   for (const p of s.players) {
     const a = g.archers[p.id];
     if (!a.aim || p.gone || (g.tiebreak && !g.tiebreak.includes(p.id))) continue;
-    const speed = AM.maxSpeed * a.aim.power, start = launch(a);
-    g.arrows.push({ owner: p.id, x: start.x, y: start.y, vx: Math.cos(a.aim.angle) * speed, vy: Math.sin(a.aim.angle) * speed, done: false, best: Infinity });
+    // Special arrows are spent when they fly; the precision tiebreak always uses the normal arrow.
+    const kind: ArrowKind = !g.tiebreak && a.kind && a.kind !== "normal" && (a.specials?.[a.kind] ?? 0) > 0 ? a.kind : "normal";
+    if (kind !== "normal") a.specials![kind]--;
+    const speed = AM.maxSpeed * a.aim.power * (kind === "heavy" ? AM.heavySpeed : 1), start = launch(a);
+    for (const turn of kind === "triple" ? [-AM.tripleSpread, 0, AM.tripleSpread] : [0]) {
+      const angle = a.aim.angle + turn;
+      g.arrows.push({ owner: p.id, x: start.x, y: start.y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, done: false, best: Infinity, ...(kind !== "normal" ? { kind } : {}) });
+    }
   }
   emit(s, "fire", g.arrows.length ? "Pfeile los!" : "Niemand hat gezielt", []);
 }
@@ -67,7 +88,9 @@ function fly(s: MatchState<ArrowGame>, dt: number) {
     const h = dt / AM.substeps;
     for (const arrow of g.arrows) {
       if (arrow.done) continue;
-      arrow.vx += g.wind * h; arrow.vy -= AM.gravity * h;
+      // The heavy arrow is not pushed by the wind.
+      if (arrow.kind !== "heavy") arrow.vx += g.wind * h;
+      arrow.vy -= AM.gravity * h;
       arrow.x += arrow.vx * h; arrow.y += arrow.vy * h;
       if (g.tiebreak) { const t = g.targets[0]; arrow.best = Math.min(arrow.best, Math.hypot(arrow.x - t.x, arrow.y - t.y)); }
       if (arrow.y <= 0 || arrow.x < -1 || arrow.x > AM.width + 1 || arrow.y > AM.height + 6 || OBSTACLES.some(o => pointInRect(arrow.x, arrow.y, o))) { arrow.done = true; continue; }
@@ -81,7 +104,7 @@ function fly(s: MatchState<ArrowGame>, dt: number) {
   }
   // Damage after the whole step: simultaneous hits on the same archer all count.
   for (const [arrow, victim] of hits) {
-    victim.hp--;
+    victim.hp -= arrow.kind === "heavy" ? AM.heavyDamage : 1;
     const self = arrow.owner === victim.id;
     if (!self) g.points[arrow.owner] += AM.hitPoints;
     g.log.at(-1)?.hits.push({ from: arrow.owner, to: victim.id });
@@ -119,13 +142,13 @@ export const arrowMasters: MatchModule<ArrowGame> = {
   id: "arrows",
   meta: {
     name: "Arrow Masters", seconds: (AM.rounds + 1) * (AM.aimMs + AM.flightMs + AM.resultMs) / 1000 + 2, players: [2, 3, 4, 5, 6], hz: 10,
-    instruction: "Ziehe auf der Zielfläche wie an einer Bogensehne: Richtung und Länge bestimmen Winkel und Stärke. Nach 10 Sekunden fliegen alle Pfeile gleichzeitig, der Wind wechselt jede Runde. Gegnertreffer +2, Besiegen +1, Zielscheiben +1. Jeder hat 3 Trefferpunkte pro Runde und steht jede Runde an einem neuen Platz. Fünf Runden; bei Gleichstand entscheidet ein Präzisionsschuss auf die Scheibe.",
+    instruction: "Ziehe auf der Zielfläche wie an einer Bogensehne: Richtung und Länge bestimmen Winkel und Stärke. Nach 10 Sekunden fliegen alle Pfeile gleichzeitig, der Wind wechselt jede Runde. Gegnertreffer +2, Besiegen +1, Zielscheiben +1. Je einmal pro Partie wählst du vor dem Schuss einen Dreifachpfeil (drei Pfeile im Fächer) oder einen schweren Pfeil (fliegt unbeirrt vom Wind, ein Treffer kostet zwei Trefferpunkte). Jeder hat 3 Trefferpunkte pro Runde und steht jede Runde an einem neuen Platz. Fünf Runden; bei Gleichstand entscheidet ein Präzisionsschuss auf die Scheibe.",
     controls: "Ziehen = spannen und zielen · der Schuss löst automatisch aus.",
     look: { icon: "➶", action: "Spannen, zielen, treffen", hint: "Ziehen zum Zielen · Schuss nach 10 s", goal: "Die meisten Punkte nach 5 Runden" }
   },
   create(s) {
     s.game = { round: 0, phase: "aim", phaseStart: 0, wind: 0, archers: {}, arrows: [], targets: [], obstacles: OBSTACLES, points: Object.fromEntries(s.players.map(p => [p.id, 0])), precision: {}, log: [{ round: 1, hits: [] }] };
-    s.players.forEach((p, i) => { const [x, y] = SLOTS[i]; s.game.archers[p.id] = { id: p.id, x, y, hp: AM.hp, down: false }; });
+    s.players.forEach((p, i) => { const [x, y] = SLOTS[i]; s.game.archers[p.id] = { id: p.id, x, y, hp: AM.hp, down: false, kind: "normal", specials: { triple: 1, heavy: 1 } }; });
     startRound(s);
     return s.game;
   },
@@ -149,7 +172,12 @@ export const arrowMasters: MatchModule<ArrowGame> = {
     }
     if (g.phase === "result" && s.time - g.phaseStart >= AM.resultMs) afterRound(s);
   },
-  press() { /* aiming uses the held drag only */ },
+  // Aiming uses the held drag; a command chooses the arrow kind for this round (0 normal, 1 triple, 2 heavy).
+  press(s, p, kind, _at, value) {
+    const g = s.game, a = g.archers[p.id], wanted = ARROW_KINDS[value];
+    if (kind !== "n" || g.phase !== "aim" || !a || a.down || !wanted || g.tiebreak) return;
+    if (wanted === "normal" || (a.specials?.[wanted] ?? 0) > 0) a.kind = wanted;
+  },
   remove(s, id) { const a = s.game.archers[id]; if (a) a.aim = undefined; },
   standings(s) {
     const g = s.game;
@@ -159,7 +187,7 @@ export const arrowMasters: MatchModule<ArrowGame> = {
   finish(s) { s.game.phase = "done"; },
   view(s, viewer) {
     // Aims stay secret until the arrows fly.
-    if (s.game.phase === "aim") for (const a of Object.values(s.game.archers)) if (a.id !== viewer) delete a.aim;
+    if (s.game.phase === "aim") for (const a of Object.values(s.game.archers)) if (a.id !== viewer) { delete a.aim; delete a.kind; }
   },
   bot(s, id) {
     const g = s.game, me = g.archers[id];
@@ -181,7 +209,9 @@ export const arrowMasters: MatchModule<ArrowGame> = {
     const error = ((hash(`${id}:${g.round}:e`) % 100) / 100 - .5) * .12;
     const angle = best.angle + error, power = Math.min(1, best.power);
     // Express the aim as a drag vector: pulling opposite to the shot direction.
-    const intent = { ax: -Math.cos(angle) * power, ay: Math.sin(angle) * power };
+    // Specials: the heavy arrow in strong wind, the triple shot in the second half.
+    const special = me.specials?.heavy && Math.abs(g.wind) > 2 ? 2 : me.specials?.triple && g.round >= 3 ? 1 : 0;
+    const intent = { ax: -Math.cos(angle) * power, ay: Math.sin(angle) * power, ...(special && !g.tiebreak ? { command: special } : {}) };
     if (BOT_AIMS.size > 500) BOT_AIMS.clear();
     BOT_AIMS.set(key, intent);
     return intent;
