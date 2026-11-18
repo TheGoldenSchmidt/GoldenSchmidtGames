@@ -1,3 +1,4 @@
+import { boardWalking } from "../lib/boardMotion";
 import { rollingTray, trayHeight, trayPoint, trayStation } from "./rollingTray";
 import { batchScenery } from "./staticBatch";
 import { partyBoard, partyPaths } from "../../shared/partyBoard";
@@ -203,7 +204,7 @@ export function createBoardWorld(host:HTMLElement,read:()=>BoardFrame,select:(id
       let pawn=pawns.get(player.id);if(!pawn){pawn=character(kit,figures,index,undefined,player.characterId);pawn.group.scale.setScalar(PAWN_SCALE);pawns.set(player.id,pawn);pawn.group.position.copy(figurePoint(state.positions[player.id]??player.position));}
       const point=standingPoint(player.id,state.positions[player.id]??player.position);
       let speed=0,heading=controls.getAzimuthalAngle();
-      const walking=player.id===active.id&&Boolean(movement)&&progress>0&&progress<1&&!g.pausedAt&&!state.reduce;
+      const walking=player.id===active.id&&boardWalking(movement,visualNow,Boolean(g.pausedAt),state.reduce);
       if(player.id===active.id&&movement){
         const destination=standingPoint(player.id,movement.destination),direction=destination.clone().sub(point);
         // Animation speed comes from the authoritative segment, never from camera or network-frame deltas.

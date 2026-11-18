@@ -1,3 +1,4 @@
+import { boardWalking } from "../src/lib/boardMotion";
 import {boardGame} from "./party-fixtures";
 import assert from "node:assert/strict";
 import React from "react";
@@ -156,3 +157,12 @@ try {
   if (originalWindow) Object.defineProperty(globalThis, "window", originalWindow); else Reflect.deleteProperty(globalThis, "window");
 }
 console.log("Spieloberflächen erfolgreich: Start und Endansichten ohne Renderfehler");
+
+// Segment arrival and delayed follow-up packets must not interrupt the gait.
+const segment={departAt:1000,arriveAt:1420};
+assert.equal(boardWalking(segment,999,false,false),false);
+for(const now of [1000,1200,1420,1500])assert.equal(boardWalking(segment,now,false,false),true);
+assert.equal(boardWalking({departAt:1420},1420,false,false),true);
+assert.equal(boardWalking(undefined,1500,false,false),false);
+assert.equal(boardWalking(segment,1200,true,false),false);
+assert.equal(boardWalking(segment,1200,false,true),false);
