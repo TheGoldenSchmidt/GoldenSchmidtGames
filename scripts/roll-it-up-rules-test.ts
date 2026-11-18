@@ -1,12 +1,41 @@
 import assert from "node:assert/strict";
 import { activePartyPlayer, applyPartyAction, publicParty, type PartyAction, type PartyGame } from "../shared/party";
-import { hasFullSet, JAYSPOT, partyBoard, partyPaths, STATIONS } from "../shared/partyBoard";
+import { boardDistances, boardPathTo, boardRoute, hasFullSet, JAYSPOT, partyBoard, partyPaths, STATIONS } from "../shared/partyBoard";
 import { botBoardAction } from "../shared/partyBots";
 import { boardGame, settleMovement } from "./party-fixtures";
 
 const players = [{id:"a",name:"Ada"},{id:"b",name:"Ben"}];
 const make = () => boardGame(players,{rounds:5},true,17,100000,"roll-it-up");
 const command = (g:PartyGame, action:PartyAction) => settleMovement(applyPartyAction(g,activePartyPlayer(g).id,action,100000));
+
+// Guidance follows the directed game graph and never promises an unavailable goal.
+const guide = make(), traveler = activePartyPlayer(guide);
+traveler.position=8;traveler.supplies=[2,7,17];
+const unchanged=structuredClone(guide);
+assert.deepEqual(boardRoute(guide,traveler,9,4).fields,[9,10,11,12]);
+assert.deepEqual(boardRoute(guide,traveler,30,4).fields,[30,31,12,13]);
+assert.deepEqual(boardRoute(guide,traveler,30,4).stations,[{...STATIONS[2],steps:3,owned:false}]);
+assert.equal(boardRoute(guide,traveler,9,12).junction,true);
+assert.equal(boardRoute(guide,traveler,9,12).fields.at(-1),18);
+assert.deepEqual(boardRoute(guide,traveler,JAYSPOT,4).fields,[]);
+assert.deepEqual(boardRoute(guide,traveler,9,Infinity).fields,[]);
+assert.deepEqual(boardRoute(guide,traveler,9,0).fields,[]);
+assert.equal(boardDistances(guide,traveler).get(12),3);
+assert.equal(boardDistances(guide,traveler).has(JAYSPOT),false);
+assert.deepEqual(boardPathTo(guide,traveler,JAYSPOT),[]);
+assert.deepEqual(boardPathTo(guide,traveler,8),[8]);
+assert.deepEqual(guide,unchanged);
+traveler.supplies=STATIONS.map(s=>s.field);
+assert.equal(boardDistances(guide,traveler).get(JAYSPOT),3);
+assert.deepEqual(boardPathTo(guide,traveler,JAYSPOT),[8,30,31,JAYSPOT]);
+assert.deepEqual(boardRoute(guide,traveler,30,4).fields,[30,31]);
+assert.equal(boardRoute(guide,traveler,30,4).junction,true);
+traveler.position=31;
+assert.deepEqual(boardRoute(guide,traveler,JAYSPOT,8).fields,[JAYSPOT]);
+// Buying the final missing station could open a fork later in the same move.
+traveler.position=26;traveler.supplies=STATIONS.filter(s=>s.field!==27).map(s=>s.field);
+assert.equal(boardRoute(guide,traveler,27,20).junction,true);
+assert.equal(boardRoute(guide,traveler,27,20).fields.at(-1),8);
 
 function approach(g:PartyGame, field:number) {
   activePartyPlayer(g).position=field-1;

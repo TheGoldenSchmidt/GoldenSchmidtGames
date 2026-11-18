@@ -12,3 +12,10 @@ export const FIELD_VISUALS={
 } as const satisfies Record<Field,{color:string;ink:string;symbol:string}>;
 
 export const fieldSymbol=(type:Field)=>FIELD_VISUALS[type].symbol;
+
+export const FIELD_HELP: Record<Field,string> = {
+  start:"Beim Passieren bekommst du 3 Münzen.",coin:"Beim Landen bekommst du 3 Münzen.",
+  bad:"Beim Landen verlierst du bis zu 3 Münzen. Ein Schild schützt dich.",
+  event:"Eine Überraschung für dich oder die ganze Gruppe.",gift:"Hier wartet ein zufälliges Item auf dich.",
+  shop:"Kaufe ein Item für deinen nächsten Zug.",safe:"Hier kannst du die Aussicht genießen. Keine weiteren Effekte."
+};

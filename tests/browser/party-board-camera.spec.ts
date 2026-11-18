@@ -1,3 +1,4 @@
+import { settledBoardCamera } from "./board-view";
 import { test, expect, type Locator } from "@playwright/test";
 import { onlineSession } from "./party-session";
 
@@ -22,7 +23,7 @@ for (const mode of ["party", "roll-it-up"] as const) {
         const zoomOut = page.getByRole("button", { name: "Karte verkleinern", exact: true });
         const browser = page.getByRole("dialog", { name: "Felder und Figuren", exact: true });
         await expect(world).toHaveAttribute("data-webgl", "ready");
-        await expect.poll(() => world.getAttribute("data-frames").then(Number)).toBeGreaterThan(8);
+        await settledBoardCamera(world);
         await page.getByRole("button", {name:"Kamera öffnen",exact:true}).click();
         await expect(figure).toHaveAttribute("aria-pressed", "true");
         await expect(browser).toHaveCount(0);
@@ -34,6 +35,7 @@ for (const mode of ["party", "roll-it-up"] as const) {
         const sizes = info.project.name === "phone" ? [{ width: 390, height: 844 }, { width: 320, height: 740 }] : [{ width: 1280, height: 900 }];
         for (const size of sizes) {
           await page.setViewportSize(size);
+          await settledBoardCamera(world);
           for (const button of await page.locator(".party-camera-tools button").all()) {
             const bounds = (await button.boundingBox())!;
             expect(bounds.width).toBeGreaterThanOrEqual(44);
@@ -75,8 +77,7 @@ for (const mode of ["party", "roll-it-up"] as const) {
         await activate(zoomIn);
         await expect(zoomOut).toBeEnabled();
         await activate(page.getByRole("button", { name: "Kamera nach rechts drehen", exact: true }));
-        await figure.focus();
-        await page.keyboard.press("Enter");
+        await activate(figure);
         // Reset must restore both orientation and distance after zooming and rotating.
         await expect.poll(async () => distance(start, await camera(world))).toBeLessThan(.15);
         await expect(figure).toHaveAttribute("aria-pressed", "true");
@@ -86,8 +87,7 @@ for (const mode of ["party", "roll-it-up"] as const) {
         await page.getByRole("button", { name: "Felder und Figuren", exact: true }).click();
         const field = mode === "party" ? "Feld 6: Shop, Trophäenstand" : "Feld 2: Grinder";
         const inspect = page.getByRole("button", { name: field, exact: true });
-        await inspect.focus();
-        await page.keyboard.press("Enter");
+        await activate(inspect);
         await expect(inspect).toHaveAttribute("aria-pressed", "true");
         await expect(browser.locator(".party-map-caption")).toContainText(mode === "party" ? "Trophäenstand: 20 Münzen" : "Grinder beim Passieren für 8 Münzen");
         await expect.poll(async () => distance(start, await camera(world))).toBeLessThan(.15);

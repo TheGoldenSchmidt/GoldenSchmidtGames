@@ -15,12 +15,12 @@ function Palm({x,y,size=1}:{x:number;y:number;size?:number}) {
   return <g transform={`translate(${x} ${y}) scale(${size})`}><path d="M0 5q2-5 0-11" stroke="#9d7341" strokeWidth="1.6" fill="none"/><path d="M0-6q-7-5-8 1 4-2 8-1m0 0q-1-8 5-7-3 3-5 7m0 0q7-5 9 1-5-2-9-1m0 0q-6-8-9-4 5 0 9 4" fill="#237250"/><circle cy="-5" r="1.1" fill="#bd8849"/></g>;
 }
 
-export function PartyMapFallback({game,rolling=false,onTravelChange,onInspect}:{game:PartyGame;rolling?:boolean;onTravelChange?:(moving:boolean)=>void;onInspect?:(field:number)=>void}) {
+export function PartyMapFallback({game,rolling=false,onTravelChange,onInspect,previewRoute}:{game:PartyGame;rolling?:boolean;onTravelChange?:(moving:boolean)=>void;onInspect?:(field:number)=>void;previewRoute?:number[]}) {
   const [zoom,setZoom]=useState(1),[selected,setSelected]=useState<number>(),[animated,setAnimated]=useState<number>();
 
   const p=activePartyPlayer(game), tray=game.mode==="roll-it-up", map=tray?partyBoard(game):islandMap;
   useEffect(()=>{setAnimated(game.phase==="moving"?game.movement?.destination:undefined);onTravelChange?.(game.phase==="moving");},[game.phase,game.movement?.destination,onTravelChange]);
-  const route=new Set(game.path),choices=game.phase==="path"?partyPaths(game,p):[];
+  const route=new Set(previewRoute??game.path),choices=game.phase==="path"?partyPaths(game,p):[];
   function inspect(field:number) {setSelected(field);onInspect?.(field);}
   return <section className="party-board-wrap" aria-label={tray?"Bauschalenkarte":"Inselkarte"}>
     <div className="party-map-tools">{!onInspect&&mapObjective(game)}<button onClick={()=>setZoom(Math.max(1,zoom-.5))} disabled={zoom===1} aria-label="Karte verkleinern">−</button><button onClick={()=>setZoom(Math.min(2,zoom+.5))} disabled={zoom===2} aria-label="Karte vergrößern">+</button></div>
@@ -48,6 +48,7 @@ export function PartyMapFallback({game,rolling=false,onTravelChange,onInspect}:{
       {map.flatMap(f=>f.next.map(next=>{const a=map[f.id],b=map[next],traversed=route.has(f.id)&&route.has(next);return <g key={`${f.id}-${next}`}><line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#bba365" strokeWidth="2.7" strokeLinecap="round"/><line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={traversed?"#ffcc4d":"#fff5d7"} strokeWidth="1.7" strokeLinecap="round"/></g>;}))}
       {!tray&&<><text x="49" y="27" className="party-region">Hafen</text><text x="53" y="53" className="party-region">Jahrmarkt</text><text x="72" y="73" className="party-region">Dschungel</text><text x="25" y="58" className="party-region">Vulkan</text></>}
       {map.map(f=><g key={f.id} role="button" tabIndex={0} aria-label={`Feld ${f.id}: ${fieldName(game,f.id)}${!tray && f.id===game.trophyField?", Trophäenstand":""}`} onClick={()=>inspect(f.id)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();inspect(f.id);}}} style={{"--field-color":FIELD_VISUALS[f.type].color,"--field-ink":FIELD_VISUALS[f.type].ink} as CSSProperties} className={`party-field party-field--${f.type} ${selected===f.id?"is-selected":""} ${choices.includes(f.id)?"is-choice":""}`}>
+        <rect x={f.x-5.7} y={f.y-5.7} width="11.4" height="11.4" fill="transparent" pointerEvents="all"/>
         <circle cx={f.x} cy={f.y} r="3.1" filter="url(#party-field-shadow)"/><text className="party-field-symbol" x={f.x} y={f.y} dominantBaseline="central">{FIELD_VISUALS[f.type].symbol}</text>
         {tray && stationAt(f.id) && <g className="roll-map-label" transform={`translate(${50+(f.x-50)*.8} ${50+(f.y-50)*.8})`}><rect x="-6.2" y="-2.1" width="12.4" height="4.2" rx="1.4"/><text y=".8">{stationAt(f.id)!.name}</text></g>}
         {!tray && f.id===game.trophyField&&<g className="party-map-trophy" transform={`translate(${f.x} ${f.y-6})`}><path d="m0 5-3-5h6Z" fill="#ffcc4d"/><circle r="3.6" fill="#ffcc4d" stroke="#fff7d6" strokeWidth=".8"/><text y="1.2">★</text></g>}

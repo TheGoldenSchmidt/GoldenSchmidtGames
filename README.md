@@ -87,6 +87,8 @@ Das Auftakt-Minispiel legt die Zugreihenfolge fest. Ihr würfelt, entscheidet an
 
 Mit vollständigem Set könnt ihr auf einem der beiden Hügelwege von Feld 31 oder 33 zur Bank auf Feld 34 abbiegen. Die erste Ankunft am Jayspot beendet die Partie sofort, auch bei übrigen Würfelschritten. Es gibt kein Rundenlimit.
 
+Das Spielbrett **Die Bauschale** hat eine eigene 3D-Miniaturwelt und eine Smartphone-Oberfläche im Inselwelt-Stil. Setfortschritt, Münzen und nächstes Sammelziel stehen oben; Wegwahl und Käufe zeigen ihre Folgen vor dem Bestätigen. „Ganze Schale“ zeigt alle Stationen, „Zeigen“ in der Sammlung markiert einen Ort. Inventar, Feldinfos, Spielstand und Verlauf öffnen sich bei Bedarf. Die 2D-Karte bleibt auch bei einem WebGL-Ausfall spielbar. Technische Umsetzung und Prüfgrenzen: [3D-Spielansichten](docs/inselparty-3d.md#roll-it-up-die-bauschale).
+
 ## Inselparty
 
 Die Partyinsel wird ausschließlich online gespielt. Jede Person öffnet den Link auf dem eigenen Handy und tritt dem Raum bei. Die anderen Spielmodule behalten ihren lokalen Modus. Der Host wählt 5–15 Runden. Die Figuren bewegen sich mit Normaltempo. Standard sind acht Runden; die tatsächliche Dauer hängt von der Spielerzahl und den Entscheidungen ab. Startkapital: 10 Münzen. Eine Trophäe kostet 20 Münzen. Trophäen, danach Münzen, danach Minispielsiege entscheiden über den Sieg. Auf dem Brett wirken normale Felder beim Landen. Am Hafen gibt es beim Überqueren 3 Münzen. Die Trophäe wechselt nach dem Kauf zwischen den Shops 6, 15 und 24. Inventarlimit: drei Items, ein Einsatz vor dem Würfeln.

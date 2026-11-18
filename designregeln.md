@@ -38,7 +38,8 @@ wichtigste nächste Aktion.
 | Startbildschirm | Inselwelt als gerenderte 3D-Szene umgesetzt und geprüft ([Renderpipeline](docs/startscreen-render.md)) |
 | Lokales Setup, Online-Menü, Lobby, Wiederverbindung, Gastprofil, QR-Dialog | Inselwelt umgesetzt und auf dem Handy geprüft (`.iw-menu`, `.iw-dialog`, [menus.css](src/styles/menus.css)) |
 | Menüs laufender Minispiel-Wettbewerbe (Einsatz, Ergebnis) | Noch im früheren Party-Stil (`.party-menu`, `--menu-*` in [partyMenus.css](src/styles/partyMenus.css)) |
-| Spielflächen, Live-HUDs, Minispiele | Eigene Gestaltung; Umstellung geplant, nur auf ausdrücklichen Auftrag |
+| Roll It Up! – Die Bauschale | Freigegebene Inselwelt-Richtung als 3D-Brett und Touch-HUD umgesetzt ([Umsetzung](docs/inselparty-3d.md#roll-it-up-die-bauschale)); echte Handy-Leistung noch zu prüfen |
+| Übrige Spielflächen, Live-HUDs, Minispiele | Eigene Gestaltung; Umstellung geplant, nur auf ausdrücklichen Auftrag |
 
 Wer eine noch nicht umgestellte Ansicht bearbeitet, stellt sie entweder ganz auf die
 Inselwelt um oder bleibt in ihrem bisherigen Stil. Beide Stile werden innerhalb
@@ -226,12 +227,21 @@ Ereignisse grün mit Ausrufezeichen und Shops hellblau mit Shopsymbol.
 der aktiven Figur; ein gelber Bodenring kennzeichnet sie. Kameratasten stehen
 außerhalb der Szene, „Zur Figur“ und „Ganze Insel/Schale“ setzen die Ansicht
 zurück. Ein einzelner Button wechselt zwischen 3D und 2D. Die Spielerleiste steht
-am unteren Kartenrand; Set, Trophäenziel und Inventar öffnen sich über halbtransparente
-Seitenbuttons. Feldsuche und Legende liegen in einem schließbaren Panel.
+am unteren Kartenrand. Bei Inselparty öffnen sich Trophäenziel und Inventar über
+halbtransparente Seitenbuttons. Feldsuche und Legende liegen in einem schließbaren Panel.
 Die normale mobile Brettansicht nutzt eine Bildschirmhöhe ohne Seitenscrollen;
 längere Auswahlen dürfen innerhalb eines Panels scrollen. Beim Schließen kehrt
 der Fokus zum Auslöser zurück. Minispiel-Auswahl und Regeltext stehen nicht mehr
-unter dem laufenden Brett. Die bestehende Farbwelt der Spielansicht bleibt erhalten.
+unter dem laufenden Brett. Die bestehende Farbwelt von Inselparty bleibt erhalten.
+
+Roll It Up! verwendet die freigegebene Bauschale mit Emaille, Messingrand und
+grünem Hügel im Inselwelt-Himmel. Lilita One, Lexend, dunkles Glas und die
+vorhandenen Gold-/Steintasten bilden das HUD. Oben stehen eigene Münzen,
+Setfortschritt und Sammelziel; unten die aktuelle Entscheidung und die Zugreihenfolge.
+Die Übersicht zeigt Stationsnamen, die Zugansicht nur Ziel, aktive Figur und
+ausgewählten Ort. Wegwahl zeigt eine Vorschau vor der Bestätigung, ein Kauf Preis
+und Restbudget. Seltene Informationen bleiben in schließbaren Panels. Im
+Smartphone-Querformat stehen Welt und Aktionsfläche nebeneinander.
 
 Match-Minispiele (`src/matches/`) teilen eine Bühne: oben ein dunkles HUD mit
 gelbem Spieltitel, eigener Punktzahl und Tontaste, darunter ein Zwischenstand

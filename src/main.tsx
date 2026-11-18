@@ -14,6 +14,7 @@ import "./styles/kribbelnCup.css";
 import "./styles/qwixxCup.css";
 import "./styles/partyMenus.css";
 import "./styles/menus.css";
+import "./styles/rollItUp.css";
 import "./styles/matches.css";
 
 createRoot(document.getElementById("root")!).render(

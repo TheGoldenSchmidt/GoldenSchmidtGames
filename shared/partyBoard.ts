@@ -13,6 +13,7 @@ export const BOARD = Array.from({ length: 34 }, (_, id) => {
 
 export interface PartyBoardState { mode?: import("./party").PartyGame["mode"] }
 export interface Collector { position: number; supplies?: number[] }
+export const BAUSCHALE = { id: "bauschale", name: "Die Bauschale" } as const;
 
 export const STATIONS = [
   { field: 2, name: "Grinder", price: 8 },
@@ -48,4 +49,52 @@ export function fieldName(game: PartyBoardState, id: number) {
     if (station) return station.name;
   }
   return FIELD_LABELS[partyBoard(game)[id].type];
+}
+
+/** Deterministic route up to the next decision. Purchases are never assumed. */
+export function boardRoute(game: PartyBoardState, player: Collector, destination: number, steps: number) {
+  const board = partyBoard(game), fields: number[] = [];
+  let current = destination, junction = false, couldCompleteSet = false;
+  const possibleSupplies = new Set(player.supplies);
+  if (!Number.isFinite(steps) || !partyPaths(game, player).includes(destination)) return { fields, junction, stations: [] };
+  for (let left = Math.max(0, Math.floor(steps)); left > 0; left--) {
+    fields.push(current);
+    if (game.mode === "roll-it-up" && stationAt(current)) {
+      possibleSupplies.add(current);
+      couldCompleteSet = !hasFullSet(player) && STATIONS.every(s => possibleSupplies.has(s.field));
+    }
+    if (left === 1 || !board[current].next.length) break;
+    const next = partyPaths(game, player, current);
+    if (next.length > 1 || (couldCompleteSet && board[current].next.includes(JAYSPOT))) { junction = true; break; }
+    current = next[0];
+  }
+  return { fields, junction, stations: game.mode === "roll-it-up" ? fields.flatMap((field, index) => {
+    const station = stationAt(field);
+    return station ? [{ ...station, steps: index + 1, owned: Boolean(player.supplies?.includes(field)) }] : [];
+  }) : [] };
+}
+
+function traceBoard(game: PartyBoardState, player: Collector) {
+  const distances = new Map<number, number>([[player.position, 0]]), previous = new Map<number, number>(), queue = [player.position];
+  for (let index = 0; index < queue.length; index++) {
+    const field = queue[index];
+    for (const next of partyPaths(game, player, field)) if (!distances.has(next)) {
+      distances.set(next, distances.get(field)! + 1); previous.set(next, field); queue.push(next);
+    }
+  }
+  return { distances, previous };
+}
+
+/** Directed legal walking distances, without assuming a particular die roll. */
+export function boardDistances(game: PartyBoardState, player: Collector) {
+  return traceBoard(game, player).distances;
+}
+
+/** A shortest legal route to a target, including the current field. */
+export function boardPathTo(game: PartyBoardState, player: Collector, target: number) {
+  const { distances, previous } = traceBoard(game, player);
+  if (!distances.has(target)) return [];
+  const route = [target];
+  while (route.at(-1) !== player.position) route.push(previous.get(route.at(-1)!)!);
+  return route.reverse();
 }

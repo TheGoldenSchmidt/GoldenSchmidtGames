@@ -1,5 +1,6 @@
 import { FIELD_VISUALS, fieldSymbol } from "../lib/partyFieldVisuals";
 import { Collection, JayspotFinish } from "../components/RollItUp";
+import { RollItUpBoard } from "../components/RollItUpBoard";
 import { fieldName, hasFullSet, JAYSPOT, partyBoard, partyPaths, stationAt } from "../../shared/partyBoard";
 import { getGame } from "../../shared/games";
 import { MinigameBetting, MinigameResults, MinigameScoreboard } from "../components/MinigameCompetition";
@@ -124,11 +125,11 @@ export function PartyGameScreen({profile,initialRoom,onExit,onLobby}:{profile:Gu
     </>}
   </fieldset>;
   return <main data-board-phase={boardPhase?g.phase:undefined} className={`party-screen ${tray?"roll-it-up":""} ${competition?"minigame-mode":""} ${competition&&g.phase!=="mini-play"?"party-menu":""} ${boardPhase?"party-screen--board":"party-screen--stage"} ${g.phase==="mini-play"?"party-screen--playing":""}`}>
-    <header className="party-header"><div><strong>{getGame(room.config.gameId).name}<span aria-hidden="true">✦</span></strong><small>Raum {room.code}</small></div><div className="party-round"><span>{g.opening?"Auftakt":<>Runde <b>{g.round}</b>{!tray&&` / ${competition?.rounds??g.options.rounds}`}</>}</span></div><div className="party-header-actions"><button className="party-game-menu" onClick={()=>setPanel("menu")} aria-label="Spielmenü öffnen" aria-haspopup="dialog">☰</button>{!boardPhase&&<button className="text-button" onClick={onExit}>Verlassen</button>}</div></header>
+    {!(tray&&boardPhase)&&<header className="party-header"><div><strong>{getGame(room.config.gameId).name}<span aria-hidden="true">✦</span></strong><small>Raum {room.code}</small></div><div className="party-round"><span>{g.opening?"Auftakt":<>Runde <b>{g.round}</b>{!tray&&` / ${competition?.rounds??g.options.rounds}`}</>}</span></div><div className="party-header-actions"><button className="party-game-menu" onClick={()=>setPanel("menu")} aria-label="Spielmenü öffnen" aria-haspopup="dialog">☰</button>{!boardPhase&&<button className="text-button" onClick={onExit}>Verlassen</button>}</div></header>}
     {room.partyTest&&!competition&&host&&socket.connected&&!["finished","aborted"].includes(g.phase)&&<PartyTestTools room={room} onUpdate={setRoom}/>}
     {!competition&&!boardPhase&&g.phase!=="mini-play"&&g.phase!=="finished"&&roster}
     {(!socket.connected||g.pausedAt>0)&&<section className="party-connection" role="status"><h2>Wir warten auf die Verbindung</h2><p>Die Partie pausiert, bis die Geräte wieder verbunden sind. Nach 60 Sekunden kann der Host ohne fehlende Spieler fortsetzen.</p>{host&&g.resumeOffered&&<button className="button button--primary" disabled={busy} onClick={()=>send({type:"resume"})}>Ohne getrennte Spieler fortsetzen</button>}{host&&<button className="button button--ghost" disabled={busy} onClick={()=>send({type:"abort"})}>Partie abbrechen</button>}</section>}
-    <div className="party-layout">
+    {tray&&boardPhase?<RollItUpBoard game={g} viewer={viewer} now={g.pausedAt||now} busy={busy} rolling={rolling} blocked={Boolean(panel)} connected={socket.connected} error={error} coinsChanged={coinsChanged} send={send} onMenu={()=>setPanel("menu")} onInventory={()=>setPanel("inventory")}/>:<div className="party-layout">
       {boardPhase&&<PartyBoard game={g} now={g.pausedAt||now} rolling={rolling} onTravelChange={setTravelling} roster={roster} tools={sideTools} interactionBlocked={Boolean(panel)}/>}
       <section className={`party-decision ${moving&&boardPhase?"is-travelling":""}`}>
         {boardPhase&&<>
@@ -177,12 +178,12 @@ export function PartyGameScreen({profile,initialRoom,onExit,onLobby}:{profile:Gu
         {g.phase==="aborted"&&<><h2>Partie beendet</h2><button className="button button--primary" onClick={onLobby??onExit}>{onLobby?"Zurück zur Lobby":"Zum Startmenü"}</button></>}
         {error&&!panel&&<p className="error-message" role="alert">{error}</p>}
       </section>
-    </div>
+    </div>}
     {panel&&<PartyPanel title={panel==="inventory"?"Dein Inventar":panel==="collection"?(tray?"Dein Set":"Dein Trophäenziel"):panel==="journal"?(tray?"Spielverlauf":"Inselchronik"):"Spielmenü"} onClose={()=>setPanel(undefined)}>
       {panel==="inventory"&&inventory}
       {panel==="collection"&&(tray?<Collection player={own}/>:<PartyTrophyGoal coins={own.coins} field={g.trophyField} reward={miniReward}/>)}
       {panel==="journal"&&<ol className="party-game-log">{g.log.map((line,i)=><li key={i}>{line}</li>)}</ol>}
-      {panel==="menu"&&<div className="party-game-options"><label><input type="checkbox" checked={sound} onChange={event=>setSound(event.target.checked)}/> Kurze Spieltöne</label><label><input type="checkbox" checked={haptics} onChange={event=>setHaptics(event.target.checked)}/> Vibration, falls unterstützt</label><button className="button button--secondary" onClick={()=>setPanel("journal")}>{tray?"Spielverlauf":"Inselchronik"} öffnen</button>{host&&!["finished","aborted"].includes(g.phase)&&<button className="button button--ghost" disabled={busy} onClick={()=>send({type:"abort"})}>Partie für alle beenden</button>}<button className="button button--ghost" onClick={onExit}>Verlassen</button></div>}
+      {panel==="menu"&&<div className="party-game-options">{tray&&<button className="button button--secondary" onClick={()=>setPanel("inventory")}>Dein Inventar ansehen</button>}<label><input type="checkbox" checked={sound} onChange={event=>setSound(event.target.checked)}/> Kurze Spieltöne</label><label><input type="checkbox" checked={haptics} onChange={event=>setHaptics(event.target.checked)}/> Vibration, falls unterstützt</label><button className="button button--secondary" onClick={()=>setPanel("journal")}>{tray?"Spielverlauf":"Inselchronik"} öffnen</button>{host&&!["finished","aborted"].includes(g.phase)&&<button className="button button--ghost" disabled={busy} onClick={()=>send({type:"abort"})}>Partie für alle beenden</button>}<button className="button button--ghost" onClick={onExit}>Verlassen</button></div>}
       {error&&<p className="error-message" role="alert">{error}</p>}
     </PartyPanel>}
     {practice&&<PartyPractice key={practice} miniId={practice} characterId={own.characterId} onClose={()=>setPractice(undefined)}/>}

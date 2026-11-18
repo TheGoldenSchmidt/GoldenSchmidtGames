@@ -1,0 +1,199 @@
+<style>
+@font-face{font-family:RollLexend;src:url('__LEXEND__') format('woff2');font-weight:100 900}
+@font-face{font-family:RollLilita;src:url('__LILITA__') format('woff2');font-weight:400}
+#roll-draft{--ri-ink:#221b4f;--ri-paper:#fff8ea;--ri-gold:#ffd777;--ri-glass:#1f1c54ed;--ri-grass:#6fbf35;--ri-stone:#605575;font-family:RollLexend,sans-serif;width:100%;color:var(--ri-paper)}
+#roll-draft *{box-sizing:border-box}
+#roll-draft button{font:inherit;color:inherit;touch-action:manipulation}
+#roll-draft button:disabled{filter:grayscale(1);opacity:.65}
+#roll-draft .ri-stage{width:100%;max-width:390px;margin:0 auto;position:relative;height:746px;overflow:hidden;background:#4a47a6;border-radius:24px;isolation:isolate;box-shadow:0 12px 36px #16113a30}
+#roll-draft .ri-content{position:absolute;inset:0;overflow:hidden}
+#roll-draft .ri-world{position:absolute;top:18px;left:50%;width:390px;height:700px;transform:translateX(-50%)}
+#roll-draft .ri-world>img{width:100%;height:100%;display:block}
+#roll-draft .ri-world::after{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(#221b4f40,transparent 22%,transparent 78%,#221b4f40)}
+#roll-draft .ri-head{position:absolute;z-index:2;left:12px;right:12px;top:12px;display:grid;gap:8px}
+#roll-draft .ri-titlebar{display:flex;align-items:center;gap:10px;padding:0 0 0 12px;background:var(--ri-glass);border:1px solid #ffffff35;border-radius:15px}
+#roll-draft .ri-title{font:400 24px/1 RollLilita,sans-serif;flex:1;letter-spacing:.2px}
+#roll-draft .ri-round{font-size:11px;line-height:1.35;text-align:center;color:#eee5ff}
+#roll-draft .ri-round b{font-size:15px;font-weight:600;display:block;color:var(--ri-paper)}
+#roll-draft .ri-menu{width:46px;height:46px;border:0;background:none;display:grid;place-items:center;font-size:23px}
+#roll-draft .ri-status{display:flex;gap:8px;align-items:stretch}
+#roll-draft .ri-set{flex:1;min-width:0;display:flex;align-items:center;gap:10px;background:var(--ri-glass);border:1px solid #ffffff35;border-radius:13px;padding:7px 11px;text-align:left;min-height:49px}
+#roll-draft .ri-set-copy{flex:1;font-size:12px;font-weight:500;line-height:1.45}
+#roll-draft .ri-set-copy>span:first-child{display:block}
+#roll-draft .ri-count{font-weight:600;font-size:19px;white-space:nowrap}
+#roll-draft .ri-pips{display:flex;gap:4px;margin-top:5px}
+#roll-draft .ri-pips i{display:block;width:15px;height:4px;border-radius:1px;background:#aaa0c4}
+#roll-draft .ri-pips i.is-full{background:var(--ri-gold)}
+#roll-draft .ri-coins{display:flex;gap:6px;align-items:center;background:var(--ri-glass);border:1px solid #ffffff35;border-radius:13px;padding:8px 12px;min-width:103px}
+#roll-draft .ri-coin{width:23px;height:23px;display:grid;place-items:center;color:#3d2412;border:2px solid #fff0b4;box-shadow:0 2px #a95a24;border-radius:50%;background:#f1aa4c;font-weight:700;font-size:15px}
+#roll-draft .ri-money{font-size:20px;font-weight:600;line-height:1}
+#roll-draft .ri-money small{display:block;font-size:10px;font-weight:400;line-height:1.6}
+#roll-draft .ri-objective{justify-self:start;display:flex;align-items:center;gap:7px;font-size:12px;padding:7px 10px;min-height:44px;border:1px solid #ffffff30;border-radius:9px;background:var(--ri-glass);max-width:100%;text-align:left}
+#roll-draft .ri-objective span{min-width:0;overflow-wrap:anywhere}
+#roll-draft .ri-marker{position:absolute;z-index:1;transform:translate(-50%,-100%);white-space:nowrap;background:var(--ri-glass);border:1px solid #ffffff65;border-radius:8px;padding:5px 8px;color:var(--ri-paper);font-size:11px;line-height:1.35;text-align:center;box-shadow:0 3px 8px #221b4f30;pointer-events:none}
+#roll-draft .ri-marker::after{content:'';position:absolute;left:50%;bottom:-6px;margin-left:-4px;border-top:6px solid #1f1c54ed;border-left:4px solid transparent;border-right:4px solid transparent}
+#roll-draft .ri-marker strong{font-weight:600;display:block;font-size:12px}
+#roll-draft .ri-marker--player{background:#ffd777;border-color:#fff0b4;color:#3d2412;font-weight:600}
+#roll-draft .ri-marker--player::after{border-top-color:#ffd777}
+#roll-draft .ri-marker--destination{background:#fff8ea;color:#221b4f;border-color:#ffd777}
+#roll-draft .ri-marker--destination::after{border-top-color:#fff8ea}
+#roll-draft .ri-marker--goal{font-size:10px}
+#roll-draft .ri-world-controls{position:absolute;bottom:207px;left:12px;right:12px;display:flex;justify-content:space-between;align-items:center;gap:8px;z-index:2;pointer-events:none}
+#roll-draft .ri-world-controls button{pointer-events:auto}
+#roll-draft .ri-stone{position:relative;background:none;border:0;min-height:52px;padding:0 17px 7px;color:var(--ri-paper);font-size:11px;font-weight:500;isolation:isolate}
+#roll-draft .ri-stone::before{content:'';position:absolute;inset:0;z-index:-1;border-style:solid;border-width:13px 15px 20px;border-image:url('__STONE__') 44 48 66 48 fill stretch}
+#roll-draft .ri-quiet{background:var(--ri-glass);border:1px solid #ffffff50;border-radius:12px;padding:0 12px;min-height:44px;display:flex;gap:6px;align-items:center;font-size:11px}
+#roll-draft .ri-dock{position:absolute;z-index:3;bottom:66px;left:12px;right:12px;border:1px solid #ffffff45;border-radius:16px;padding:13px 12px 5px;background:var(--ri-glass);box-shadow:0 10px 24px #221b4f30}
+#roll-draft .ri-dock h2{font:400 23px/1.12 RollLilita,sans-serif;margin:0}
+#roll-draft .ri-dock p{font-size:12px;line-height:1.5;margin:4px 0 8px;color:#e8e2f3}
+#roll-draft .ri-dock .ri-turn{display:flex;align-items:center;gap:9px;margin:0 0 7px;font-size:13px;line-height:1.35;font-weight:500;overflow-wrap:anywhere}
+#roll-draft .ri-turn img{width:25px;height:28px;object-fit:contain;background:#ffffff15;border-radius:7px}
+#roll-draft .ri-actions{display:flex;align-items:center;gap:9px}
+#roll-draft .ri-gold{position:relative;isolation:isolate;flex:1;width:100%;min-height:70px;padding:8px 20px 20px;background:transparent;border:0;color:#3d2412;font:400 24px/1 RollLilita,sans-serif;text-align:center;display:flex;gap:10px;justify-content:center;align-items:center}
+#roll-draft .ri-gold::before{content:'';position:absolute;inset:0;z-index:-1;border-style:solid;border-width:18px 20px 27px;border-image:url('__GOLD__') 44 48 66 48 fill stretch}
+#roll-draft .ri-gold:active{transform:translateY(2px)}
+#roll-draft .ri-bag{width:54px;flex-shrink:0;padding:0 0 7px;font-size:11px}
+#roll-draft .ri-bag span{display:block;font-size:17px;line-height:1.5}
+#roll-draft .ri-roster{position:absolute;bottom:10px;left:12px;right:12px;display:flex;align-items:center;gap:6px;z-index:2}
+#roll-draft .ri-person{display:flex;align-items:center;gap:5px;flex:1;min-width:0;min-height:46px;padding:4px 6px;background:#1f1c54e0;border:1px solid #ffffff35;border-radius:11px;text-align:left}
+#roll-draft .ri-person:first-child{border-color:#ffd777}
+#roll-draft .ri-person img{height:30px;width:22px;object-fit:contain;flex-shrink:0}
+#roll-draft .ri-person>span{min-width:0}
+#roll-draft .ri-person b{display:block;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+#roll-draft .ri-person small{font-size:10px;color:#e6def8;white-space:nowrap}
+#roll-draft .ri-route{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:11px 0 6px}
+#roll-draft .ri-option{border:1px solid #bfb4d3;background:#fff8ea;color:#221b4f;border-radius:10px;padding:10px 8px;text-align:left;min-height:88px}
+#roll-draft .ri-option[aria-pressed=true]{border:2px solid #ffd777;padding:9px 7px;background:#fff0c7}
+#roll-draft .ri-option b{font-size:13px;font-weight:600;display:block;margin-bottom:5px}
+#roll-draft .ri-option span{display:block;font-size:10px;line-height:1.5}
+#roll-draft .ri-option em{font-style:normal;font-size:10px;color:#4a4072;display:block;margin-top:3px}
+#roll-draft .ri-price{display:flex;gap:8px;justify-content:space-between;padding:10px 0;font-size:13px;border-top:1px solid #ffffff30;border-bottom:1px solid #ffffff30;margin:8px 0}
+#roll-draft .ri-price b{font-weight:600}
+#roll-draft .ri-skip{width:100%;border:0;background:transparent;min-height:44px;font-size:12px;text-decoration:underline;text-underline-offset:3px}
+#roll-draft .ri-toast{font-size:12px;padding:8px 10px;background:#fff8ea;color:#221b4f;border-radius:8px;margin-bottom:11px}
+#roll-draft .ri-shade{position:absolute;z-index:4;inset:0;background:#17113170}
+#roll-draft .ri-sheet{position:absolute;z-index:5;bottom:12px;left:12px;right:12px;max-height:660px;overflow:auto;background:#fff8ea;color:#221b4f;border-radius:18px;border:2px solid #221b4f;box-shadow:0 14px 40px #17113170;padding:0 16px 16px}
+#roll-draft .ri-sheet header{display:flex;align-items:center;gap:8px;position:sticky;top:0;background:#fff8ea;border-bottom:1px solid #d9cdb5;padding:10px 0;z-index:1}
+#roll-draft .ri-sheet h2{flex:1;font:400 26px/1.2 RollLilita,sans-serif;margin:0}
+#roll-draft .ri-close{height:44px;min-width:44px;border:1px solid #c3b39a;background:transparent;border-radius:10px;font-size:24px}
+#roll-draft .ri-sheet p{font-size:13px;line-height:1.6;margin:12px 0}
+#roll-draft .ri-collection{list-style:none;padding:0;margin:0}
+#roll-draft .ri-collection li{padding:12px 0;border-bottom:1px solid #ded3c0;display:flex;align-items:center;gap:11px;min-height:58px}
+#roll-draft .ri-itemmark{width:28px;height:28px;display:grid;place-items:center;border:1px solid #756b89;border-radius:7px;font-size:17px;flex-shrink:0}
+#roll-draft .ri-itemmark.is-owned{background:#dbe8bd;border-color:#5b793c;color:#294d20}
+#roll-draft .ri-collection li>div{flex:1;min-width:0}
+#roll-draft .ri-collection b{display:block;font-size:13px;font-weight:600}
+#roll-draft .ri-collection small{display:block;font-size:11px;line-height:1.6;color:#645774}
+#roll-draft .ri-show{font-size:11px;border:1px solid #b8abc6;min-height:44px;border-radius:8px;background:transparent;padding:5px 9px}
+#roll-draft .ri-sheetline{padding:12px 0;border-bottom:1px solid #ded3c0;font-size:13px;display:flex;justify-content:space-between;gap:12px;align-items:center}
+#roll-draft .ri-sheetline img{width:35px;height:43px;object-fit:contain}
+#roll-draft .ri-sheetline span{flex:1}
+#roll-draft .ri-legend{display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:12px;margin:16px 0}
+#roll-draft .ri-legend span{display:flex;align-items:center;gap:8px}
+#roll-draft .ri-legend i{width:24px;height:24px;display:grid;place-items:center;font-style:normal;font-weight:600;border-radius:50%}
+#roll-draft .ri-foot{max-width:390px;margin:10px auto 0;display:flex;align-items:center;justify-content:space-between;color:light-dark(#635d70,#c6c0cf);gap:8px;font-size:11px;line-height:1.4}
+#roll-draft .ri-replay{background:transparent;border:1px solid light-dark(#c7c1d1,#665c7c);border-radius:7px;padding:8px;color:inherit;min-height:44px;font-size:11px}
+#roll-draft [hidden]{display:none!important}
+#roll-draft .ri-screenreader{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media(max-width:350px){#roll-draft .ri-head{left:8px;right:8px}#roll-draft .ri-stage{height:730px;border-radius:15px}#roll-draft .ri-dock,#roll-draft .ri-roster{left:8px;right:8px}#roll-draft .ri-title{font-size:22px}#roll-draft .ri-gold{font-size:22px}#roll-draft .ri-set{gap:6px;padding:7px 8px}#roll-draft .ri-person{padding:4px}#roll-draft .ri-person img{width:17px}}
+@media(prefers-reduced-motion:reduce){#roll-draft *,#roll-draft *::before,#roll-draft *::after{animation:none!important;transition:none!important}}
+</style>
+<div id="roll-draft">
+ <div class="viz-dotted-background">
+  <section class="ri-stage" aria-label="Roll It Up! Smartphone-Entwurf">
+   <div class="ri-content">
+    <div class="ri-world"><img id="ri-world-image" src="__WORLD__" alt="Dreidimensionale Schaleninsel mit Rundweg, sechs Sammelstationen und einer Bank auf dem Hügel."><div id="ri-markers"></div></div>
+    <header class="ri-head">
+     <div class="ri-titlebar"><span class="ri-title">Roll It Up!</span><span class="ri-round">Runde<b>3</b></span><button type="button" class="ri-menu cursor-interaction" data-do="menu" aria-label="Spielmenü öffnen">☰</button></div>
+     <div class="ri-status"><button type="button" class="ri-set cursor-interaction" data-do="set" aria-label="Dein Set öffnen"><span class="ri-set-copy"><span>Dein Set</span><span class="ri-pips" aria-hidden="true"></span></span><span class="ri-count" id="ri-count">3 / 6</span><span aria-hidden="true">›</span></button><div class="ri-coins"><span class="ri-coin" aria-hidden="true">G</span><span class="ri-money"><span id="ri-money">18</span><small>Münzen</small></span></div></div>
+     <button type="button" class="ri-objective cursor-interaction" data-do="objective"><span id="ri-objective">Pape fehlt · 3 Münzen</span><span aria-hidden="true">›</span></button>
+    </header>
+    <div class="ri-world-controls"><button type="button" class="ri-stone cursor-interaction" data-do="view" id="ri-view">Ganze Schale</button><button type="button" class="ri-quiet cursor-interaction" data-do="legend">? <span>Feldhilfe</span></button></div>
+    <section class="ri-dock" aria-label="Aktuelle Spielentscheidung" id="ri-dock"></section>
+    <div class="ri-roster" aria-label="Spielstand öffnen">
+     <button type="button" class="ri-person cursor-interaction" data-do="standings"><img src="__RICK__" alt=""><span><b id="ri-name">Anna · du</b><small id="ri-own-standing">3/6 · 18 G</small></span></button>
+     <button type="button" class="ri-person cursor-interaction" data-do="standings"><img src="__MORTY__" alt=""><span><b>Ben</b><small>4/6 · 12 G</small></span></button>
+     <button type="button" class="ri-person cursor-interaction" data-do="standings"><img src="__SUMMER__" alt=""><span><b>Clara</b><small>2/6 · 21 G</small></span></button>
+    </div>
+   </div>
+   <div class="ri-shade" hidden></div><section class="ri-sheet" role="dialog" aria-modal="true" aria-labelledby="ri-sheet-title" hidden><header><h2 id="ri-sheet-title"></h2><button type="button" class="ri-close cursor-interaction" data-do="close" aria-label="Schließen">×</button></header><div id="ri-sheet-body"></div></section>
+   <div class="ri-screenreader" id="ri-live" aria-live="polite"></div>
+  </section>
+ </div>
+ <div class="ri-foot"><span>Entwurf · fester Beispielzug</span><button type="button" class="ri-replay cursor-interaction" data-do="restart">Beispielzug wiederholen</button></div>
+</div>
+<script>
+(()=>{
+ const root=document.getElementById('roll-draft');
+ const images={world:'__WORLD__',outer:'__OUTER__',shortcut:'__SHORTCUT__',purchase:'__PURCHASE__',arrival:'__ARRIVAL__',overview:'__OVERVIEW__'};
+ const projection=__PROJECTIONS__;
+ const stations=[{field:2,name:'Grinder',price:8},{field:7,name:'Weedbud I',price:5},{field:12,name:'Pape',price:3},{field:17,name:'Weedbud II',price:5},{field:22,name:'Filter',price:3},{field:27,name:'Weedbud III',price:5}];
+ const options={guided:false,overview:false,name:'Anna'};
+ let state={phase:'turn',route:'outer',coins:18,owned:[2,7,17],target:12,bought:false,shield:false},previousFocus=null;
+ const $=s=>root.querySelector(s);
+ const button=(action,label,cls='ri-gold')=>`<button type="button" class="${cls} cursor-interaction" data-do="${action}">${label}</button>`;
+ function save(){if(window.openai?.setWidgetState)window.openai.setWidgetState({modelContent:{entwurf:'Schaleninsel',phase:state.phase,weg:state.route,hinweise:options.guided},privateContent:{state,options}}).catch(()=>{});}
+ function restore(saved){const data=saved?.privateContent;if(!data?.state||!['turn','path','supply','gift','summary','wait'].includes(data.state.phase))return;state={...state,...data.state};Object.assign(options,data.options??{});}
+ restore(window.openai?.widgetState);
+ window.addEventListener('openai:set_globals',event=>{restore(event.detail?.globals?.widgetState);render();});
+ function marker(id,label,cls='',view='world'){const p=projection[view]?.[id];if(!p||p.x<7||p.x>93)return '';return `<div class="ri-marker ${cls}" style="left:${p.x}%;top:${p.y}%">${label}</div>`;}
+ function render(){
+  $('#ri-money').textContent=state.coins;$('#ri-count').textContent=state.owned.length+' / 6';$('.ri-pips').innerHTML=stations.map(s=>`<i class="${state.owned.includes(s.field)?'is-full':''}"></i>`).join('');
+  $('#ri-own-standing').textContent=state.owned.length+'/6 · '+state.coins+' G';$('#ri-name').textContent=options.name+' · du';
+  const target=stations.find(s=>s.field===state.target)||stations[2];
+  $('#ri-objective').textContent=target.name+(state.owned.includes(target.field)?' gesammelt':' fehlt · '+target.price+' Münzen');
+  const purchased=['supply','gift','summary','wait'].includes(state.phase);
+  const atRed=state.route==='shortcut'&&['summary','wait'].includes(state.phase);
+  const deciding=['path','supply','gift','summary'].includes(state.phase);
+  const view=options.overview?'overview':atRed?'arrival':purchased?'purchase':state.phase==='path'?state.route:'world';
+  $('.ri-world').style.top=deciding&&!options.overview?'-112px':'18px';
+  const worldWidth=options.overview?$('.ri-stage').clientWidth:390;
+  $('.ri-world').style.width=worldWidth+'px';$('.ri-world').style.height=(worldWidth*700/390)+'px';
+  $('#ri-world-image').src=images[view];$('#ri-view').textContent=options.overview?'Zur Figur':'Ganze Schale';
+  $('#ri-markers').innerHTML=(deciding?'':marker(34,'<strong>Jayspot</strong>Alle 6 Utensilien','ri-marker--goal',view))+
+   (options.overview?stations.map(s=>marker(s.field,s.name+(state.owned.includes(s.field)?' ✓':''),s.field===state.target?'ri-marker--destination':'',view)).join(''):marker(atRed?13:purchased?12:8,'Du','ri-marker--player',view))+
+   (state.phase==='path'&&!options.overview?marker(12,'<strong>Pape</strong>'+ (state.route==='outer'?'4':'3')+' Schritte','ri-marker--destination',view):'');
+  let html='';
+  if(state.phase==='turn')html=`<div class="ri-turn"><img src="__RICK__" alt=""><span>${options.name}, du bist dran.</span></div>${options.guided?'<p>Sammle sechs Utensilien. Danach geht’s zur Bank.</p>':''}<div class="ri-actions">${button('roll','Würfeln')}${button('items','<span aria-hidden="true">▣</span>Items','ri-stone ri-bag')}</div>`;
+  if(state.phase==='path')html=`<h2>Welchen Weg nimmst du?</h2><p>Du hast eine 4 gewürfelt. Noch 4 Schritte.</p><div class="ri-route"><button type="button" class="ri-option cursor-interaction" data-do="outer" aria-pressed="${state.route==='outer'}"><b>${state.route==='outer'?'✓ ':''}Außenweg</b><span>Pape in 4 Schritten</span><em>Landung: Geschenk</em></button><button type="button" class="ri-option cursor-interaction" data-do="shortcut" aria-pressed="${state.route==='shortcut'}"><b>${state.route==='shortcut'?'✓ ':''}Abkürzung</b><span>Pape in 3 Schritten</span><em>Landung: −3 Münzen</em></button></div>${button('travel',state.route==='outer'?'Außenweg nehmen':'Abkürzung nehmen')}`;
+  if(state.phase==='supply')html=`<h2>Pape für dein Set</h2><p>Dieses Utensil fehlt dir noch.</p><div class="ri-price"><span>Preis <b>3 Münzen</b></span><span>Danach <b>15 Münzen</b></span></div><p>Dein Set wächst von 3 auf 4 Utensilien.</p>${button('buy','Für 3 Münzen kaufen')}${button('skip','Ohne Kauf weiter','ri-skip')}`;
+  if(state.phase==='gift')html=`${state.bought?'<div class="ri-toast">✓ Pape gesammelt. Dein Set: 4 / 6</div>':''}<h2>Ein Geschenk für dich</h2><p>Du landest auf einem Geschenkfeld. Ein Schild schützt einmal vor Münzverlust.</p>${button('take-gift','Schild mitnehmen')}${button('leave-gift','Geschenk liegen lassen','ri-skip')}`;
+  if(state.phase==='summary')html=`${state.bought?'<div class="ri-toast">✓ Pape gesammelt. Dein Set: 4 / 6</div>':''}<h2>${state.route==='shortcut'?'−3 Münzen':'Zug geschafft'}</h2><p>${state.route==='shortcut'?'Nach Pape noch ein Schritt: Du landest auf einem roten Feld.':'Deine Sammlung ist aktualisiert. Als Nächstes ist Ben dran.'}</p>${button('end','Zug beenden')}`;
+  if(state.phase==='wait')html='<div class="ri-turn"><img src="__MORTY__" alt=""><span>Ben ist am Zug.</span></div><p>Du kannst dich auf der Karte umsehen und dein Set prüfen.</p>';
+  $('#ri-dock').innerHTML=html;
+  $('#ri-dock').hidden=options.overview;
+  $('.ri-world-controls').style.bottom=(options.overview?74:$('#ri-dock').offsetHeight+74)+'px';
+ }
+ function open(title,html){previousFocus=document.activeElement;$('#ri-sheet-title').textContent=title;$('#ri-sheet-body').innerHTML=html;$('.ri-sheet').hidden=false;$('.ri-shade').hidden=false;$('.ri-content').inert=true;$('.ri-close').focus();}
+ function close(){const focus=previousFocus;$('.ri-sheet').hidden=true;$('.ri-shade').hidden=true;$('.ri-content').inert=false;if(focus?.isConnected)focus.focus();}
+ function collection(){open('Dein Set',`<p><b>${state.owned.length} von 6 gesammelt.</b> Mit allen sechs Utensilien öffnet sich der Weg zum Jayspot.</p><ul class="ri-collection">${stations.map(s=>{const has=state.owned.includes(s.field);return `<li><span class="ri-itemmark ${has?'is-owned':''}" aria-hidden="true">${has?'✓':'◇'}</span><div><b>${s.name}</b><small>${has?'Gesammelt':'Fehlt · '+s.price+' Münzen'}</small></div>${has?'':button('target-'+s.field,'Zeigen','ri-show')}</li>`;}).join('')}</ul>`);}
+ root.addEventListener('click',event=>{
+  const control=event.target.closest('[data-do]');if(!control)return;const action=control.dataset.do;
+  if(action==='close'){close();return;}
+  if(action==='set'||action==='objective'){collection();return;}
+  if(action==='menu'){open('Spielmenü',`<p><b>Roll It Up!</b><br>Runde 3 · Anna, Ben und Clara</p><div class="ri-sheetline"><span>Ziel & Regeln</span>${button('rules','Ansehen','ri-show')}</div><div class="ri-sheetline"><span>Letzte Aktionen</span>${button('history','Verlauf','ri-show')}</div><div class="ri-sheetline"><span>Hinweise beim Spielen</span>${button('guidance',options.guided?'An':'Aus','ri-show')}</div>`);return;}
+  if(action==='rules'){open('So gewinnst du','<p>Sammle Grinder, drei Weedbuds, Pape und Filter. Kaufe fehlende Utensilien beim Passieren ihrer Station.</p><p>Mit dem vollständigen Set wird der Weg zur Bank frei. Wer den Jayspot zuerst erreicht, gewinnt.</p>');return;}
+  if(action==='history'){open('Letzte Aktionen',`<p>Anna ist am Zug.</p>${state.phase!=='turn'?'<p>Anna würfelt eine 4.</p>':''}${state.bought?'<p>Anna kauft Pape für 3 Münzen.</p>':''}`);return;}
+  if(action==='legend'){open('Feldhilfe','<p>Die Symbole erklären, was beim Landen passiert.</p><div class="ri-legend"><span><i style="background:#326fc7;color:#fff8ea">+</i>+3 Münzen</span><span><i style="background:#c33d4c;color:#fff8ea">−</i>−3 Münzen</span><span><i style="background:#65c783">!</i>Ereignis</span><span><i style="background:#a6dff5">▣</i>Shop</span><span><i style="background:#ffd258">◇</i>Geschenk</span></div><p>Stationen erkennst du an ihrem Utensil. Den Kauf bekommst du auch beim Vorbeiziehen angeboten.</p>');return;}
+  if(action==='items'){open('Deine Items',state.shield?'<p><b>Schild</b><br>Schützt einmal vor Münzverlust. Du kannst es vor deinem nächsten Wurf einsetzen.</p>':'<p>Du hast noch keine Items.</p><p>Du bekommst sie auf Geschenkfeldern oder kaufst sie im Shop.</p>');return;}
+  if(action==='standings'){open('Spielstand',`<p>Zuerst das Set vervollständigen, dann den Jayspot erreichen.</p>${[[options.name,state.owned.length,state.coins,'__RICK__'],['Ben',4,12,'__MORTY__'],['Clara',2,21,'__SUMMER__']].map(([name,count,coins,img])=>`<div class="ri-sheetline"><img src="${img}" alt=""><span>${name}</span><b>${count}/6</b><span>${coins} Münzen</span></div>`).join('')}`);return;}
+  if(action==='roll')state.phase='path';
+  if(action==='outer'||action==='shortcut')state.route=action;
+  if(action==='travel'){state.phase='supply';options.overview=false;}
+  if(action==='buy'||action==='skip'){
+   if(action==='buy'){state.coins-=3;state.owned.push(12);state.bought=true;state.target=22;}
+   if(state.route==='outer')state.phase='gift';else{state.coins-=3;state.phase='summary';}
+  }
+  if(action==='take-gift'||action==='leave-gift'){state.shield=action==='take-gift';state.phase='summary';}
+  if(action==='end')state.phase='wait';
+  if(action==='view')options.overview=!options.overview;
+  if(action==='guidance'){options.guided=!options.guided;close();}
+  if(action.startsWith('target-')){state.target=Number(action.split('-')[1]);options.overview=true;close();}
+  if(action==='restart'){state={phase:'turn',route:'outer',coins:18,owned:[2,7,17],target:12,bought:false,shield:false};options.overview=false;close();}
+  render();save();$('#ri-live').textContent=$('#ri-dock').textContent;
+ });
+ $('.ri-shade').addEventListener('click',close);
+ render();
+ if(globalThis.Tweak){const tweak=new Tweak({container:$('.ri-stage'),onChange:render});tweak.addToggle(options,'guided',{label:'Zusätzliche Spielhinweise'});tweak.addToggle(options,'overview',{label:'Ganze Schale zeigen'});tweak.addSelect(options,'name',{label:'Spielername',options:['Anna','AlexandertheGoldenSchmidt']});}
+})();
+</script>

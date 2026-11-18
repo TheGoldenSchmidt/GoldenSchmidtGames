@@ -1,3 +1,4 @@
+import { settledBoardCamera } from "./board-view";
 import {test,expect} from "@playwright/test";
 import {onlineSession} from "./party-session";
 
@@ -14,12 +15,12 @@ for(const mode of ["party","roll-it-up"] as const)for(const motion of ["no-prefe
     try{
       const world=page.locator(".party-world");
       await expect(world).toHaveAttribute("data-webgl","ready");
-      await expect.poll(()=>world.getAttribute("data-frames").then(Number)).toBeGreaterThan(8);
+      await settledBoardCamera(world);
       await page.getByRole("button",{name:"Kamera öffnen",exact:true}).click();
       await page.getByRole("button",{name:mode==="party"?"Ganze Insel":"Ganze Schale",exact:true}).click();
       await page.getByRole("button",{name:"Kamera schließen",exact:true}).click();
       // Let the requested overview finish before the visual check.
-      await expect.poll(()=>world.getAttribute("data-frames").then(Number)).toBeGreaterThan(32);
+      await settledBoardCamera(world);
       await page.screenshot({path:info.outputPath("fields-3d.png")});
       await page.getByRole("button",{name:"Felder und Figuren",exact:true}).click();
       const legend=page.getByLabel("Feldarten");
@@ -38,14 +39,15 @@ for(const mode of ["party","roll-it-up"] as const)for(const motion of ["no-prefe
       for(const symbol of await map.locator(".party-field-symbol").allTextContents())expect(symbol).not.toMatch(/\d/);
       const before=(await session.state()).partyGame!;
       const event=page.getByRole("button",{name:"Feld 4: Ereignis",exact:true});
-      await event.focus();await page.keyboard.press("Enter");
+      await event.tap();
       await expect(page.locator(".party-map-caption")).toContainText("Überraschung");
       expect((await session.state()).partyGame!.seq).toEqual(before.seq);
       await page.screenshot({path:info.outputPath("fields-2d.png")});
       expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBe(page.viewportSize()!.width);
       await page.getByRole("button",{name:"Feldinfo schließen",exact:true}).click();
       await expect(event).toBeFocused();
-      await page.getByRole("button",{name:"Würfeln & losziehen",exact:true}).click();
+      if(mode==="roll-it-up")await page.getByRole("button",{name:"Zur Figur zurückkehren",exact:true}).tap();
+      await page.getByRole("button",{name:"Würfeln & losziehen",exact:true}).tap();
       await expect.poll(async()=>(await session.state()).partyGame!.dice.length).toBeGreaterThan(0);
     }finally{session.close();}
   });

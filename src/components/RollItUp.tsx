@@ -2,10 +2,10 @@ import { characterId, characterPortrait } from "../../shared/characters";
 import type { PartyGame, PartyPlayer } from "../../shared/party";
 import { hasFullSet, JAYSPOT, stationAt, STATIONS } from "../../shared/partyBoard";
 
-export function Collection({player}:{player:PartyPlayer}) {
+export function Collection({player,onShow}:{player:PartyPlayer;onShow?:(field:number)=>void}) {
   return <section className="roll-collection">
     <p><strong>{player.supplies?.length ?? 0} / {STATIONS.length} Utensilien gesammelt</strong></p>
-    <ul>{STATIONS.map(s=><li key={s.field}><b>{player.supplies?.includes(s.field)?"✓ ":""}{s.name}</b><span>Feld {s.field} · {s.price} Münzen</span></li>)}</ul>
+    <ul>{STATIONS.map(s=>{const collected=player.supplies?.includes(s.field);return <li key={s.field}><div><b>{collected?"✓ ":""}{s.name}</b><span>{collected?"Gesammelt":`${s.price} Münzen${player.coins<s.price?` · noch ${s.price-player.coins} nötig`:" · bezahlbar"}`} · Feld {s.field}</span></div>{onShow&&<button className="roll-show" onClick={()=>onShow(s.field)} aria-label={`${s.name} auf der Karte zeigen`}>Zeigen</button>}</li>;})}</ul>
     <p>{hasFullSet(player)?"Der Weg zum Jayspot ist frei.":"Mit sechs Utensilien öffnet sich der Weg zur Bank."}</p>
   </section>;
 }
@@ -25,7 +25,7 @@ export function objectiveHint(game:PartyGame, id:number) {
 
 export function TrayMapArt() {
   return <g aria-hidden="true">
-    <rect width="100" height="100" rx="5" fill="#423c30"/>
+    <rect width="100" height="100" fill="#7f9be8"/>
     <circle cx="50" cy="50" r="49" fill="#22584f" stroke="#d8a76a" strokeWidth="1.2"/>
     <circle cx="50" cy="50" r="45" fill="#c98462" stroke="#854f43" strokeWidth="1.5"/>
     <circle cx="50" cy="50" r="20" fill="#8b935d"/><circle cx="50" cy="50" r="15" fill="#9ca36c"/>

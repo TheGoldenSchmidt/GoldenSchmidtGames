@@ -1,0 +1,139 @@
+/* Roll It Up opts into the approved island-world materials without changing other games. */
+.roll-it-up { --roll-glass:rgb(31 28 84 / .94); --roll-line:rgb(255 248 234 / .28); --tray-ink:var(--iw-ink); --tray-paper:var(--iw-paper); font-family:var(--iw-font-ui); }
+.roll-it-up.party-screen--board { background:var(--iw-sky-dusk); color:var(--iw-paper); }
+.roll-board { position:absolute; inset:0; overflow:hidden; }
+.roll-board button,.roll-it-up .party-panel button { font-family:var(--iw-font-ui); touch-action:manipulation; }
+.roll-board button:focus-visible { outline:3px solid var(--iw-paper); outline-offset:3px; }
+.roll-it-up button:disabled { cursor:default; filter:grayscale(1); opacity:.6; }
+.roll-board .party-world { position:absolute; inset:0; height:100%; }
+.roll-board .party-world canvas { width:100%;height:100%;touch-action:none; }
+.roll-it-up .roll-head.party-header { display:grid; justify-content:stretch; gap:7px; top:var(--party-top); left:var(--party-edge); right:var(--party-edge); min-height:0; padding:0; background:none; text-shadow:none; pointer-events:auto; }
+.roll-it-up .roll-head.party-header .roll-brand { display:flex; align-items:center; gap:8px; min-height:48px; padding:0 4px 0 11px; border:1px solid var(--roll-line); border-radius:13px; background:var(--roll-glass); }
+.roll-brand > div { flex:1; min-width:0; }
+.roll-it-up .roll-brand strong { font:400 23px/1.1 var(--iw-font-display); letter-spacing:0; }
+.roll-it-up .roll-brand small { display:block;font:400 10px/1.5 var(--iw-font-ui);color:var(--iw-paper); }
+.roll-brand > span { display:grid; text-align:center; font-size:10px; }
+.roll-brand > span b { font-size:14px;font-weight:600; }
+.roll-it-up .roll-brand .party-game-menu { width:44px; height:44px; background:none; border:0; border-radius:0;font-size:22px; }
+.roll-personal { display:flex; gap:7px; min-width:0; }
+.roll-set { display:flex; align-items:center; gap:9px; flex:1; min-width:0; min-height:49px; padding:7px 10px; text-align:left; color:var(--iw-paper);background:var(--roll-glass);border:1px solid var(--roll-line);border-radius:12px; }
+.roll-set > span:first-child { flex:1;font-size:11px;font-weight:500; }
+.roll-set > b { font-size:18px;white-space:nowrap;font-weight:600; }
+.roll-set-progress { display:flex;gap:4px;margin-top:7px; }
+.roll-set-progress i { width:14px;height:4px;background:#aca3c4; }
+.roll-set-progress i.is-collected { background:#ffd777; }
+.roll-coins { min-width:91px;display:flex;align-items:center;gap:7px;padding:7px 11px;background:var(--roll-glass);border:1px solid var(--roll-line);border-radius:12px; }
+.roll-coins > span { color:#ffd777;font-size:23px; }
+.roll-coins strong { font-size:19px;line-height:1;font-weight:600; }
+.roll-coins small { display:block;font-size:10px;font-weight:400;line-height:1.6; }
+.roll-objective { justify-self:start;max-width:100%;display:flex;gap:10px;align-items:center;min-height:44px;padding:6px 10px;background:var(--roll-glass);border:1px solid var(--roll-line);border-radius:10px;color:var(--iw-paper);font-size:11px;text-align:left;overflow-wrap:anywhere; }
+.roll-objective > span { margin-left:auto; }
+.roll-bottom { position:absolute;z-index:4;left:var(--party-edge);right:var(--party-edge);bottom:var(--party-bottom);display:flex;flex-direction:column;gap:7px;pointer-events:none; }
+.roll-bottom > * { pointer-events:auto; }
+.roll-it-up .roll-map-tools.party-board-toolbar { position:static;display:flex;align-items:center;gap:7px;width:auto;pointer-events:auto; }
+.roll-it-up .roll-map-tools > button { position:relative;isolation:isolate;flex:0 0 auto;min-width:44px;min-height:44px;width:auto;padding:5px 12px;border:1px solid var(--roll-line);border-radius:10px;background:var(--roll-glass);color:var(--iw-paper);font:500 12px var(--iw-font-ui); }
+.roll-it-up .roll-map-tools > button:first-child { margin-right:auto;min-width:122px;min-height:52px;padding-bottom:12px;border:0;border-radius:0;background:none; }
+.roll-stone { position:relative;isolation:isolate;min-height:52px;border:0;background:none;color:var(--iw-paper);padding:5px 16px 13px;font-size:12px; }
+.roll-stone::before,.roll-it-up .roll-map-tools > button:first-child::before { content:"";position:absolute;z-index:-1;inset:0;border-style:solid;border-width:13px 15px 20px;border-image:url("../assets/home/slab-stone.webp") 44 48 66 48 fill stretch; }
+.roll-it-up.party-screen--board .roll-decision { position:relative;display:block;left:auto;right:auto;bottom:auto;width:100%;max-height:48dvh;overflow:auto;overscroll-behavior:contain;padding:11px 12px 7px;border:1px solid var(--roll-line);border-radius:15px;background:var(--roll-glass);box-shadow:0 6px 18px #221b4f26;transform:none;translate:none; }
+.roll-turn { display:flex;align-items:center;gap:8px;margin-bottom:7px; }
+.roll-turn > .character-avatar { width:25px;height:29px;flex-shrink:0; }
+.roll-turn > strong { min-width:0;flex:1;font-size:12px;font-weight:500;line-height:1.4;overflow-wrap:anywhere; }
+.roll-turn > span { font-size:12px;white-space:nowrap;font-variant-numeric:tabular-nums; }
+.roll-turn .is-urgent { color:#ffd777; }
+.roll-decision h2 { font:400 22px/1.15 var(--iw-font-display);margin:4px 0 7px;color:var(--iw-paper); }
+.roll-decision p { font-size:12px;line-height:1.5;margin:5px 0 9px;color:var(--iw-paper);overflow-wrap:anywhere; }
+.roll-actions { display:grid;gap:7px;min-width:0;margin:0;padding:0;border:0; }
+.roll-actions > div { min-width:0; }
+.roll-roll-actions { display:flex;align-items:center;gap:8px; }
+.roll-roll-actions > .button { flex:1;min-width:0; }
+.roll-inventory { flex:0 0 56px;padding-inline:5px; }
+.roll-inventory small { display:block;font-size:11px;margin-top:3px; }
+.roll-it-up .button { --roll-slab:url("../assets/home/slab-stone.webp");--roll-pressed:url("../assets/home/slab-stone-pressed.webp");position:relative;isolation:isolate;display:flex;justify-content:center;align-items:center;min-height:54px;padding:7px 16px 18px;border:0;border-radius:0;background:none;color:var(--iw-paper);box-shadow:none;gap:7px;text-align:center;font:500 13px/1.3 var(--iw-font-ui); }
+.roll-it-up .button::before { content:"";position:absolute;inset:0;z-index:-1;border-style:solid;border-width:16px 20px 24px;border-image:var(--roll-slab) 44 48 66 48 fill stretch; }
+.roll-it-up .button--primary,.roll-it-up .button--gold { --roll-slab:url("../assets/home/slab-gold.webp");--roll-pressed:url("../assets/home/slab-gold-pressed.webp");min-height:70px;color:var(--iw-ink-gold);font:400 20px/1.2 var(--iw-font-display); }
+.roll-it-up .button:active:not(:disabled)::before { border-image-source:var(--roll-pressed); }
+.roll-paths { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px; }
+.roll-it-up .roll-paths .roll-path { display:flex;flex-direction:column;gap:5px;min-width:0;min-height:90px;padding:9px 8px;background:var(--iw-paper);color:var(--iw-ink);border:2px solid #bfb4d3;border-radius:10px;text-align:left; }
+.roll-it-up .roll-paths .roll-path[aria-pressed=true] { background:#fff0c7;border-color:#ffd777; }
+.roll-path strong { font-size:13px;line-height:1.4; }
+.roll-path span,.roll-path small { font-size:11px;line-height:1.45;color:inherit;overflow-wrap:anywhere; }
+.roll-price { display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;padding:11px 0;margin:10px 0;border-block:1px solid var(--roll-line);font-size:12px; }
+.roll-price b { font-weight:600; }
+.roll-purchase { display:grid;gap:6px; }
+.roll-shop { display:grid;gap:7px; }
+.roll-shop-item { border:1px solid #bfb4d3;border-radius:10px;background:var(--iw-paper);color:var(--iw-ink);padding:10px;text-align:left;min-height:70px; }
+.roll-shop-item strong { display:flex;justify-content:space-between;gap:8px;font-size:13px; }
+.roll-shop-item span,.roll-shop-item small { display:block;margin-top:5px;font-size:11px;line-height:1.5; }
+.roll-actions label { display:grid;gap:6px;font-size:12px; }
+.roll-actions select { max-width:100%;min-height:44px;font:400 16px var(--iw-font-ui);color:var(--iw-ink);background:var(--iw-paper);border:1px solid var(--iw-ink);border-radius:10px; }
+.roll-it-up.party-screen--board .roll-decision .party-dice-tray { position:static;min-height:45px;justify-content:center;padding:7px 0; }
+.roll-notice { margin:0;padding:9px 12px;border:1px solid var(--iw-ink);background:var(--iw-paper);color:var(--iw-ink);border-radius:10px;font-size:12px;line-height:1.4; }
+.roll-it-up .roll-roster { position:static;display:flex;gap:5px;height:50px;margin:0;padding:0;background:none;overflow-x:auto;overscroll-behavior:contain;scrollbar-width:none; }
+.roll-roster > button { display:flex;align-items:center;gap:5px;flex:1 0 94px;min-width:0;max-width:50%;padding:5px 7px;min-height:48px;border:1px solid var(--roll-line);border-radius:10px;background:var(--roll-glass);color:var(--iw-paper);text-align:left; }
+.roll-roster > button[aria-current=step] { border-color:#ffd777; }
+.roll-roster .character-avatar { width:22px;height:31px;flex-shrink:0; }
+.roll-roster > button > span { min-width:0; }
+.roll-roster strong { display:block;max-width:none;font:500 11px/1.4 var(--iw-font-ui);white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+.roll-roster small { display:block;margin-top:2px;font-size:10px;white-space:nowrap; }
+.roll-map-labels { position:absolute;inset:0;pointer-events:none;overflow:hidden; }
+.roll-world-label { visibility:hidden;position:absolute;top:0;left:0;max-width:132px;padding:5px 8px;border:1px solid var(--roll-line);border-radius:8px;background:var(--roll-glass);color:var(--iw-paper);text-align:center;box-shadow:0 2px 8px #221b4f30; }
+.roll-world-label::after { content:"";position:absolute;bottom:-6px;left:calc(50% - 4px);border-top:6px solid var(--roll-glass);border-left:4px solid transparent;border-right:4px solid transparent; }
+.roll-world-label strong { display:block;font-size:11px;font-weight:500;overflow:hidden;white-space:nowrap;text-overflow:ellipsis; }
+.roll-world-label small { display:block;font-size:9px;line-height:1.5; }
+.roll-world-label.is-active { background:#ffd777;color:var(--iw-ink-gold);border-color:#fff0b4; }
+.roll-world-label.is-active::after { border-top-color:#ffd777; }
+.roll-world-label.is-objective:not(.is-active) { border-color:#ffd777; }
+.roll-flat { position:absolute;inset-inline:0; }
+.roll-it-up .roll-flat > .party-board-wrap { position:absolute;inset:0;padding:0;margin:0;border-radius:0; }
+.roll-it-up .roll-flat .party-map-scroll { height:100%;min-height:0;background:transparent; }
+.roll-it-up .roll-flat .party-map-tools { position:absolute;z-index:1;top:0;left:8px;display:flex;padding:0;background:none; }
+.roll-flat .party-map-tools button { min-width:44px;min-height:44px;background:var(--roll-glass);color:var(--iw-paper); }
+.roll-it-up .party-panel { color:var(--iw-ink);background:var(--iw-paper);border-color:var(--iw-ink);border-radius:18px;font-family:var(--iw-font-ui); }
+.roll-it-up .party-panel::backdrop { background:#221b4f85; }
+.roll-it-up .party-panel > header { border-color:#d9cdb5; }
+.roll-it-up .party-panel > header h2 { font:400 25px/1.15 var(--iw-font-display); }
+.roll-it-up .party-panel > header button { color:var(--iw-ink);border-color:#b8abc6; }
+.roll-it-up .party-panel .party-map-caption { background:var(--roll-glass);color:var(--iw-paper);font-size:13px;line-height:1.5; }
+.roll-it-up .party-panel .party-map-caption span { display:block;margin-top:7px; }
+.roll-it-up .roll-collection { color:var(--iw-ink); }
+.roll-it-up .roll-collection li { align-items:center;gap:12px;padding:12px 0;min-height:60px; }
+.roll-collection li > div { flex:1;min-width:0; }
+.roll-collection li span { display:block;font-size:11px;margin-top:5px;line-height:1.5; }
+.roll-show,.roll-field-list button,.roll-camera > button:not(.button) { min-width:44px;min-height:44px;border:1px solid #b8abc6;border-radius:9px;background:transparent;color:var(--iw-ink);padding:7px 10px;font-size:12px; }
+.roll-field-list { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-block:14px; }
+.roll-field-list button { text-align:left;overflow-wrap:anywhere; }
+.roll-it-up .party-panel .roll-camera { display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px; }
+.roll-camera .button { grid-column:span 2; }
+.roll-standing-list { list-style:none;padding:0;margin:0; }
+.roll-standing-list li { display:grid;grid-template-columns:34px minmax(0,1fr);gap:3px 10px;padding:12px 0;border-bottom:1px solid #d9cdb5; }
+.roll-standing-list .character-avatar { grid-row:span 2;width:34px;height:43px; }
+.roll-standing-list strong { font-size:13px;overflow-wrap:anywhere; }
+.roll-standing-list span { font-size:12px; }
+.roll-it-up .party-panel .party-item { background:var(--iw-paper);color:var(--iw-ink);border-color:#b8abc6; }
+.roll-it-up .error-message { background:var(--iw-paper);color:#a01c30;border:2px solid var(--iw-danger);padding:9px;border-radius:10px; }
+.roll-it-up.party-screen--board > .party-connection { top:var(--party-top);z-index:12;background:var(--iw-paper);color:var(--iw-ink);border:2px solid var(--iw-ink);border-radius:14px; }
+.roll-it-up.party-screen--stage:not(.party-screen--playing) { background:linear-gradient(var(--iw-sky-dusk),var(--iw-sky-haze));color:var(--iw-paper); }
+.roll-it-up.party-screen--stage:not(.party-screen--playing) .party-header { background:var(--roll-glass); }
+.roll-it-up.party-screen--stage:not(.party-screen--playing) .party-decision { background:var(--iw-paper);color:var(--iw-ink);border-radius:16px; }
+.roll-it-up.party-screen--stage h1,.roll-it-up.party-screen--stage h2 { font-family:var(--iw-font-display);font-weight:400; }
+@media(max-height:670px) {
+  .roll-it-up .roll-head.party-header { gap:4px; }
+  .roll-it-up .roll-head .roll-brand { min-height:42px; }
+  .roll-it-up .roll-brand small { display:none; }
+  .roll-set,.roll-coins { min-height:44px;padding-block:5px; }
+  .roll-set-progress { margin-top:5px; }
+  .roll-it-up.party-screen--board .roll-decision { max-height:43dvh;padding:8px; }
+  .roll-turn { margin-bottom:5px; }
+  .roll-bottom { gap:5px; }
+}
+@media(orientation:landscape) and (max-height:500px) {
+  .roll-it-up .roll-head.party-header { right:auto;width:min(310px,calc(54% - 24px)); }
+  .roll-bottom { left:auto;width:min(340px,46%);top:var(--party-top); }
+  .roll-it-up.party-screen--board .roll-decision { flex:0 1 auto;max-height:calc(100% - 122px);min-height:0; }
+  .roll-it-up .roll-roster { flex-shrink:0;margin-top:auto; }
+  .roll-map-tools { flex-shrink:0; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .roll-board *,.roll-board *::before,.roll-it-up .party-panel * { transition:none;animation:none;scroll-behavior:auto; }
+}

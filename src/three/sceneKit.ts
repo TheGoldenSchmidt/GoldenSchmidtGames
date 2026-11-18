@@ -66,15 +66,16 @@ export class SceneKit {
     const group=new T.Group();group.position.set(x,y,z);parent.add(group);
     this.cylinder(group,0xfff6d9,0,1.6,0,.6,3.2);this.cylinder(group,0xe96752,0,1.3,0,.61,.5);this.cylinder(group,0xe96752,0,2.5,0,.61,.5);this.cylinder(group,0x3d7691,0,3.3,0,.78,.25);this.cylinder(group,0xffdc67,0,3.65,0,.48,.5);this.cone(group,0xe96752,0,4.13,0,.82,.55);return group;
   }
-  render() {if(this.disposed||document.hidden)return;const now=performance.now();
-    if(this.frameTime&&now-this.frameTime>28&&now-this.frameTime<150)this.slowFrames++;else this.slowFrames=Math.max(0,this.slowFrames-1);
+  render(frameBudget=16.7) {if(this.disposed||document.hidden)return;const now=performance.now();
+    if(this.frameTime&&now-this.frameTime>Math.max(28,frameBudget*1.6)&&now-this.frameTime<150)this.slowFrames++;else this.slowFrames=Math.max(0,this.slowFrames-1);
     this.frameTime=now;
     if(!this.qualityChanged&&this.slowFrames>70){this.qualityChanged=true;this.renderer.setPixelRatio(1);this.renderer.shadowMap.enabled=false;this.resize();}
     this.renderer.render(this.scene,this.camera);this.host.dataset.drawCalls=String(this.renderer.info.render.calls);this.host.dataset.triangles=String(this.renderer.info.render.triangles);this.host.dataset.frames=String((Number(this.host.dataset.frames)||0)+1);}
   dispose() {
     if(this.disposed)return;this.disposed=true;this.observer.disconnect();this.renderer.domElement.removeEventListener("webglcontextlost",this.lost);
     const geometries=new Set<T.BufferGeometry>(),materials=new Set<T.Material>(),textures=new Set<T.Texture>();
-    this.scene.traverse(object=>{const mesh=object as T.Mesh;if(mesh.geometry)geometries.add(mesh.geometry);if(mesh.material)for(const material of Array.isArray(mesh.material)?mesh.material:[mesh.material]){materials.add(material);const map=(material as T.MeshStandardMaterial).map;if(map)textures.add(map);}});
+    this.scene.traverse(object=>{if(object instanceof T.InstancedMesh)object.dispose();const mesh=object as T.Mesh;if(mesh.geometry)geometries.add(mesh.geometry);if(mesh.material)for(const material of Array.isArray(mesh.material)?mesh.material:[mesh.material]){materials.add(material);const map=(material as T.MeshStandardMaterial).map;if(map)textures.add(map);}});
+    if(this.scene.background instanceof T.Texture)textures.add(this.scene.background);
     geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());this.materials.forEach(m=>m.dispose());
     this.sphereGeometry.dispose();this.boxGeometry.dispose();this.cylinderGeometry.dispose();this.coneGeometry.dispose();this.renderer.dispose();this.renderer.forceContextLoss();this.renderer.domElement.remove();delete this.host.dataset.webgl;
   }
