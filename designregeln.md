@@ -37,6 +37,7 @@ wichtigste nächste Aktion.
 | --- | --- |
 | Startbildschirm | Inselwelt als gerenderte 3D-Szene umgesetzt und geprüft ([Renderpipeline](docs/startscreen-render.md)) |
 | Lokales Setup, Online-Menü, Lobby, Wiederverbindung, Gastprofil, QR-Dialog | Inselwelt umgesetzt und auf dem Handy geprüft (`.iw-menu`, `.iw-dialog`, [menus.css](src/styles/menus.css)) |
+| Rich’s Universe: Zugang auf dem Startbildschirm und Experimentliste | Inselwelt umgesetzt und auf dem Handy geprüft (`.expedition-universe`, [richsUniverse.css](src/richs-universe/richsUniverse.css)); Experimente darin gestalten sich frei ([Anleitung](src/richs-universe/README.md)) |
 | Menüs laufender Minispiel-Wettbewerbe (Einsatz, Ergebnis) | Noch im früheren Party-Stil (`.party-menu`, `--menu-*` in [partyMenus.css](src/styles/partyMenus.css)) |
 | Roll It Up! – Die Bauschale | Freigegebene Inselwelt-Richtung als 3D-Brett und Touch-HUD umgesetzt ([Umsetzung](docs/inselparty-3d.md#roll-it-up-die-bauschale)); echte Handy-Leistung noch zu prüfen |
 | Übrige Spielflächen, Live-HUDs, Minispiele | Eigene Gestaltung; Umstellung geplant, nur auf ausdrücklichen Auftrag |
@@ -195,7 +196,8 @@ Umgesetzt in [HomeScreen.tsx](src/screens/HomeScreen.tsx),
 Vorlage ist die [Referenz](docs/design/startscreen-referenz.webp).
 
 - Aufbau von oben nach unten: Statuschip und Profilchip, die Insel, die goldene
-  Tafel „Lokal spielen“, die Amethyst-Tafel „Online spielen“, darunter im freien
+  Tafel „Lokal spielen“, die Amethyst-Tafel „Online spielen“, direkt darunter die
+  kompakte Stein-Tafel „Rich’s Universe“, darunter im freien
   Himmel die Stein-Tafeln „App installieren“ (nur solange nicht installiert) und
   „Updates prüfen“. Angebote zum Fortsetzen erscheinen als Stein-Tafeln unter den
   Spielmodi.

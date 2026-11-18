@@ -3,6 +3,8 @@ import type { GuestProfile } from "../../shared/types";
 import { InstallPrompt } from "../components/InstallPrompt";
 import { AppUpdate } from "../components/AppUpdate";
 import { AdventureChoice } from "../components/AdventureChoice";
+import { MenuIcon } from "../components/MenuIcon";
+import { UNIVERSE_TITLE } from "../richs-universe/experiments";
 import { MenuSound } from "../components/MenuSound";
 import { displayName } from "../lib/profile";
 import island from "../assets/expedition/island.webp";
@@ -22,13 +24,14 @@ interface HomeProps {
   onProfile: () => void;
   onLocal: () => void;
   onOnline: () => void;
+  onUniverse: () => void;
   onResumeHost?: () => void;
   onResumeOnline?: () => void;
   resumeGameName?: string;
   resumeError?: string;
 }
 
-export function HomeScreen({profile, online, onProfile, onLocal, onOnline, onResumeHost, onResumeOnline, resumeGameName = "Inselparty", resumeError}: HomeProps) {
+export function HomeScreen({profile, online, onProfile, onLocal, onOnline, onUniverse, onResumeHost, onResumeOnline, resumeGameName = "Inselparty", resumeError}: HomeProps) {
   const name = displayName(profile);
   const hero = useRef<HTMLHeadingElement>(null);
   const [intro, setIntro] = useState<"loading" | "playing" | "complete">(() => introShown ? "complete" : "loading");
@@ -79,6 +82,9 @@ export function HomeScreen({profile, online, onProfile, onLocal, onOnline, onRes
           <AdventureChoice title="Lokal spielen" detail="Zusammen an einem Gerät" icon="group" onClick={onLocal}/>
           <AdventureChoice title="Online spielen" detail="Jeder am eigenen Gerät" icon="globe" violet onClick={onOnline}/>
         </nav>
+        <button className="iw-slab iw-slab--stone expedition-universe" onClick={onUniverse}>
+          <span className="iw-slab__face"><MenuIcon name="planet"/><span className="expedition-universe__copy"><strong>{UNIVERSE_TITLE}</strong><small>Experimente und neue Ideen</small></span><MenuIcon name="next"/></span>
+        </button>
         {onResumeHost && <button className="expedition-resume" onClick={onResumeHost}>Handy-Tisch fortsetzen</button>}
         {onResumeOnline && <button className="expedition-resume" disabled={!online} onClick={onResumeOnline}>{resumeGameName === "Inselparty" ? "Online-Inselparty" : resumeGameName} wieder beitreten</button>}
         {resumeError && <p role="alert">{resumeError}</p>}
