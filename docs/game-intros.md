@@ -18,30 +18,16 @@ beginnt die Arena mit ihrem gemeinsamen Drei-Sekunden-Countdown.
 - Die bestehende Trebuchet-Schrift bleibt für Namen und Steuerung. Nur der
   Spieltitel verwendet Georgia, wie die bestehenden Durak-Karten.
 - Die Szene füllt den Bildschirm. Titel oben links, Überspringen oben rechts,
-  kurze Szenenbeschreibung unten. Smartphone und PC erhalten eine ihrer Breite
-  angepasste Kameradistanz.
+  kurze Szenenbeschreibung unten. Kameradistanz an Smartphone-Ausrichtung anpassen.
 
-```text
-Spielname                         Intro überspringen
-
-             Figuren am runden Tisch
-                Kamerafahrt ↓
-
-                   Szenenbeschreibung
-```
-
-Die Kamerafahrt ist das zentrale Gestaltungsmittel. Keine weiteren schwebenden
-Elemente oder wiederholten Effekte. Die erste Entwurfsidee eines identischen
-Kartentischs für jedes Spiel wurde verworfen: Spielmaterial und Inselkulisse
-müssen das gewählte Spiel bereits vor der Bedienoberfläche erkennbar machen.
+Kamerafahrt als einziger Blickfang; Material/Kulisse machen das gewählte Spiel erkennbar.
 
 ## Verhalten
 
 Das Intro läuft nur beim neuen Spielstart, lokal und online. Wiederbeitritt und
 Fortsetzen führen direkt ins Spiel. Die Spieloberfläche bleibt währenddessen
-montiert und empfängt Online-Zustände, ist aber weder per Maus noch Tastatur
-bedienbar. Spielregeln und Serverzeiten ändern sich nicht. Inselparty behält
-ihre laufende Entscheidungszeit; das kurze Intro kann sofort übersprungen werden.
+montiert und empfängt Online-Zustände, ist währenddessen aber nicht bedienbar.
+Spielregeln und Serverzeiten ändern sich nicht. Das Intro kann sofort übersprungen werden.
 
 Überspringen und Escape öffnen sofort das Spiel. Reduzierte Bewegung überspringt
 das Intro vollständig, auch wenn sie während der Kamerafahrt aktiviert wird.

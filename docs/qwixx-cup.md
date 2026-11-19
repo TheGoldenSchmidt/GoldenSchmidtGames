@@ -16,17 +16,6 @@ Bechersteuerung verwaltet Pointer-Capture, Freigabe, Vorbereitung und Flug.
   zusammenhängende Szene. Die aktive Figur rückt beim Befüllen und Werfen zum
   Tisch vor. Darunter liegt das Wertungsblatt wie eine helle Papierkarte.
 
-```text
-Handy und PC
-Kopfzeile
-┌──────── dauerhafte Tisch-Arena ────────┐
-│ Figuren · Becher · freie Würfel        │
-└────────────────────────────────────────┘
-┌──────────── Wertungsblatt ─────────────┐
-│ vier Reihen · Fehlwürfe · Punkte       │
-└────────────────────────────────────────┘
-```
-
 In Qwixx hat jeder Würfel eine feste Farbe auf allen sechs Seiten. Gemeinsame
 Bechergesten werden wiederverwendet, Landepunkte und die angedeutete Kollision
 sind arena-spezifisch. Würfel lassen sich nach dem Landen anheben: In der

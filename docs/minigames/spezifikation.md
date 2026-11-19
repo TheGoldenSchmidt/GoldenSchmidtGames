@@ -1,7 +1,7 @@
 # Spezifikation: 12 Multiplayer-Minispiele
 
-Verbindliche Ausgangsbasis des Auftraggebers (November 2026), unverändert
-übernommen. Abweichungen, die Bedienbarkeit, Fairness oder Spielspaß
+Verbindliche Ausgangsregeln (November 2026), redaktionell gekürzt.
+Sie dokumentieren die ursprünglichen Anforderungen; der aktuelle Stand ergibt sich mit den unten verlinkten Abweichungen. Abweichungen, die Bedienbarkeit, Fairness oder Spielspaß
 verbessern, stehen mit Begründung in [konzept.md](konzept.md#dokumentierte-abweichungen).
 Umsetzungsstand und Reihenfolge: [backlog.md](backlog.md).
 
@@ -29,10 +29,6 @@ Ergänzende Vorgaben aus dem Auftrag:
 
 **Spieler:** 1v1 oder 2v2
 
-**Szenario:** Zwei Teams treten in einer futuristischen Neon-Arena
-gegeneinander an. Holografische Bälle und elektrische Power-ups machen aus
-klassischem Pong einen dynamischen Wettkampf.
-
 **Steuerung:** Spieler bewegen ihren Schläger durch vertikale
 Fingerbewegung. Im 2v2-Modus verteidigen zwei Spieler dieselbe Seite mit
 leicht überlappenden Bewegungsbereichen.
@@ -56,16 +52,10 @@ leicht überlappenden Bewegungsbereichen.
 **Sieg:** Erstes Team mit 7 Punkten oder höhere Punktzahl nach 90 Sekunden.
 Gleichstand: Golden Goal.
 
-**Technik:** Ballphysik, Paddle-Kollisionen, Teamsteuerung,
-Power-up-System, synchronisierte Ballposition und Torerkennung.
 
 ## 2. Tank Trouble – Panzerchaos
 
 **Spieler:** 2–6, jeder gegen jeden
-
-**Szenario:** Kleine Comic-Panzer kämpfen in einem verwinkelten Labyrinth.
-Geschosse prallen von Mauern ab, zerstören Hindernisse und ermöglichen
-überraschende Trickschüsse.
 
 **Steuerung:** Virtueller Joystick für Bewegung, rechte Bildschirmhälfte zum
 Ausrichten des Geschützes und Schießen.
@@ -89,16 +79,10 @@ Ausrichten des Geschützes und Schießen.
 **Sieg:** 7 Abschüsse oder die meisten Abschüsse nach 90 Sekunden.
 Gleichstand: weniger eigene Tode, danach Stechen.
 
-**Technik:** Panzerbewegung, Projektilreflexionen, Schaden, Zerstörung,
-Respawn und Power-ups.
 
 ## 3. Quick Draw – Western Showdown
 
 **Spieler:** 2–6
-
-**Szenario:** Cowboys stehen sich in einer Westernstadt gegenüber. Ein
-plötzliches Signal entscheidet über den Startschuss, während falsche Signale
-und Ablenkungen die Nerven testen.
 
 **Steuerung:** Ein großer Touchbereich zum Schießen.
 
@@ -122,55 +106,14 @@ und Ablenkungen die Nerven testen.
 **Sieg:** Drei gewonnene Duellrunden beziehungsweise höchste
 Gruppenpunktzahl.
 
-**Technik:** Präziser Zeitabgleich, synchronisierte Startsignale,
-Zeitstempelvalidierung, faire Latenzkompensation und Erkennung von
-Fehlstarts. Client-Reaktionszeiten dürfen nicht ungeprüft übernommen werden.
 
-## 4. Tower Tumble – Der wackelige Turm
+## 4. Tower Tumble – Turmrennen
 
-> **Stand Nov. 2026:** Nach Spielrückmeldung als gleichzeitiges Turmrennen mit
-> echter Physik neu gebaut; diese Ursprungsfassung gilt nicht mehr. Aktuelle
-> Regeln: [Konzept](konzept.md).
-
-**Spieler:** 2–6
-
-**Szenario:** In einem verrückten Bauwettbewerb stapeln Spieler gemeinsam
-einen immer instabileren Turm. Jeder möchte höher bauen, ohne den Einsturz
-zu verursachen.
-
-**Steuerung:** Baustein mit dem Finger horizontal verschieben und durch
-Loslassen fallen lassen.
-
-**Mechanik und Regeln:**
-
-- Gemeinsamer physikalisch simulierter Turm.
-- Spieler platzieren abwechselnd Bausteine unterschiedlicher Größe und Form.
-- Jeder Spieler erhält insgesamt 3 Platzierungszüge.
-- Maximal 5 Sekunden zum Positionieren; danach fällt der Baustein
-  automatisch.
-- Nach dem Aufprall wird eine kurze physikalische Beruhigungsphase
-  abgewartet.
-- Stabil platzierter Baustein: +1 Punkt.
-- Deutliche neue Rekordhöhe: +1 Bonuspunkt.
-- Wesentlicher Einsturz durch die eigene Platzierung: −2 Punkte.
-- Nach einem Einsturz wird ein neuer Turm begonnen.
-- Die Reihenfolge rotiert zwischen Durchgängen.
-- Stabilität und Einsturz müssen anhand eindeutiger physikalischer Kriterien
-  bestimmt werden.
-
-**Sieg:** Höchste Gesamtpunktzahl nach 3 Zügen pro Spieler. Gleichstand:
-größter eigener erfolgreicher Höhenbeitrag, danach Stechrunde.
-
-**Technik:** Starre-Körper-Physik, Schwerkraft, Kollisionen,
-Stabilitätserkennung, Turmhöhe und Zugverwaltung.
+2–6 Personen. Die ursprüngliche Variante am gemeinsamen Turm wurde nach Spielrückmeldung ersetzt; aktuelle Regeln/Begründung im [Konzept](konzept.md#dokumentierte-abweichungen). Alle bauen gleichzeitig auf eigenen Sockeln mit derselben Steinfolge und deterministischer Starrkörperphysik. Frühere Fassung in der Git-Historie.
 
 ## 5. Light Trails – Neon Survival
 
 **Spieler:** 2–6
-
-**Szenario:** Futuristische Gleiter hinterlassen auf einem digitalen
-Spielfeld tödliche Lichtspuren. Während sich die Arena verkleinert, müssen
-die Spieler immer schwierigere Wege finden.
 
 **Steuerung:** Stick zeigt die gewünschte Richtung, zwei Haltetasten lenken
 voll nach links oder rechts (seit Nov. 2026; vorher Wischen auf einem Raster).
@@ -190,17 +133,10 @@ voll nach links oder rechts (seit Nov. 2026; vorher Wischen auf einem Raster).
 
 **Sieg:** Höchste Gesamtpunktzahl nach 3 Durchgängen.
 
-**Technik:** Deterministische Bewegung im festen 50-ms-Schritt, Spuren als
-Polylinien (in der Sicht kompakt als Zeichenkette), synchrone Kollisionen und
-Arenaverkleinerung.
 
 ## 6. Arrow Masters – Bogenschützen-Turnier
 
 **Spieler:** 2–6
-
-**Szenario:** Mittelalterliche Bogenschützen treten auf verschiedenen
-Plattformen in einem Turnier gegeneinander an. Wind, Schwerkraft und
-Hindernisse machen jeden Treffer zur Herausforderung.
 
 **Steuerung:** Durch Ziehen Schusswinkel und Stärke bestimmen. Schuss
 vorbereiten; Auslösung erfolgt am Ende der Zielphase.
@@ -226,16 +162,10 @@ vorbereiten; Auslösung erfolgt am Ende der Zielphase.
 **Sieg:** Höchste Punktzahl nach 5 Runden. Gleichstand: Präzisions-Stechen
 auf eine Zielscheibe.
 
-**Technik:** Ballistik, Windmodell, Schusskraft, Kollisionsprüfung,
-synchrone Schüsse und Zielscheiben.
 
 ## 7. Sumo Smash – Arena Knockout
 
 **Spieler:** 2–6
-
-**Szenario:** Kleine Comic-Sumo-Kämpfer versuchen, sich gegenseitig aus
-einer schwebenden Arena zu befördern. Geschicktes Positionieren und gut
-getimte Stoßangriffe entscheiden den Kampf.
 
 **Steuerung:** Joystick für Bewegung und Button für Stoßangriff.
 
@@ -256,16 +186,10 @@ getimte Stoßangriffe entscheiden den Kampf.
 **Sieg:** Letzter Überlebender gewinnt. Nach 75 Sekunden zählen verbleibende
 Leben, danach verursachte Ring-Outs. Falls erforderlich, Sudden Death.
 
-**Technik:** Top-down-Bewegung, Kollisionsimpulse, Knockback,
-Angriffscooldowns und Ring-Out-Erkennung.
 
 ## 8. Hook Wars – Greifhaken-Chaos
 
 **Spieler:** 2–6
-
-**Szenario:** Kleine Roboter schwingen durch einen schwebenden Schrottplatz
-und sammeln Energiekerne. Mithilfe ihrer Greifhaken können sie sich schnell
-bewegen und Gegnern ihre Beute entreißen.
 
 **Steuerung:** Joystick für Bewegung, Wisch-/Ziehgeste für
 Greifhakenrichtung, Loslassen zum Lösen der Verbindung.
@@ -288,16 +212,10 @@ Greifhakenrichtung, Loslassen zum Lösen der Verbindung.
 **Sieg:** Meiste abgegebene Energiekerne nach 90 Sekunden. Gleichstand:
 nächste erfolgreiche Abgabe.
 
-**Technik:** Plattformbewegung, Schwing- und Seilphysik, Ankerpunkte,
-Objekttransport, Spielerinteraktionen und Respawns.
 
 ## 9. Bomb Arena – Explosive Maze
 
 **Spieler:** 2–6
-
-**Szenario:** In einer chaotischen Bombenfabrik kämpfen kleine
-Sprengstoffexperten um die Vorherrschaft. Explosionen zerstören Labyrinthe,
-eröffnen neue Wege und lösen gefährliche Kettenreaktionen aus.
 
 **Steuerung:** Joystick für Rasterbewegung und Button zum Bombenlegen.
 
@@ -328,16 +246,10 @@ Umweltschaden geben keine Abschusspunkte.
 entscheiden verbleibende Leben über den Rundensieg; bei Gleichstand werden
 die Bonuspunkte geteilt. Bei Gesamtgleichstand: Sudden Death.
 
-**Technik:** Grid, Bombentimer, Kettenreaktionen, Zerstörung, Power-ups,
-Schaden, sichere Respawns und Arenaverkleinerung.
 
 ## 10. Floor is Lava – Einstürzende Plattform
 
 **Spieler:** 2–6
-
-**Szenario:** Eine uralte Tempelanlage schwebt über einem glühenden
-Lavasee. Jeder Schritt beschädigt den Boden, während immer mehr Plattformen
-unwiederbringlich verschwinden.
 
 **Steuerung:** Joystick für Bewegung und Button für einen kurzen Sprung.
 
@@ -367,16 +279,10 @@ eine Stechrunde.
 > Verbindlich ist die Tabelle „Dokumentierte Abweichungen“ in
 > [konzept.md](konzept.md).
 
-**Technik:** Tile-State-Machine, Zeitsteuerung, Plattformkollisionen,
-Sprungmechanik, Regeneration und globales Schrumpfen.
 
 ## 11. Bumper Mayhem – Autoscooter Battle
 
 **Spieler:** 2–6
-
-**Szenario:** In einer verrückten Autoscooter-Arena versuchen die Fahrer,
-ihre Konkurrenten durch wuchtige Zusammenstöße aus dem Ring zu schleudern.
-Turbos und bewegliche Hindernisse sorgen für Chaos.
 
 **Steuerung:** Joystick für Fahrtrichtung und Turbo-Button.
 
@@ -400,16 +306,10 @@ Turbos und bewegliche Hindernisse sorgen für Chaos.
 **Sieg:** Letzter Überlebender oder nach 75 Sekunden die meisten Leben,
 anschließend die meisten Ring-Outs. Gleichstand: Sudden Death.
 
-**Technik:** Fahrzeugphysik, Impulskollisionen, Turbo, Knockback,
-Ring-Outs, Respawn und Arenaverkleinerung.
 
 ## 12. Chaos Run – Hindernisrennen
 
 **Spieler:** 2–6
-
-**Szenario:** Die Spieler nehmen an einer chaotischen Hindernis-Gameshow
-teil. Rotierende Hämmer, einstürzende Brücken und bewegliche Plattformen
-machen den Weg ins Ziel zum Wettkampf.
 
 **Steuerung:** Figur läuft automatisch. Tippen zum Springen, länger halten
 für höhere Sprünge, nach unten wischen zum Ducken/Rutschen.
@@ -437,8 +337,6 @@ für höhere Sprünge, nach unten wischen zum Ducken/Rutschen.
 Streckenfortschritt; bei gleichem Fortschritt zählt, wer diesen zuerst
 erreicht hat.
 
-**Technik:** Auto-Runner, Jump-/Slide-Mechanik, Hindernisphysik,
-Checkpoints, Fortschrittsmessung und synchronisierte Strecken.
 
 ## Gemeinsame Designanforderungen
 

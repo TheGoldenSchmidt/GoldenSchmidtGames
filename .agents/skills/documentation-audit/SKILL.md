@@ -1,47 +1,44 @@
 ---
 name: documentation-audit
-description: Prüfe Entwicklungsdokumentation, Architekturannahmen und Codex-Workflow von GoldenSchmidtGames gegen Code, Tests und CI. Nutze den Skill für ausdrücklich angeforderte oder regelmäßige Dokumentationsaudits und nach größeren Entwicklungsmeilensteinen, etwa Architektur-, Hosting- oder Spielmodulerweiterungen; kein vollständiger Audit bei kleinen Codeänderungen.
+description: Prüfe Projektdokumentation, Architektur und Codex-Workflow gegen Code, Tests und CI bei angeforderten oder regelmäßigen Audits sowie größeren Meilensteinen; kein Voll-Audit für kleine Änderungen.
 ---
 
 # Documentation Audit
 
-## Umfang und Schreibfreigabe
+## Umfang und Freigabe
 
-- Führe den Audit auf Anforderung oder im Rahmen eines größeren Entwicklungsmeilensteins aus. Richte die Prüftiefe am Auftrag aus; regelmäßige Nutzung benötigt keinen neuen Zeitplan, Hook oder Automatismus.
-- Lies die geltenden `AGENTS.md`-Anweisungen und prüfe Branch, Arbeitsstand und vorhandene Änderungen. Bewahre fremde Änderungen. Benenne den geprüften Stand einschließlich uncommitteter Änderungen.
-- Ein reiner Prüfauftrag ist lesend. Nur bei Schreibfreigabe im aktuellen Auftrag korrigierst du nachweislich veraltete technische Dokumentation innerhalb des freigegebenen Umfangs. Dateisystem-Schreibrechte allein sind keine inhaltliche Freigabe.
-- Änderungen an `AGENTS.md`, Skills, verbindlichen Spielentscheidungen und Qualitätsrichtlinien zunächst als konkrete Vorschläge mit Begründung vorlegen. Erst nach ausdrücklicher Freigabe umsetzen; eine allgemeine Freigabe für Dokumentationskorrekturen reicht dafür nicht. Bereits ausdrücklich genehmigte Änderungen benötigen keine erneute Rückfrage.
-- Ändere keine produktive Spiellogik, Tests oder CI-Konfiguration, um Dokumentation passend zu machen. Schwäche niemals Tests, Sicherheitsregeln oder Qualitätsanforderungen ab. Melde Implementierungsfehler als separate Befunde.
+AGENTS.md, Branch/Commit und lokale Änderungen prüfen, fremde Arbeit bewahren. Prüftiefe am Auftrag ausrichten. Prüfaufträge bleiben lesend; Dateisystemrechte sind keine Schreibfreigabe. Keine neuen Automationen, Berichte, Checklisten oder Skills ohne konkreten Bedarf/Auftrag.
 
-## Dokumentation und Architektur abgleichen
+Technische Doku nur im freigegebenen Umfang nach belegtem Befund ändern. AGENTS.md, Skills, Spielentscheidungen und Qualitätsrichtlinien brauchen konkrete Vorschläge und ausdrückliche Freigabe; allgemeine Doku-Freigabe genügt nicht. Vorhandene ausdrückliche Genehmigung nicht erneut abfragen. Produktivcode, Tests/CI oder Sicherheitsanforderungen nicht passend zur Doku verändern/abschwächen; Implementierungsfehler separat melden. Ausdrücklich beauftragte Konfigurationsänderungen gesondert prüfen und dokumentieren.
 
-1. Starte mit `AGENTS.md`, `README.md`, `DEPLOYMENT.md` und deren für den Auftrag relevanten Verweisen in `docs/`. Suche gezielt mit `rg`; lies zusätzliche Dateien nur bei konkretem Bezug. Prüfe Links, Dateipfade und dokumentierte Einstiegspunkte.
-2. Vergleiche relevante Aussagen mit dem aktuellen Code und der Konfiguration. Ausgangspunkte sind `shared/games.ts`, `shared/roomCore.ts`, die Spielmodule in `shared/`, `src/App.tsx`, `server/` und die über ihre Aufrufer ermittelten Handy-Host-/Transportmodule. Behandle diese Pfade als zu prüfende Einstiegspunkte, nicht als unveränderliche Architektur.
-3. Prüfe insbesondere gemeinsame Regelfunktionen, Zuständigkeit der Raumautorität, Trennung von Regeln und Transport, Speicherung vor Zugbestätigung, Sitzungsschutz und gerätespezifische Sichten. Gleiche Hosting-, Offline-, PWA- und Speicherbeschreibungen mit ihrer tatsächlichen Implementierung ab.
-4. Beachte verbindliche Entscheidungen in `docs/island-party-rules.md` und `docs/approved-character-design.md`, soweit betroffen. Bei Widersprüchen zwischen Soll und Code nicht stillschweigend die Vorgabe an den Code anpassen; Abweichung und Klärungsbedarf melden.
-5. Erfasse veraltete Annahmen, Widersprüche zwischen Dokumenten und relevante undokumentierte Änderungen. Nutze bei Bedarf gezielte Git-Diffs oder Historie, ohne aus einer fehlenden Erwähnung allein auf fehlende Implementierung zu schließen.
+## Abgleich
 
-## Befehle, CI und Skills verifizieren
+1. AGENTS.md, README, DEPLOYMENT und relevante Verweise lesen; gezielt mit `rg` suchen. Links, Pfade/Einstiegspunkte prüfen, weitere Quellen nach Bezug.
+2. Tatsächliche Architektur/Aufrufer abgleichen: `shared/games.ts`, `shared/roomCore.ts`, Spielmodule, `src/App.tsx`, Server und Handy-Host/Transport. Pfade sind Einstiegshilfen, keine unveränderliche Vorgabe.
+3. Gemeinsame Regeln, Raumautorität, Regel-/Transporttrennung, Nachrichtenprüfung, Speicherung vor Bestätigung, Sitzungsschutz und gerätespezifische Sichten prüfen. Hosting, Offline/PWA und Speichergrenzen mit Implementierung vergleichen.
+4. Inselparty-Regeln/Figurenfreigabe beachten. Soll-/Code-Widersprüche melden, Vorgaben nicht stillschweigend anpassen.
+5. Veraltetes, Widersprüche und relevante undokumentierte Änderungen erfassen; nötigenfalls Git-Diff/Historie. Fehlende Erwähnung beweist keine fehlende Implementierung.
 
-- Vergleiche dokumentierte Befehle mit `package.json`, den tatsächlich aufgerufenen Skripten, `.github/workflows/` und `playwright.config.ts`. Prüfe Auslöser, Abhängigkeiten, Laufzeitversionen, Build-Reihenfolge und Testprojekte. Konfigurierter CI-Schritt und nachgewiesener erfolgreicher CI-Lauf sind verschiedene Belege.
-- Führe relevante lokale Prüfungen gemäß `AGENTS.md` aus, um Funktionsfähigkeit zu bestätigen. Prüfe Befehle vor der Ausführung auf Nebenwirkungen. Nach Clientänderungen muss vor Playwright der Build erfolgen, da die Browserprüfung `dist/` verwendet. Ein Voll-Audit prüft alle dokumentierten lokalen Prüfgruppen, soweit ausführbar; ein Teil-Audit benennt seine Auswahl und ausgelassene Gruppen.
-- Trenne „Befehl/Skript existiert“, „Konfiguration geprüft“ und „erfolgreich ausgeführt“. Pro Ausführung Befehl, Ergebnis und relevante Einschränkungen festhalten. Fehlende Abhängigkeiten, Netzwerkzugang, Geräte oder Berechtigungen als „nicht verifiziert“ mit Grund melden, niemals als Erfolg. Keine kostenpflichtigen Dienste, Deployments oder Installationen ohne entsprechende Autorisierung auslösen.
-- Prüfe referenzierte Skills anhand ihres tatsächlichen Speicherorts bzw. des verfügbaren Skill-Katalogs: `SKILL.md`, YAML-Frontmatter mit `name` und `description`, unterstützende Verweise und passende Auslöser. Plugin-Skills müssen nicht im Repository liegen. Nutze verfügbare Formatvalidatoren und Erkennungsmechanismen; unterscheide Formatprüfung, Erkennung und praktische Anwendung.
-- Browseremulation belegt keine Leistung oder Bewegungssensorik auf echten Handys. Behaupte erfolgreiche CI-Läufe nur mit einem tatsächlich verfügbaren Laufbeleg für den benannten Stand.
+## Befehle und Belege
 
-## Workflow und Kontext verbessern
+Befehle mit `package.json`, aufgerufenen Skripten, Workflows/Playwright vergleichen: Auslöser, Abhängigkeiten, Versionen, Build-Reihenfolge, Testprojekte. Zusammenarbeit/Deployment ebenfalls am aktuellen Stand prüfen; Einstellungen im Repository und aktivierte Einstellungen bei GitHub/Render unterscheiden.
 
-- Suche in vorhandenen Testausgaben, CI-Ergebnissen, Git-Historie und Projektdokumentation nach belegten Arbeitsproblemen. Bezeichne einen Fehler nur mit mehreren unabhängigen Belegen als wiederkehrend; fehlende Historie rechtfertigt keine erfundenen Muster.
-- Leite aus jedem bestätigten Problem eine konkrete, möglichst kleine Verbesserung ab: Ursache, betroffene Datei, vorgeschlagene Änderung und überprüfbarer Nutzen. Kennzeichne bloße Vermutungen und offene Fragen gesondert.
-- Halte `AGENTS.md` auf dauerhafte Projektregeln, Einstiegspunkte und passende Prüfungen konzentriert. Schlage vor, redundante Inhalte zu entfernen und umfangreiche Spezialanweisungen in bestehende Dokumente oder Skills zu verschieben und knapp zu verlinken. Erhalte dabei alle verbindlichen Anforderungen; Kürze allein ist kein Qualitätsnachweis.
-- Verwende vorhandene Dokumente. Erzeuge keine neuen Berichtsdateien, Checklisten, Skills oder sonstige Infrastruktur ohne konkreten Bedarf und Auftrag. Prüfe bei freigegebenen Korrekturen den finalen Diff auf Umfang und unbeabsichtigte Änderungen.
+Passende lokale Prüfungen nach AGENTS.md ausführen, vorher Nebenwirkungen prüfen. Voll-Audit: alle dokumentierten lokalen Prüfgruppen soweit ausführbar; Teil-Audit: Auswahl/Auslassungen benennen. Nach Client-/shared-Änderungen vor Browserprüfung bauen (`dist/`). Keine kostenpflichtigen Dienste, Deployments oder Installationen ohne Autorisierung.
 
-## Priorisierter Abschlussbericht
+Je Prüfung Befehl, Ergebnis und Grenzen erfassen. **Existiert**, **statisch geprüft** und **erfolgreich ausgeführt** unterscheiden. Fehlende Abhängigkeiten, Netz, Geräte oder Rechte als nicht verifiziert melden. CI-Erfolg nur mit Laufbeleg zum benannten Stand. Emulation beweist keine reale Handy-Leistung/Sensorfunktion.
 
-Gib den Bericht auf Deutsch direkt in der Antwort aus:
+Skills am tatsächlichen Ort/Katalog prüfen: SKILL.md, YAML `name`/`description`, Auslöser/Verweise. Plugin-Skills müssen nicht im Repo liegen. Verfügbare Validatoren/Erkennung nutzen; Format, Erkennung und Anwendung unterscheiden.
 
-- **Prüfumfang:** Branch/Commit, relevante lokale Änderungen, geprüfte Bereiche und Auditmodus.
-- **Befunde nach Priorität:** hoch bei Sicherheits-, Datenverlust- oder verbindlichen Qualitätsabweichungen; mittel bei falschen Architektur-/Betriebs-/Testangaben; niedrig bei Redundanz und Verständlichkeit. Pro Befund konkrete Dateiverweise mit Zeilen, Beleg, Auswirkung und nächste Maßnahme angeben. Fakten, Annahmen und geplante Funktionen ausdrücklich unterscheiden.
-- **Umgesetzte Korrekturen:** Nur tatsächlich vorgenommene, freigegebene Änderungen und deren Verifikation nennen; sonst festhalten, dass nichts geändert wurde.
-- **Freigabepflichtige Vorschläge:** Konkrete Änderungen an Agentenregeln, Skills und verbindlichen Richtlinien getrennt aufführen.
-- **Validierung und Grenzen:** Ausgeführte Befehle und Ergebnisse, nur statisch geprüfte Aussagen sowie nicht geprüfte Punkte mit Gründen nennen. Keine Befunde erfinden, wenn keine bestätigt wurden.
+## Verbesserung und Abschluss
+
+Probleme mit Testausgaben, CI, Historie oder Doku belegen; „wiederkehrend“ braucht mehrere unabhängige Belege. Je Befund Ursache, Datei, kleine Änderung und überprüfbaren Nutzen nennen; Vermutungen/offene Fragen kennzeichnen.
+
+AGENTS.md auf dauerhafte Regeln, Einstiegspunkte und Prüfungen konzentrieren. Spezialwissen in vorhandene Dokumente/Skills verlinken, Dopplungen entfernen; verbindliche Anforderungen erhalten. Nach freigegebenen Änderungen finalen Diff prüfen.
+
+Bericht knapp auf Deutsch direkt in der Antwort:
+
+- Umfang: Modus, Branch/Commit, lokale Änderungen, Bereiche.
+- Befunde priorisieren: hoch bei Sicherheit/Datenverlust/verbindlicher Qualität, mittel bei falscher Technik/Betrieb/Tests, niedrig bei Redundanz. Jeweils Datei/Zeile, Beleg, Auswirkung/Maßnahme.
+- Nur tatsächliche Korrekturen und Verifikation nennen, sonst „nichts geändert“.
+- Noch freigabepflichtige Regel-/Skillvorschläge getrennt aufführen.
+- Ausgeführte, statisch geprüfte und nicht verifizierte Punkte samt Gründen nennen; Fakten/Annahmen/Planung unterscheiden.

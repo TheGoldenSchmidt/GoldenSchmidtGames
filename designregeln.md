@@ -1,291 +1,83 @@
 # Designregeln für GoldenSchmidtGames
 
-Diese Regeln gelten bei jeder UI-Erweiterung und UI-Bearbeitung. Sie beschreiben
-den Inselwelt-Stil, der die gesamte App tragen soll, und den Stand seiner Umsetzung.
-Technische Vorgaben und Prüfabläufe stehen in [AGENTS.md](AGENTS.md).
+Bei jeder UI-Erweiterung und -Bearbeitung anwenden. Technik und Prüfungen: [AGENTS.md](AGENTS.md). Für HUDs/Menüs/Overlays zusätzlich `game-ui-frontend`.
 
-## Freigegebene Inselwelt-Menüs
+## Geltungsbereich
 
-Die neu gebauten Menüs verwenden lokal gespeicherte Illustrationen und gerenderte Buttonflächen aus `src/assets/expedition/`. Auf dem Startbildschirm trägt ein steinernes Wappen den Titel; darunter stehen die Spielzugänge in Gold und Amethyst. Der Status, die Tonwahl und das Gastprofil liegen über der Illustration. Beim Start fallen Steintafel, GOLDEN, SCHMIDT, GAMES und Krone in dieser Reihenfolge von oben an ihren Platz. Anschließend erscheint „Play like the GoldenSchmidt - Be like the GoldenSchmidt“ allein durch Einblenden. Ein einzelner warmer Reflex zieht nach der Landung über die Krone. Das Motto steht als kursives, von TheGoldenSchmidt signiertes zweizeiliges Zitat zwischen goldenen englischen Anführungszeichen (“ … ”); sie umschließen nur die beiden Zeilen, die Signatur steht außerhalb. Sobald es eingeblendet ist, erscheinen die Startmenü-Buttons. Bei reduzierter Bewegung und bei der Rückkehr ins Menü sind sie sofort verfügbar. Ganz unten teilen sich „Spiel fortsetzen“ (links, nur wenn verfügbar), „App installieren“ und „Updates prüfen“ (rechts) eine Zeile; auf schmalen Handys zeigt „App installieren“ dann nur sein Symbol. Der Startbildschirm ist ein fester Rahmen: Er scrollt nie, und Meldungen wie das Ergebnis der Update-Prüfung erscheinen kurz als Glashinweis über der Werkzeugzeile, ohne Logo oder Insel zu verkleinern. „Lokal spielen“ und „Raum erstellen“ verwenden dieselbe honigfarbene Citrinfläche mit geschliffenen Kanten. In Untermenüs rahmen eine Landschaft und eine Krone den Titel. Lokale Spielwahl und Online-Raumerstellung verwenden dieselben illustrierten Spielkarten. Beim Erstellen und Beitreten lässt sich die eigene Figur in derselben aufklappbaren Galerie über Porträtkarten auswählen. Die Lobby verwendet dieselben Spiel- und Figurengalerien. Abgesetzt unter „Ich bin bereit“ stehen „Party verlassen“ (heller Stein) und für den Host „Party für alle beenden“ (dunkler Stein, nie Gold). Das Beenden bestätigt der Host auf Papier. Im lokalen Spiel hat jeder Platz ein Namensfeld und eine eigene Porträtgalerie mit 3D-Vorschau. Die geöffnete Figurengalerie der Lobby zeigt die drehbare 3D-Vorschau. Fragezeichen an den Spielkacheln öffnen die Regeln. In den Spieleinstellungen stehen ausschließlich Optionen für die jeweilige Partie. Helles Papier trägt längere Eingaben und Listen.
-
-Die folgenden Beschreibungen der gerenderten Ebenen, alten Button-Sprites, Renderbefehle und Auftrittsreihenfolge dokumentieren den früheren Vergleichsstand. Die freigegebenen Menüs verwenden `HomeScreen.tsx`, `AdventureChoice.tsx`, `home.css` und `menus.css`. Bewegung klingt nach dem Einstieg aus. Ein kurzer mechanischer Klick bestätigt die Betätigung von Menübuttons. Tonwahl, Fokus, reduzierte Bewegung und Offline-Zugriff gehören zur Prüfung.
-
-## Richtung: die Inselwelt
-
-GoldenSchmidtGames spielt auf einer schwebenden Insel: ein Abenteuer-Spielplatz für
-die Freundesrunde, bunt, plastisch und sofort bedienbar. Vier Merkmale tragen den Stil:
-
-1. **Welt statt Fläche.** Der Bildschirm ist ein Fenster in eine Landschaft. Hinter
-   den Inhalten liegt ein Himmel von Nachtblau zu hellem Blau; Gipfel, Tannen und
-   Blattwerk rahmen die Ränder, die Mitte bleibt frei für Inhalt und Bedienung.
-2. **Material statt Farbe.** Jedes Bedienelement besteht aus einem Material mit
-   fester Rolle: Gold, Amethyst, Stein, Holz, Glas oder Papier (siehe unten).
-3. **Beleuchtete Low-Poly-Körper.** Grafik ist echte 3D-Geometrie aus wenigen
-   Facetten, gerendert mit warmer Sonne von links vorn, kühlem Himmels- und Kantenlicht,
-   weichen Schatten und Umgebungsverdeckung. Oberflächen haben eine leichte Körnung.
-   Keine flachen Vektorflächen als Ersatz, keine Fotos, keine Emoji.
-4. **Geschnitzte Tiefe.** Aktionen sind Tafeln mit abgeschlagenen Ecken, heller
-   Oberkante, sichtbarer Seitenwand und dunkler Kontur. Beim Drücken sinken sie ein.
-
-Blickfang ist pro Ansicht genau ein Motiv der Welt (auf dem Startbildschirm die
-Insel mit dem Steinlogo). Alles andere bleibt ruhig; jede Ansicht zeigt ihre
-wichtigste nächste Aktion.
-
-### Stand der Umsetzung
-
-| Bereich | Stand |
+| Bereich | Gestaltung |
 | --- | --- |
-| Startbildschirm | Inselwelt als gerenderte 3D-Szene umgesetzt und geprüft ([Renderpipeline](docs/startscreen-render.md)) |
-| Lokales Setup, Online-Menü, Lobby, Wiederverbindung, Gastprofil, QR-Dialog | Inselwelt umgesetzt und auf dem Handy geprüft (`.iw-menu`, `.iw-dialog`, [menus.css](src/styles/menus.css)) |
-| Rich’s Universe: Zugang auf dem Startbildschirm und Experimentliste | Inselwelt umgesetzt und auf dem Handy geprüft (`.expedition-universe`, [richsUniverse.css](src/richs-universe/richsUniverse.css)); Experimente darin gestalten sich frei ([Anleitung](src/richs-universe/README.md)) |
-| Menüs laufender Minispiel-Wettbewerbe (Einsatz, Ergebnis) | Noch im früheren Party-Stil (`.party-menu`, `--menu-*` in [partyMenus.css](src/styles/partyMenus.css)) |
-| Roll It Up! – Die Bauschale | Freigegebene Inselwelt-Richtung als 3D-Brett und Touch-HUD umgesetzt ([Umsetzung](docs/inselparty-3d.md#roll-it-up-die-bauschale)); echte Handy-Leistung noch zu prüfen |
-| Übrige Spielflächen, Live-HUDs, Minispiele | Eigene Gestaltung; Umstellung geplant, nur auf ausdrücklichen Auftrag |
+| Start, lokale/Online-Auswahl, Lobby, Profil, QR, Wiederverbindung | Inselwelt: `HomeScreen.tsx`, `AdventureChoice.tsx`, `home.css`, `menus.css` |
+| Rich’s Universe: Zugang/Experimentliste | Inselwelt; [Bereich](src/richs-universe/README.md). Nur dortige `experiments/` gestalten sich frei. |
+| Roll It Up! | Bauschale mit Inselwelt-HUD; [Umsetzung](docs/inselparty-3d.md#roll-it-up-die-bauschale) |
+| Einsatz-/Ergebnismenüs laufender Wettbewerbe | Bisheriger Party-Stil: `.party-menu`, `--menu-*`, `partyMenus.css` |
+| Übrige Spiele/Live-HUDs | Eigene bisherige Gestaltung; Umstellung nur auf Auftrag |
 
-Wer eine noch nicht umgestellte Ansicht bearbeitet, stellt sie entweder ganz auf die
-Inselwelt um oder bleibt in ihrem bisherigen Stil. Beide Stile werden innerhalb
-einer Ansicht nicht gemischt, und der Party-Stil erhält keine neuen Bausteine. Eine
-Menüänderung darf Farben, Layout oder Interaktion einer Spielfläche nicht nebenbei
-verändern. Bei beauftragten Spielansichten gilt zusätzlich der Skill
-`game-ui-frontend`. Nach jeder Umstellung die Tabelle oben nachführen.
+Eine Ansicht vollständig umstellen oder ihren bestehenden Stil fortführen; nicht mischen. Keine neuen Party-Stil-Bausteine. Menüänderungen verändern keine Spielflächen nebenbei. Umstellungen hier nachführen; implementiert, geprüft und geplant unterscheiden. Die Experiment-Ausnahme hebt gemeinsame Sicherheits-, Offline- und Zugänglichkeitsanforderungen nicht auf.
 
-## Farben und Materialien
+## Visuelle Richtung
 
-Farben der Oberfläche stehen als `--iw-*` in [inselwelt.css](src/styles/inselwelt.css),
-Materialfarben der gerenderten Grafik in `scripts/home-render/kit.ts` (Welt) und
-`sprites.ts` (Tafeln). Diese Werte verwenden; keine fast identischen Farbreihen anlegen.
-Die Tabelle nennt die Ausgangsfarben; Licht und Körnung verändern sie im Bild.
+Schwebende Insel als plastische Abenteuerwelt: Landschaft rahmt freie Inhalte, Materialien machen Aktionen erkennbar. Warme Sonne, kühles Füll-/Kantenlicht, weiche Schatten, facettierte Körper und leichte Körnung. Pro Ansicht ein Blickfang und eine wichtigste nächste Aktion; danach Ruhe.
 
-| Material | Fläche oben → unten | Kante / Seitenwand | Text darauf | Rolle |
-| --- | --- | --- | --- | --- |
-| Gold | `#ffd777` → `#f1aa4c` | `#fff0b4` / `#a95a24` | `#3d2412` | Hauptaktion einer Ansicht |
-| Amethyst | `#dcaefc` → `#c18ef2` | `#f6d6ff` / `#55309a` | `#170834` | Gleichrangige zweite Wahl, Online |
-| Stein | `#7c7092` → `#605575` | `#c2bbd8` / `#2e2742` | `#fff8ea` | Nebenaktionen, Werkzeuge, Fortsetzen |
-| Holz | `#dea468` | Fase heller, Kontur `#4a2a17` | `#43240f` | Schilder: Motto, Abschnittstitel |
-| Glas | `#1f1c54` mit 74 % Deckkraft | heller Rand, 30 % Weiß | `#fff8ea` | Status und kurze Hinweise über dem Himmel |
-| Papier | `#fff8ea` | Kontur `#221b4f` | `#221b4f` | Formulare, Hilfetexte, lange Inhalte |
+Aktuelle Illustrationen/Buttons: `src/assets/expedition/`. Frühere prozedurale Quellen: [Grafikwerkzeuge](docs/startscreen-render.md). Historische Renderkompositionen sind keine aktuelle Menüvorgabe. Neue Grafik im Projekt modellieren; fremde Modelle nur mit geprüfter Lizenz/Herkunft. Keine Fotos, Emoji oder flachen Ersatzflächen für Weltgrafik.
 
-| Farbe | Wert | Rolle |
+## Materialien und Schrift
+
+Farben aus `--iw-*` in [inselwelt.css](src/styles/inselwelt.css); alte Renderpalette in `kit.ts`/`sprites.ts`. Keine ähnlichen Parallelpaletten.
+
+| Material | Grundfarbe | Rolle |
 | --- | --- | --- |
-| Himmel | `#272a6e` → `#4a47a6` → `#5f70d8` → `#7f9be8` | Hintergrund von oben nach unten |
-| Abendrosa | `#d9b8ee` | Lichtschein rechts oben, Gipfel, Wolken |
-| Tinte | `#221b4f` | Konturen der Tafeln und Chips |
-| Gras | `#a9dc42`, `#6fbf35`, `#2f7a2e` | Natur, Blattwerk |
-| Bereit | `#3fe6a0` | Online, Bereitschaft |
-| Pink | `#ff7fc6` | Profilbild, Offline-Punkt, spielerische Akzente |
-| Fehler | `#c8353e` | Fehlerrahmen und Fehlermeldungen |
+| Gold/Citrin | `#ffd777` → `#f1aa4c` | Hauptaktion |
+| Amethyst | `#dcaefc` → `#c18ef2` | Gleichrangige zweite Wahl, Online |
+| Stein | `#7c7092` → `#605575` | Nebenaktionen, Werkzeuge, Fortsetzen |
+| Holz | `#dea468` | Schilder/Abschnittstitel |
+| Glas | `#1f1c54`, 74 % | Status/kurze Hinweise |
+| Papier | `#fff8ea` | Formulare, Listen, Hilfetexte |
 
-Die Textfarben erreichen auf den gerenderten Tafeln überall mindestens 4,5:1 (gemessen
-auf den Pixeln der Sprites: Gold 4,7–6,3:1, Amethyst 4,5–6,1:1). Nach jedem Neurendern
-und bei neuen Kombinationen erneut messen.
-Text steht nie direkt auf Himmel oder Landschaft, sondern auf einem Material.
+Textkontrast ≥4,5:1 auf tatsächlichen Flächen, nach Neurendern/neuen Kombinationen erneut messen. Text braucht Materialhintergrund. Farben nie allein: Auswahl mit Rahmen/Häkchen, Bereitschaft mit Text, Fehler konkret. Spielfarben (Qwixx, Würfel, Karten) semantisch erhalten.
 
-Farben unterstützen Bedeutung, ersetzen sie aber nicht: Auswahl mit Rahmen und
-Häkchen, Bereitschaft mit Text, Fehler mit konkreter Meldung kennzeichnen.
-Deaktivierte Aktionen sind entsättigt und technisch deaktiviert. Spielfarben wie
-Qwixx-Reihen, Würfelfarben und Kartenfarben bleiben semantisch unverändert.
+Lilita One: Titel/kurze Hauptzeilen; Lexend: Bedienung/Fließtext (400–500, Bedienelemente 600). Lokal über Fontsource und offline verfügbar; keine weiteren/externen Schriften. Bestehende Spielansichten behalten Trebuchet bis zur Umstellung. Logo als Bild mit Alternativtext „GoldenSchmidtGames“.
 
-## Schrift und Sprache
+Großschreibung per CSS nur auf kurzen Tafel-/Schildtiteln (etwa 18 Zeichen). Klare Titelhierarchie, kurze deutsche Aktionsnamen, gleiche Aktion gleich benennen. Beschriftung, zugänglicher Name und bestätigte Auswahl stimmen überein. Markenname GoldenSchmidtGames, Kurzform GSG.
 
-- **Lilita One** ist die Schauschrift: Logo, Holzschilder, Bildschirmtitel und
-  Hauptzeilen großer Tafeln. **Lexend** ist die Bedienschrift: Unterzeilen, kleine
-  Tafeln, Chips, Formulare, Fließtext (400–500 für Text, 600 für Bedienelemente). Beide liegen als
-  npm-Pakete im Projekt, werden mit der App ausgeliefert und offline gespeichert.
-  Keine weiteren Schriften und keine Schriften von fremden Servern laden.
-- Noch nicht umgestellte Ansichten behalten Trebuchet MS, bis sie umgestellt werden.
-- Das Logo ist extrudierte 3D-Schrift aus den Umrissen in
-  `scripts/home-render/logoPaths.ts`: „Golden“ und „Schmidt“ in Gold, „Games“ in Silber,
-  mit Fase, metallischem Glanz und dunkler Kontur. Es erscheint als Bild mit dem
-  Alternativtext „GoldenSchmidtGames“.
-- Großbuchstaben nur für die Hauptzeile einer Tafel und für Schildtexte, jeweils
-  höchstens etwa 18 Zeichen. Unterzeilen, Hinweise und Formulare in normaler
-  Schreibung. Der Quelltext bleibt normal geschrieben; die Großschreibung setzt CSS.
-- Pro Ansicht eine klare Titelhierarchie. Kleine Hinweise nicht wie Überschriften
-  behandeln.
-- Kurz und direkt auf Deutsch schreiben. Aktionsnamen beschreiben die Handlung,
-  etwa „Raum beitreten“. Dieselbe Aktion behält durch den Ablauf denselben Namen.
-- Sichtbare Beschriftungen, zugängliche Namen und bestätigte Auswahl müssen
-  übereinstimmen. Der Markenname bleibt `GoldenSchmidtGames`; `GSG` ist die Kurzform.
+## Menüs und Bausteine
 
-## Bausteine
+`.iw-menu`/`.iw-dialog`, `IslandWorld`, `ScreenHeader`, `.iw-card`, `.iw-chip`, `.iw-note` und vorhandene Tasten verwenden. Ansichtsspezifisches CSS in eigener Datei; keine globalen Selektoren oder `!important` als Ersatz für Zuständigkeit. Regeln, Sitzungen und Transport bleiben außerhalb der Gestaltung.
 
-| Baustein | Klasse | Verwendung |
-| --- | --- | --- |
-| Tafel | `.iw-slab` mit `.iw-slab__face`, Varianten `--gold`, `--violet`, `--stone` | Jede Aktion. Gold und Amethyst für große Zugänge, Stein kompakt für Nebenaktionen. Gerendertes Sprite als 9-Slice |
-| Chip | `.iw-chip`, tippbar als `.iw-chip--light` | Status (dunkles Glas) und Profil (hell mit Tintenrand) |
-| Holzschild | `.iw-plank` | Bildschirmtitel und Kartentitel. Gerendertes Brett als 9-Slice, dunkle Lilita-Schrift |
-| Pergamentkarte | `.iw-card` mit Titel `.iw-plank.iw-card__title` und `.iw-card__lead` | Listen, Formulare, Einstellungen. Der Titel sitzt als Holzschild auf der Oberkante |
-| Glashinweis | `.iw-note` | Kurze Hinweise direkt auf dem Himmel |
-| Welt | `IslandWorld` | Gerenderter Himmel mit Vordergrund-Ecken hinter Startbildschirm und Menüs |
-| Gerenderte Ebenen | `src/assets/home/*.webp`, Quelle `scripts/home-render/` | Insel mit Logo, Himmel hoch und quer, Vordergrund-Ecken, Tafeln, Holzschild |
+- Höchstens eine goldene Hauptaktion; Amethyst daneben nur bei gleichrangiger Wahl, sonst Stein. „Party für alle beenden“ dunkel, niemals Gold, mit Papierbestätigung.
+- Materialtasten mit heller Kante, sichtbarer Tiefe und Druckzustand. Expedition-Flächen verwenden; alte Sprites an der Renderquelle ändern.
+- Symbole einfarbig ohne zusätzliche Kachel; große Tafeln mit Symbol, Haupt-/Unterzeile und Pfeil. Runde Pillen für Chips, Papier/Eingaben mit 12–16 px Radius.
+- Eingaben mit sichtbarem Label. Fehler nennen Ursache/nächsten Schritt; Hinweise unterscheiden sich von Fehlern. Deaktivierte Aktionen entsättigt und technisch deaktiviert.
+- Touch-Ziele ≥44 × 44 CSS-px, Stein-Tafeln ≥52 px, große Tafeln ≥70 px hoch; Abstand zwischen Nachbaraktionen.
+- Nur [freigegebene Figuren](docs/approved-character-design.md). Eine gemeinsame drehbare 3D-Vorschau je Auswahl, unverzerrte statische Portraits in Listen; keine zusätzlichen Canvas-Vorschauen.
 
-- Eine Tafel ist ein gerenderter Steinblock: ebene Fläche mit Farbverlauf und feinen
-  Haarrissen, ringsum eine unregelmäßig abgeschlagene Fase (oben hell, unten dunkel),
-  darunter ein dunklerer Sockel als sichtbare Dicke, außen eine dunkle Kante und ein
-  weicher Schlagschatten. Form und Farbe nur in `sprites.ts` ändern und neu rendern,
-  nicht per CSS nachbauen; keine runden Ecken an Tafeln.
-- In Inselwelt-Menüs und -Dialogen werden die vorhandenen `.button`-Klassen
-  automatisch zu Tafeln: `--primary` Gold, `--secondary` Amethyst, `--ghost` Stein.
-  Die Geräte-Kopplung ist eine Nebenaufgabe und nutzt Stein.
-- Gedrückt wechselt das Sprite zu einer in die Seitenwand gesunkenen Fläche, der Inhalt
-  sinkt mit. Hover hellt leicht auf; Bedienung und Information dürfen nicht davon abhängen. Der Fokusring ist 3 px Papier mit
-  3 px Abstand und bleibt auf Himmel und Material sichtbar.
-- Pro Ansicht höchstens eine goldene Tafel. Amethyst steht nur neben Gold, wenn
-  beide Wege gleichrangig sind (Startbildschirm: lokal und online). Alles Weitere
-  ist Stein.
-- Große Tafeln zeigen links ein Symbol, in der Mitte Haupt- und Unterzeile, rechts
-  einen Pfeil in einem dunklen Achteck. Symbole sind einfarbig in der Textfarbe
-  der Tafel, gefüllt oder mit 2,5–3 px Strich, ohne eigene Kachel dahinter.
-- Runde Formen bleiben den Chips (Pille) vorbehalten. Papierflächen und Eingaben
-  haben 12–16 px Radius und eine Tintenkontur.
-- Eingaben haben sichtbare Labels. Fehlermeldungen benennen Problem und nächsten
-  Schritt; normale Hinweise sehen nicht wie Fehler aus.
-- Touch-Ziele mindestens 44 × 44 CSS-Pixel, Stein-Tafeln mindestens 52 px, große
-  Tafeln mindestens 70 px hoch. Abstände verhindern versehentliche Nachbaraktionen.
+Online zuerst Erstellen/Beitreten; Raumcode/QR sind Beitrittsarten. Galerie in Erstellen, Beitreten und Lobby aufklappbar; lokale Plätze mit Namen/eigener Galerie. Nur Partienoptionen in Einstellungen; Fragezeichen an Spielkarten öffnen Regeln. Verlassen/Beenden unter Bereitschaft absetzen.
 
-## Illustration
+Lokal: „Ein Handy für alle“ (Tischspiele), „Allein mit Bots“ (Brett-/Minispielmodi), Hinweis „Läuft nur auf diesem Handy, auch ohne Internet.“. Bot-Karten nennen 1–5 Bots, Einrichtung trägt Spielnamen. Proberaum bleibt eigener lokaler Zugang.
 
-- Landschaft, Requisiten und Tafeln entstehen als three.js-Szene in
-  `scripts/home-render/` und werden mit `npm run render:home` zu WebP-Bildern gerendert
-  (Details in der [Renderpipeline](docs/startscreen-render.md)). Die App lädt nur die
-  Bilder, keine Live-3D-Szene.
-- Licht und Schatten entstehen beim Rendern, nicht durch gemalte Facetten. Dunkle
-  Konturen tragen nur Tafeln, Chips, Logo und Holzschild.
-- Material der Welt: Stein braungrau mit Moos auf Oberseiten, Fels braun, Gras
-  gelbgrün mit dunkler Kante und Erdschicht, Holz honigfarben mit Maserung, Gold
-  metallisch für Schrift, Krone, Beschläge und Schatz. Requisiten stammen aus dem
-  Spielabend: Würfel, Schwert, Schatztruhe, Fahne, Krone.
-- Neue Grafik wird prozedural im Projekt modelliert. Fremde Modelle nur mit geprüfter
-  Lizenz und Eintrag in der Renderpipeline-Dokumentation.
-- Illustrationen sind Dekoration (`aria-hidden` oder leerer Alternativtext), enthalten
-  keine Information, die nur dort steht, und verdecken weder Text noch Aktion.
-- Figuren: nur die [freigegebenen Figuren](docs/approved-character-design.md) und
-  vorhandenen Modell- und Portraitzuordnungen verwenden. Pro Figurenwahl eine
-  gemeinsame 3D-Vorschau; Listen und Auswahlbilder verwenden statische Portraits.
-  Portraits dürfen nicht verzerrt oder durch Flex-Layouts beschnitten werden.
+## Smartphone-Layout
 
-## Layout auf Handy und PC
+Touch zuerst; ab 320 px kein horizontaler Überlauf. Lange Namen umbrechen/kürzen, ohne Aktionen/Portraits zu verdrängen. Hochkant untereinander; im Querformat ab 700 px passende Bereiche nebeneinander. Kulisse bildschirmfüllend; Abstände etwa 8/16/24/32 px. PC-Prüfungen ruhen.
 
-Zuerst für Touch auf schmalen Handys gestalten. Ab 320 px Breite darf keine
-Menüseite horizontal überlaufen. Lange Namen müssen umbrechen oder sinnvoll gekürzt
-werden, ohne Aktionen oder Figurenbilder zu verdrängen.
+Feste Aktionen brauchen Inhaltsabstand und Safe Areas; Bildschirmtastatur berücksichtigen. Dialoge passen in sichtbare Fläche, scrollen innen, haben erreichbare Schließen-Aktion und Fokus-Rückgabe. Kamera-/Welteingaben unter Modals sperren. QR-Codes quadratisch, unverzerrt, mit weißem Rand.
 
-Auf dem Handy Inhalte untereinander anordnen. Ab 700 px Breite im Querformat dürfen
-zusammengehörige Bereiche nebeneinander stehen; hochkant bleibt die Handy-Anordnung
-in einer mittigen Spalte. Die Kulisse füllt immer den ganzen Bildschirm. Abstände
-in wiederkehrenden Größen halten; etwa 8, 16, 24 und 32 px sind Richtwerte.
+## Start und Bewegung
 
-Feste Startaktionen müssen den Inhalt freilassen: unteren Inhaltsabstand,
-Safe Areas und Tastaturbedienung berücksichtigen. Dialoge passen in den sichtbaren
-Bereich, können bei Bedarf innen scrollen und besitzen eine erreichbare
-Schließen-Aktion. QR-Codes bleiben quadratisch, unverzerrt und mit weißem Rand.
+Startbildschirm eine Bildschirmhöhe ohne Scrollen; bei Platzmangel zuerst Illustration verkleinern, Touch-Ziele erhalten. Status/Ton/Profil oben; Wappen/Motto und Spielzugänge darübergelegt. Rich’s Universe als kompakte Stein-Tafel unter den Spielmodi. Unten eine Werkzeugzeile: Fortsetzen links (falls verfügbar), Installation/Updates rechts; auf schmalen Handys Installation nur als Symbol. Kurzmeldungen als Glashinweis darüber, ohne Logo/Insel zu verkleinern. Keine Figuren oder Live-3D-Szene; CSS-Himmel bis Bilder bereitstehen.
 
-## Bewegung
+Beim ersten Einstieg landen Steintafel, GOLDEN, SCHMIDT, GAMES und Krone nacheinander; einmaliger warmer Kronenreflex. Kursives, zweizeiliges Motto zwischen goldenen englischen Anführungszeichen (“ … ”), Signatur außerhalb; es blendet ein, danach Spielbuttons. Bei Rückkehr/reduzierter Bewegung sofort verfügbar. Kurzer mechanischer Klick für Menüaktionen, Ton je Gerät schaltbar.
 
-Bewegung erklärt einen Auftritt oder eine Aktion. Keine dauernden Wackel-, Blink-
-oder Schwebeeffekte. Eine Ansicht hat höchstens einen Auftritt und ruht danach;
-Aktionen sind von Anfang an bedienbar. Bei `prefers-reduced-motion` entfallen
-dekorative Animationen und Übergänge; Bestätigung, Auswahl und Spielergebnis
-bleiben gleich. Ohne WebGL bleiben Ersatzdarstellung und Menüaktionen nutzbar;
-fehlende Grafik blockiert keinen Zugang.
+Bewegung erklärt Auftritt/Handlung; kein ständiges Wackeln/Blinken/Schweben. Höchstens ein Auftritt je Ansicht. `prefers-reduced-motion` entfernt Dekoration/Übergänge und erhält Auswahl, Bestätigung, Ergebnis. Fehlende Grafik blockiert keinen Zugang; WebGL-Ersatz bleibt nutzbar.
 
-## Startbildschirm
+## Spielflächen
 
-Umgesetzt in [HomeScreen.tsx](src/screens/HomeScreen.tsx),
-[home.css](src/styles/home.css) und der [Renderpipeline](docs/startscreen-render.md);
-Vorlage ist die [Referenz](docs/design/startscreen-referenz.webp).
+Brett-/Roll-It-Up-Details: [3D-Spielansichten](docs/inselparty-3d.md). Größere Figuren, schmale Wege, flache Symbole mit Tiefenprüfung; keine Feldnummern auf Karten. Plus blau, Minus rot, Ereignis grün, Shop hellblau, identisch in 3D/2D/Legende/Vorschau. Aktive Figur gelb markieren; Kamera startet bei ihr, „Zur Figur“/„Ganze Insel/Schale“ setzen zurück.
 
-- Aufbau von oben nach unten: Statuschip und Profilchip, die Insel, die goldene
-  Tafel „Lokal spielen“, die Amethyst-Tafel „Online spielen“, direkt darunter die
-  kompakte Stein-Tafel „Rich’s Universe“, darunter im freien
-  Himmel die Stein-Tafeln „App installieren“ (nur solange nicht installiert) und
-  „Updates prüfen“. Angebote zum Fortsetzen erscheinen als Stein-Tafeln unter den
-  Spielmodi.
-- Ebenen von hinten nach vorn: gerenderter Himmel mit Landschaft (eigenes Bild für Hoch-
-  und Querformat), Vordergrund-Büsche in den unteren Ecken, die Insel mit Steinlogo, Krone,
-  Fahne, Schwert im Stein, Würfel, leuchtender Schatztruhe, Wasserfall und dem Holzschild
-  „Play like The GoldenSchmidt – Be like The GoldenSchmidt“ (zweizeilig), darüber die Bedienelemente. Auf dem Handy ragt die
-  Insel über beide Seitenränder; die Tafeln überlappen ihre Felsspitzen.
-- Auftritt in etwa zwei Sekunden: Zuerst fliegt der Steinrahmen ein, dann erscheint die Insel,
-  danach fliegen „Golden“, „Schmidt“ und „Games“ nacheinander ein. Danach ruht die Seite.
-  Die Schrift steht vor dem Steinrahmen und wird von ihm nicht verdeckt.
-- Der Startbildschirm ist genau eine Bildschirmhöhe groß und scrollt nicht. Fehlt
-  Höhe, wird zuerst die Insel kleiner; Tafeln behalten ihre Mindestgröße. Die
-  Installationshilfe öffnet sich als Papierfeld über der unteren Zeile, der
-  Update-Status als Glaszeile darunter.
-- Im Querformat ab 700 px steht die Insel links, die Spielmodi rechts.
-- Er zeigt keine Figuren und lädt keine Live-3D-Szene. Bis die Bilder geladen sind,
-  steht ein CSS-Himmelsverlauf dahinter.
-- `npm run compare:home` stellt den Startbildschirm der Referenz gegenüber.
+Brettansicht eine Bildschirmhöhe; Spielerleiste unten, Ziel/Inventar und seltene Informationen in schließbaren Panels. Feldinfo verändert keinen Ausschnitt. Keine Minispielauswahl unter dem Brett. Inselparty behält ihre Farbwelt. Bauschale: Emaille/Messing/Hügel, Lilita/Lexend, Glas und Gold/Stein; oben Münzen/Set/Ziel, unten Entscheidung/Reihenfolge. Vorschau vor Bestätigung, Kauf kompakt, Feldwirkung einmal, Kamera während Zug stabil.
 
-## Spielflächen und Minispiele
+Schlussrunden gelb markieren; bis erstem Wurf tiefblaue ×2-Ansage, Würfeln erreichbar. Siegerehrung: drei Bonuszeilen mit goldenen/grauen Sternen, danach Konfetti/Sieg; reduzierte Bewegung zeigt alles sofort.
 
-Die 3D-Bretter von Inselparty und Roll It Up! stellen die Figuren in den
-Vordergrund: größere Modelle, mehr Abstand auf gemeinsam belegten Feldern,
-schmale Wege und flache Feldsymbole mit Tiefenprüfung. Auf den Karten stehen
-keine Feldnummern: Münzgewinn ist blau mit Plus, Münzverlust rot mit Minus,
-Ereignisse grün mit Ausrufezeichen und Shops hellblau mit Shopsymbol.
-3D, 2D, Legende und Wegvorschau nutzen dieselbe Zuordnung. Die Ansicht startet bei
-der aktiven Figur; ein gelber Bodenring kennzeichnet sie. Kameratasten stehen
-außerhalb der Szene, „Zur Figur“ und „Ganze Insel/Schale“ setzen die Ansicht
-zurück. Ein einzelner Button wechselt zwischen 3D und 2D. Die Spielerleiste steht
-am unteren Kartenrand. Bei Inselparty öffnen sich Trophäenziel und Inventar über
-halbtransparente Seitenbuttons. Feldsuche und Legende liegen in einem schließbaren Panel.
-Die normale mobile Brettansicht nutzt eine Bildschirmhöhe ohne Seitenscrollen;
-längere Auswahlen dürfen innerhalb eines Panels scrollen. Beim Schließen kehrt
-der Fokus zum Auslöser zurück. Minispiel-Auswahl und Regeltext stehen nicht mehr
-unter dem laufenden Brett. Die bestehende Farbwelt von Inselparty bleibt erhalten.
+Match-Spiele teilen dunkles HUD mit gelbem Titel, eigenen Punkten/Ton, Zwischenstand und großer Spielfläche; eigene Themen je Spiel. Stick links, Aktionen rechts; bei Bomb Arena/Tank Trouble 132 px Steuerreserve und gelber Eigenmarker. Countdown/Ergebnis/Rückmeldung gemeinsam; keine Tastatur-/PC-Erweiterung. [Minispiel-Konzept](docs/minigames/konzept.md).
 
-Roll It Up! verwendet die freigegebene Bauschale mit Emaille, Messingrand und
-grünem Hügel im Inselwelt-Himmel. Lilita One, Lexend, dunkles Glas und die
-vorhandenen Gold-/Steintasten bilden das HUD. Oben stehen eigene Münzen,
-Setfortschritt und Sammelziel; unten die aktuelle Entscheidung und die Zugreihenfolge.
-Die Übersicht zeigt Stationsnamen, die Zugansicht nur Ziel, aktive Figur und
-ausgewählten Ort. Wegwahl zeigt eine Vorschau vor der Bestätigung; beim Kauf stehen
-Utensil und Preis kompakt in einer Zeile. Feldwirkungen erscheinen nur einmal,
-Zugansagen nur vor dem Würfeln. Die Kamera hält ihren Ausschnitt innerhalb eines
-Zuges und fokussiert automatisch erst beim Spielerwechsel neu. Seltene Informationen
-bleiben in schließbaren Panels. Im
-Smartphone-Querformat stehen Welt und Aktionsfläche nebeneinander.
+## Prüfung
 
-In den letzten drei Inselparty-Runden trägt die Rundenanzeige die gelbe Zeile
-„Schlussrunde“. Bis zum ersten Wurf der ersten Schlussrunde steht oben im Zugbereich
-eine tiefblaue Ansage mit gelbem „×2“-Abzeichen, gleich für Ziehende und
-Zuschauende; der Würfelknopf bleibt darunter erreichbar. Die Siegerehrung der Inselparty
-zeigt zuerst die drei Bonus-Trophäen als Zeilen mit goldenem Stern (nicht vergeben:
-grauer Stern), die nacheinander erscheinen, danach Konfetti und Sieger. Das ist der
-einzige Auftritt der Ansicht; reduzierte Bewegung zeigt alles sofort.
-
-Match-Minispiele (`src/matches/`) teilen eine Bühne: oben ein dunkles HUD mit
-gelbem Spieltitel, eigener Punktzahl und Tontaste, darunter ein Zwischenstand
-in Spielerfarben, darunter die Canvas-Spielfläche bis zum unteren Rand (Bomb Arena
-und Tank Trouble: WebGL-Szene in 2.5D, die Canvas bleibt Rückfall; unten bleiben
-132 px für die Steuerelemente frei, die eigene Figur trägt einen gelben Marker). Jedes
-Spiel hat eine eigene Themenwelt innerhalb der Fläche; Countdown, Rückmeldung,
-Ergebnis und Steuerelemente sind gemeinsam. Die Bedienung ist ausschließlich
-Touch: große Tippflächen, Stick links, Aktionstasten rechts, mindestens 44 px.
-Reduzierte Bewegung entfernt Blitze, Pulsieren und Glättung, nicht die
-Spielinformation. Gestaltung und Regeln stehen in [docs/minigames](docs/minigames/konzept.md).
-
-## Umsetzung und Prüfung
-
-Inselwelt-Ansichten bauen auf den Bausteinen aus `inselwelt.css` auf; Regeln, die
-nur eine Ansicht betreffen, stehen in deren eigener CSS-Datei. Menüs vor dem Spiel
-tragen `.iw-menu`, setzen `IslandWorld` und `ScreenHeader` ein und gruppieren Inhalte
-in Pergamentkarten ([menus.css](src/styles/menus.css)); Dialoge tragen `.iw-dialog`.
-Die Menüs laufender Minispiel-Wettbewerbe nutzen bis zu ihrer Umstellung weiter
-`.party-menu` mit den `--menu-*`-Variablen in [partyMenus.css](src/styles/partyMenus.css). Globale Selektoren und `!important` nicht als
-Ersatz für klare Zuständigkeiten einsetzen. Spielregeln, Sitzungen und Transport
-bleiben außerhalb der Gestaltung.
-
-Vor dem Abschluss geänderte Ansichten auf Handybreite visuell prüfen und mit
-Touch bedienen (PC-Prüfungen ruhen vorerst) sowie reduzierte Bewegung,
-lange Namen, Auswahl- und Fehlerzustände berücksichtigen. Die passenden Prüfungen
-gemäß [AGENTS.md](AGENTS.md#passende-prüfungen) ausführen. Für Startseite und Menüs
-existieren `home-screen.spec.ts` und `party-menus.spec.ts` unter `tests/browser/`.
-Browser-Emulation belegt keine Leistung auf einem echten Handy.
-
-Neue Gestaltungsentscheidungen in diesem Dokument festhalten. Implementierte und
-geprüfte Ansichten von bloß geplanten Erweiterungen unterscheiden.
-
-Im Online-Einstieg zuerst Erstellen oder Beitreten wählen. Eine kompakte Figurenliste begleitet beide Wege. QR und Raumcode sind Beitrittsarten. Das lokale Menü gliedert die Spielkarten unter zwei Holzschildern: „Ein Handy für alle“ (Qwixx, Durak, Kribbeln) und „Allein mit Bots“ (Roll It Up!, Inselparty, Freies Minispiel, Schlag den GoldenSchmidt) mit dem Glashinweis „Läuft nur auf diesem Handy, auch ohne Internet.“. Bot-Karten nennen „1–5 Bots“ statt der Spielerzahl; ihre Einrichtung trägt den Spielnamen als Titel.
+Smartphone visuell/per Touch: schmale/kurze Displays, Querformat, lange Namen, Auswahl/Fehler, Fokus, reduzierte Bewegung, Offline-Zugriff. Prüfungen gemäß AGENTS.md; Start/Menüs in `home-screen.spec.ts`/`party-menus.spec.ts`, Rich’s Universe in eigenem Spec. Browseremulation ersetzt keine Android-/iPhone-Messung.

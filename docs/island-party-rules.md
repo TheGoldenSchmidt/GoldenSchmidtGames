@@ -2,7 +2,7 @@
 
 Eine vollständige Partie findet im Mehrspieler-Raum auf den eigenen Geräten
 statt, wahlweise mit Node-Server oder [Handy-Host](../README.md#zwei-hostingarten).
-Die 13 freigegebenen alpha_-Figuren bleiben erhalten. Vor der ersten
+Figuren gemäß [Freigabe](approved-character-design.md). Vor der ersten
 Brett-Runde spielen alle ein zufälliges Auftakt-Minispiel. Das Ergebnis legt
 die feste Zugreihenfolge für sämtliche Runden fest; der Auftakt verteilt noch
 keine Münzen. Bei Punktgleichheit entscheiden weniger Stürze und danach die
@@ -11,7 +11,7 @@ zwischen den Runden nicht mehr.
 
 Die Minispiele nach jeder Brett-Runde vergeben genau 10, 4 und 2 Münzen an die
 drei ersten Plätze; alle weiteren erhalten 0. Nichtteilnahme bleibt ohne
-Belohnung. Auch bei gleicher Punktzahl gibt es eindeutige Plätze. Die Anzeige
+Belohnung. Klassische Arenen lösen Gleichstände eindeutig auf; Match-Spiele können Plätze teilen (siehe unten). Die Anzeige
 und die tatsächliche Gutschrift verwenden dieselbe Wertungsfunktion.
 
 In Roll It Up! bleibt jedes Minispiel-Ergebnis einschließlich Auftakt stehen,
@@ -51,18 +51,9 @@ Einzelübung lassen sich die beiden Platten nacheinander auslösen. Bots spielen
 alle 14 Arenen über dieselben Eingaben wie Menschen. Alle neuen Spiele sind
 in normaler Rotation, im Solo-Testraum und als kurze Übung verfügbar.
 
-## Lesbares Brett und Ankunft
+## Brett und Ankunft
 
-Inselparty und Roll It Up! zeigen größere Figuren auf weiter auseinanderliegenden
-Feldern. Schmale Verbindungen und flach aufliegende Symbole lassen die Figuren
-frei. Die Kamera startet bei der aktiven Figur; Tasten wechseln zur ganzen Karte
-oder zurück zur Figur. Die Welt füllt den Bildschirm; Spielerstände und Aktionen
-liegen als Overlays darin. Feldinfos erscheinen beim Antippen als Pop-up, ohne den
-Kameraausschnitt zu verändern. Zusätzlich gibt es eine umschaltbare klare Übersicht
-und eine aufklappbare Legende mit Feld- und Figurensuche. Auf kleinen Displays bleibt der
-Würfelknopf am unteren Rand erreichbar. Auf dem Brett gibt es keine kurze
-Entscheidungsfrist. Die Figuren bewegen sich mit Normaltempo.
-Die Minispiele behalten ihre jeweiligen Zeitlimits und den gemeinsamen Start.
+Darstellung: [3D-Spielansichten](inselparty-3d.md). Keine kurze Entscheidungsfrist auf dem Brett; Normaltempo. Minispiele behalten Zeitlimits und gemeinsamen Start.
 
 Würfeln und Wegwahl beginnen eine eigene Bewegungsphase. Der Server gibt jeden
 Schritt mit Abfahrts- und Ankunftszeit vor. Erst bei Ankunft wird die Position
@@ -122,25 +113,14 @@ nacheinander, danach die Sieger. Bei reduzierter Bewegung steht alles sofort da;
 das Ergebnis ist in beiden Fällen gleich. Der Satz unter dem Siegernamen spricht
 nur die Sieger mit „Du“ an.
 
-## Geschlossene Räume
+## Räume nach Spielende
 
-Nach dem letzten gewerteten Minispiel endet die Partie automatisch. Der letzte
-Minispielstand bleibt in der Siegerehrung nachlesbar. Der Host kann jederzeit
-über „Partie → Partie für alle beenden“ abbrechen. In beiden Fällen werden Raum,
-Sitzungstokens, Botsteuerung und Mitgliedschaften sofort entfernt. Verbundene
-Spieler sehen weiterhin ihre Abschlussanzeige, können aber nicht erneut beitreten.
-
-Das Startmenü fragt die gespeicherte Sitzung zunächst beim Server ab. Nur eine
-tatsächlich gültige, aktive Sitzung bietet „Online-Inselparty wieder beitreten“.
-Die Statusabfrage tritt dem Raum nicht bei und hebt keine Verbindungspause auf.
-Geschlossene Räume melden dies auch an angemeldete Status-Beobachter; der Knopf
-und der lokale Sitzungsverweis verschwinden dann sofort. Ohne Serververbindung
-wird kein ungeprüfter Wiederbeitritt angeboten.
+Normale Räume bleiben nach Spielende/Abbruch erhalten. Mitglieder können zum Ergebnis wiederbeitreten; „Zurück zur Lobby“ setzt denselben Raum für alle zurück. Dort gibt „Party verlassen“ den eigenen Platz frei; der Host kann den Raum für alle löschen. Seedbasierte Testräume schließen unmittelbar nach Ende. Schlüssel, Wiederverbindung und Speicherung: [Deployment](../DEPLOYMENT.md#speicherung-und-wiederherstellung).
 
 ## Eigenständige Minispielmodi
 
 **Freies Minispiel** und **Schlag den GoldenSchmidt** verwenden dieselben
-Minispiele (14 klassische Arenen und 12 Match-Spiele), Teilnahme- und
+Minispiele aus dem [Minispielkatalog](../shared/minigameCatalog.ts), Teilnahme- und
 Gleichstandsregeln wie die Inselparty. Beide
 Modi laufen für 2–6 Personen auf getrennten Geräten mit Node-Server oder
 Handy-Host. Brett, Auftakt zur Zugreihenfolge und Münzausschüttung entfallen.
@@ -173,7 +153,7 @@ Pausen-, Wiederbeitritts- und Raumschließungsregeln gelten auch hier.
 
 ## Match-Minispiele und 1st Generation Minigames
 
-Die 14 ersten Arenen und das Match-Spiel Hook Wars bilden die **1st Generation
+Die 14 ersten Arenen sowie Hook Wars, Chaos Run und Wippenwerk bilden die **1st Generation
 Minigames** (`FIRST_GEN_MINI_IDS`). Inselparty, Roll It Up! und Schlag den
 GoldenSchmidt speichern dafür die Option `classic` (Standard: an). Ohne sie
 ziehen die Modi nur neue Match-Minispiele, die zur Zahl der
@@ -183,38 +163,22 @@ passendes Spiel gibt oder deren Rundenzahl die Auswahl übersteigt.
 Match-Minispiele ermitteln ihre Platzierung selbst, einschließlich eigener
 Stechregeln. Bleibt danach ein Gleichstand, teilen sich die Spieler den Platz
 und erhalten dieselbe Belohnung: in der Inselparty die Münzen dieses Platzes
-(10/4/2), im Wettbewerb jeweils den eigenen Einsatz. Ohne eigene Eingabe gilt
+(10/4/2), im Wettbewerb nur auf dem ersten Platz jeweils den eigenen Einsatz. Ohne eigene Eingabe gilt
 eine Person als nicht teilnehmend. „Aufgeben“ beendet die Teilnahme; später
 Aufgebende stehen vor früher Aufgebenden. Bleibt nur eine Person übrig, endet
 das Match. Details: [Konzept](minigames/konzept.md).
 
-## Tests
+## Grundregeln der Brettspiele
 
-`test:rules` prüft in `scripts/party-duel-test.ts` die Duellfelder (Einsatzgrenzen,
-Pott, Zuschauen, Unentschieden, Verzicht, Frist, Bots); `test:online` spielt
-dabei ein Duell über den Socket, `tests/browser/party-duel.spec.ts` den Ablauf
-auf dem Handy in beiden Bewegungseinstellungen.
-`test:rules` prüft in `scripts/party-finale-test.ts` den wechselnden
-Trophäenstand, die Schlussrunden mit Rückenwind und die Bonus-Trophäen samt
-Gleichständen. `tests/browser/party-finale.spec.ts` spielt eine Partie mit zwei
-Geräten bis zur Siegerehrung, in beiden Bewegungseinstellungen.
-`test:rules` prüft zusätzlich alle neuen Mechaniken, Körperkontakte, Stürze,
-eindeutige Auszahlungen, den Auftakt, feste Reihenfolge und Wirkungen nach
-Ankunft. Deterministische Replays und echte Botsteuerung laufen für 14 Arenen
-und alle 12 Match-Spiele (je ein eigener Regeltest in `scripts/`).
-`test:online` spielt eine vollständige Partie und prüft die Rückkehr in die Lobby nach Spielende,
-Verlassen und Beenden der wartenden Lobby,
-Host-Rechte, Status-Beobachter und ungültige Tokens. Browserfälle decken alle
-14 Arenen, Neigung, Touch-/Tastatursteuerung, sechs Modelle, Kartenansichten,
-Auftakt und Wiederbeitritt ab. Die CI führt `test:rules` und `test:online`
-automatisch aus; die Browserfälle (Projekt `phone`) laufen nur in der von Hand
-gestarteten ausführlichen Prüfung, siehe [README](../README.md#automatische-prüfungen).
+**Inselparty:** 2–6 Personen, 5–15 Runden (Standard 8), Startkapital 10 Münzen. Trophäe kostet 20; Sieg nach Trophäen, Münzen, Minispielsiegen. Hafenüberquerung gibt 3 Münzen, normale Felder wirken beim Landen. Inventar: drei Items, ein Einsatz vor dem Würfeln. Auftakt/Rundenminispiele wie oben.
 
-Die eigenständigen Modi haben zusätzliche Regel- und Socketfälle in
-`scripts/minigame-modes-test.ts` und `scripts/minigame-modes-online-test.ts`.
-Sie sind in `test:rules` beziehungsweise `test:online` eingebunden. Der
-Neustarttest prüft einen gespeicherten, weiterhin verdeckten Einsatz.
-`tests/browser/minigame-modes.spec.ts` prüft Lobby, Eingabe, Wiederbeitritt und
-Abschluss in beiden Bewegungseinstellungen; `nearby.spec.ts` enthält beide
-Modi mit direktem Datenkanal und erneuter Paarung. Dies ersetzt keine Prüfung
-auf echten Handys.
+**Roll It Up!:** 2–6 Personen, kein Rundenlimit. Bauschale mit sechs Kaufstellen im Abstand von fünf Feldern: Grinder 8 Münzen, Pape/Filter je 3, drei Weedbuds je 5. Jede Figur kauft jede Station einmal für ihr Set; Zug-Items bleiben getrennt mit drei Inventarplätzen. Mit vollem Set führen Hügelwege ab Feld 31/33 zum Jayspot auf Feld 34. Erste Ankunft gewinnt sofort, auch mit restlichen Würfelschritten. Auftakt bestimmt Reihenfolge, gemeinsame Minispiele liefern Münzen.
+
+## Prüfungen
+
+Befehle/CI: [AGENTS.md](../AGENTS.md#passende-prüfungen).
+
+- `scripts/party-duel-test.ts`, `party-finale-test.ts`, Party-/Arena-/Match-Regeltests: Einsätze, Felder, Reihenfolge, Stürze, Gleichstände, Boni und deterministische Wiederholung.
+- `test:online`: Partie/Duell, Lobby-Rückkehr, Verlassen/Schließen, Hostrechte und Sitzungsschutz.
+- Eigenständige Modi: `scripts/minigame-modes-test.ts`, `minigame-modes-online-test.ts`; Neustart mit verdecktem Einsatz.
+- Smartphone: `party-duel.spec.ts`, `party-finale.spec.ts`, `minigame-modes.spec.ts`, Arena-/Wiederbeitrittsfälle und `nearby.spec.ts`. Beide Bewegungseinstellungen; Sensoren simuliert. Gerätefreigabe bleibt gesondert.

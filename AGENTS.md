@@ -1,60 +1,55 @@
 # GoldenSchmidtGames
 
-Private, installierbare Spielesammlung für eine Freundesrunde. Im Online-Spiel nutzt jede Person ihr eigenes Handy. Neue Spiele sollen sich einzeln ausprobieren lassen. Der Betrieb soll dauerhaft ohne laufende Kosten auskommen.
+Private Smartphone-Spielesammlung für Freunde; Betrieb ohne laufende Kosten. Online nutzt jede Person ihr eigenes Handy. Neue Spiele einzeln erprobbar halten.
 
-## Spielregeln und Online-Räume
+## Zusammenarbeit und Auslieferung
 
-- Lege Regeln und Wertung im jeweiligen Spielmodul in `shared/` ab. Lokales Spiel und beide Hostingarten verwenden dieselben Regelfunktionen. Für ein neues Spiel sind [Spielekatalog](shared/games.ts), [Raumlogik](shared/roomCore.ts) und [Auswahl der Spielansicht](src/App.tsx) die Einstiegspunkte. Inselparty braucht getrennte Geräte, wahlweise mit Node-Server oder Handy-Host.
-- Neue Minispiele sind Match-Module in `shared/matches/` mit Darstellung in `src/matches/`. Vor der Arbeit [Backlog](docs/minigames/backlog.md) und [Konzept](docs/minigames/konzept.md) lesen und den Stand dort nachführen.
-- Die gewählte Raumautorität entscheidet über Züge, Würfe und Punkte. Node-Server und Handy-Worker verwenden `shared/roomCore.ts`; halte die Transportadapter frei von Spielregeln. Prüfe Nachrichten vor jeder Zustandsänderung und bestätige Züge erst nach dem Speichern. Beim Wiederbeitritt muss der Schlüssel zum Raum und zum Spieler passen. Sende jedem Gerät nur seine eigene Sicht, insbesondere bei Durak-Handkarten und Sitzungsschlüsseln. Beim Handy-Hosting bleibt dasselbe Host-Gerät zuständig.
+TheGoldenSchmidt verantwortet Integration und Betrieb, Rich seinen [Bereich](src/richs-universe/README.md). Diese Regeln gelten für Menschen sowie Codex und Claude Code.
 
-## Spieloberfläche
+- `main` ist der vorgesehene Live-Branch: **nur Pull Requests, keine direkten Pushes**. Render-Konfiguration: Auslieferung nach erfolgreichen CI-Checks. Kein Merge während eines Spielabends; Neustarts können Node-Partien unterbrechen oder bei flüchtigem Speicher löschen.
+- Jede Aufgabe auf eigenem Branch vom aktuellen `origin/main`: `<person>/<thema>`, Agenten `codex/<thema>` bzw. `claude/<thema>`. Ein Branch gehört einer Person; fremde Branches nicht umschreiben, kein Force-Push. Parallele Agenten-Sitzungen verwenden getrennte Worktrees.
+- Vor dem PR `origin/main` einmischen, Konflikte lösen und passende Prüfungen erneut ausführen. Besonders auf gemeinsame Einstiegspunkte achten: `src/App.tsx`, `src/screens/HomeScreen.tsx`, `shared/games.ts`, `shared/roomCore.ts`, `package-lock.json`.
+- PR: Ziel, Änderungen, Prüfungen und offene Punkte nennen; schnelle CI muss grün sein. **Merge nur nach Freigabe durch TheGoldenSchmidt**, danach Aufgabenbranch löschen. CODEOWNERS-Zuständigkeit ersetzt diese Freigabe nicht.
+- Vorher absprechen: `shared/roomCore.ts`, `server/`, Sitzungen/Wiederbeitritt, Socket-Nachrichten, `.github/workflows/`, `render.yaml`, `Dockerfile`, Abhängigkeiten, diese Datei, `designregeln.md`, Inselparty-Regeln und Figurenfreigabe. Eine konkrete Freigabe im laufenden Auftrag gilt; nicht erneut fragen.
+- Rich arbeitet in `src/richs-universe/`; Änderungen außerhalb vorher absprechen. Nur die dortigen `experiments/` sind von den Designregeln ausgenommen, Zugang und Untermenü folgen ihnen. Gemeinsame Sicherheits-, Offline- und Qualitätsanforderungen bleiben bestehen.
+- Mit `npm ci` installieren. `package-lock.json` nur zusammen mit einer abgesprochenen Änderung an `package.json` committen. Keine Zugangsdaten ins Repo; Render und Turso verwaltet der Betreiber.
+- Übergabe: Ziel, Branch/Commit, PR-Link sofern vorhanden, offene lokale Änderungen, geprüfte und offene Punkte.
 
-Bei **jeder UI-Erweiterung und UI-Bearbeitung** zuerst die [Designregeln](designregeln.md) lesen und anwenden. Sie legen Stil, Farben, Komponenten, Bewegung und responsive Gestaltung fest; den dort beschriebenen Geltungsbereich für Menüs und Spielansichten beachten.
+Technische Einrichtung und noch offene Betreiberaufgaben: [Deployment](DEPLOYMENT.md#einrichtung-durch-den-betreiber).
 
-Bei **jeder UI-Designaufgabe** den Skill `frontend-design:frontend-design` lesen und anwenden; fehlt er in der Sitzung (z. B. in Cloud-Sitzungen), das in der Übergabe nennen. Für HUDs, Menüs und Overlays zusätzlich [game-ui-frontend](.agents/skills/game-ui-frontend/SKILL.md) nutzen. Gestalte zuerst für Touch auf getrennten Handys. Inselparty, Roll It Up! und alle Minispiele sind nur für Smartphones vorgesehen: keine PC-Layouts, keine Tastaturbedienung und keine Desktop-Tests dafür. Auch die übrigen Ansichten werden vorerst nur auf dem Smartphone geprüft; PC-Prüfungen ruhen, bis die App wieder für den PC vorgesehen ist. Animationen erklären Spieleraktionen und respektieren `prefers-reduced-motion`. Beide Bewegungseinstellungen müssen zum selben Spielergebnis führen.
+## Architektur
+
+- Regeln/Wertung in `shared/`; lokal, Node und Handy-Host verwenden dieselben Funktionen. Einstieg: [Katalog](shared/games.ts), [Raumkern](shared/roomCore.ts), [Ansichtsauswahl](src/App.tsx).
+- Match-Minispiele: `shared/matches/` und `src/matches/`. Vorher [Backlog](docs/minigames/backlog.md) und [Konzept](docs/minigames/konzept.md) lesen und relevante Änderungen nachführen.
+- Raumautorität entscheidet über Züge, Würfe und Punkte; beide Hostingadapter verwenden `roomCore` ohne eigene Spielregeln. Nachrichten vor Zustandsänderung prüfen, Erfolg erst nach Speicherung bestätigen.
+- Wiederbeitritt nur mit passendem Raum-, Spieler- und Sitzungsschlüssel. Jedes Gerät erhält nur seine Sicht; verdeckte Karten, Einsätze und Schlüssel schützen. Beim Handy-Hosting bleibt dasselbe Host-Gerät zuständig.
+
+## Oberfläche
+
+Bei UI-Änderungen zuerst [Designregeln](designregeln.md) samt Geltungsbereich anwenden. Bei UI-Design `frontend-design:frontend-design` nutzen; fehlt er, in der Übergabe nennen. Für HUDs/Menüs/Overlays zusätzlich [game-ui-frontend](.agents/skills/game-ui-frontend/SKILL.md).
+
+Touch auf getrennten Handys zuerst. Inselparty, Roll It Up! und Minispiele: keine PC-Layouts, Tastaturbedienung oder Desktop-Tests. PC-Prüfungen ruhen auch für übrige Ansichten. Animationen erklären Aktionen; `prefers-reduced-motion` beachten, mit identischem Spielergebnis.
 
 ## Passende Prüfungen
 
 | Änderung | Lokal prüfen |
 | --- | --- |
-| Regeln, Wertung oder Bots | `npm run test:rules` |
-| Raum, Sitzung oder Socket-Nachricht | `npm run test:online`. Bei Änderungen am Wiederbeitritt auch `tests/browser/room-session.spec.ts`, für Handy-Hosting `tests/browser/nearby.spec.ts` ausführen. |
-| Spielansicht oder Bedienung | `npm run test:screens`, danach den betroffenen Playwright-Fall ausführen. `npm run test:browser` nutzt nur das Projekt `phone`; die ruhenden PC-Fälle startet `npm run test:browser:desktop`. |
-| PWA-Update oder Auslieferung | `npm run test:pwa` für den Updateablauf, `npm run build` und `npm run test:production` für die gebaute App. |
+| Regeln, Wertung, Bots | `npm run test:rules` |
+| Raum, Sitzung, Socket | `npm run test:online`; Wiederbeitritt zusätzlich `tests/browser/room-session.spec.ts`, Handy-Hosting `tests/browser/nearby.spec.ts` |
+| Spielansicht/Bedienung | `npm run test:screens`, danach betroffener Playwright-Fall |
+| Rich’s Universe | `npm run build`, `npm run test:screens`, dann `npm run test:browser -- tests/browser/richs-universe.spec.ts` |
+| PWA/Auslieferung | `npm run test:pwa`, `npm run build`, `npm run test:production` |
 
-Playwright startet den Server mit dem Inhalt von `dist/`. Passt der vorinstallierte Browser nicht zur Playwright-Version, `PLAYWRIGHT_CHROMIUM_PATH` auf die Chromium-Datei setzen. Nach Client- und nach `shared/`-Änderungen zuerst `npm run build` (der Testserver nutzt den Quellcode, der Client `dist/`), dann z. B. `npm run test:browser -- tests/browser/qwixx-cup.spec.ts` ausführen. Tests dürfen nicht voraussetzen, dass ein bestimmtes Minispiel zufällig gezogen wird; dafür `toArenaMini` bzw. `participate` aus `tests/browser/party-session.ts` nutzen. Das Projekt `phone` emuliert Touch in Chromium. Für Aussagen zur 3D-Leistung oder zu Bewegungssensoren auf einem echten Handy prüfen.
+Nach Client-/`shared/`-Änderungen **vor Playwright bauen**: Server verwendet Quellcode, Client `dist/`. Beispiel: `npm run build`, danach `npm run test:browser -- tests/browser/qwixx-cup.spec.ts`. Bei Browser-Versionsabweichung `PLAYWRIGHT_CHROMIUM_PATH` setzen.
 
-Die GitHub-CI ist auf wenige Actions-Minuten ausgelegt: Automatisch läuft nur die schnelle Prüfung (Build, `test:rules`, `test:screens`, `test:pwa`, `test:online`, `test:production`) bei Pushes auf `main` und bei Pull Requests. Die Browsertests laufen dort nur in der ausführlichen Prüfung per manuellem Start (Actions → CI → „Run workflow“, optional mit einzelnen Spec-Dateien). Diese nur auf ausdrücklichen Wunsch starten und betroffene Browserfälle sonst lokal ausführen.
+`test:browser` nutzt `phone` (Chromium-Touchemulation); ruhende PC-Fälle: `test:browser:desktop`. Zufallsminispiele über `toArenaMini`/`participate` aus `tests/browser/party-session.ts` behandeln. 3D-Leistung und Sensorfunktion nur auf echten Handys belegen.
 
-## Projektwissen und Übergabe
+CI: schnelle Prüfung (Build, Regeln, Screens, PWA, Online, Produktion) bei jedem PR und Push auf `main`, auch für Doku. So erhalten Pflichtprüfungen und Render für jeden Commit ein Ergebnis. Actions-Verbrauch gemeinsam sparsam halten; ausführliche Browser-CI weiterhin **nur auf ausdrücklichen Wunsch** manuell starten, optional einzelne Specs. Sonst betroffene Fälle lokal prüfen.
 
-Nutze [documentation-audit](.agents/skills/documentation-audit/SKILL.md) auf ausdrückliche Anforderung, für regelmäßige Dokumentationsprüfungen oder nach größeren Entwicklungsmeilensteinen (z. B. Architektur-, Hosting- oder Spielmodulerweiterungen). Kleine Codeänderungen lösen keinen vollständigen Audit aus.
+## Dokumentation
 
-[README](README.md) für den Einstieg, [Deployment](DEPLOYMENT.md) für Hosting und Speichergrenzen, [Inselparty-Regeln](docs/island-party-rules.md) und [Figurenfreigabe](docs/approved-character-design.md) für verbindliche Spielentscheidungen. Änderungen an solchen Entscheidungen im zuständigen Dokument festhalten.
+[README](README.md): Einstieg; [Deployment](DEPLOYMENT.md): Betrieb/Speicher; [Inselparty-Regeln](docs/island-party-rules.md) und [Figurenfreigabe](docs/approved-character-design.md): verbindliche Entscheidungen.
 
-Bei parallelen Codex-Chats pro unabhängiger Änderung einen eigenen Worktree nutzen. Zur Übergabe Ziel, Branch und Commit, offene lokale Änderungen sowie geprüfte und noch offene Punkte nennen.
-Fange für jede neue Aufgabe einen neuen Branch an.
+[documentation-audit](.agents/skills/documentation-audit/SKILL.md) bei angefordertem/regelmäßigem Audit oder größeren Architektur-, Hosting- oder Spielmodul-Meilensteinen; nicht bei kleinen Änderungen.
 
-
-## Kontinuierliche Verbesserung und Dokumentationspflege
-
-- Prüfe bei relevanten Änderungen, ob bestehende
-  Projektdokumentation aktualisiert werden muss.
-- Aktualisiere betroffene Dokumentation im selben
-  Auftrag, sofern die Änderung tatsächlich
-  implementiert und überprüft wurde.
-- Entferne nachweislich veraltete Informationen
-  und vermeide redundante Dokumentation.
-- Unterscheide implementierte, getestete und
-  lediglich geplante Funktionalität.
-- Identifiziere wiederkehrende Fehler,
-  unklare Anweisungen und ineffiziente Workflows.
-- Schlage daraus konkrete Verbesserungen an
-  AGENTS.md, Guidelines oder Skills vor.
-- Ändere grundlegende Agentenregeln und
-  Qualitätsanforderungen nur nach Freigabe.
-- Schwäche niemals Tests oder Sicherheitsregeln
-  ab, nur um eine Aufgabe abzuschließen.
-- Halte Dokumentationsänderungen klein,
-  nachvollziehbar und im Git-Diff überprüfbar.
+Betroffene Doku im selben Auftrag knapp nachführen, wenn die Änderung implementiert und überprüft ist. Veraltetes nur nach Beleg entfernen, Dopplungen vermeiden; implementiert/getestet/geplant unterscheiden. Dauerhafte Entscheidungen einmal im zuständigen Dokument pflegen. Wiederkehrende Fehler und ineffiziente Abläufe belegen und konkrete Regel-/Skillverbesserungen vorschlagen. Grundlegende Agentenregeln und Qualitätsanforderungen nur nach Freigabe ändern; Tests und Sicherheitsregeln niemals abschwächen. Diff klein und prüfbar halten.

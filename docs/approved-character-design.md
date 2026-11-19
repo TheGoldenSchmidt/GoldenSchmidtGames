@@ -1,61 +1,22 @@
-# Freigegebene Charaktere
+# Freigegebene Figuren
 
-Spielbar sind zwei Gruppen (Register in `shared/characters.ts`):
+Register: `shared/characters.ts`. Neue Modelle nur nach ausdrücklicher Freigabe.
 
-- **Animierte Figuren** (seit Nov. 2026, elf Stück, Kennung `rig_…`): Figuren mit
-  Skelett und Animationen. Sechs Menschen aus den Quaternius-Basisfiguren (Jonas,
-  Amara, Malik, Lena, Erik, Zoe; sie bleiben in Unterwäsche in Spielerfarbe),
-  drei umgestaltete Menschen (MC Goldie: Rapper mit Oversize-Hoodie in
-  Spielerfarbe, weiter dunkler Jeans, Sneakern, Cap, Sonnenbrille und schwerer
-  Goldkette mit großem „G“; Lil Schmidt: zweiter Rapper mit hellem
-  Oversize-Hoodie, weiter Trainingshose in Spielerfarbe, Beanie, Sneakern und
-  feiner Goldkette mit großem „£“; beide tragen Kleidung als Stoffschicht; Kiki
-  Komet: Comic-Heldin mit Kontur, großen Proportionen, Stern und Maske) und zwei
-  eigene Entwürfe aus
-  Grundformen (Bolt: Roboter; Glubschi: einäugiges Monster). Quellen CC0 bzw.
-  eigene Gestaltung. Keine Nachbildungen geschützter Figuren.
-- **Klassische Figuren**: die 13 ausdrücklich ausgewählten alpha_-Figuren. The
-  Coon wurde zweimal genannt und wird einmal angeboten. Die Originaldateien aus
-  PC_Fighters bleiben unverändert; eigene Kopien enthalten Herkunfts-Hashes.
+| Gruppe | Freigabe |
+| --- | --- |
+| Animiert | Jonas, Amara, Malik, Lena, Erik, Zoe; MC Goldie, Lil Schmidt, Kiki Komet; Bolt, Glubschi |
+| Klassisch | Die 13 ausgewählten `alpha_*`-Modelle; The Coon einmal. Originale aus PC_Fighters unverändert, Kopien mit Herkunfts-Hashes. |
 
-**Richtung:** Langfristig bleiben nur animierte Figuren. Neue Figuren kommen
-hinzu, die sechs Basismenschen werden nicht ersetzt; die klassischen stehen
-bis zur Umstellung aller Spiele weiter zur Wahl. Beide Gruppen funktionieren in
-allen Spielen: Animierte Figuren erscheinen überall selbst. Wer eine klassische
-Figur wählt, sieht in Sumo Smash und Chaos Run (reine Skelett-Szenen) einen der
-sechs Menschen nach Farbplatz.
+Sechs Basismenschen bleiben in Unterwäsche in Spielerfarbe. MC Goldie: Oversize-Hoodie in Spielerfarbe, dunkle weite Jeans, Sneaker, Cap, Sonnenbrille, schwere Goldkette mit G. Lil Schmidt: heller Oversize-Hoodie, weite Trainingshose in Spielerfarbe, Beanie, Sneaker, feine Goldkette mit £. Kleidung als Stoffschicht. Kiki Komet: Comic-Proportionen, Kontur, Stern/Maske. Bolt: Roboter; Glubschi: einäugiges Monster aus eigenen Grundformen. Quellen CC0 bzw. eigene Gestaltung; keine neuen Nachbildungen geschützter Figuren.
 
-Vor Raum, Beitritt oder Solo-Test wird eine Figur gewählt. Eine große Bühne
-zeigt die Wahl, darunter stehen die Bildschaltflächen in zwei Gruppen
-(„Animierte Figuren“ zuerst, dann „Klassische Figuren“). Ohne Wahl bleiben
-Raumaktionen gesperrt. In der Lobby kann die Figur vor dem Start gewechselt
-werden. Lokale Spieler bekommen dieselbe Auswahl im Setup.
+Langfristig nur animierte Figuren; neue ergänzen die sechs Basismenschen. Klassische bleiben bis Umstellung aller Spiele wählbar. In Sumo, Bumper Mayhem, Chaos Run und Parcours verwenden klassische Wahlen einen Basismenschen nach Farbplatz, weil Skelettaktionen erforderlich sind. Andere Szenen zeigen die gewählte klassische Figur.
 
-Menüs, Figurenwahl und Lobby folgen dem Party-Stil aus den
-[Designregeln](../designregeln.md). Die Spielansichten behalten Hafenblau
-#10485b, Wasser #94def1, Sand #ffe5a1, Sonne #ffd258, Koralle #e87565
-und Papier #fffdf8. Trebuchet MS bleibt die Spielschrift.
-Figurenname und bestätigte Auswahl führen; Hinweise sind kurz und linksbündig.
+## Auswahl und Darstellung
 
-PC: [ große 3D-Bühne ] [ Figurennamen und Bildauswahl ]
-Handy: [ Bühne ] [ Bildauswahl in drei Spalten ] [ Raumaktionen ]
+Vor Raumzugang/Solo-Test Figur wählen, ohne Wahl Aktionen sperren. In Lobby vor Start wechselbar, lokale Plätze im Setup. Animierte Gruppe zuerst. Eine gemeinsame drehbare 3D-Vorschau, statische Portraits in Listen; keine weiteren WebGL-Kontexte. Name, Auswahlrahmen, Häkchen und Modell stimmen überein. Lobby-Galerie zunächst zu, Bereitschaft erreichbar.
 
-Vorabkritik: Farbpunkte machen Serienfiguren schwer erkennbar. Daher echte
-Vorschaubilder und ein einziges aktives 3D-Modell. Listen und Punktestände
-verwenden dieselben Bilder, statt zusätzliche WebGL-Kontexte zu öffnen.
-Alle Spiele und Intros erhalten dieselbe Zuordnung (Besonderheit der
-Skelett-Szenen siehe oben). Technik und Erzeugung:
-[Animierte Figuren](minigames/figuren-rigged.md). Bewegung respektiert
-die Systemeinstellung und verändert keine Regeln.
+Menüs nach [Designregeln](../designregeln.md); bestehende Spiele behalten Palette/Schrift bis beauftragter Umstellung. Portraits unverzerrt, auf Handybreite unterscheidbar; Spielerfarbe zusätzlich markieren.
 
-Für sechs Spieler werden Details innerhalb derselben beweglichen Gruppe
-zusammengeführt. Arme, Beine und Animationsziele behalten ihre Hierarchie.
-Qualitätsanpassung verändert ausschließlich Grafik, niemals Physik.
+Identische Physik. Oberflächen nur innerhalb beweglicher Gruppen bündeln, Hierarchie/Animationsziele erhalten; Qualität ausschließlich grafisch anpassen. Reduzierte Bewegung ändert keine Regeln.
 
-Visuelle Prüfung: Die Portraits machen alle 13 Modelle auf Handybreite
-unterscheidbar; Auswahlrahmen und Häkchen bestätigen denselben Namen wie die
-3D-Bühne. In der Lobby wäre die erneut offene Galerie zu lang. Deshalb zeigt
-sie zunächst nur die eigene Figur mit „Spielfigur ändern“; die Bereitschaft
-bleibt schnell erreichbar. Spielerlisten benötigen keinen eigenen Canvas.
-Die Sechs-Spieler-Ansicht wurde mit unterschiedlichen Modellen als Screenshot
-geprüft. Automatisierte Browserprüfungen ergänzen die Sichtkontrolle.
+Technik/Herkunft: [klassische Modelle](party-characters-and-testing.md), [Skelettfiguren](minigames/figuren-rigged.md). Smartphone-Prüfung: Auswahl, sechs unterschiedliche Modelle auf Insel/Arena, automatisierte Fälle plus Sichtkontrolle.
