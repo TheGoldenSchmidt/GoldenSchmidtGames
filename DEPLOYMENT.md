@@ -1,40 +1,32 @@
-# GoldenSchmidtGames über einen Link bereitstellen
+# Bereitstellung und Spielstände
 
-Die Anwendung bietet zwei Raumtypen. Der bisherige Node-Prozess liefert die PWA aus und hält die Socket.IO-Verbindungen für Serverräume offen. Beim Handy-Hosting liefert der Webhost nur die App-Dateien; Spielstand und Spielverkehr bleiben bei der Gruppe.
+## Wann ausgeliefert wird
+
+[render.yaml](render.yaml) legt `branch: main` und `autoDeployTrigger: checksPass` fest: Render soll neue Commits erst nach erfolgreichen CI-Checks ausliefern. Anders als `commit` wartet diese Einstellung auf Prüfungen; ohne erkannte Checks startet kein Deployment ([Render-Dokumentation](https://render.com/docs/deploys#integrating-with-ci)).
+
+Die [CI](.github/workflows/ci.yml) läuft daher bei **jedem** PR und Push auf `main`, auch für reine Doku. Schneller Job: Build, Regeln, Screens, PWA, Online, Produktion. Browserprüfungen nur auf ausdrücklichen Wunsch per **Actions → CI → Run workflow**, optional einzelne Specs. Keine automatischen Läufe für andere Branch-Pushes.
+
+Diese Datei beschreibt die versionierte Konfiguration. Ob der bestehende Render-Service den Blueprint bereits synchronisiert hat und tatsächlich `main`/„After CI Checks Pass“ verwendet, muss der Betreiber im Dashboard prüfen. Der bisherige Modus war `commit`.
+
+Deployments starten den Node-Prozess neu, können Wiederverbindungen/Cold Starts verursachen und bei flüchtigem Speicher Partien löschen. Lokale und Handy-gehostete Spielstände liegen auf den Geräten. Nicht während eines Spielabends mergen; [Zusammenarbeitsregeln](AGENTS.md#zusammenarbeit-und-auslieferung).
+
+Installierte Apps übernehmen heruntergeladene Updates erst nach Bestätigung im Startmenü. Socket-/Zustandsänderungen abwärtskompatibel halten oder vor dem nächsten Spielabend alle Geräte aktualisieren. Laufende Spiele werden nicht automatisch neu geladen.
+
+Im Repository ist keine separate Testumgebung eingerichtet. Vor Merge lokal bauen und mit `npm start` prüfen; Handys erreichen den Server im selben WLAN über dessen Netzwerkadresse/Port. Kamera, Installation und Service Worker brauchen einen sicheren Kontext (HTTPS; localhost nur auf demselben Gerät).
+
+Rücknahme: voriges Deployment im Render-Dashboard wiederherstellen oder einen `git revert` als PR nach `main` bringen. Kein Force-Push. Bei geändertem Speicherformat zuvor Rückwärtskompatibilität prüfen.
 
 ## Handy-Hosting
 
-1. Auf jedem Gerät die aktuelle App über HTTPS vollständig laden und möglichst installieren, solange Internet vorhanden ist. Die PWA speichert auch Worker, QR-Leser und Spielmodule offline.
-2. Alle Geräte mit demselben WLAN oder Hotspot verbinden. Der Host wählt beim Erstellen **Dieses Handy** und spielt selbst mit. Für jeden Gast **Gerät verbinden** öffnen; der Gast scannt die Einladung unter **Raum beitreten → QR vom Handy-Host**, anschließend scannt der Host die Antwort. Mehrteilige Codes vollständig durchblättern. Alternativ können die Textcodes übertragen werden.
-3. Das Host-Handy bleibt in der App und entsperrt. Ein Wechsel in den Hintergrund pausiert die Simulation; nach der Rückkehr läuft sie weiter. Bei einem vollständigen App-Neustart stellt dasselbe Gerät den Tisch aus IndexedDB wieder her. Gäste benötigen nach verlorener Direktverbindung eine neue QR-Paarung. Es gibt keinen automatischen Wechsel auf ein anderes Host-Gerät.
+1. Die aktuelle PWA auf **jedem Gerät** über HTTPS vollständig laden, möglichst installieren. Spielmodule, Worker und QR-Leser werden offline gespeichert.
+2. Host: **Dieses Handy → Gerät verbinden**. Gast: **Raum beitreten → QR vom Handy-Host**. Gast scannt Einladung, Host scannt Antwort; mehrteilige Codes vollständig übertragen. Textcodes ersetzen die Kamera.
+3. Host-Handy entsperrt in der App lassen. Im Hintergrund pausiert die Simulation. Nach vollständigem Neustart stellt dasselbe Gerät den Tisch wieder her; Gäste koppeln sich bei verlorener Verbindung erneut.
 
-Für diese Räume sind keine Turso-Zugangsdaten und kein laufender Spielserver erforderlich. `npm run build` erzeugt zusätzlich eine statisch auslieferbare PWA in `dist/`. Ein vorhandener Node-Webhost darf diese weiterhin ausliefern. Reines statisches Hosting ermöglicht ausschließlich Handy-Räume und lokale Spiele; die Node-Auswahl benötigt weiterhin einen erreichbaren Socket.IO-Server.
+Kein Spielserver, Turso oder externer ICE-Server nötig. WebRTC braucht gegenseitige Erreichbarkeit im WLAN/Hotspot; Geräteisolation kann Verbindungen verhindern. Kamera benötigt ausdrückliche Freigabe. Für haltbare Spielstände keinen privaten Modus verwenden oder Browserdaten löschen. Kein automatischer Host-Gerätewechsel; Speicherfehler unterbrechen vor Bestätigung eines ungespeicherten Zugs.
 
-Die direkte WebRTC-Verbindung verwendet keine externen ICE-Server. Geräte müssen einander im lokalen Netz erreichen können; Gastnetze mit Geräteisolation und manche Hotspots verhindern das. Die Kamera benötigt HTTPS und ausdrückliche Freigabe. Bei gesperrter Kamera bleibt die Textcode-Eingabe verfügbar. Browserdaten nicht löschen und nicht im privaten Modus spielen, wenn der Tisch erhalten bleiben soll. Ein Gerätespeicherfehler führt zu einer Unterbrechung, bevor ein ungespeicherter Zug bestätigt wird.
+## Node starten
 
-`tests/browser/nearby.spec.ts` prüft echte Datenkanäle und Wiederherstellung mit Chromium. Vor praktischer Freigabe zusätzlich mit echten Android-/iPhone-Geräten im vorgesehenen Hotspot prüfen: fünf Personen, gleichzeitige Arena-Steuerung, Kamerapaarung, kurzzeitiger App-Wechsel, gesperrter Bildschirm, vollständiger Host-Neustart und Start ohne Internet. Browseremulation ersetzt diese Prüfung nicht.
-
-## Anforderungen an den Hoster
-
-- Node.js 22 oder neuer oder Docker
-- öffentliche HTTPS-Adresse
-- Unterstützung für WebSockets
-- dauerhaft laufender Prozess; kein rein statisches Hosting
-- Umgebungsvariable `PORT` wird vom Hoster vorgegeben
-
-## Render Blueprint
-
-Die [Render-Konfiguration](render.yaml) verwendet einen einzelnen Docker-Web-Service im Free-Tarif und startet **ohne Turso-Zugangsdaten**. Beide Hostingarten sind damit auswählbar. Der Node-Modus speichert dann lokal in `.gsg-data/rooms.db`. Dessen [lokales Dateisystem ist auf Render Free flüchtig](https://render.com/docs/free): Node-Partien können bei einem Neustart, Einschlafen oder Deployment verloren gehen. Der Server weist beim Start darauf hin. Das betrifft nicht die auf dem Host-Handy gespeicherten Partien.
-
-Für das Testen beider Hostingarten sind keine Datenbankeinrichtung und keine Turso-Variablen erforderlich. Eine neue Blueprint-Installation fragt keine Zugangsdaten ab. Für Node-Spielstände, die auch den Verlust des Render-Dateisystems überstehen sollen, kann optional externer Speicher eingerichtet werden:
-
-1. Im [Turso-Free-Tarif](https://turso.tech/pricing) eine eigene Datenbank für die Spielesammlung anlegen. Free auswählen und kostenpflichtige Zusatznutzung ausgeschaltet lassen.
-2. Die Datenbankadresse und ein Schreib-Token für **diese** Datenbank im Render-Service unter **Environment** als `TURSO_DATABASE_URL` und `TURSO_AUTH_TOKEN` hinterlegen. Nur der Server benötigt sie. Beide Werte entweder gemeinsam setzen oder gemeinsam entfernen. Bei unvollständiger oder ungültiger Cloud-Konfiguration stoppt der Start; der Server wechselt dann nicht unbemerkt auf einen leeren lokalen Speicher.
-3. Den Service deployen. Der Server legt die Tabellen an und lädt die Räume, bevor er Verbindungen annimmt. `/api/health` meldet HTTP 200, wenn der Server spielbereit ist. Für einen Handtest auf zwei Handys einen Zug durchführen, den Dienst neu starten und beide Spielansichten geöffnet lassen.
-
-Die Kombination ist innerhalb der Freikontingente kostenfrei. Cold Starts können die Wiederverbindung verlängern. Bei einem Schreibfehler bestätigt der Server den Zug erst nach einem erfolgreichen Speichervorgang. Er trennt die Verbindungen und lädt den letzten gespeicherten Stand erneut. Für die erste Umstellung einen Zeitpunkt zwischen zwei Partien wählen: Die Vorgängerversion hielt ihre Räume ausschließlich im Arbeitsspeicher.
-
-## Start ohne Docker
+Node.js ≥22 oder Docker, HTTPS, WebSockets und laufender Prozess erforderlich; `PORT` kommt vom Hoster. App und Socket.IO unter derselben Adresse. `/api/health` meldet HTTP 200 erst nach Speicherinitialisierung.
 
 ```bash
 npm ci
@@ -42,21 +34,52 @@ npm run build
 npm start
 ```
 
-Der Server liefert App, Manifest, Service Worker und WebSocket-Endpunkt anschließend über dieselbe Adresse aus. `/api/health` kann als Health-Check verwendet werden.
-
-## Start mit Docker
+Docker mit dauerhaftem Volume:
 
 ```bash
 docker build -t goldenschmidtgames .
 docker run --rm -p 3000:3000 -e PORT=3000 -v gsg-spielstaende:/app/.gsg-data goldenschmidtgames
 ```
 
-Nach dem Veröffentlichen wird nur noch die HTTPS-Adresse geteilt. Android bietet die Installation direkt im Browser an. Auf dem iPhone wird die Seite in Safari über „Teilen“ und „Zum Home-Bildschirm“ installiert.
+Statisches Hosting unterstützt lokale Spiele und Handy-Räume; Serverräume brauchen einen erreichbaren Socket.IO-Server.
 
-## Spielstände und Wiederherstellung
+## Render und optional Turso
 
-Ohne Cloud-Konfiguration verwendet der Server `.gsg-data/rooms.db`, auch auf Render. Über `GSG_DATABASE_FILE` lässt sich eine andere Datei angeben; sie übersteht den Verlust des Host-Dateisystems nur auf einem dauerhaften Datenträger. Die Datenbank enthält auch verdeckte Karten und Sitzungsschlüssel. Sie gehört weder ins Repository noch in öffentlich ausgelieferte Verzeichnisse.
+Der Blueprint startet einen einzelnen Docker-Service im Free-Tarif ohne Datenbank-Zugangsdaten. Beide Hostingarten funktionieren. Auf [Render Free ist lokaler Speicher flüchtig](https://render.com/docs/free): Neustart, Einschlafen oder Deployment können Node-Partien löschen. Handy-Spielstände sind davon unabhängig.
 
-Jeder bestätigte Spielzug wird gemeinsam mit dem vollständigen Raumzustand gespeichert, einschließlich verdeckter Einsätze und Gesamtpunkte bei Schlag den GoldenSchmidt. Wiederholte Zugnachrichten moderner Clients werden über die gespeicherte Zugnummer erkannt. Alle Modi mit 3D-Minispielen sichern zusätzlich während laufender Arenen ungefähr einmal pro Sekunde die Simulation. Bei einem harten Abbruch kann eine noch unbestätigte Bewegung bis zum letzten gespeicherten Stand zurückspringen. Die Spieluhr pausiert während der Unterbrechung. Mehrere Instanzen dürfen nicht gleichzeitig spielen: Beim Deployment übernimmt die neue Instanz das Schreibrecht.
+Für dauerhafte Node-Spielstände optional:
 
-Solange der Speicher erhalten bleibt, ist ein vollständig verwaister Spielraum sieben Tage wiederherstellbar, eine leere Lobby fünf Minuten. Nach Spielende (auch Abbruch) bleibt der Raum bestehen: „Zurück zur Lobby“ (`room:lobby`) setzt ihn für alle Mitglieder in die Lobby zurück, Sitzungsschlüssel bleiben gültig: Wer bei Spielende nicht verbunden war, kehrt mit seinem Schlüssel zum Endbildschirm zurück; Fremde treten erst bei, wenn der Raum wieder in der Lobby ist. Schlägt die Rückkehr wegen einer Verbindungsunterbrechung oder eines pausierten Host-Handys fehl, wiederholt das Gerät sie und bleibt im Raum. Der Ergebnisbildschirm führt online nur zurück in die Lobby. In der wartenden Lobby gibt „Party verlassen“ (`room:leave`) den eigenen Platz und Schlüssel frei; verlässt der Host den Raum, übernimmt ein Mitspieler. Das Host-Handy kann den Raum nur für alle beenden. „Party für alle beenden“ (`room:close`, nur Host, nur in der Lobby) schließt und löscht den Raum; alle Geräte kehren ins Startmenü zurück. Nur seedbasierte Testräume werden nach Spielende unmittelbar geschlossen. Die lokalen Neustart- und Speicherfehlertests laufen mit `npm run test:restart` und sind Teil von `npm run test:online`. Der Neustarttest startet den echten Server mit `RENDER=true` ohne Turso, prüft App-Auslieferung sowie Qwixx, Durak, Kribbeln, Inselparty und beide eigenständigen Minispielmodi und behält seine Testdatei über Prozessabbrüche hinweg. Er simuliert keinen dauerhaften Datenträger auf Render Free.
+1. Eigene Datenbank im [Turso-Free-Tarif](https://turso.tech/pricing) anlegen, kostenpflichtige Zusatznutzung ausschalten.
+2. `TURSO_DATABASE_URL` und Schreib-Token `TURSO_AUTH_TOKEN` gemeinsam in Render setzen, ausschließlich serverseitig. Unvollständige/ungültige Konfiguration stoppt den Start; kein stiller Wechsel auf lokalen Speicher.
+3. Deployen; Tabellen/Räume werden vor Verbindungsannahme geladen. Auf zwei Handys einen Zug ausführen, Dienst neu starten und Wiederherstellung prüfen.
+
+Kostenfreiheit gilt innerhalb der aktuellen Freikontingente; Betreiber prüft Tarifgrenzen. Zugänge/Umgebungsvariablen für Render und Turso verwaltet nur der Betreiber.
+
+## Speicherung und Wiederherstellung
+
+- Ohne Turso: `.gsg-data/rooms.db`; eigener Pfad über `GSG_DATABASE_FILE`. Dauerhaftigkeit erfordert einen beständigen Datenträger.
+- Datenbank enthält verdeckte Karten, Einsätze und Sitzungsschlüssel: niemals veröffentlichen oder einchecken.
+- Bestätigte Züge und vollständigen Raumzustand gemeinsam speichern; gespeicherte Zugnummern erkennen Wiederholungen. Arenen sichern etwa jede Sekunde. Harte Abbrüche können unbestätigte Bewegungen zurücksetzen; Spieluhr pausiert.
+- Bei Schreibfehler Verbindungen trennen, letzten gespeicherten Stand laden. Keine Bestätigung vor erfolgreicher Speicherung.
+- Nur eine schreibende Instanz; beim Deployment übernimmt die neue das Schreibrecht.
+- Bei erhaltenem Speicher: verwaiste Spielräume sieben Tage, leere Lobbys fünf Minuten wiederherstellbar.
+- Nach Ende/Abbruch bleibt der Raum erhalten. **Zurück zur Lobby** (`room:lobby`) setzt ihn für alle zurück, Schlüssel bleiben gültig. Getrennte Mitglieder kehren zunächst zum Endbildschirm zurück, neue Gäste erst zur Lobby. Unterbrochene Lobby-Rückkehr wird wiederholt.
+- In der Lobby gibt **Party verlassen** (`room:leave`) Platz/Schlüssel frei. Beim Node-Host übernimmt ein Mitspieler; das Host-Handy kann nur für alle beenden.
+- **Party für alle beenden** (`room:close`, nur Host in Lobby) löscht den Raum. Seedbasierte Testräume schließen unmittelbar nach Spielende.
+
+## Einrichtung durch den Betreiber
+
+Stand 19. November 2026: GitHub meldet das Repository als **öffentlich**, `main` ungeschützt und automatisches Branch-Löschen aus. Die App ist weiterhin für eine private Freundesrunde gedacht.
+
+Noch einzurichten/zu bestätigen:
+
+- Einladung an `rreicherter` annehmen lassen und Schreibrecht prüfen; erst dann kann der CODEOWNERS-Eintrag Reviews zuweisen.
+- `main` schützen: PR und erfolgreichen CI-Job `test` verlangen, Force-Push/Löschen verbieten. Merge-Freigabe bleibt bei TheGoldenSchmidt; CODEOWNERS allein erzwingt sie nicht.
+- Automatisches Löschen gemergter Aufgabenbranches aktivieren. Alte Branches gemeinsam auf offene Arbeit prüfen, erst danach löschen.
+- Render-Blueprint synchronisieren; Deploy-Branch `main` und CI-Abwarten im Dashboard bestätigen.
+
+## Prüfgrenzen
+
+`npm run test:restart` (Teil von `test:online`) prüft Neustart/Speicherfehler am echten Server, auch `RENDER=true` ohne Turso. Das beweist keine Haltbarkeit des Render-Free-Dateisystems.
+
+`tests/browser/nearby.spec.ts` enthält Datenkanal-/Wiederherstellungsfälle. Android/iPhone im vorgesehenen Hotspot zusätzlich prüfen: fünf Personen, gleichzeitige Steuerung, QR-Kamera, App-Wechsel, Sperrbildschirm, Host-Neustart und Offline-Start. Browseremulation ersetzt diese Prüfung nicht.

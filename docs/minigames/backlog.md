@@ -1,219 +1,34 @@
-# Backlog: Match-Minispiele
+# Minispiele: Stand und offene Arbeit
 
-Persistenter Arbeitsstand für die zwölf neuen Minispiele. Bei jeder
-Sitzung zuerst hier lesen und am Ende aktualisieren. Konzept:
-[konzept.md](konzept.md) · Regeln: [spezifikation.md](spezifikation.md).
+Architektur/Abweichungen: [Konzept](konzept.md). Ausgangsregeln: [Spezifikation](spezifikation.md). Bei relevanten Änderungen nachführen; erledigte Phasen und Rückmeldungen bleiben in der Git-Historie.
 
-Statuswerte: **offen** · **in Arbeit** · **fertig** (Lobby bis
-Ergebnis, automatisch getestet) · **blockiert**.
+## Implementiert
 
-## Phasen
+Match-Framework, Touch-Steuerung, Bots/Übung, Party-/Wettbewerbsanbindung und beide Hostingadapter. Spiele: `MATCH_IDS` in `shared/matches/framework.ts`; Gruppen/Zufallspool: `shared/minigameCatalog.ts`.
 
-| Phase | Inhalt | Status |
-| --- | --- | --- |
-| 0 | Analyse, Konzept, Spezifikation, Backlog | fertig |
-| 1 | Framework, Klassik-Option, Nur-Smartphone-Umstellung, Testspiel | fertig |
-| 2 | Quick Draw, Light Trails, Neon Pong | fertig (Gerätetest offen) |
-| 3 | Tank Trouble, Bomb Arena, Floor is Lava | fertig (Gerätetest offen) |
-| 4 | Sumo Smash, Bumper Mayhem, Chaos Run | fertig (Gerätetest offen) |
-| 5 | Arrow Masters, Tower Tumble, Hook Wars | fertig (Gerätetest offen) |
-| 6 | Qualitätssicherung, Leistung, Feinschliff, Dokumentation | weitgehend fertig; Gerätetests offen (siehe unten) |
+- Ursprüngliche Match-Spiele plus Turmsicht, Hindernis-Parcours und Standhaft; freie Wahl einzelner Läufe, gemeinsame Gewichtung im Zufallspool.
+- Erste Generation: 14 klassische Arenen, Hook Wars, Chaos Run und Wippenwerk; weiter direkt wählbar.
+- Proberaum: lokale Übungsinsel mit neun Stationen, Pause/Reset, Figurenwahl und Animationsvorschau; kein Minispiel-/Pool-Eintrag.
+- 3D-Match-Szenen mit Canvas-Rückfall. Figurenpipeline: [Skelettfiguren](figuren-rigged.md).
 
-## Spiele
+**Implementiert ist keine Abnahme auf echten Handys.**
 
-| # | Spiel | Kennung | Spieler | Priorität | Status | Automatische Tests |
-| --- | --- | --- | --- | --- | --- | --- |
-| 1 | Quick Draw | `quickdraw` | 2–6 | P1 | fertig | Regeln (`quickdraw-test`), Socket (`match-online-test`), Browser `phone` |
-| 2 | Light Trails | `trails` | 2–6 | P1 | fertig | Regeln (`light-trails-test`), Browser `phone` |
-| 3 | Neon Pong | `pong` | 2 oder 4 | P1 | fertig | Regeln (`neon-pong-test`, 1v1 und 2v2), Browser `phone` 1v1/2v2 |
-| 4 | Tank Trouble | `tanks` | 2–6 | P2 | fertig | Regeln (`tank-trouble-test`), Browser `phone` |
-| 5 | Bomb Arena | `bombs` | 2–6 | P2 | fertig | Regeln (`bomb-arena-test`), Browser `phone` |
-| 6 | Floor is Lava | `lava` | 2–6 | P2 | fertig | Regeln (`floor-is-lava-test`), Browser `phone` |
-| 7 | Sumo Smash | `sumo` | 2–6 | P3 | fertig | Regeln (`ring-games-test`), Browser `phone` |
-| 8 | Bumper Mayhem | `bumpercars` | 2–6 | P3 | fertig | Regeln (`ring-games-test`), Browser `phone` |
-| 9 | Chaos Run | `chaosrun` | 2–6 | P3 | fertig, seit Nov. 2026 bei den 1st Generation Minigames | Regeln (`chaos-run-test`), Browser `phone` |
-| 10 | Arrow Masters | `arrows` | 2–6 | P4 | fertig | Regeln (`arrow-masters-test`), Browser `phone` |
-| 11 | Tower Tumble | `tower` | 2–6 | P4 | fertig | Regeln (`tower-tumble-test`), Browser `phone` |
-| 12 | Hook Wars | `hooks` | 2–6 | P4 | fertig, seit Nov. 2026 bei den 1st Generation Minigames | Regeln (`hook-wars-test`), Browser `phone` |
-| 13 | Tank Trouble – Turmsicht | `tankview` | 2–6 | P2 | fertig (Nov. 2026, Gerätetest offen) | Regeln (`tank-view-test`), Browser `phone` |
-| 14–21 | Hindernis-Parcours: Türenlotto, Kreiselkurs, Glibberflut, Geisterpfad, Fallklappen, Windkanal, Kletterwand (im Zufallspool ein Eintrag); Wippenwerk seit der dritten Rückmelderunde bei den 1st Generation Minigames | `tuerenlotto`, `kreiselkurs`, `wippenwerk`, `glibberflut`, `geisterpfad`, `fallklappen`, `windkanal`, `kletterwand` | 2–6 | P2 | fertig (Nov. 2026, Gerätetest und Balance offen) | Regeln (`parcours-test`), Browser `phone` |
-| 22 | Standhaft (Finale) | `standhaft` | 2–6 | P2 | fertig (Nov. 2026, Gerätetest offen) | Regeln (`parcours-test`), Browser `phone` |
+## Offen
 
-„Fertig“ heißt: in Lobby, Zufallspool, Übung (gegen Bots), Bot-Testraum,
-Wettbewerb und Inselparty spielbar; Ergebnis fließt in die bestehende Wertung.
-Leistung und Bedienung auf echten Handys sind für kein Spiel geprüft.
-
-## Phase 1: umgesetzt
-
-- `shared/matches/types.ts`, `framework.ts`: Modulvertrag, Registrierung,
-  Spielerzahl/Teams, Eingabeprüfung (`MatchInput` mit kumulativen Zählern),
-  fester 50-ms-Schritt, harte Zeitgrenze, öffentliche Sicht, Laufzeitschätzung,
-  Aufgeben/Abbruch (`presence`), Ranglisten mit geteilten Plätzen, Bot-Eingaben.
-- `shared/minigameCatalog.ts`: gemeinsamer Pool aus Match- und klassischen
-  Spielen; Option `classic` für Inselparty, Roll It Up! und Wettbewerb.
-- `shared/party.ts`, `roomCore.ts`, `partyBots.ts`: Start, Takt, Ende,
-  Wertung (`partyMiniResults`), Pausen, Neustart, `party:match` mit 10/20 Hz.
-- `src/matches/`: Bühne (`MatchStage`), Steuerelemente (Tippfläche, Stick,
-  Aktionstaste, Wischfläche, Schieberegler, Zielfläche), Töne, Registrierung.
-- Lobby: Checkbox „1st Generation Minigames“ (früher „Klassische Minispiele“), getrennte Auswahlgruppen,
-  Übungsliste mit neuen Spielen, Bot-Testwerkzeug mit allen Spielen.
-- Testspiel: `scripts/match-framework-test.ts` prüft das Framework mit einem
-  eigenen Tippzähler-Modul ohne Lobbyeintrag.
-- Nur Smartphone: Playwright-Projekt `desktop` ignoriert Party- und
-  Minispiel-Specs; gemischte Specs überspringen Party-Fälle auf dem Desktop.
-
-## Gemeinsame Bausteine
-
-- `geometry.ts`: Kreis-Rechteck-Abstoßung, Kreis-Kreis-Trennung, Strahl-Rechteck-Test.
-- `ringCore.ts`: Ring-Out-Kern für Sumo Smash und Bumper Mayhem.
-- Muster „Durchgänge mit Pause, Punkte je überlebtem Gegner, Stechen“:
-  Light Trails, Bomb Arena, Floor is Lava.
-- Steuerelemente in `src/matches/controls.tsx`: `Stick`, `ActionButton` mit
-  Abklingring, `AimPad`, `SwipeZone`, `SliderPad` (mit Loslassen), `TapZone`.
-- Neue Spiele: Kennungen dürfen nicht mit klassischen Arena-Kennungen
-  kollidieren (`bumper` ist „Kugelrempler“, daher `bumpercars`).
-
-## Architekturentscheidungen (Kurzfassung)
-
-Siehe [konzept.md](konzept.md#architekturentscheidungen) und die Tabelle
-„Dokumentierte Abweichungen“. Ergänzungen aus der Umsetzung:
-
-- **Aufgeben statt Versuch beenden:** Die bestehende Aktion `finish` lässt in
-  Match-Spielen die Person ausscheiden. Später Aufgebende stehen vor früher
-  Aufgebenden; bleibt höchstens eine Person, endet das Match.
-- **Teilnahme:** Wer im Match keine Eingabe gesendet hat, gilt wie bisher als
-  nicht teilnehmend und erhält keine Münzen oder Einsatzpunkte.
-- **Schlanke öffentliche Sicht:** fremde Spieler nur mit Kennung, Farbe, Team
-  und Anwesenheit; Ereignisse der letzten 1,5 s; Zahlen auf 1/1000 gerundet.
-- **Tower Tumble** ist seit Nov. 2026 ein Turmrennen mit eigener,
-  deterministischer Starrkörperphysik (`physics2d.ts`, Begründung im Konzept).
-- **Klassische Tastaturbedienung** der 3D-Arenen bleibt vorerst im Code
-  (bestehende `phone`-Tests nutzen sie), wird aber nicht weiterentwickelt.
-
-## Teststatus
-
-| Prüfung | Stand |
+| Thema | Nächster Schritt |
 | --- | --- |
-| `npm run test:rules` inkl. Framework und allen zwölf Spielen | grün |
-| `npm run test:online` inkl. `match-online-test` und Neustart mit laufendem Match | grün |
-| `npm run test:screens` | grün |
-| `npm run build`, `npm run test:pwa`, `npm run test:production` | grün |
-| Playwright `phone`, `match-games.spec.ts` (34 Fälle, alle zwölf Spiele; Stand Nov. 2026 nach Pfeilsteuerung und Etagen) | grün |
-| Playwright `phone`, gesamte Suite ohne Handy-Hosting-Fälle | 103 von 106 grün; die 3 roten (Testhelfer) korrigiert und danach 51 von 51 in dreifacher Wiederholung grün |
-| Playwright `desktop`, gesamte Suite ohne Handy-Hosting-Fälle (Party und Minispiele ausgenommen) | 35 grün, 2 übersprungen |
-| Handy-Hosting-Browserfälle (`nearby.spec.ts`, „Handy-Einladung“) | in dieser Cloud-Umgebung nicht lauffähig (WebRTC), auch nicht auf dem Ausgangsstand |
-| Echte Handys (Leistung, Touch, Latenz, Handy-Host mit 6 Spielern) | nicht durchgeführt |
+| Echte Geräte | Android/iPhone, möglichst älteres Gerät, Node und Handy-Host bis sechs Geräte nach [Gerätetest](geraetetest.md) prüfen. |
+| Handy-Hosting | `nearby.spec.ts` mit Match-Spielen in WebRTC-fähiger Umgebung prüfen. Frühere Cloud-Grenzen sind kein aktueller Laufbeleg. CI nur auf ausdrücklichen Wunsch. |
+| Tower Tumble | Hohe Türme, Pfeilsteuerung und Leistung auf Handy-Host/Render Free messen. Bots nur zum Üben. |
+| Kamera/Balance | Klettern, Balkentreffer, Sprung/Hechten, Lava-Etagen/Respawn/Schubser, kleine Figuren, Light-Trails-Lenkung, Quick-Draw-Fairness und Funklatenz beurteilen. |
+| Bots | Insbesondere Hook Wars, Chaos Run und Windkanal einfach; keine hohe Spielstärke zugesichert. |
+| Arrow Masters | Ego-Perspektive offen, Spezialpfeile vorhanden. |
+| Weitere Läufe | Ideen: Teamstaffel, Rutschbahn, wechselndes Labyrinth, weitere Finals. Nicht implementiert. |
 
-Abgedeckt sind je Spiel: Start bis Ergebnis über die Party, Siegbedingungen,
-Gleichstände und Stechen, Zeitablauf, Aufgeben, gleichzeitige Ereignisse,
-deterministische Wiederholung, JSON-Neustart mitten im Spiel sowie 2, 4 und 6
-Spieler (Neon Pong 1v1 und 2v2). Netzverzögerung ist für Quick Draw
-(Laufzeitprüfung) und allgemein für doppelte, alte und verlorene Pakete
-geprüft; echte Funknetze nicht.
+## Prüfungen
 
-## Offene Probleme
+Befehle/CI/Build-Reihenfolge: [AGENTS.md](../../AGENTS.md#passende-prüfungen).
 
-- **Echte Geräte:** 60 FPS, Touchgefühl, Lesbarkeit kleiner Figuren (Arrow
-  Masters, Sumo), Quick-Draw-Fairness im WLAN und Handy-Host mit sechs Geräten
-  sind nicht geprüft.
-- **Handy-Hosting im Browser:** `nearby.spec.ts` braucht eine Umgebung mit
-  WebRTC (z. B. CI). Der Handy-Worker nutzt denselben Raumkern; mit
-  Match-Spielen ist er im Browser noch nicht geprüft.
-- **Bots** sind für Übung und Testräume gedacht, nicht als starke Gegner;
-  besonders Hook Wars und Chaos Run spielen einfach.
-- **Neon Pong** steht nur bei 2 oder 4 aktiven Spielern im Pool.
-- **Tower Tumble** braucht als einziges Spiel spürbar Rechenzeit (≈ 12 ms je
-  Spielsekunde im Bot-Spiel, bis ≈ 50 ms bei sechs hohen wackelnden Türmen in
-  Node); auf Handy-Host und Render Free ungeprüft. Bots verlieren viele
-  Steine und taugen nur zum Üben.
-- **Floor is Lava** sendet mit drei Etagen etwa 3,6 statt 2,4 KB je Sicht;
-  Figuren auf tieferen Etagen sind teils von den Platten darüber verdeckt.
-- **Zufallsziehung in Tests:** Tests, die ein bestimmtes Minispiel erwarten,
-  müssen es wählen oder gezogene Match-Spiele durchspielen
-  (`toArenaMini`, `participate` in `tests/browser/party-session.ts`).
-- **Browsertests nach Änderungen in `shared/`:** Der Testserver nutzt den
-  Quellcode, der Client `dist/`; vorher `npm run build`.
+Regeltests unter `scripts/`: Determinismus, JSON-Neustart, Gleichstände, Zeitlimits, Teilnahme, 2/4/6 Personen (Neon Pong 2/4). Online: Match-, Modus- und Neustarttests. Smartphone: `match-games.spec.ts`, `practice-world.spec.ts`, `nearby.spec.ts`. Zufallsminispiele mit `toArenaMini`/`participate` aus `party-session.ts` behandeln.
 
-## Rückmeldung aus der ersten Spielrunde (Nov. 2026)
-
-| Spiel | Rückmeldung | Stand |
-| --- | --- | --- |
-| Sumo Smash, Bumper Mayhem | Rückstoß viel zu klein | **umgesetzt**: Kontrollverlust nach Treffern, stärkerer Stoß; Wurfweite im Regeltest abgesichert (Sumo ≈ 5 statt 0,8 Einheiten, seitlicher Rammstoß ≈ 6 statt 3,5) |
-| Neon Pong | Schläger zu langsam | **umgesetzt**: 42 statt 16 Feldeinheiten/s, eigene Anzeige läuft weiter voraus |
-| Arrow Masters | Nach jedem Schuss andere Startplätze | **umgesetzt**: neun Plätze, jede Runde neu verteilt |
-| Tower Tumble | Mechanik und Physik nicht schön | **umgesetzt**: Neubau als Turmrennen mit echter 2D-Starrkörperphysik, Drehen, schnellem Fallen und Landehilfe (eigenständiges Spiel im Genre, keine Kopie); Gefühl auf echten Handys offen |
-| Hook Wars | Prinzip unverständlich | **umgesetzt**: vorerst zu den 1st Generation Minigames verschoben (nur mit Haken im Zufallspool, weiter direkt wählbar) |
-| Floor is Lava | Lieber als 3D-Hindernislauf mit Figuren | **umgesetzt** als 2.5D-Tempel über Lava mit Figuren und neuem Schubser (kein Hindernislauf); Plan und Stand in [plan-floor-is-lava.md](plan-floor-is-lava.md), Gerätetest offen |
-
-## Rückmeldung aus der zweiten Runde (Nov. 2026)
-
-| Spiel | Rückmeldung | Stand |
-| --- | --- | --- |
-| Tower Tumble | Hängt und ruckelt am Handy | **umgesetzt**: Ursache war vor allem Rechenzeit der Raumautorität (Übung und Handy-Host rechnen auf dem Handy, Render Free hat wenig CPU): zusammengefasste Kollisionsboxen, schlanker Solver, Warmstart als Zahlenliste, Sicht ohne Kopie der Physikdaten (`publicGame`); auf dem Gerät Zellen als vorgezeichnete Bilder und zeitbasierte Kamera. Werte in [konzept.md](konzept.md#architekturentscheidungen); echtes Handy offen |
-| Tower Tumble | Lieber links/rechts-Pfeile statt Schieben | **umgesetzt**: ⇦ ⇨ links unten (halbe Zelle je Tipp, Halten wiederholt), ⟳ und ⇩ rechts unten; Regeltest und Playwright `phone` |
-| Alle | Ego- oder 3rd-Person-Perspektive statt alles sehen | **umgesetzt** für die genannten Spiele nach [plan-perspektiven-und-parcours.md](plan-perspektiven-und-parcours.md): Floor is Lava mit Verfolgerkamera (Übersicht per Knopf) und Tank Trouble – Turmsicht (nur Sichtlinie) umgesetzt |
-| Chaos Run | Alternative: selbst gelaufener Hindernis-Parcours mit Laufen, Springen, Hechten, Festhalten, Ducken | **umgesetzt** als fünf eigene Läufe (Türenlotto, Kreiselkurs, Wippenwerk, Glibberflut, Geisterpfad), Stand in [plan-perspektiven-und-parcours.md](plan-perspektiven-und-parcours.md); Gerätetest und Balance offen |
-| Floor is Lava | Über mehrere Etagen spielen | **umgesetzt**: drei Etagen, Durchfallen statt Lava bis zur untersten Etage; Regeltest, Playwright `phone` (beide Bewegungseinstellungen, sechs Figuren, 2D-Rückfall); Gerätetest offen |
-
-Gefühl auf echten Handys ist für die umgesetzten Punkte weiter ungeprüft.
-
-## Rückmeldung aus der dritten Runde (Nov. 2026)
-
-| Spiel | Rückmeldung | Stand |
-| --- | --- | --- |
-| Alle mit Verfolgerkamera (Parcours, Floor is Lava, Turmsicht) | Kamera dreht beim Laufen mit | **umgesetzt**: Kamera steht nach Start, Respawn bzw. neuem Durchgang hinter der Figur und dreht danach nur per Wischen; der Stick bleibt kamerarelativ |
-| Standhaft, Kreiselkurs, Geisterpfad | Umgehauen ohne Treffer; Balken fahren durch die Figur | **umgesetzt**: Hindernisse werden zum selben Zeitpunkt wie die (interpolierten) Figuren gezeichnet (vorher ≈ 50 ms voraus); engere Trefferzone (0,48 m); Balken sind fest: Wer getroffen wird, fliegt vor dem Balken her und nach außen weg und wird während der Schutzzeit weitergeschoben statt durchfahren; ruhende Balken blockieren nur. Schieber und Walzen stoßen weg („Weggeschoben!“). Seitenkontakte rechnen mit runder Figur (kein Hängenbleiben an bündigen Ecken) |
-| Kreiselkurs | Kollision katastrophal, stark ausarbeiten | **umgesetzt**: neue, längere Strecke (73 m) mit Einzelbalken, gegenläufigem Zwillingspaar, Kreuz aus hohem und niedrigem Balken, wandernden Inseln, zwei flinken Wippen und einem Rührwerk aus drei schnellen Kurzbalken |
-| Kletterwand | Hochglitschen statt Klettern, Animation unpassend | **umgesetzt**: Hochziehen ist eine 0,62-s-Bewegung (erst die Wand hoch, dann auf die Kante) mit Kletteranimation `ClimbUp_1m` (Quaternius UAL 2); Hängen mit eigener Pose, Figur blickt zur Wand. An hohe Kanten springen und den Stick zur Wand drücken genügt (Festhalten-Knopf weiter möglich); an Gräben greift nur der Knopf. Wände, Pfosten und Türen sind nicht erkletterbar |
-| Windkanal (alle Läufe) | Sprungpose bleibt nach der Landung | **umgesetzt**: Absprung ohne Ausholphase und schneller abgespielt, Landung beendet die Sprunganimation sofort; Ducken mit Hockanimation statt Rutschen |
-| Glibberflut | Etwas schwieriger und länger | **umgesetzt**: 80 statt 57 m, zusätzliches Oberdeck mit Walzen, schmalem Steg mit Schieber und dritter Kante; Glibber steigt schneller (0,34 m/s ab 3,5 s) |
-| Wippenwerk | Wippen zu träge, kein eigenes Spiel wert | **umgesetzt**: Wippen reagieren schneller und kräftiger; Wippenwerk zu den 1st Generation Minigames verschoben (weiter direkt wählbar), zwei Wippen sind jetzt Teil des Kreiselkurses |
-| Türenlotto | Länger, mehr Reihen und Türen, Sackgassen und Falltüren | **umgesetzt**: vier Reihen mit je sechs Türen auf 12 m Breite (64 m); zwei Reihen mit Gängen hinter den Türen: Gänge führen weiter, enden an einem massiven Ausgang (Sackgasse) oder haben eine Falltür als Boden. Massive Türen werden nach dem Antesten für alle dunkel markiert |
-| Tower Tumble | Steine höher starten lassen; Kamera im Ziel nach unten | **umgesetzt**: Start 7 statt 4,5 Einheiten über dem Turm; Kamera lief bei hohen Türmen in die falsche Richtung (Vorzeichenfehler), jetzt folgt sie nach oben |
-| Arrow Masters | Mehr Möglichkeiten beim Schuss, evtl. Ego-Perspektive | **teilweise**: je einmal pro Partie Dreifachpfeil (Fächer aus drei Pfeilen) und schwerer Pfeil (vom Wind unbeeinflusst, Treffer −2); Wahl verdeckt bis zum Abschuss. Ego-Perspektive **offen** (eigener 3D-Umbau, für ein stärkeres Modell vorgemerkt) |
-| Bumper Mayhem | 2.5D; nach Ring-Out alle auf die Startplätze | **umgesetzt**, siehe 2.5D-Tabelle; Reset gemeinsam mit Sumo |
-| Sumo Smash | Ring flackert; nach Ring-Out alle auf die Startplätze | **umgesetzt**: Spielfläche liegt sichtbar über dem Außenring (vorher 0,8 mm Abstand: Z-Fighting). Nach jedem Ring-Out halten alle 2 s an und starten dann von ihren eigenen Startplätzen (mit kurzem Schutz) |
-| Floor is Lava | Nach dem Tod aufrecht spawnen; Gegner der Etage darüber nicht zeigen; Hechten | **umgesetzt**: Respawn ohne Umfall-Animation; Figuren auf höheren Etagen sind für Lebende unsichtbar; neuer Knopf Hechten (flach über zwei Platten, danach 0,45 s liegen, alle 3,5 s) |
-| Light Trails | Größeres Feld, stetige statt 90°-Bewegung | **umgesetzt**: freies Feld 30 × 48 statt Raster 21 × 33, Lenkrate 3,3 rad/s; Stick zeigt die Richtung, ⟲/⟳ halten lenkt voll; Spur als kompakte Zeichenkette in der Sicht (6 Bots: größte Sicht ≈ 3 KB, ≈ 10 ms Rechenzeit je Spielsekunde) |
-| Quick Draw | Mehr täuschende Effekte, z. B. „Don't shoot“ im Signalstil | **umgesetzt**: rote Tafeln im exakt gleichen Stil wie „ZIEH!“ (inkl. Blitz und Ton) mit „NICHT ZIEHEN!“, „ZIEH… NICHT!“, „ZIEGE!“, „ZIEL!“, „ZIEHT NICHT!“; dazu weißer Blitz und Schuss in der Ferne; bis zu drei Täuschungen je Runde |
-| Bomb Arena | Bomben und Gegner als Hindernisse, man kann eingesperrt werden | **umgesetzt**: Gegner blockieren wie Bomben (eigenes und Zielfeld); Respawn nur auf freie Startfelder |
-
-Nachbesserungen danach:
-
-| Spiel | Rückmeldung | Stand |
-| --- | --- | --- |
-| Tank Trouble – Turmsicht | Kamera rechts oben drehen, damit gleichzeitig gelenkt werden kann | **umgesetzt**: Wischfeld oben rechts, Zielfläche untere rechte Hälfte; Playwright prüft Stick und Kamera mit zwei Fingern gleichzeitig |
-| Floor is Lava | Am Rand herunterfallen; nach dem Sturz kein Respawn | **umgesetzt**: kein Geländer mehr – über den Rand (auch geschubst) geht es direkt in die Lava. Ursache des fehlenden Respawns: Die Figur wurde sofort und unsichtbar auf eine Platte gesetzt, die unter ihr gleich zerbröselte, und war nach 1,2 s endgültig raus. Jetzt fällt sie sichtbar in die Lava, kommt nach 1 s von oben auf eine sichere Platte abseits des einstürzenden Rands zurück, und während des Schutzes (1,5 s) bröseln Platten unter ihr nicht |
-| Sumo Smash | Neustart aller nur im 1-gegen-1 | **umgesetzt**: Neustart von den Startplätzen nur, wenn zwei übrig sind; mit mehr Kämpfern kehrt nur die herausgefallene Figur nach 2 s auf einen freien Platz zurück. Bumper Mayhem behält den Neustart für alle (`restart` in `RingRules`) |
-
-| Standhaft (und alle Läufe mit Drehbalken) | Kollision weiter schlecht und oft falsch | **umgesetzt**: Hauptursache war die 3D-Darstellung – die Balken drehten gespiegelt zur Physik (Spitze z. B. bei z −0,6 gezeichnet, berechnet bei 10,6), seit Beginn des Parcours. Jetzt gemeinsame Zuordnung in `src/three/parcoursPose.ts`, Regeltest prüft Zeichnung = Physik für alle Balken. Dazu 140 ms Schonfrist nach der ersten Berührung (Sprung oder Ducken rettet noch, gleicht Funklatenz aus) und für Standhaft eine schräge Arena-Übersicht der ganzen Plattform statt der Verfolgerkamera (per Wischen drehbar, gelber Pfeil über der eigenen Figur) |
-| Bumper Mayhem | Bounce wirkt komisch | **umgesetzt**: Ein normaler Rempler schleuderte mit 8 m/s, kappte beim Ende der Benommenheit schlagartig auf 4,4 m/s und rollte ohne Gas wie auf Eis weiter (oft über den Rand). Jetzt weiche Gummistöße (Rückprall 0,5 statt 1,1), Rempler ≈ 1,7 m, Turbostoß aus der Mitte bis kurz vor den Rand (≈ 4,9 m, Regeltest > 5 m beim Seitenstoß bleibt), ohne Gas bremsen die Wagen, über dem Tempolimit weiches Abbremsen; Wagen rund wie ihr Kollisionskörper, kurzes Stauchen beim Zusammenstoß |
-
-Alle Punkte sind mit Regeltests und Playwright `phone` geprüft; Gefühl auf echten Handys
-(Kamera, Klettern, Lenkung in Light Trails) ist offen.
-
-## 2.5D-Fassungen
-
-| Spiel | Stand |
-| --- | --- |
-| Bomb Arena | **umgesetzt**, Gerätetest offen: 3D-Feld mit gewählten Figuren, 2D-Rückfall; Stand in [plan-2-5d.md](plan-2-5d.md#umsetzungsstand) |
-| Floor is Lava | **umgesetzt**, Gerätetest offen: siehe [plan-floor-is-lava.md](plan-floor-is-lava.md) |
-| Sumo Smash | **umgesetzt**, Gerätetest offen: animierte Figuren (sechs Looks), Schieben, Kampfspiel-Kamera; [figuren-rigged.md](figuren-rigged.md) |
-| Chaos Run | **umgesetzt**, Gerätetest offen: animierte Figuren in eigenen Spuren, Verfolgerkamera; [figuren-rigged.md](figuren-rigged.md) |
-| Figurenwahl | **umgesetzt**: elf animierte Figuren wählbar (inkl. MC Goldie, Lil Schmidt, Kiki Komet, Bolt, Glubschi), in allen 3D-Szenen sichtbar; [figuren-rigged.md](figuren-rigged.md) |
-| Tank Trouble | **umgesetzt**, Gerätetest offen: Panzer mit Figur in der Luke, Ziellaser, 2D-Rückfall; Stand in [plan-2-5d.md](plan-2-5d.md#tank-trouble-zweites-spiel-umgesetzt) |
-| Bumper Mayhem | **umgesetzt** (dritte Rückmelderunde), Gerätetest offen: nächtliche Autoscooter-Halle (`src/three/bumperWorld.ts`), Wagen in Spielerfarbe mit Stromabnehmer-Mast, Funke flackert beim Turbo, animierte Figur am Steuer (Fahranimation), drehende Goldpfosten, Kampfspiel-Kamera wie Sumo, 2D-Rückfall; sechs Wagen ≈ 180 Zeichenaufrufe |
-
-## Nächste Schritte
-
-1. Gerätetest auf mindestens zwei echten Handys (Android/iOS) im Node- und
-   Handy-Modus nach [geraetetest.md](geraetetest.md) (Testmodus `?messung`);
-   Ergebnisse dort eintragen, danach Kamera- und Balancewerte nachstellen.
-2. `nearby.spec.ts` in CI beobachten; bei Fehlern mit Match-Spielen den
-   Handy-Worker prüfen.
-3. Nach Rückmeldung aus echten Runden Werte feinjustieren (Tempo von Light
-   Trails, Wind bei Arrow Masters, Stärke der Bots).
-
-## Proberaum (November 2026)
-
-Lokale Übungsinsel für Figuren- und Hindernismechaniken umgesetzt: neun frei erreichbare Stationen, direkte Stationswechsel, Pause/Reset, Übungsfigur zum Festhalten, Figurenwahl und Animationsvorschau. Kein zusätzliches Minispiel und kein Bestandteil der Zufallsrotation. Prüfungen: `scripts/proberaum-test.ts` (Teil von `test:rules`), bestehende Parcours-Regeln und `tests/browser/practice-world.spec.ts` auf Smartphone-Größe, normale/reduzierte Bewegung sowie Offline- und WebGL-Ersatzansicht. Geräteleistung und praktische Bedienung auf Android/iPhone bleiben offen.
+Vergangene „grün“-Angaben ohne Commit/Laufbeleg sind kein aktueller Prüfstand. Ergebnisse mit Datum, Commit, Befehl und Grenzen erfassen; reale Gerätefreigabe gesondert.

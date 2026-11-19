@@ -1,9 +1,9 @@
 # Technisches Konzept: Match-Minispiele
 
-Gilt für die zwölf neuen Minispiele aus der [Spezifikation](spezifikation.md).
+Gemeinsame Technik aller Match-Minispiele; ursprüngliche Regeln: [Spezifikation](spezifikation.md).
 Den Arbeitsstand führt der [Backlog](backlog.md).
 
-## Ausgangslage (Analyse, Phase 0)
+## Einbindung
 
 - **Ablauf:** `shared/party.ts` steuert Inselparty, Roll It Up!, Freies
   Minispiel und Schlag den GoldenSchmidt mit denselben Phasen
@@ -21,9 +21,6 @@ Den Arbeitsstand führt der [Backlog](backlog.md).
 - **Wiederverwendbar:** Phasen, Countdown, Ergebnisansichten,
   Wettbewerbs-Einsätze, Bot-Treiber, Sitzungs- und Pausenlogik, Übungsdialog,
   Socket-Transport mit Folgenummern und Ratenbegrenzung.
-- **Nicht ausreichend:** Eingabeformat (keine Zielrichtung, keine
-  verlustfreien Tipp-Ereignisse), feste Wertung mit eindeutigen Plätzen,
-  Arena-Zustand mit fest verdrahteten Spielarten.
 
 ## Architekturentscheidungen
 
@@ -32,7 +29,7 @@ Den Arbeitsstand führt der [Backlog](backlog.md).
    Framework (`shared/matches/framework.ts`) übernimmt Registrierung,
    Spielerzahl und Teams, Eingabeprüfung, festen Simulationsschritt,
    öffentliche Sicht, Ranglisten und Bot-Anbindung. Die klassischen Arenen
-   bleiben unverändert und laufen parallel weiter.
+   laufen parallel weiter.
 2. **Einbindung in den bestehenden Party-Ablauf.** `PartyMini` erhält neben
    `arena` ein Feld `match`. Anleitung, Countdown, Pausen, Einsätze,
    Ergebnisse und Rückkehr zur Lobby bleiben dieselben. Die Partylogik
@@ -52,17 +49,13 @@ Den Arbeitsstand führt der [Backlog](backlog.md).
    10 oder 20 Hz (je Modul) an jedes Gerät, jeweils als eigene Sicht
    (`view`), z. B. ohne verdeckte Signalzeiten. Discrete Aktionen sendet der
    Client sofort zuverlässig, Stickwerte periodisch alle 100 ms.
-6. **Darstellung mit Canvas 2D.** Die neuen Spiele sind 2D-Arcade-Spiele.
-   Canvas 2D ist auf Handys leichter als eine Three.js-Szene, braucht kein
-   WebGL 2 und erlaubt eigene Neon-, Western- oder Lava-Themen ohne externe
-   Assets. Interpolation zwischen zwei Zuständen glättet die Bewegung; die
-   eigene Spielfigur wird bei Bedarf lokal vorausberechnet.
+6. **Darstellung:** Canvas 2D oder nachgeladenes Three.js-Modul, je Spiel. Match-Spiele behalten Canvas als Rückfall bei fehlendem WebGL, Ladefehler oder Kontextverlust. Interpolation und lokale Vorhersage glätten die Darstellung.
 7. **Nur Smartphone.** Steuerung ausschließlich per Touch (Stick, Tasten,
    Tippen, Wischen, Ziehen). Keine Tastaturbelegung, keine PC-Layouts, keine
    Tests im Playwright-Projekt `desktop` für Inselparty, Roll It Up! und
    Minispiele.
 8. **1st Generation Minigames abschaltbar.** Die 14 ersten Arenen und
-   Hook Wars und Chaos Run (nach Spielrückmeldung verschoben) bilden die erste Generation. Inselparty, Roll It Up! und Schlag den
+   Hook Wars, Chaos Run und Wippenwerk bilden die erste Generation. Inselparty, Roll It Up! und Schlag den
    GoldenSchmidt erhalten die Option `classic` (Standard: an). Ist sie aus,
    ziehen die Modi nur aus den neuen Spielen, die zur Spielerzahl passen.
 
@@ -85,7 +78,8 @@ Den Arbeitsstand führt der [Backlog](backlog.md).
 Das Modul liefert eine Rangliste mit Spielpunkten und geteilten Plätzen.
 `partyMiniResults` übernimmt sie für alle Spieler, die mindestens eine
 Eingabe gesendet haben. Gleich platzierte Spieler erhalten in der Inselparty
-dieselbe Münzzahl ihres Platzes, im Wettbewerb ihren eigenen Einsatz. Die
+dieselbe Münzzahl ihres Platzes; im Wettbewerb erhalten nur gemeinsam
+Erstplatzierte ihren jeweiligen Einsatz, andere Plätze 0. Die
 spielinternen Stechregeln (Golden Goal, Stechdurchgang, Sudden Death) werden
 im Modul ausgespielt; bleibt danach ein Gleichstand, wird der Platz geteilt.
 
@@ -118,10 +112,10 @@ im Modul ausgespielt; bleibt danach ein Gleichstand, wird der Platz geteilt.
 | Quick Draw | Duell höchstens 9 Runden; danach entscheidet der Rundenstand | Wiederholte Doppel-Fehlstarts dürfen nicht endlos laufen |
 | Quick Draw | Gruppen-Stechen bis zu 3 Durchgänge, danach geteilter Platz | Wie oben |
 | Quick Draw | Reaktion unter 80 ms gilt als Fehlstart | Menschlich nicht erreichbar, verhindert Vorwegnahme |
-| Light Trails | Durchgang endet spätestens nach 40 s; Überlebende teilen den Platz ohne Bonus | Begrenzte Spieldauer |
-| Light Trails | Raster 21 × 33 im Hochformat, ein Feld je 150 ms, Arena schrumpft ab 12 s alle 1,5 s um einen Ring bis 5 Felder Breite | Lesbar auf Handys, Reaktionszeit trotz Funklatenz |
+| Light Trails | Durchgang höchstens 45 s; Überlebende teilen bei Zeitablauf den Platz ohne Bonus | Begrenzte Spieldauer |
+| Light Trails | Freies Feld 30 × 48, konstante Fahrt, stufenlose Lenkung; Schrumpfen ab 14 s | Aktuelle Mechanik in `lightTrails.ts` |
 | Light Trails | Startplätze gleichmäßig auf einem inneren Ring, alle im Uhrzeigersinn; Zuordnung rotiert je Durchgang | Faire, symmetrische Ausgangslage |
-| Light Trails | Bis zu zwei Kurven werden vorgemerkt; ⟲/⟳ wirken relativ zur letzten vorgemerkten Richtung | Schnelle Doppelkurven ohne verlorene Eingaben |
+| Light Trails | Stick zeigt die Richtung; ⟲/⟳ halten lenkt voll | Touch-Steuerung |
 | Neon Pong | Ball startet mit 6,5, je Treffer +0,45, höchstens 15 Feldeinheiten/s; Power-up alle 10–15 s, aktiviert durch das Team des letzten Treffers | Konkrete Werte der Spezifikation |
 | Neon Pong | Wirkungen: breiter Schläger 5 s, Mehrball bis alle Zusatzbälle weg sind, Kurvenbälle 6 s, Zeitlupe 4 s nur für Bälle Richtung des sammelnden Teams | „Kurzzeitiger Slowdown“ soll dem sammelnden Team helfen |
 | Alle | „Aufgeben“ ersetzt in Match-Spielen „Versuch beenden“ | Gemeinsame Spiele lassen sich nicht einzeln beenden |
@@ -131,20 +125,20 @@ im Modul ausgespielt; bleibt danach ein Gleichstand, wird der Platz geteilt.
 | Bomb Arena | Kettenreaktionen bilden eine Explosion: höchstens ein Schaden je Spieler | „Dieselbe Explosion“ einheitlich auslegen |
 | Bomb Arena | Arena schließt sich ab 25 s spiralförmig (ein Feld je 0,35 s); geteilter Rundenbonus anteilig (z. B. 1,5) | Konkrete Werte; Teilen laut Spezifikation |
 | Bomb Arena | Sudden Death nur für die Punktgleichen: 1 Leben, Arena schließt ab 8 s, höchstens 30 s | Kurzer, eindeutiger Entscheid |
-| Sumo Smash, Chaos Run | **Animierte Figuren** (Nov. 2026): Quaternius-Figuren mit Skelett und Animationen (CC0) in sechs Looks, Kleidung in Spielerfarbe; Sumo mit Kampfspiel-Kamera, Chaos Run mit Verfolgerkamera und eigener Spur je Person; Canvas als Rückfall; Regeln unverändert | Wunsch nach „Profi-Niveau“ ohne Unity-Umstieg; Details in [figuren-rigged.md](figuren-rigged.md) |
+| Sumo Smash, Chaos Run | Gewählte Skelettfiguren; klassische Auswahl über Basismenschen nach Farbplatz. Sumo mit Kampfspiel-Kamera, Chaos Run mit Verfolgerkamera und eigener Spur; Canvas-Rückfall | Bestehende Web-Technik; [Figurenpipeline](figuren-rigged.md) |
 | Tank Trouble | **2.5D-Darstellung** (Nov. 2026): WebGL-Szene mit gewählter Figur in der Panzerluke; roter Ziellaser nur beim eigenen Zielen bis zur ersten Wand (keine Abprallvorhersage); Canvas als Rückfall; Regeln unverändert | Lesbarkeit der Abpraller bleibt Aufgabe der Spieler; der Laser zeigt nur die eigene Richtung |
-| Bomb Arena | **2.5D-Darstellung** (Nov. 2026): WebGL-Szene mit fester, geneigter Kamera und den gewählten Figuren; die Canvas-Fassung bleibt als Rückfall. Regeln, Sicht und Eingaben unverändert | Spielrückmeldung „cooleres Spielerlebnis“; Plan und Abwägung gegen Tank Trouble in [plan-2-5d.md](plan-2-5d.md) |
+| Bomb Arena | WebGL-Szene mit fester geneigter Kamera, gewählten Figuren und Canvas-Rückfall; Regeln/Sicht/Eingaben unverändert | Räumliche Lesbarkeit; [3D-Darstellung](#3d-darstellung-und-parcours) |
 | Floor is Lava | Quadratische Platten 9 × 13; Rand bricht bei 16 s und 23 s ein (bis Nov. 2026 bei 10 s und 15 s); Sprung 0,55 s mit 1,4-facher Geschwindigkeit (überwindet ein Feld) | Konkrete Werte für Handys |
 | Floor is Lava | **Drei Etagen** (Nov. 2026): Plattenzustände je Etage, alle starten oben. Wer über einem Loch steht, fällt in 0,45 s eine Etage tiefer (in der Luft, kein Lebensverlust, Platte darunter beginnt beim Landen zu bröckeln); nur ein Loch der untersten Etage führt in die Lava. Schubser und Wegdrücken nur auf derselben Etage, nicht während des Falls. Randeinsturz auf allen Etagen. Respawn auf der untersten Etage mit intakter Innenplatte. Durchgänge bis 30 s, Stechrunde bis 25 s | Spielwunsch „über mehrere Etagen“; Wertung (Überleben) unverändert. Die Spezifikation (eine Ebene, 20 s) gilt insoweit nicht mehr |
-| Floor is Lava | Nach Lava sicherer Neustart auf der Platte mit größtem Abstand, 1,2 s Schutz; Überlebende bei Zeitablauf teilen +3 | Fairness; „teilen die beste Platzierung“ |
+| Floor is Lava | Randsturz führt direkt in Lava; sichtbarer Fall, nach 1 s Respawn auf sicherer Platte, 1,5 s Schutz; währenddessen bröckelt die eigene Platte nicht. Hechten ergänzt Sprung/Schubser; Überlebende bei Zeitablauf teilen +3 | Lesbarer, sicherer Wiedereinstieg |
 | Floor is Lava | Stechrunde bei Gesamtgleichstand: nur die Punktgleichen, 1 Leben | Spezifikation verlangt Stechrunde |
 | Floor is Lava | **Schubser** (Nov. 2026, Erweiterung): 0,22 s Stoß in Blickrichtung, Abklingzeit 2,5 s; Getroffene rutschen 0,35 s ohne Kontrolle mit 6,5/s; Springende und Geschützte werden nicht getroffen; Lava-Sturz bis 1,5 s nach einem Stoß nennt die stoßende Person im Ereignis, Punkte bleiben bei der Überlebenswertung | Spielrückmeldung „wie Fall Guys“: Interaktion zwischen den Spielern; Wertung bewusst unverändert |
-| Floor is Lava | **2.5D-Darstellung** (Nov. 2026): Tempelplatten auf drei Etagen über glühender Lava (Kamera folgt der eigenen Etage, Etagen darüber ausgeblendet, tiefere Etagen abgedunkelt), Platten erhitzen sich beim Bröckeln, kippen und versinken, Runenplatten steigen wieder auf; äußerer Ring glüht 1,5 s vor dem Einsturz; Figuren mit Sprungbogen und Schatten; Canvas als Rückfall | Plan in [plan-floor-is-lava.md](plan-floor-is-lava.md) |
+| Floor is Lava | **2.5D-Darstellung** (Nov. 2026): Tempelplatten auf drei Etagen über glühender Lava (Kamera folgt der eigenen Etage, Etagen darüber ausgeblendet, tiefere Etagen abgedunkelt), Platten erhitzen sich beim Bröckeln, kippen und versinken, Runenplatten steigen wieder auf; äußerer Ring glüht 1,5 s vor dem Einsturz; Figuren mit Sprungbogen und Schatten; Canvas als Rückfall | Plan in [3D-Darstellung](#3d-darstellung-und-parcours) |
 | Sumo Smash / Bumper Mayhem | Gemeinsamer Kern `ringCore.ts`; Ring-Out wird der Person gutgeschrieben, die in den letzten 3 s am stärksten geschoben hat | „Verursacher“ eindeutig und für beide Spiele gleich |
 | Sumo Smash / Bumper Mayhem | Spielpunkte = 2 × Ring-Outs; Rangfolge: Sieger, Ausscheidezeitpunkt, Leben, Ring-Outs | Punkte laut Spezifikation, Platzierung nach Überleben |
 | Sumo Smash / Bumper Mayhem | Sudden Death nur für die nach 75 s Gleichauf-Liegenden, 1 Leben, kleiner Ring, höchstens 20 s, danach geteilter Platz | Begrenzte Dauer |
-| Sumo Smash | Stoß: 0,24 s Vorwärtsschub, Abklingzeit 2,5 s; Treffer im Stoß wirft mit 12,5/s und 0,52 s ohne Kontrolle (rund 5 Einheiten Wurfweite, auch gegen Gegenhalten); normaler Körperkontakt prallt elastisch ab; Ring schrumpft ab 40 s bis 75 s von 5,5 auf 3,2 | Spielrückmeldung: vorher trug ein Treffer nur knapp 1 Einheit |
-| Bumper Mayhem | Lenkung in Stickrichtung mit begrenzter Drehrate, automatisches Gas; Turbo 0,8 s alle 4 s mit 1,5-fachem Rammstoß; harter Rammstoß gibt dem Opfer Zusatzschub und lässt es bis 0,9 s ohne Haftung schleudern; zwei kreisende Pfosten; Arena schrumpft ab 45 s | Einfache Ein-Daumen-Steuerung; Spielrückmeldung: Seitenhaftung schluckte den Rückstoß |
+| Sumo Smash | Stoß 0,24 s, Abklingzeit 2,5 s; starke Treffer mit Kontrollverlust, elastischer Körperkontakt; Ring schrumpft ab 40 s bis 75 s. Gemeinsamer Neustart nur, wenn zwei übrig sind, sonst kehrt allein die gestürzte Figur zurück | Stoßwirkung und Mehrspielerablauf; Werte in `SUMO` |
+| Bumper Mayhem | Stickrichtung mit begrenzter Drehrate; Turbo 0,8 s alle 4 s, zwei Pfosten, Schrumpfen ab 45 s. Weiche Gummistöße, Bremsen ohne Gas und weiches Abbauen von Übertempo; gemeinsamer Neustart nach Ring-Out | Lesbare, kontrollierbare Fahrzeugbewegung; Werte in `BUMPER` |
 | Chaos Run | Brücken stürzen je Läufer ein (0,6 s nach dem Betreten); keine gegenseitige Beeinflussung | Version 1 ohne Spielerinteraktion, faire Bedingungen |
 | Chaos Run | Strecke aus 8 Modulen à 24 m, jeder der 6 Typen mindestens einmal; Checkpoint an jedem Modulbeginn; Wand 1,7 hoch (nur mit gehaltenem Sprung), Balken nur rutschend passierbar | „Halten für höhere Sprünge“ bekommt eine Aufgabe |
 | Chaos Run | Wischen nach unten in der Luft lässt schnell fallen und startet das Rutschen | Tippen und Wischen auf einer Fläche ohne Verzögerung |
@@ -152,9 +146,10 @@ im Modul ausgespielt; bleibt danach ein Gleichstand, wird der Platz geteilt.
 | Arrow Masters | Arena 20 × 14 mit neun Standplätzen, jede Runde zufällig (deterministisch) neu verteilt, Hinweis „DU“ zu Beginn des Zielens; Mittelpfeiler und zwei Simsen; zwei Zielscheiben je Runde an neuen Stellen; Wind bis ±3 | Konkrete Werte |
 | Arrow Masters | Besiegte stehen bis zur nächsten Runde nicht mehr als Ziel bereit; Eigentreffer kosten Trefferpunkte, bringen aber keine Punkte | Spezifikation sagt nichts zu Eigentreffern |
 | Arrow Masters | Stechen: nur die Punktgleichen, eine Scheibe ohne Wind; der kleinste Abstand der Flugbahn zur Mitte gewinnt | „Präzisions-Stechen“ messbar umsetzen |
+| Arrow Masters | Je einmal pro Partie Dreifachpfeil und schwerer Pfeil (windunabhängig, 2 Schaden), Wahl bis Abschuss verdeckt | Zusätzliche Schussentscheidungen; Ego-Perspektive bleibt offen |
 | Tower Tumble | **Neubau nach Spielrückmeldung (Nov. 2026): Turmrennen statt reihum an einem gemeinsamen Turm.** Alle bauen gleichzeitig auf eigenem Sockel (5 Zellen breit), dieselbe Steinfolge aus 7er-Beuteln von Vier-Zellen-Steinen; erster Turm, der 2 s über 16 m steht, gewinnt; nach 120 s entscheidet die Höhe ruhender Steine, gleiche Höhe teilt den Platz | Rückmeldung „Mechanik und Physik nicht schön“; Genre wie Stapel-Rennspiele, eigene Gestaltung und kein Nachbau eines bestimmten Spiels. Die Spezifikation (reihum, Punkte je Stein) gilt für dieses Spiel nicht mehr |
 | Tower Tumble | **Eigene deterministische Starrkörperphysik** (`physics2d.ts`, nach Box2D-Lite): Quader mit Clipping-Kontakten, sequentielle Impulse mit Warmstart, Reibung 0,9, 3 Teilschritte je 50 ms, 12 Iterationen. Alle Zwischenwerte (auch Warmstart-Impulse) liegen als JSON im Zustand | Der Raumkern klont den Zustand je Takt; eine externe Physikbibliothek müsste ihre Welt jedes Mal neu aufbauen. So setzt ein Neustart die Physik exakt fort (Regeltest) |
-| Tower Tumble | **Leistung** (Nov. 2026, nach „hängt und ruckelt am Handy“): gerade Zellreihen eines Steins sind eine Kollisionsbox (O = 1, I = 1, übrige 2 statt je 4), Warmstart als flache Zahlenliste `[Schlüssel, Normal-, Tangentialimpuls, …]` statt Textschlüsseln, Solver ohne Objektanlagen in den Iterationen, öffentliche Sicht über den Modul-Hook `publicGame` ohne Kopie der Physikdaten. Masse und Trägheit weiter aus den vier Zellen | Sechs belebte 24-Stein-Türme in Node: Physik 209 → 49 ms, Sichten 65 → 12 ms je Spielsekunde. Übung auf dem Handy (Chromium, CPU 6× gedrosselt): Bildzeit Ø 28,8 → 20,7 ms, 95. Perzentil 50 → 33 ms |
+| Tower Tumble | Kollisionsboxen zusammenfassen, flache Warmstart-Zahlenliste, Solver ohne Objektanlagen, `publicGame` ohne Physikkopie; Zellen vorzeichnen | Physik-/Sichtaufwand senken, echte Geräteleistung bleibt zu messen |
 | Tower Tumble | **Pfeilsteuerung** (Nov. 2026) statt Schiebeleiste: ⇦/⇨ verschieben das Ziel des fallenden Steins um eine halbe Zelle (Befehl `n` mit Wert −1/+1), Halten wiederholt nach 240 ms alle 80 ms; Drehen behält das Ziel. Bots tippen wie Menschen einen Schritt je Takt | Spielwunsch; Tipps statt Fingerposition sind genauer und senden weniger Pakete |
 | Tower Tumble | Fallender Stein ist kinematisch (Halbzellenraster, Vierteldrehung mit seitlichem Ausweichen, 2,2 bzw. 12 Zellen/s); beim ersten Kontakt wird er zum Körper. Ein ruhender Turm schläft nach 0,4 s und wird beim nächsten Aufsetzen geweckt. Steine unter −6 m oder neben dem Sockel gelten als verloren | Steuerbarkeit wie in Fallblockspielen, danach echte Physik; Schlafen verhindert Kriechen hoher Türme und spart Rechenzeit |
 | Tower Tumble | Sicht: Körper gepackt `[id, Form, Drehung, x, y, Winkel]`, fremde Türme auf 1 cm gerundet, ohne Geschwindigkeiten und Warmstart; Steinfolge nur bis zum nächsten Stein | Datenmenge bei sechs Türmen |
@@ -164,56 +159,37 @@ im Modul ausgespielt; bleibt danach ein Gleichstand, wird der Platz geteilt.
 | Hook Wars | 4 s Abklingzeit nur nach Treffern auf Gegner; ein Fehlschuss sperrt 0,35 s | Spezifikation nennt die Abklingzeit für erfolgreiche Treffer |
 | Hook Wars | Zonen und Anker spiegelbildlich (links/rechts); Paare auf gleicher Höhe; Kerne erscheinen alle 6 s an 5 mittigen Punkten, höchstens 3 | „Vergleichbar fair erreichbar“; Paare sind gleich, Höhenunterschiede zwischen Paaren bleiben |
 | Hook Wars | Gleichstand nach 90 s: höchstens 30 s Verlängerung, die nächste Abgabe einer gleichauf liegenden Person gewinnt, sonst geteilter Platz | Begrenzte Dauer |
-| Alle | Öffentliche Sicht enthält fremde Spieler nur mit Kennung, Farbe, Team und Anwesenheit, Ereignisse der letzten 1,5 s und auf 1/1000 gerundete Kommazahlen | Etwa 40 % weniger Daten je Sicht |
+| Alle | Öffentliche Sicht enthält fremde Spieler nur mit Kennung, Farbe, Team und Anwesenheit, Ereignisse der letzten 1,5 s und auf 1/1000 gerundete Kommazahlen | Datenmenge begrenzen |
 
 Weitere Abweichungen werden beim jeweiligen Spiel ergänzt.
 
-## Leistung (gemessen, Node, Bots)
+## Leistungsgrenzen
 
-Gemessen mit `publicMatch` je Gerät nach bis zu 30 s Bot-Spiel, sechs Spieler
-(Neon Pong vier). Simulationskosten ohne Bot-Logik.
-
-| Spiel | Hz | Ø KB je Sicht | Ø KB/s alle Geräte | ms Rechenzeit je Spielsekunde |
-| --- | --- | --- | --- | --- |
-| Quick Draw | 20 | 2,2 | 262 | 0,1 |
-| Light Trails | 20 | 1,5 | 183 | 0,2 |
-| Neon Pong | 20 | 1,0 | 79 | 0,3 |
-| Tank Trouble | 10 | 2,4 | 146 | 3,1 |
-| Bomb Arena | 20 | 2,5 | 303 | 0,3 |
-| Floor is Lava (drei Etagen) | 20 | 3,6 | 434 | 1,0 |
-| Sumo Smash | 20 | 2,2 | 260 | 0,2 |
-| Bumper Mayhem | 20 | 2,2 | 266 | 0,3 |
-| Chaos Run | 20 | 2,4 | 293 | 0,6 |
-| Arrow Masters | 10 | 1,6 | 96 | 0,2 |
-| Tower Tumble (nach Leistungsarbeit) | 20 | 2,3 | 281 | 12,5 |
-| Hook Wars | 20 | 2,3 | 274 | 0,2 |
-
-Echte Spieler-IDs (UUIDs) vergrößern jede Sicht um etwa 0,5–1 KB. Der Handy-Host
-serialisiert bei sechs Geräten sechs Sichten alle 50 ms. Das ist in Node
-unkritisch, auf echten Handys aber **nicht gemessen**.
-
-## Risiken und Abhängigkeiten
-
-- **Leistung auf echten Handys:** Browser-Emulation belegt keine 60 FPS.
-  Prüfung auf echten Geräten steht aus (siehe Backlog).
-- **Handy-Host mit sechs Spielern:** Der Worker klont den Spielzustand je
-  Eingabe. Zustände bleiben deshalb klein (Spuren als Polylinien statt
-  Raster in der Übertragung).
-- **Latenzkompensation:** Die Laufzeit wird aus Client-Angaben abgeleitet und
-  bleibt deshalb auf 300 ms begrenzt. Ein manipuliertes Gerät kann sich
-  höchstens diesen Spielraum verschaffen.
-- **Spielerzahlen:** Neon Pong passt nur zu 2 oder 4 Spielern. Wird ein Pool
-  ohne klassische Spiele für eine Spielerzahl leer, lehnt die Lobby die
-  Einstellung mit einer Meldung ab.
-- **Physikintensive Spiele:** Tower Tumble rechnet mit echter Starrkörperphysik
-  etwa 12 ms je Spielsekunde im Bot-Spiel und bis etwa 50 ms bei sechs hohen,
-  gleichzeitig wackelnden Türmen (Node), ein Vielfaches der anderen Spiele.
-  Auf einem Handy-Host mit sechs Geräten und auf Render Free (0,1 CPU) ist das
-  **nicht gemessen**; falls es weiter ruckelt, als Nächstes Teilschritte
-  (3 → 2) senken oder ruhende Turmteile einfrieren.
+Frühere Node-/Chromium-Messungen sind historische Vergleichswerte, keine Gerätefreigabe. Der Handy-Host klont Zustände und erzeugt gerätespezifische Sichten; Tower Tumble mit hohen Türmen sowie Lava mit mehreren Etagen besonders auf Rechenzeit und Datenmenge prüfen. Erst messen, dann optimieren; Physik/Fairness nicht für Dekoration verändern. Offene Arbeit und Gerätetests im [Backlog](backlog.md).
 
 ## Lokaler Proberaum
 
 `shared/matches/proberaumCourse.ts` beschreibt die zusammenhängende Übungsinsel; `course("proberaum")` verwendet denselben Parcours-Kern. Die Kennung steht ausdrücklich nicht in `MATCH_IDS`, `COURSE_IDS` oder im Zufallspool. `shared/proberaum.ts` steuert ausschließlich die lokale Übung mit geprüften Eingaben und 50-ms-Schritten. Der `practice`-Schalter unterdrückt Rennende und Ausscheiden durch Glibber; Rückkehrpunkte dürfen zusätzlich eine x-Koordinate haben. Normale Parcours behalten ihre bisherigen Regeln.
 
 `PracticeWorldScreen` ist ein eigener, verzögert geladener Einstieg aus der lokalen Spielauswahl. Er nutzt die bestehenden Touch-Steuerelemente, `parcoursWorld` und dessen 2D-Ersatzdarstellung. Geöffnete Werkzeuge, Pause und Animationsvorschau halten die Simulation an; beim App-Wechsel werden Eingaben neutralisiert. Die Vorschau nutzt die tatsächlichen Animationsclips der Parcoursfiguren und verändert keine Physik. Es werden keine Räume angelegt und keine Online-Spielstände geändert.
+
+## 3D-Darstellung und Parcours
+
+`MatchClient.world`/`MatchStage` wählen WebGL oder Canvas; `preloadMatchWorld` lädt im Intro. Gemeinsame Kameras/Größen/Effekte: `src/three/matchScene.ts`. Fehler/Kontextverlust führt ohne Raumverlust zur Canvas. HUD, Countdown, Eingaben und Ergebnis bleiben gemeinsam; reduzierte Bewegung entfernt nur Dekoration.
+
+| Szene | Dauerhafte Entscheidung |
+| --- | --- |
+| `bombWorld.ts` | Ganzes Feld sichtbar, feste geneigte Kamera, instanzierte Blöcke/Flammen, gewählte Figuren; Steuerbereich freihalten. |
+| `tankWorld.ts` | Wandgeometrie entspricht Regeln; eigener Ziellaser nur bis erster Wand, keine Abprallvorhersage; 132 px Steuerreserve. |
+| `lavaWorld.ts` | Vulkantempel auf drei Etagen; Kamera folgt eigener Etage, höhere ausgeblendet, tiefere abgedunkelt; Bröckeln/Rückkehr/Randwarnung lesbar. |
+| `tankView.ts` | Tank-Regeln wiederverwenden; Autorität filtert Panzer, Wracks und fremde Kugeln nach Sichtlinie und Distanz ≤6. Zuschauer sehen alles, Bots dieselbe eingeschränkte Sicht wie Spieler. |
+| `parcoursWorld.ts` | Eigene Gameshow-Strecken; Geometrie und Hinderniszeit passen zur Physik. Kein Nachbau fremder Level/Figuren; Canvas als Draufsicht. |
+| Sumo, Bumper Mayhem, Chaos Run | Skelettfiguren und szenenspezifische Kameras; [Figurenpipeline](figuren-rigged.md). |
+
+Kamera: `ChaseCamera`, `cameraRelative`/`chaseStick`/`chaseAim` in `src/matches/client.ts`. Blickrichtung lokal, Steuerung in Weltkoordinaten; gehaltene Eingaben bei Kameradrehung nachführen. Ausrichtung beim Start/Respawn, danach Drehung per Wischen statt automatischer Laufrichtungsverfolgung. Turmsicht: oben rechts wischen. Standhaft: drehbare Arena-Übersicht.
+
+Parcours-Kern: `shared/matches/parcours.ts`, Strecken: `parcoursCourses.ts`. Laufen, Springen, Hechten, Festhalten und Ducken teilen deterministische Physik. Tür-/Pfadgeheimnisse vor Entdeckung nicht übertragen. Wertung nach Ankunft, sonst Fortschritt; Ende, wenn alle im Ziel/raus, 20 s nach erster Ankunft oder nach 120 s. Standhaft: Sturz = ausgeschieden, letzter Überlebender bzw. Sturzzeit, höchstens 90 s. Zuschauer wechseln verfolgte Person.
+
+Läufe: Türenlotto, Kreiselkurs, Glibberflut, Geisterpfad, Fallklappen, Windkanal, Kletterwand; Wippenwerk erste Generation. Auswahl/Zufallsgewichtung: `shared/minigameCatalog.ts`; Proberaum ausdrücklich ausgeschlossen.
+
+Grafikbudget: Pixelratio begrenzen, Geometrien teilen/instanzieren, Partikel begrenzen, `SceneKit`-Qualitätsstufen nutzen. Ziel 60 FPS, mindestens stabile 30; reale Abnahme ausstehend. Smartphone-Browser mit 2/4/6 Personen, beiden Bewegungseinstellungen, Steuerung/Ergebnis und WebGL-Rückfall. Android/iPhone zusätzlich: hintere Reihen, kleine Fahrerfiguren, Runen/Etagen, Schutzblinken, Schubsergefühl, Erwärmung/Ladezeit. [Gerätetest](geraetetest.md).

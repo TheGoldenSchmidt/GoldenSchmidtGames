@@ -12,19 +12,9 @@ bisher höchste Summe und das nächste Ziel.
 - Bestehende Trebuchet für Regeln und Bedienung, kräftige tabellarische Zahlen
   für Mengen und Summen. Keine neue Schrift oder externe Assets.
 - Handy: Aufgabe, Zielbild, Würfelkiste, Auswertung, Aktionen untereinander.
-  PC: Aufgabenblatt links, Würfelkiste und Aktionen rechts; Punktestand darüber.
   Texte linksbündig, Würfelbilder und Mengenvergleiche zentriert.
 
-```text
-Handy                         PC
-Spieler                       Spieler
-Aufgabe + Zielbild             Aufgabe + Zielbild | Würfelkiste
-Würfelkiste                   Versuche           | Summe + Aktionen
-Summe + Aktionen              Wertungsblatt
-```
-
-Ein Entwurf mit rein dekorativen bunten Würfeln wurde verworfen: Die Symbole
-müssen die Bedingung erklären. Frei wählbare Farben sind ausdrücklich als solche
+Symbole erklären die Bedingung. Frei wählbare Farben sind ausdrücklich als solche
 gekennzeichnet. Die sechs Aufgaben erhalten unterschiedliche Mengenbilder;
 die vorhandene Würfelkiste bleibt das gemeinsame visuelle Bindeglied.
 
@@ -38,9 +28,7 @@ bleibt erhalten; es wird keine Übereinstimmung mit Originalmaterial behauptet.
 
 Die sechs Würfel werden einmal angelegt und behalten ihre festen Farbseiten
 auch beim Einsammeln, Schütteln und Fliegen. Links auf dem Filz steht ein
-Lederbecher, rechts liegen die sechs Plätze. Eine zweite Reihe mit dekorativen
-Miniwürfeln wurde verworfen: Becherinhalt und fliegende Würfel sind dieselben
-sechs Objekte. Der Becher kippt nach rechts; die Würfel verlassen seine Öffnung
+Lederbecher, rechts liegen die sechs Plätze. Becherinhalt und fliegende Würfel sind dieselben sechs Objekte. Der Becher kippt nach rechts; die Würfel verlassen seine Öffnung
 zeitversetzt und rollen zu ihren Plätzen. Behaltene Würfel bleiben liegen.
 
 Den Becher mit Finger oder Maus hin und her bewegen; ein zügiger Swipe nach
