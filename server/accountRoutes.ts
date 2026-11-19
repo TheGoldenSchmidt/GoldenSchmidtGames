@@ -56,9 +56,9 @@ export function accountRoutes(store: AccountStore, onLogout: (token: string) => 
       } finally { hashing--; }
     });
   }
-  router.post("/logout", requireLogin, async (request, response) => {
-    await store.logout(sessionCookie(request.headers.cookie)!);
-    onLogout(sessionCookie(request.headers.cookie)!);
+  router.post("/logout", async (request, response) => {
+    const token = sessionCookie(request.headers.cookie);
+    if (token) { await store.logout(token); onLogout(token); }
     response.clearCookie(COOKIE, { httpOnly: true, secure: request.secure, sameSite: "strict", path: "/" });
     response.json({ ok: true });
   });

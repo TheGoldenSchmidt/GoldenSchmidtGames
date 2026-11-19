@@ -8,7 +8,7 @@ import { io, type Socket } from "socket.io-client";
 import { createClient } from "@libsql/client";
 import { createSpielraumServer } from "../server/index";
 import { RoomStore, type SavedRoom } from "../server/roomStore";
-import { hashToken } from "../server/accountStore";
+import { AccountStore, hashToken } from "../server/accountStore";
 import { resultStatements } from "../server/gameStatistics";
 import { createQwixxGame } from "../shared/qwixx";
 import { createDurakGame } from "../shared/durak";
@@ -53,6 +53,15 @@ async function emit(socket: Socket, event: string, ...args: unknown[]) {
 }
 
 try {
+  const freshDatabase = createClient({ url: ":memory:" });
+  try {
+    const freshAccounts = new AccountStore(freshDatabase);
+    await freshAccounts.initialize(bootstrap);
+    await freshDatabase.execute("UPDATE gsg_invitations SET expires=0");
+    await freshAccounts.initialize(bootstrap);
+    await assert.rejects(freshAccounts.register("ExpiredOwner", "a strong test password", bootstrap), /Einladung ungültig/,
+      "Ein Neustart verlängert keinen abgelaufenen Erstadmin-Code");
+  } finally { freshDatabase.close(); }
   assert.equal((await request("/developer")).status, 401);
   assert.equal((await request("/register", "POST", { username: "owner", password: "short", invitation: bootstrap })).status, 400);
   const owner = await register("Owner", bootstrap);
@@ -155,6 +164,8 @@ try {
   assert.ok(otherDevice.connected, "Abmelden trennt nur Verbindungen dieser Sitzung");
   assert.equal((await request("/me", "GET", undefined, anotherLogin.cookie)).data.account.id, developer.account.id);
   assert.equal((await request("/me", "GET", undefined, developer.cookie)).data.account, null);
+  assert.equal((await request("/logout", "POST", {}, developer.cookie)).status, 200, "Abmelden ist auch für eine bereits ungültige Sitzung möglich");
+  assert.equal((await request("/logout", "POST", {})).status, 200);
   for (let i = 0; i < 22; i++) await request("/login", "POST", { username: "absent", password: "wrong" });
   assert.equal((await request("/login", "POST", { username: "absent", password: "wrong" })).status, 429);
   assert.ok(joined.sessionToken);

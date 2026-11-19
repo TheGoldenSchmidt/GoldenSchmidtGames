@@ -31,7 +31,8 @@ export class AccountStore {
         won INTEGER NOT NULL, PRIMARY KEY(match_id, account_id))`,
       "CREATE INDEX IF NOT EXISTS gsg_results_account ON gsg_results(account_id)",
       { sql: "DELETE FROM gsg_sessions WHERE expires <= ?", args: [Date.now()] },
-      { sql: "DELETE FROM gsg_invitations WHERE expires <= ?", args: [Date.now()] }
+      // Keep an expired bootstrap hash so restarting cannot renew the same owner invitation.
+      { sql: "DELETE FROM gsg_invitations WHERE expires <= ? AND role!='admin'", args: [Date.now()] }
     ], "write");
     if (bootstrapToken) {
       if (bootstrapToken.length < 32) throw new Error("GSG_ADMIN_INVITE benötigt mindestens 32 Zeichen.");
