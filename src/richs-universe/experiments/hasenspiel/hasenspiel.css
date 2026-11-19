@@ -63,3 +63,44 @@
 .ru-hasenspiel .hare-target { fill: #6c4106; }
 .ru-hasenspiel details { margin-top: 8px; }
 .ru-hasenspiel summary { align-content: center; }
+
+.ru-hasenspiel .hare-levels {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.ru-hasenspiel .hare-levels [aria-pressed="true"] {
+  color: #172522;
+  background: #f4de9a;
+  border-color: #f4de9a;
+  font-weight: 700;
+}
+.ru-hasenspiel .hare-center line,
+.ru-hasenspiel .hare-side-links line {
+  stroke-width: 1.4;
+  stroke-dasharray: 3 3;
+  pointer-events: none;
+}
+.ru-hasenspiel .hare-center line { stroke: #584628; }
+.ru-hasenspiel .hare-side-links line { stroke: #e2d8bf; stroke-width: 2; }
+.ru-hasenspiel .hare-cell[data-protected="true"] polygon {
+  fill: #c7a77b;
+  stroke: #694010;
+  stroke-width: 2;
+}
+.ru-hasenspiel .hare-cell[data-target="true"] > .hare-center rect,
+.ru-hasenspiel .hare-cell[data-target="true"] > polygon {
+  fill: #f4de9a;
+}
+.ru-hasenspiel .hare-token .hare-frozen {
+  fill: none;
+  stroke: #853c18;
+  stroke-width: 2;
+  stroke-dasharray: 3 2;
+}
+.ru-hasenspiel .hare-choices {
+  display: grid;
+  gap: 8px;
+}
+.ru-hasenspiel .hare-token path[data-kind="deer"] { fill: none; stroke-width: 1.5; }
