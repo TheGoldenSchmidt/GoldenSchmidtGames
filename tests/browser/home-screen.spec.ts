@@ -142,3 +142,26 @@ test("Startbildschirm: Fortsetzen und Updates teilen sich eine Zeile", async ({ 
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
   }
 });
+
+test("Startbildschirm: Update-Prüfung verändert weder Größe noch Scrollbarkeit", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  for (const viewport of [{ width: 320, height: 640 }, { width: 412, height: 915 }]) {
+    await page.setViewportSize(viewport);
+    await page.goto("/");
+    const hero = page.locator(".expedition-hero");
+    const before = (await hero.boundingBox())!;
+    await page.getByRole("button", { name: /Updates prüfen/ }).click();
+    const note = page.getByRole("complementary", { name: "App aktualisieren" }).getByRole("status");
+    await expect(note).toBeVisible();
+    // The note floats above the tool row instead of pushing the island up.
+    expect(await hero.boundingBox()).toEqual(before);
+    await page.mouse.wheel(0, 600);
+    await page.evaluate(() => window.scrollTo(0, 600));
+    expect(await page.evaluate(() => [window.scrollY, document.documentElement.scrollHeight <= innerHeight])).toEqual([0, true]);
+    // It hides by itself; the status text stays available to screen readers.
+    const tool = page.getByRole("complementary", { name: "App aktualisieren" });
+    await expect(tool).toHaveAttribute("data-note", "false", { timeout: 8000 });
+    await expect(note).not.toBeEmpty();
+    expect(await note.evaluate(element => element.getBoundingClientRect().width)).toBeLessThanOrEqual(1);
+  }
+});
