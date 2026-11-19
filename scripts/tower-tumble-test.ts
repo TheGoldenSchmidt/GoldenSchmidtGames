@@ -186,4 +186,48 @@ for (const count of [2, 4, 6]) {
   assert.equal(g.phase, "finished", `${count} Bots`);
   assert.ok(partyMiniResults(g).every(r => r.participated));
 }
-console.log("Tower Tumble erfolgreich: Physik-Kern, Steinformen und Raster, gleiche Steinfolge, Verschieben, Drehen, schnelles Fallen, Landen, Kippen und Verlust, Schlafen, Höhe, Ziel mit Haltezeit, Zeitablauf und Gleichstand, Aufgeben, öffentliche Sicht, Determinismus, JSON-Neustart und Bots mit 2, 4 und 6 Spielern.");
+// Survival: keine Ziellinie, drei verlorene Steine = raus, Letzter gewinnt, Zeitablauf nach Höhe, Steine werden schneller.
+{
+  const survive = (count = 3, seed = 4) => createMatch("towersurvival", Array.from({ length: count }, (_, i) => ({ id: `p${i}`, style: i })), seed) as TS;
+  const s = survive();
+  assert.equal(s.game.survival, true);
+  // Steine neben den Sockel steuern: jeder zählt als verloren.
+  const loseOne = (id: string) => { const before = s.game.towers[id].lost; for (let i = 0; i < 400 && s.game.towers[id].lost === before && !s.done; i++) { if (s.game.towers[id].piece) send(s, id, { ha: true }, false, 1, 1); advanceMatch(s, s.time + 50); } };
+  loseOne("p0"); loseOne("p0");
+  assert.equal(s.game.towers.p0.outAt, undefined, "Zwei verlorene Steine: noch dabei");
+  loseOne("p0");
+  assert.ok(s.game.towers.p0.outAt !== undefined, "Drei verlorene Steine: raus");
+  assert.ok(s.events.some(e => e.kind === "out" && e.ids[0] === "p0"));
+  run(s, 600);
+  assert.equal(s.game.towers.p0.piece, undefined, "Ausgeschiedene bauen nicht weiter");
+  loseOne("p1"); loseOne("p1"); loseOne("p1");
+  assert.equal(s.done, true, "Nur noch einer baut");
+  assert.equal(s.game.winner, "p2");
+  assert.deepEqual(matchStandings(s).map(r => r.id), ["p2", "p1", "p0"], "Später raus = besser");
+  // Kein Ziel: Höhe über der Ziellinie beendet nichts.
+  const high = survive(2, 7);
+  high.game.towers.p0.bodies = Array.from({ length: 20 }, (_, i) => body(i + 1, "O", 0, 0, 1 + i * 2));
+  high.game.towers.p0.asleep = true;
+  run(high, 3000);
+  assert.equal(high.done, false); assert.equal(high.game.towers.p0.finishedAt, undefined);
+  assert.ok(high.game.towers.p0.best > TW.goal, "Höhe zählt weiter");
+  // Zeitablauf: höchster Turm vorne, gleiche Höhe teilt.
+  const timed = survive(2, 8);
+  timed.game.towers.p1.bodies = [body(1, "O", 0, 0, 1)]; timed.game.towers.p1.asleep = true;
+  advanceMatch(timed, TW.survivalMs);
+  assert.equal(timed.done, true); assert.equal(matchStandings(timed)[0].id, "p1");
+  // Steine fallen mit der Zeit schneller.
+  const fast = survive(2, 9); fast.time = TW.survivalMs - 6000; advanceMatch(fast, fast.time + 100);
+  const y0 = fast.game.towers.p0.piece!.y; advanceMatch(fast, fast.time + 100);
+  assert.ok(y0 - fast.game.towers.p0.piece!.y > TW.fall * .1 * 1.5, "Schnellerer Fall gegen Ende");
+}
+for (const count of [2, 4, 6]) {
+  const players = Array.from({ length: count }, (_, i) => ({ id: `b${i}`, name: `Bot ${i}`, bot: true }));
+  let g = createPartyGame(players, undefined, true, 60 + count, 0, "free-minigame", { miniId: "towersurvival" });
+  const driver = new PartyBotDriver(); let now = 0;
+  for (let i = 0; i < 4500 && g.phase !== "finished"; i++) { now += 50; if (i === 300) g = JSON.parse(JSON.stringify(g)); g = tickParty(driver.step(g, now), now); }
+  assert.equal(g.phase, "finished", `Survival ${count} Bots`);
+  assert.ok(partyMiniResults(g).every(r => r.participated));
+}
+
+console.log("Tower Tumble erfolgreich: Survival (drei Verluste, Letzter, Zeitablauf, schneller), Physik-Kern, Steinformen und Raster, gleiche Steinfolge, Verschieben, Drehen, schnelles Fallen, Landen, Kippen und Verlust, Schlafen, Höhe, Ziel mit Haltezeit, Zeitablauf und Gleichstand, Aufgeben, öffentliche Sicht, Determinismus, JSON-Neustart und Bots mit 2, 4 und 6 Spielern.");

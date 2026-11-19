@@ -49,8 +49,13 @@ function goalLine(ctx: CanvasRenderingContext2D, x0: number, x1: number, y: numb
   for (let x = x0, i = 0; x < x1; x += size, i++) { ctx.fillStyle = i % 2 ? "#24133f" : "#fff9ed"; ctx.fillRect(x, y - size / 2, Math.min(size, x1 - x), size); }
 }
 
+/** Remaining lives in Survival as small stones: filled = still allowed to lose. */
+function lives(ctx: CanvasRenderingContext2D, x: number, y: number, lost: number, size: number) {
+  for (let i = 0; i < TW.lives; i++) { ctx.fillStyle = i < TW.lives - lost ? "#ff86c8" : "#24133f55"; ctx.beginPath(); ctx.roundRect(x + i * (size + 3), y, size, size, 3); ctx.fill(); }
+}
+
 function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
-  const s = f.cur, towers = towersOf(s.game), prevTowers = towersOf(f.prev.game), { w, h } = f;
+  const s = f.cur, towers = towersOf(s.game), prevTowers = towersOf(f.prev.game), { w, h } = f, survival = !!(s.game as TowerGame).survival;
   const me = towers[f.viewer], others = s.players.filter(p => p.id !== f.viewer && towers[p.id]);
   const local = f.local as { towerCam?: number; towerT?: number; sky?: CanvasGradient; skyH?: number };
   if (!local.sky || local.skyH !== h) { local.sky = ctx.createLinearGradient(0, 0, 0, h); local.sky.addColorStop(0, "#6b5bd6"); local.sky.addColorStop(.6, "#ff86c8"); local.sky.addColorStop(1, "#ffd166"); local.skyH = h; }
@@ -68,9 +73,15 @@ function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
     const X = (x: number) => cx + x * scale, Y = (y: number) => (floor - y) * scale;
     // Height marks every 2 m and the checkered finish line.
     ctx.font = "800 11px 'Trebuchet MS', sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "middle";
-    for (let y = 2; y < TW.goal + 8; y += 2) { if (Y(y) < -10 || Y(y) > h) continue; ctx.fillStyle = "#24133f2a"; ctx.fillRect(0, Y(y), mainW, 1); ctx.fillStyle = "#24133f99"; ctx.textAlign = "right"; ctx.fillText(`${y} m`, mainW - 4, Y(y) - 7); }
-    goalLine(ctx, 0, mainW, Y(TW.goal), Math.max(6, scale * .3));
-    ctx.fillStyle = "#24133f"; ctx.font = "900 13px 'Trebuchet MS', sans-serif"; ctx.textAlign = "left"; ctx.fillText(`ZIEL ${TW.goal} m`, 80, Y(TW.goal) - scale * .45);
+    const marks = survival ? Math.ceil(me.best + 10) : TW.goal + 8;
+    for (let y = 2; y < marks; y += 2) { if (Y(y) < -10 || Y(y) > h) continue; ctx.fillStyle = "#24133f2a"; ctx.fillRect(0, Y(y), mainW, 1); ctx.fillStyle = "#24133f99"; ctx.textAlign = "right"; ctx.fillText(`${y} m`, mainW - 4, Y(y) - 7); }
+    if (!survival) {
+      goalLine(ctx, 0, mainW, Y(TW.goal), Math.max(6, scale * .3));
+      ctx.fillStyle = "#24133f"; ctx.font = "900 13px 'Trebuchet MS', sans-serif"; ctx.textAlign = "left"; ctx.fillText(`ZIEL ${TW.goal} m`, 80, Y(TW.goal) - scale * .45);
+    } else if (me.best > .5 && Y(me.best) > 0) {
+      // Survival: the best height so far as a dashed record line.
+      ctx.strokeStyle = "#fff9edaa"; ctx.setLineDash([8, 6]); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, Y(me.best)); ctx.lineTo(mainW, Y(me.best)); ctx.stroke(); ctx.setLineDash([]);
+    }
     // Pedestal.
     ctx.fillStyle = "#4b3a7a"; ctx.fillRect(X(-TW.baseHalf), Y(0), TW.baseHalf * 2 * scale, h);
     ctx.fillStyle = "#ffe44e"; ctx.fillRect(X(-TW.baseHalf), Y(0), TW.baseHalf * 2 * scale, Math.max(3, scale * .12));
@@ -94,6 +105,15 @@ function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
       ctx.fillStyle = "#fff9ed"; ctx.font = "800 10px 'Trebuchet MS', sans-serif"; ctx.textAlign = "center"; ctx.fillText("NÄCHSTER", 39, 16);
       piece(ctx, next, 0, 0, 0, 0, x => 39 + x * 11, y => 40 - y * 11, 11, color);
     }
+    if (survival) {
+      ctx.fillStyle = "#24133fcc"; ctx.beginPath(); ctx.roundRect(mainW - 70, 6, 64, 30, 10); ctx.fill();
+      lives(ctx, mainW - 62, 15, me.lost, 14);
+      if (me.outAt !== undefined) {
+        ctx.fillStyle = "#24133fdd"; ctx.beginPath(); ctx.roundRect(cx - 110, h * .3 - 34, 220, 68, 14); ctx.fill();
+        ctx.fillStyle = "#ff86c8"; ctx.font = "900 22px 'Trebuchet MS', sans-serif"; ctx.textAlign = "center"; ctx.fillText("Raus!", cx, h * .3 - 10);
+        ctx.fillStyle = "#fff9ed"; ctx.font = "800 13px 'Trebuchet MS', sans-serif"; ctx.fillText(`Drei Steine verloren · ${me.best.toFixed(1)} m`, cx, h * .3 + 14);
+      }
+    }
     if (me.holdSince !== undefined && me.finishedAt === undefined) {
       const left = Math.max(0, TW.holdMs - (f.simTime - me.holdSince)) / 1000;
       ctx.fillStyle = "#24133fdd"; ctx.beginPath(); ctx.roundRect(cx - 80, h * .3 - 30, 160, 60, 14); ctx.fill();
@@ -102,19 +122,21 @@ function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
   }
   // The other towers as small columns on the right, each from the pedestal up to the finish line.
   if (others.length) {
-    const box = Math.min(150, (h * .62) / others.length), sc = Math.min((side - 16) / (TW.laneHalf * 2), (box - 22) / (TW.goal + 2));
+    const reach = survival ? Math.max(8, ...others.map(p => towers[p.id].best + 2)) : TW.goal + 2;
+    const box = Math.min(150, (h * .62) / others.length), sc = Math.min((side - 16) / (TW.laneHalf * 2), (box - 22) / reach);
     ctx.fillStyle = "#24133f55"; ctx.fillRect(mainW, 0, side, h);
     others.forEach((p, i) => {
       const t = towers[p.id], top = 6 + i * box, base = top + box - 14, mx = mainW + side / 2, color = playerColor(p.style);
       const X = (x: number) => mx + x * sc, Y = (y: number) => base - y * sc;
-      ctx.globalAlpha = p.gone ? .35 : 1;
-      goalLine(ctx, X(-TW.laneHalf), X(TW.laneHalf), Y(TW.goal), Math.max(2, sc * .4));
+      ctx.globalAlpha = p.gone || t.outAt !== undefined ? .35 : 1;
+      if (!survival) goalLine(ctx, X(-TW.laneHalf), X(TW.laneHalf), Y(TW.goal), Math.max(2, sc * .4));
       ctx.fillStyle = "#4b3a7a"; ctx.fillRect(X(-TW.baseHalf), Y(0), TW.baseHalf * 2 * sc, 4);
       ctx.save(); ctx.beginPath(); ctx.rect(mainW, top, side, box - 4); ctx.clip();
       for (const b of bodies(t.packed, prevTowers[p.id]?.packed, f.alpha)) piece(ctx, b.k, b.r, b.x, b.y, b.a, X, Y, sc, color, false);
       ctx.restore();
       ctx.fillStyle = color; ctx.font = "900 11px 'Trebuchet MS', sans-serif"; ctx.textAlign = "center";
-      ctx.fillText(t.finishedAt !== undefined ? "ZIEL!" : `${t.height.toFixed(1)} m`, mx, base + 8);
+      ctx.fillText(t.finishedAt !== undefined ? "ZIEL!" : t.outAt !== undefined ? "RAUS" : `${t.height.toFixed(1)} m`, mx, base + 8);
+      if (survival) lives(ctx, mx - 15, top + 2, t.lost, 8);
       ctx.globalAlpha = 1;
     });
   }
@@ -138,7 +160,7 @@ export const towerTumbleClient: MatchClient = {
   unit: "Meter",
   quiet: ["lost", "hold", "drop"],
   Controls({ io, view, viewer, active }) {
-    const mine = towersOf(view.game)[viewer], playing = active && !!mine && mine.finishedAt === undefined;
+    const mine = towersOf(view.game)[viewer], playing = active && !!mine && mine.finishedAt === undefined && mine.outAt === undefined;
     return <>
       <div className="tower-arrows">
         <Arrow io={io} dir={-1} disabled={!playing} />
@@ -151,14 +173,16 @@ export const towerTumbleClient: MatchClient = {
     </>;
   },
   status(view, viewer) {
-    const mine = towersOf(view.game)[viewer], left = Math.max(0, Math.ceil((TW.regular - view.time) / 1000));
+    const survival = !!(view.game as TowerGame).survival, mine = towersOf(view.game)[viewer], left = Math.max(0, Math.ceil(((survival ? TW.survivalMs : TW.regular) - view.time) / 1000));
     if (!mine) return `noch ${left} s`;
+    if (survival) return `${mine.height.toFixed(1)} m · ${mine.outAt !== undefined ? "raus" : `${TW.lives - mine.lost} von ${TW.lives} Leben`} · noch ${left} s`;
     return `${mine.height.toFixed(1)} von ${TW.goal} m · ${mine.lost} verloren · noch ${left} s`;
   },
   sound(event, viewer) {
     if (event.kind === "lost") return event.ids.includes(viewer) ? "fail" : undefined;
     if (event.kind === "hold") return event.ids.includes(viewer) ? "power" : undefined;
     if (event.kind === "finish") return event.ids.includes(viewer) ? "win" : "fail";
+    if (event.kind === "out") return event.ids.includes(viewer) ? "fail" : "score";
     return undefined;
   }
 };

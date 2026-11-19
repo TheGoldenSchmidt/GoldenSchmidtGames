@@ -7,6 +7,7 @@ Architektur/Abweichungen: [Konzept](konzept.md). Ausgangsregeln: [Spezifikation]
 Match-Framework, Touch-Steuerung, Bots/Übung, Party-/Wettbewerbsanbindung und beide Hostingadapter. Spiele: `MATCH_IDS` in `shared/matches/framework.ts`; Gruppen/Zufallspool: `shared/minigameCatalog.ts`.
 
 - Ursprüngliche Match-Spiele plus Turmsicht, Hindernis-Parcours und Standhaft; jeder Parcours-Lauf ist ein eigenständiges Minispiel mit eigenem Eintrag in Auswahl und Zufallspool (Nov. 2026).
+- Neu (Nov. 2026): Tower Tumble – Survival, Neon Racer (Hochformat, Lenkrad/Pedale), Neon Racer – Kippen (Querformat, Bewegungssteuerung), Schneeballschlacht (3D). Regeln/Entscheidungen im [Konzept](konzept.md#dokumentierte-abweichungen).
 - Erste Generation: 14 klassische Arenen, Hook Wars, Chaos Run und Wippenwerk; weiter direkt wählbar.
 - Proberaum: lokale Übungsinsel mit neun Stationen, Pause/Reset, Figurenwahl und Animationsvorschau; kein Minispiel-/Pool-Eintrag.
 - 3D-Match-Szenen mit Canvas-Rückfall. Figurenpipeline: [Skelettfiguren](figuren-rigged.md).
@@ -23,6 +24,8 @@ Match-Framework, Touch-Steuerung, Bots/Übung, Party-/Wettbewerbsanbindung und b
 | Kamera/Balance | Klettern, Balkentreffer, Sprung/Hechten, Lava-Etagen/Schubser, kleine Figuren, Light-Trails-Lenkung, Quick-Draw-Fairness und Funklatenz beurteilen. |
 | Bots | Insbesondere Hook Wars, Chaos Run und Windkanal einfach; keine hohe Spielstärke zugesichert. |
 | Arrow Masters | Ego-Perspektive offen, Spezialpfeile vorhanden. |
+| Neon Racer | Kippsteuerung auf Android und iPhone (Vorzeichen, Ruhelage, Querformat-Layout, Freigabe) prüfen; Streckenlänge, Item-Balance und Lenkradgefühl beurteilen. Nur Canvas, keine 3D-Variante. |
+| Schneeballschlacht | Wurfgefühl, Reichweite, Bot-Stärke und 3D-Leistung mit sechs Figuren auf echten Handys prüfen. |
 | Weitere Läufe | Ideen: Teamstaffel, Rutschbahn, wechselndes Labyrinth, weitere Finals. Nicht implementiert. |
 
 ## Prüfungen
