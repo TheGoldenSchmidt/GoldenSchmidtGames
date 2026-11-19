@@ -1,7 +1,7 @@
 import { ACTION_MINI_IDS, advanceArena, ARENA_META, createArena, isArenaId, NEUTRAL_INPUT, publicArena, setArenaControl, type ArenaId, type ArenaInput, type ArenaState } from "./partyArena";
 import { advanceMatch, createMatch, finishMatch, isMatchId, MATCH_IDS, MATCH_MODULES, matchStandings, neutralizeMatch, publicMatch, removeMatchPlayer, setMatchControl, type MatchId } from "./matches/framework";
 import type { MatchState } from "./matches/types";
-import { isParcoursRun, miniEligible, miniPool, parcoursRuns, type PlayableMiniId } from "./minigameCatalog";
+import { miniEligible, miniPool, type PlayableMiniId } from "./minigameCatalog";
 import { partyBoard, partyPaths, fieldCoins, fieldLabel, FINAL_ROUNDS, hasFullSet, isFinalStretch, stationAt, JAYSPOT, TROPHY_SHOPS } from "./partyBoard";
 import { characterId, type CharacterId } from "./characters";
 import { checkMinigameSetup, isMinigameMode, minigameOptions, placeMinigameBet, type MinigameCompetition, type MinigameMode, type MinigameOptions } from "./minigameModes";
@@ -202,8 +202,7 @@ function startFinalStretch(g:PartyGame){
 function startTurn(g:PartyGame,now:number) {g.itemUsed=false;g.double=false;g.boost=0;g.trophyBought=false;g.dice=[];g.path=[];g.offered=undefined;phase(g,"turn",now);log(g,`${activePartyPlayer(g).name} ist am Zug.`);}
 function selectMini(g:PartyGame,now:number,forceDigital=false) {
   const active=g.players.filter(p=>!p.passive).length;
-  // The parcours entry of the pool becomes one of its runs when the bag is filled.
-  const refill=()=>{g.miniBag=shuffle(g,miniPool(active,g.options.classic??true)).map(id=>{if(!isParcoursRun(id))return id;const runs=parcoursRuns(active);return runs[Math.floor(random(g)*runs.length)]??id;});if(g.miniBag.at(-1)===g.lastMini) [g.miniBag[0],g.miniBag[g.miniBag.length-1]]=[g.miniBag[g.miniBag.length-1],g.miniBag[0]];};
+  const refill=()=>{g.miniBag=shuffle(g,miniPool(active,g.options.classic??true));if(g.miniBag.at(-1)===g.lastMini) [g.miniBag[0],g.miniBag[g.miniBag.length-1]]=[g.miniBag[g.miniBag.length-1],g.miniBag[0]];};
   if(!g.miniBag.length)refill();
   // Players may have become passive since the bag was filled; skip games that no longer fit.
   while(g.miniBag.length&&!miniEligible(g.miniBag.at(-1) as PlayableMiniId,active)){g.miniBag.pop();if(!g.miniBag.length)refill();}

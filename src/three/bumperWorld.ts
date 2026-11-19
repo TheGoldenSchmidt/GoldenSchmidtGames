@@ -1,6 +1,6 @@
 import * as T from "three";
-import type { Fighter, RingGame } from "../../shared/matches/ringCore";
-import { BUMPER } from "../../shared/matches/bumperMayhem";
+import type { Fighter, RingGame, RingItemKind } from "../../shared/matches/ringCore";
+import { BUMPER, ITEMS } from "../../shared/matches/bumperMayhem";
 import type { MatchWorld, MatchWorldFrame } from "../matches/client";
 import { Debris, frameBox, Impact } from "./matchScene";
 import { riggedFigure, riggedIdFor, type CharacterKit, type RiggedFigure } from "./riggedFigure";
@@ -14,7 +14,8 @@ import { PLAYER_COLORS, SceneKit } from "./sceneKit";
  * authoritative view (positions, headings, edge, events).
  */
 const START_RADIUS = 6, TILT = 46 * Math.PI / 180, FIGURE_H = 1.45, CAR_TOP = 1.7;
-const COLOR = { night: 0x14102e, rink: 0x2a2160, grid: 0x3b2f80, outside: 0x1d1748, rim: 0x0d0a22, edge: 0xff86c8, post: 0xffe44e, ink: 0x24133f, spark: 0xfff3a0, own: 0xffe44e, life: 0xff86c8, star: 0xffe44e, shield: 0x57e4cb, turbo: 0xffa04a } as const;
+const COLOR = { night: 0x14102e, rink: 0x2a2160, grid: 0x3b2f80, outside: 0x1d1748, rim: 0x0d0a22, edge: 0xff86c8, post: 0xffe44e, ink: 0x24133f, spark: 0xfff3a0, own: 0xffe44e, life: 0xff86c8, star: 0xffe44e, shield: 0x57e4cb, turbo: 0xffa04a, box: 0x6544e8, oil: 0x07060f, wave: 0x57e4cb } as const;
+const ITEM_ICON: Record<RingItemKind, string> = { mega: "⬆", oil: "◍", wave: "◎" };
 /** 2D heading (x right, y down on screen = +z) → rotation of a model facing +Z. */
 const yawOf = (heading: number) => Math.atan2(Math.cos(heading), Math.sin(heading));
 
@@ -66,6 +67,21 @@ export function createBumperWorld(host: HTMLElement, read: () => MatchWorldFrame
   };
 
   const impact = new Impact(world, kit), sparks = new Debris(world, 90, new T.MeshBasicMaterial({ color: COLOR.spark }));
+  // Item boxes float and spin; oil slicks lie flat; a shockwave is an expanding ring.
+  const boxes = new Map<number, T.Group>(), slicks = new Map<number, T.Mesh>();
+  const slickGeo = new T.CircleGeometry(ITEMS.oilRadius, 28), slickMat = new T.MeshStandardMaterial({ color: COLOR.oil, roughness: .15, metalness: .6, transparent: true, opacity: .9 });
+  const waveRing = new T.Mesh(new T.TorusGeometry(1, .07, 6, 48), new T.MeshBasicMaterial({ color: COLOR.wave, transparent: true, opacity: .8, depthWrite: false }));
+  waveRing.rotation.x = Math.PI / 2; waveRing.visible = false; world.add(waveRing);
+  let waveAt = -1e9;
+  const waveFrom = new T.Vector3();
+  const boxFor = (id: number, kind: RingItemKind) => {
+    let group = boxes.get(id);
+    if (group) return group;
+    group = new T.Group(); world.add(group);
+    const cube = kit.box(group, COLOR.box, 0, .55, 0, .5, .5, .5); cube.name = "cube";
+    const badge = kit.badge(group, ITEM_ICON[kind], "#24133f", .5); badge.position.y = 1.15; badge.name = "badge";
+    boxes.set(id, group); return group;
+  };
   const cars = new Map<string, Car>();
   let lastSeq = 0, frame = 0, last = performance.now(), camPos: T.Vector3 | undefined, camTarget: T.Vector3 | undefined;
 
@@ -122,9 +138,31 @@ export function createBumperWorld(host: HTMLElement, read: () => MatchWorldFrame
         for (const id of e.ids) { const c = cars.get(id); if (c) c.bumpAt = time; }
         if (!reduced) sparks.burst(fighter.x, .5, fighter.y, time, { count: 10, speed: 2.6, up: 2.6, size: .07, life: 450, color: COLOR.spark });
         impact.hit(fighter.x, fighter.y, time, reduced, .5);
-      } else if (e.kind === "reset") for (const c of cars.values()) if (!c.wasOut) c.backAt = time;
+      } else if (e.kind === "reset") { for (const c of cars.values()) if (!c.wasOut) c.backAt = time; }
+      else if (e.kind === "wave" && fighter) { waveAt = time; waveFrom.set(fighter.x, .15, fighter.y); impact.hit(fighter.x, fighter.y, time, reduced, .7); }
+      else if (e.kind === "slip" && car) car.fig.play("hitLight");
     }
     lastSeq = Math.max(lastSeq, s.eventSeq);
+
+    const liveBoxes = new Set<number>();
+    for (const item of g.items ?? []) {
+      liveBoxes.add(item.id);
+      const group = boxFor(item.id, item.kind); group.position.set(item.x, 0, item.y);
+      const cube = group.getObjectByName("cube")!; cube.position.y = .55 + (reduced ? 0 : Math.sin(time / 260 + item.id) * .1); cube.rotation.y = reduced ? .6 : time / 700;
+    }
+    for (const [id, group] of boxes) if (!liveBoxes.has(id)) { world.remove(group); boxes.delete(id); }
+    const liveSlicks = new Set<number>();
+    for (const o of g.slicks ?? []) {
+      liveSlicks.add(o.id);
+      let mesh = slicks.get(o.id);
+      if (!mesh) { mesh = new T.Mesh(slickGeo, slickMat); mesh.rotation.x = -Math.PI / 2; mesh.position.set(o.x, .02, o.y); mesh.receiveShadow = true; world.add(mesh); slicks.set(o.id, mesh); }
+      // Grows to full size while it becomes slippery.
+      mesh.scale.setScalar(s.time < o.armedAt ? .45 + .55 * (1 - (o.armedAt - s.time) / ITEMS.oilArm) : 1);
+    }
+    for (const [id, mesh] of slicks) if (!liveSlicks.has(id)) { world.remove(mesh); slicks.delete(id); }
+    const waveK = (time - waveAt) / 450;
+    waveRing.visible = waveK >= 0 && waveK < 1;
+    if (waveRing.visible) { waveRing.position.copy(waveFrom); waveRing.scale.setScalar(reduced ? ITEMS.waveRadius : .4 + waveK * ITEMS.waveRadius); (waveRing.material as T.MeshBasicMaterial).opacity = .8 * (1 - waveK); }
 
     for (const p of s.players) {
       const fighter = g.fighters[p.id];
@@ -154,7 +192,8 @@ export function createBumperWorld(host: HTMLElement, read: () => MatchWorldFrame
       car.group.rotation.y = yawOf(heading);
       // Collision: the rubber cars squash for a moment (not with reduced motion).
       const squash = reduced ? 0 : Math.max(0, 1 - (time - car.bumpAt) / 220), wobble = Math.sin(squash * Math.PI) * squash;
-      car.group.scale.set(1 + wobble * .14, 1 - wobble * .12, 1 + wobble * .14);
+      const size = s.time < (fighter.bigUntil ?? 0) ? ITEMS.megaScale : 1;
+      car.group.scale.set(size * (1 + wobble * .14), size * (1 - wobble * .12), size * (1 + wobble * .14));
       const turbo = s.time < fighter.actionUntil, stunned = !fighter.out && s.time < fighter.stunUntil;
       // The spark on the pole flares with the turbo (steady with reduced motion).
       const flare = turbo ? (reduced ? 1.6 : 1.3 + Math.abs(Math.sin(time / 45)) * .9) : 1;
@@ -167,7 +206,7 @@ export function createBumperWorld(host: HTMLElement, read: () => MatchWorldFrame
       car.lives.forEach((m, i) => { m.visible = fighter.alive && i < fighter.lives; });
       car.stars.forEach((star, i) => { star.visible = stunned && !reduced; const a = time / 160 + i * Math.PI * 2 / 3; star.position.set(Math.cos(a) * .32, CAR_TOP - .3, Math.sin(a) * .32); });
       if (car.marker) car.marker.position.y = CAR_TOP + .65 + (reduced ? 0 : Math.abs(Math.sin(time / 220)) * .1);
-      car.ring.visible = !fighter.out && fighter.alive; car.ring.position.set(x, .04 + height, z);
+      car.ring.visible = !fighter.out && fighter.alive; car.ring.position.set(x, .04 + height, z); car.ring.scale.setScalar(size);
       if (s.done && g.winner === p.id && !car.cheered) { car.cheered = true; car.fig.play("cheer"); }
     }
 
@@ -190,5 +229,5 @@ export function createBumperWorld(host: HTMLElement, read: () => MatchWorldFrame
     frame = requestAnimationFrame(animate);
   };
   frame = requestAnimationFrame(animate);
-  return { dispose: () => { cancelAnimationFrame(frame); for (const c of cars.values()) { c.fig.dispose(); (c.spark.material as T.Material).dispose(); } grid.dispose(); floorMat.dispose(); kit.dispose(); } };
+  return { dispose: () => { cancelAnimationFrame(frame); for (const c of cars.values()) { c.fig.dispose(); (c.spark.material as T.Material).dispose(); } slickGeo.dispose(); slickMat.dispose(); grid.dispose(); floorMat.dispose(); kit.dispose(); } };
 }

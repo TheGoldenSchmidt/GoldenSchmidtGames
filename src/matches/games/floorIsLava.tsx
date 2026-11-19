@@ -34,8 +34,8 @@ function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
   }
   for (const p of s.players) {
     const r = g.runners[p.id], before = prev.runners?.[p.id];
-    // Out, or in the lava until the return.
-    if (!r?.alive || r.respawnAt) continue;
+    // Out for this round.
+    if (!r?.alive) continue;
     const x = before?.alive ? lerp(before.x, r.x, f.alpha) : r.x, y = before?.alive ? lerp(before.y, r.y, f.alpha) : r.y;
     // Runners on other floors appear as faint ghosts; a falling runner shrinks into the floor below.
     ctx.globalAlpha = r.floor === floor ? 1 : .3;
@@ -48,7 +48,6 @@ function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
     ctx.fillStyle = playerColor(p.style); ctx.beginPath(); ctx.arc(X(x), Y(y) - lift, size * FL.radius * (air ? 1.15 : 1), 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = "#2a1a10"; ctx.beginPath(); ctx.arc(X(x + r.fx * FL.radius * .7), Y(y + r.fy * FL.radius * .7) - lift, size * .06, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = p.id === f.viewer ? "#ffe44e" : "#2a1a10"; ctx.lineWidth = p.id === f.viewer ? 3 : 2; ctx.stroke();
-    for (let i = 0; i < r.lives; i++) { ctx.fillStyle = "#fff9ed"; ctx.beginPath(); ctx.arc(X(x) - size * .12 + i * size * .24, Y(y) - lift - size * .5, size * .07, 0, Math.PI * 2); ctx.fill(); }
   }
   ctx.globalAlpha = 1;
   ctx.fillStyle = "#2a0f0ae6"; ctx.beginPath(); ctx.roundRect(8, 8, 92, 26, 13); ctx.fill();
@@ -96,12 +95,12 @@ export const floorIsLavaClient: MatchClient = {
   world: () => import("../../three/lavaWorld").then(m => m.createLavaWorld),
   banner(view, viewer) {
     const g = view.game as LavaGame, last = g.history.at(-1), me = g.runners[viewer];
-    // In the lava for a moment: the return is announced (the canvas hides the figure meanwhile).
-    if (g.phase === "play" && me?.alive && me.respawnAt) return { title: "In der Lava!", text: `Ein Leben weg – gleich bist du zurück (${me.lives} übrig)` };
+    // In the lava: out until the next round.
+    if (g.phase === "play" && me && !me.alive && !view.done) return { title: "In der Lava!", text: "Für diesen Durchgang bist du raus – schau zu, wer am längsten durchhält." };
     if (g.phase === "play" || view.done) return undefined;
     return { title: last?.tiebreak ? "Stechrunde vorbei" : `Durchgang ${g.round} vorbei`, text: last?.winners.includes(viewer) ? "Du stehst am längsten!" : `+${last?.points[viewer] ?? 0} Punkte für dich` };
   },
-  quiet: ["jump", "dash", "drop", "dive", "back"],
+  quiet: ["jump", "dash", "drop", "dive"],
   Controls: LavaControls,
   status(view, viewer) {
     const g = view.game as LavaGame, me = g.runners[viewer];

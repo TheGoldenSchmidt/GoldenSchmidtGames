@@ -40,9 +40,11 @@ export function MatchStage({ game, id, now, control, busy = false }: Props) {
   const [sound, setSound] = useState(soundEnabled());
   activeRef.current = active; controlRef.current = control;
 
-  // Keep the latest two snapshots for interpolation; ignore stale ones.
-  if (match !== snapshots.current.cur && match.time >= snapshots.current.cur.time) {
-    snapshots.current = { prev: snapshots.current.cur.time === match.time ? snapshots.current.prev : snapshots.current.cur, cur: match, at: performance.now(), echo: game.serverTime ?? Date.now() };
+  // Keep the latest two snapshots for interpolation; ignore stale ones. A re-render with the same
+  // simulation time (a new projection object) keeps the clock: resetting it made fast objects jump back.
+  if (match !== snapshots.current.cur && match.time === snapshots.current.cur.time) snapshots.current = { ...snapshots.current, cur: match };
+  else if (match !== snapshots.current.cur && match.time > snapshots.current.cur.time) {
+    snapshots.current = { prev: snapshots.current.cur, cur: match, at: performance.now(), echo: game.serverTime ?? Date.now() };
     if (measuring) { arrivals.current.push(snapshots.current.at); if (arrivals.current.length > 200) arrivals.current.shift(); }
   }
   // A reloaded device continues its tap counters from the authority's state.

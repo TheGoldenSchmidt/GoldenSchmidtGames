@@ -13,11 +13,18 @@ export const NP = {
   serveDelay: 1200, goalsToWin: 7, regular: 90000, goldenMax: 30000,
   powerEvery: [10000, 15000] as const, powerRadius: .5,
   wideMs: 5000, curveMs: 6000, slowMs: 4000, slowFactor: .55, curveAccel: 8, substeps: 6,
+  /** The ball is drawn 1.2× its physical radius; hits count for the drawn ball plus a small margin. */
+  hitSlack: .15,
+  /** A curved ball never flies flatter than this (radians from the field axis). */
+  maxFlight: 1.22,
+  /** Late save window after a ball passed a paddle: the team's round trip plus one snapshot, within these bounds. */
+  lateMin: 100, lateMax: 250,
   /** Overlap of the two 2v2 ranges around the centre line. */
   duoOverlap: .9
 } as const;
 export type PowerKind = "wide" | "multi" | "curve" | "slow";
-export interface Ball { id: number; x: number; y: number; vx: number; vy: number; speed: number; lastTeam: number; curve: number; extra: boolean }
+/** `late`: the ball passed a paddle of `team` at `x`; that team may still save it until `until` (network delay). */
+export interface Ball { id: number; x: number; y: number; vx: number; vy: number; speed: number; lastTeam: number; curve: number; extra: boolean; late?: { team: number; x: number; until: number } }
 export interface Paddle { id: string; team: number; x: number; min: number; max: number }
 export interface PongGame {
   score: [number, number];
@@ -70,31 +77,60 @@ function score(s: MatchState<PongGame>, team: number) {
   if (g.score[team] >= NP.goalsToWin || g.golden) { g.winner = team; s.done = true; g.balls = []; }
 }
 
+/** Front edge (ball centre) of a team's paddles. */
+const edgeOf = (team: number) => (team === 0 ? 1 : -1) * (NP.paddleY - NP.paddleT / 2 - NP.ball);
+const reach = (g: PongGame, paddle: Paddle) => width(g, paddle) / 2 + NP.ball * 1.2 + NP.hitSlack;
+
+function bounce(s: MatchState<PongGame>, ball: Ball, paddle: Paddle, hitX: number) {
+  const g = s.game, half = width(g, paddle) / 2;
+  const offset = Math.max(-1, Math.min(1, (hitX - paddle.x) / half)), angle = offset * NP.maxAngle;
+  ball.speed = Math.min(NP.maxSpeed, ball.speed + NP.speedUp);
+  ball.vx = Math.sin(angle) * ball.speed; ball.vy = Math.cos(angle) * ball.speed * forward(paddle.team);
+  ball.lastTeam = paddle.team; ball.late = undefined;
+  ball.curve = g.effects[paddle.team]?.kind === "curve" ? (offset >= 0 ? -1 : 1) * NP.curveAccel : 0;
+  emit(s, "hit", "", [paddle.id]);
+}
+
+/** Save window for a team: its slowest round trip plus one snapshot interval. */
+function lateWindow(s: MatchState<PongGame>, team: number) {
+  const rtt = Math.max(0, ...s.players.filter(p => p.team === team && !p.gone).map(p => p.rtt));
+  return Math.max(NP.lateMin, Math.min(NP.lateMax, rtt + 50));
+}
+
 function moveBall(s: MatchState<PongGame>, ball: Ball, dt: number) {
   const g = s.game;
   const slowTeam = g.effects.findIndex(e => e?.kind === "slow");
   // Slow motion only for balls flying towards the team that collected it.
   const towards = ball.vy > 0 ? 0 : 1, factor = slowTeam === towards ? NP.slowFactor : 1;
-  if (ball.curve) ball.vx += ball.curve * dt;
+  if (ball.curve) {
+    ball.vx += ball.curve * dt;
+    // A curve must not turn the ball flat: it would shuttle between the walls out of reach.
+    const limit = Math.tan(NP.maxFlight) * Math.abs(ball.vy);
+    if (Math.abs(ball.vx) > limit) ball.vx = Math.sign(ball.vx) * limit;
+  }
   const length = Math.hypot(ball.vx, ball.vy) || 1;
   ball.vx = ball.vx / length * ball.speed; ball.vy = ball.vy / length * ball.speed;
   const px = ball.x, py = ball.y;
   ball.x += ball.vx * dt * factor; ball.y += ball.vy * dt * factor;
   if (Math.abs(ball.x) > NP.halfW - NP.ball) { ball.x = Math.sign(ball.x) * (NP.halfW - NP.ball) * 2 - ball.x; ball.vx = -ball.vx; ball.curve = -ball.curve * .5; emit(s, "wall", "", []); }
-  for (const paddle of g.paddles) {
-    const line = paddle.team === 0 ? NP.paddleY : -NP.paddleY, incoming = paddle.team === 0 ? ball.vy > 0 : ball.vy < 0;
-    const edge = line - Math.sign(line) * (NP.paddleT / 2 + NP.ball);
-    const crossed = paddle.team === 0 ? py <= edge && ball.y >= edge : py >= edge && ball.y <= edge;
-    if (!incoming || !crossed) continue;
-    const half = width(g, paddle) / 2, t = (edge - py) / (ball.y - py || 1), hitX = px + (ball.x - px) * t;
-    if (Math.abs(hitX - paddle.x) > half + NP.ball) continue;
-    const offset = Math.max(-1, Math.min(1, (hitX - paddle.x) / half)), angle = offset * NP.maxAngle;
-    ball.speed = Math.min(NP.maxSpeed, ball.speed + NP.speedUp);
-    ball.vx = Math.sin(angle) * ball.speed; ball.vy = Math.cos(angle) * ball.speed * forward(paddle.team);
-    ball.x = hitX; ball.y = edge; ball.lastTeam = paddle.team;
-    ball.curve = g.effects[paddle.team]?.kind === "curve" ? (offset >= 0 ? -1 : 1) * NP.curveAccel : 0;
-    emit(s, "hit", "", [paddle.id]);
-    break;
+  const team = ball.vy > 0 ? 0 : 1, edge = edgeOf(team), crossed = team === 0 ? py <= edge && ball.y >= edge : py >= edge && ball.y <= edge;
+  if (crossed) {
+    const t = (edge - py) / (ball.y - py || 1), hitX = Math.max(-NP.halfW + NP.ball, Math.min(NP.halfW - NP.ball, px + (ball.x - px) * t));
+    // Nearest paddle of the defending team that covers the crossing point.
+    const paddle = g.paddles.filter(p => p.team === team && Math.abs(hitX - p.x) <= reach(g, p)).sort((a, b) => Math.abs(hitX - a.x) - Math.abs(hitX - b.x))[0];
+    if (paddle) { bounce(s, ball, paddle, hitX); ball.x = hitX; ball.y = edge; }
+    else ball.late = { team, x: hitX, until: s.time + lateWindow(s, team) };
+  } else if (ball.late && (ball.late.team !== team || s.time > ball.late.until)) ball.late = undefined;
+  else if (ball.late) {
+    // Late save: the defender saw the ball a round trip ago; a paddle that reaches the crossing point
+    // (or the ball itself, which also covers side hits) within the window still returns it.
+    const late = ball.late;
+    const paddle = g.paddles.find(p => p.team === team && (Math.abs(late.x - p.x) <= reach(g, p) || Math.abs(ball.x - p.x) <= reach(g, p)));
+    if (paddle) {
+      const hitX = Math.abs(late.x - paddle.x) <= reach(g, paddle) ? late.x : ball.x;
+      bounce(s, ball, paddle, hitX);
+      ball.y = 2 * edge - ball.y;
+    }
   }
   collect(s, ball);
 }

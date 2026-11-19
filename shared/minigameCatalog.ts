@@ -11,10 +11,7 @@ export type PlayableMiniId = ArenaId | MatchId;
 export const FIRST_GEN_LABEL = "1st Generation Minigames";
 /** Match games moved to the first generation; they stay playable but are not "new" (Wippenwerk: its seesaws now are part of Kreiselkurs). */
 export const FIRST_GEN_MATCH_IDS: readonly MatchId[] = ["hooks", "chaosrun", "wippenwerk"];
-/**
- * The obstacle runs count as one entry in the random draw ("Hindernis-Parcours"):
- * the bag holds the first run as placeholder and the draw picks one run.
- */
+/** The obstacle runs; each one is a standalone minigame with its own entry in every pool. */
 export const PARCOURS_RUN_IDS: readonly MatchId[] = COURSE_IDS;
 export const isParcoursRun = (id: unknown): id is MatchId => typeof id === "string" && (PARCOURS_RUN_IDS as readonly string[]).includes(id);
 export const NEW_MATCH_IDS: readonly MatchId[] = MATCH_IDS.filter(id => !FIRST_GEN_MATCH_IDS.includes(id));
@@ -27,9 +24,7 @@ export function miniName(id: PlayableMiniId) { return isMatchId(id) ? MATCH_MODU
 export function miniEligible(id: PlayableMiniId, players: number) { return isMatchId(id) ? matchEligible(id, players) : players >= 1 && players <= 6; }
 export function miniPlayerHint(id: PlayableMiniId) { return isMatchId(id) ? `${playerRange(id)} Spieler` : "1–6 Spieler"; }
 
-/** Draw pool for a room (the parcours runs as one entry). Never empty for valid settings; callers check `length`. */
+/** Draw pool for a room, every minigame (each obstacle run too) as one entry. Callers check `length`. */
 export function miniPool(players: number, classic: boolean): PlayableMiniId[] {
-  return [...NEW_MATCH_IDS, ...(classic ? FIRST_GEN_MINI_IDS : [])].filter(id => miniEligible(id, players) && (!isParcoursRun(id) || id === PARCOURS_RUN_IDS[0]));
+  return [...NEW_MATCH_IDS, ...(classic ? FIRST_GEN_MINI_IDS : [])].filter(id => miniEligible(id, players));
 }
-/** Runs a drawn parcours entry can become for this player count. */
-export const parcoursRuns = (players: number) => PARCOURS_RUN_IDS.filter(id => miniEligible(id, players));

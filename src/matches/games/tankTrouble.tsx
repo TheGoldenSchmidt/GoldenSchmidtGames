@@ -1,4 +1,5 @@
 import { TANK_FIELD, TT, wallRects, type TankGame } from "../../../shared/matches/tankTrouble";
+import { sightPolygon, TV } from "../../../shared/matches/tankView";
 import { AimPad, CameraSwipe, Stick } from "../controls";
 import { chaseAim, chaseStick, lerp, playerColor, type ChaseLocal, type MatchClient, type MatchFrame } from "../client";
 
@@ -20,6 +21,15 @@ function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
     ctx.fillStyle = wall.kind === 1 ? "#3b3550" : wall.kind === 2 ? "#b4553a" : "#7d3b2a";
     ctx.fillRect(x, y, ww, hh);
     if (wall.kind === 3) { ctx.strokeStyle = "#f3d1a2"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x + ww * .3, y); ctx.lineTo(x + ww * .55, y + hh * .5); ctx.lineTo(x + ww * .4, y + hh); ctx.stroke(); }
+  }
+  // Turmsicht: everything outside the own sight lies in the dark (same rays as the authority).
+  const own = g.tanks[f.viewer];
+  if (s.id === "tankview" && own) {
+    const before = prev.tanks?.[f.viewer], k = before && before.alive && own.alive ? f.alpha : 1;
+    const cx = before ? lerp(before.x, own.x, k) : own.x, cy = before ? lerp(before.y, own.y, k) : own.y, ring = sightPolygon(wallRects(g), cx, cy);
+    ctx.save(); ctx.fillStyle = "rgba(20,18,12,.68)"; ctx.beginPath(); ctx.rect(0, 0, w, h);
+    ring.forEach((d, i) => { const a = i / TV.rays * Math.PI * 2, px = X(cx + Math.cos(a) * d), py = Y(cy + Math.sin(a) * d); if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py); });
+    ctx.closePath(); ctx.fill("evenodd"); ctx.restore();
   }
   for (const power of g.powers) {
     ctx.fillStyle = "#6544e8"; ctx.strokeStyle = "#fff9ed"; ctx.lineWidth = 2;

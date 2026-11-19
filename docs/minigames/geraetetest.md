@@ -21,8 +21,10 @@ Android und iPhone, möglichst älteres Gerät; sechs für Volllast. Je relevant
 | Bereich | Prüfen |
 | --- | --- |
 | Tower Tumble | Hohe Türme, Handy-Host mit sechs Personen, Pfeil-Tipp-/Haltegeschwindigkeit |
-| Lava | Etagen, Wischkamera/Übersicht, Schubser/Hechten, Randsturz/Respawn, Schutzblinken, Rundenlänge |
-| Turmsicht | Orientierung, kamerarelatives Zielen, gleichzeitiges Lenken/Kamerawischen oben rechts |
+| Lava | Etagen, Wischkamera/Übersicht, Schubser/Hechten, Randsturz ohne Respawn, Startschutz, Rundenlänge |
+| Turmsicht | Orientierung, Lesbarkeit hell/dunkel und „zuletzt gesehen“, kamerarelatives Zielen, gleichzeitiges Lenken/Kamerawischen oben rechts |
+| Neon Pong | Schräge/schnelle Bälle treffbar, kein Flackern, späte Rettung wirkt fair für beide Seiten |
+| Bumper Mayhem | Item-Kisten erkennbar, Ölfleck/Schockwelle verständlich, Riesenauto-Größe |
 | Parcours | Laufzeiten, Aktionen, Balkentreffer, Klettern/Wippen/Flut, Klappenwarnung/Wind/Standhaft |
 | Übrige | FPS/Ruckler, kleine Figuren, Quick-Draw-Fairness, Light-Trails-Lenkung |
 | Alle 3D-Szenen | Laden, Erwärmung über mehrere Runden, beide Bewegungseinstellungen |

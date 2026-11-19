@@ -1,11 +1,12 @@
 import type { RingGame } from "../../../shared/matches/ringCore";
 import { SUMO } from "../../../shared/matches/sumoSmash";
-import { BUMPER } from "../../../shared/matches/bumperMayhem";
+import { BUMPER, ITEMS } from "../../../shared/matches/bumperMayhem";
 import { ActionButton, Stick } from "../controls";
 import type { MatchState } from "../../../shared/matches/types";
 import { lerp, playerColor, type MatchClient, type MatchFrame } from "../client";
 
 type Skin = "sumo" | "bumper";
+export const ITEM_ICON = { mega: "⬆", oil: "◍", wave: "◎" } as const;
 const VIEW = 6.6;
 
 function render(skin: Skin) {
@@ -13,7 +14,6 @@ function render(skin: Skin) {
     const s = f.cur, g = s.game as RingGame, prev = f.prev.game as RingGame, { w, h } = f;
     const scale = Math.min(w, h) / (VIEW * 2), cx = w / 2, cy = h / 2;
     const X = (x: number) => cx + x * scale, Y = (y: number) => cy + y * scale;
-    const body = skin === "sumo" ? SUMO.body : BUMPER.body;
     if (skin === "sumo") {
       const sky = ctx.createLinearGradient(0, 0, 0, h); sky.addColorStop(0, "#7fc8f8"); sky.addColorStop(1, "#ffe1f0");
       ctx.fillStyle = sky; ctx.fillRect(0, 0, w, h);
@@ -36,12 +36,22 @@ function render(skin: Skin) {
         ctx.fillStyle = "#ffe44e"; ctx.beginPath(); ctx.arc(X(ox), Y(oy), o.r * scale, 0, Math.PI * 2); ctx.fill();
         ctx.strokeStyle = "#24133f"; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(X(ox), Y(oy), o.r * scale * .6, 0, Math.PI * 2); ctx.stroke();
       }
+      // Oil slicks (dull until armed) and item boxes with their symbol.
+      for (const o of g.slicks ?? []) { ctx.fillStyle = s.time < o.armedAt ? "#0b0a1866" : "#0b0a18d0"; ctx.beginPath(); ctx.ellipse(X(o.x), Y(o.y), ITEMS.oilRadius * scale, ITEMS.oilRadius * scale * .8, .4, 0, Math.PI * 2); ctx.fill(); }
+      for (const item of g.items ?? []) {
+        const bob = f.reduced ? 0 : Math.sin(f.t / 220 + item.id) * 3, size = .62 * scale;
+        ctx.fillStyle = "#6544e8"; ctx.strokeStyle = "#fff9ed"; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.roundRect(X(item.x) - size / 2, Y(item.y) - size / 2 + bob, size, size, 6); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "#ffe44e"; ctx.font = `900 ${Math.round(size * .62)}px 'Trebuchet MS', sans-serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText(ITEM_ICON[item.kind], X(item.x), Y(item.y) + bob + 1);
+      }
     }
     for (const p of s.players) {
       const fi = g.fighters[p.id], before = prev.fighters?.[p.id];
       if (!fi?.alive || fi.out) continue;
       const smooth = before && !before.out && Math.hypot(before.x - fi.x, before.y - fi.y) < 1.5 ? f.alpha : 1;
       const x = before ? lerp(before.x, fi.x, smooth) : fi.x, y = before ? lerp(before.y, fi.y, smooth) : fi.y, color = playerColor(p.style);
+      const body = (skin === "sumo" ? SUMO.body : BUMPER.body) * (s.time < (fi.bigUntil ?? 0) ? ITEMS.megaScale : 1);
       const shielded = s.time < fi.shieldUntil, acting = s.time < fi.actionUntil;
       ctx.save(); ctx.translate(X(x), Y(y));
       if (shielded) { ctx.strokeStyle = "#57e4cb"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, (body + .15) * scale, 0, Math.PI * 2); ctx.stroke(); }
@@ -70,7 +80,7 @@ function render(skin: Skin) {
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
     if (g.resetAt !== undefined && !s.done) {
       ctx.fillStyle = "#24133fcc"; ctx.fillRect(0, h / 2 - 28, w, 56); ctx.fillStyle = "#fff9ed"; ctx.font = "900 18px 'Trebuchet MS', sans-serif";
-      ctx.fillText(`Ring-Out! Alle zurück auf die Startplätze – ${Math.max(0, Math.ceil((g.resetAt - f.simTime) / 1000))} s`, w / 2, h / 2);
+      ctx.fillText(`Ring-Out! Neustart von den Startplätzen – ${Math.max(0, Math.ceil((g.resetAt - f.simTime) / 1000))} s`, w / 2, h / 2);
     } else if (me && me.alive && me.out && !s.done) {
       ctx.fillStyle = "#24133fcc"; ctx.fillRect(0, h / 2 - 28, w, 56); ctx.fillStyle = "#fff9ed"; ctx.font = "900 18px 'Trebuchet MS', sans-serif";
       ctx.fillText(`Ring-Out! Zurück in ${Math.max(0, Math.ceil((me.respawnAt - f.simTime) / 1000))} s`, w / 2, h / 2);
@@ -83,7 +93,7 @@ function render(skin: Skin) {
 function client(skin: Skin, actionLabel: string, icon: string, cooldown: number): MatchClient {
   return {
     render: render(skin),
-    quiet: ["action", "bump", "strike"],
+    quiet: ["action", "bump", "strike", "item"],
     Controls({ io, view, viewer, active }) {
       const g = view.game as RingGame, me = g.fighters[viewer];
       const charge = me ? Math.max(0, Math.min(1, (view.time - me.actionAt) / cooldown)) : 0;
@@ -102,6 +112,9 @@ function client(skin: Skin, actionLabel: string, icon: string, cooldown: number)
       if (event.kind === "strike") return event.ids.includes(viewer) ? "hit" : undefined;
       if (event.kind === "action") return event.ids.includes(viewer) ? (skin === "sumo" ? "bounce" : "power") : undefined;
       if (event.kind === "sudden" || event.kind === "reset") return "tick";
+      if (event.kind === "mega" || event.kind === "oil") return event.ids.includes(viewer) ? "power" : undefined;
+      if (event.kind === "wave") return "boom";
+      if (event.kind === "slip") return event.ids[0] === viewer ? "hit" : undefined;
       return undefined;
     }
   };
@@ -121,10 +134,10 @@ export const sumoClient: MatchClient = {
 function ringBanner(view: MatchState, viewer: string) {
   const g = view.game as RingGame, me = g.fighters[viewer];
   if (view.done) return undefined;
-  // Without a restart for everyone (Sumo with more than two left) only the fallen one waits.
+  // Without a restart for everyone (more than two left) only the fallen one waits.
   if (g.resetAt === undefined) return me?.out && me.alive ? { title: "Ring-Out!", text: `Zurück in ${Math.max(0, Math.ceil((me.respawnAt - view.time) / 1000))} s` } : undefined;
   const left = `${Math.max(0, Math.ceil((g.resetAt - view.time) / 1000))} s`;
-  return me?.out ? { title: "Ring-Out!", text: me.alive ? `Neustart in ${left}` : "Du schaust zu" } : { title: "Ring-Out!", text: `Alle zurück auf die Startplätze – ${left}` };
+  return me?.out ? { title: "Ring-Out!", text: me.alive ? `Neustart in ${left}` : "Du schaust zu" } : { title: "Ring-Out!", text: `Neustart von den Startplätzen – ${left}` };
 }
 export const bumperClient: MatchClient = {
   ...client("bumper", "Turbo", "⚡", BUMPER.cooldown),

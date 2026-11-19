@@ -1,8 +1,25 @@
-import { NP, type PongGame } from "../../../shared/matches/neonPong";
+import { NP, type Ball, type PongGame } from "../../../shared/matches/neonPong";
 import { SliderPad } from "../controls";
 import { lerp, playerColor, type MatchClient, type MatchFrame } from "../client";
 
 const POWER_ICON = { wide: "↔", multi: "⁂", curve: "↝", slow: "◔" } as const;
+
+/**
+ * Ball position `ahead` seconds after the snapshot: straight flight with wall
+ * reflections, stopping at the paddle line of an incoming ball (the authority
+ * decides there). Shows fast, steep balls where they are now instead of one
+ * snapshot behind.
+ */
+function predictBall(g: PongGame, ball: Ball, ahead: number): [number, number] {
+  const slowTeam = g.effects.findIndex(e => e?.kind === "slow"), factor = slowTeam === (ball.vy > 0 ? 0 : 1) ? NP.slowFactor : 1;
+  const edge = NP.paddleY - NP.paddleT / 2 - NP.ball, vy = ball.vy * factor;
+  let t = ahead;
+  if (!ball.late && vy !== 0 && Math.abs(ball.y) <= edge) t = Math.min(t, Math.max(0, (Math.sign(vy) * edge - ball.y) / vy));
+  const lim = NP.halfW - NP.ball;
+  let x = ball.x + ball.vx * factor * t;
+  for (let i = 0; i < 4 && Math.abs(x) > lim; i++) x = Math.sign(x) * 2 * lim - x;
+  return [x, ball.y + vy * t];
+}
 
 function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
   const s = f.cur, g = s.game as PongGame, prev = f.prev.game as PongGame, { w, h } = f;
@@ -48,12 +65,19 @@ function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
     ctx.fillStyle = color; ctx.beginPath(); ctx.roundRect(X(x) - half * scale, Y(y) - NP.paddleT * scale / 2, half * 2 * scale, NP.paddleT * scale, 6); ctx.fill();
     if (paddle.id === f.viewer) { ctx.strokeStyle = "#fff9ed"; ctx.lineWidth = 2; ctx.stroke(); }
   }
-  // Balls with a short glow trail, interpolated between snapshots.
-  const trails = (f.local as unknown as { pongTrail?: Record<number, [number, number][]> });
-  trails.pongTrail ??= {};
+  // Balls with a short glow trail: predicted to the authority's time, corrections fade out within ~60 ms.
+  const trails = (f.local as unknown as { pongTrail?: Record<number, [number, number][]>; pongShown?: Record<number, { x: number; y: number; t: number }> });
+  trails.pongTrail ??= {}; trails.pongShown ??= {};
+  const ahead = Math.min(.15, Math.max(0, (f.simTime - s.time) / 1000));
   for (const ball of g.balls) {
-    const before = prev.balls?.find(b => b.id === ball.id);
-    const bx = before ? lerp(before.x, ball.x, f.alpha) : ball.x, by = before ? lerp(before.y, ball.y, f.alpha) : ball.y;
+    const [px, py] = predictBall(g, ball, ahead), shown = trails.pongShown[ball.id];
+    let bx = px, by = py;
+    if (shown) {
+      const dt = Math.min(.1, Math.max(0, (f.t - shown.t) / 1000)), [ex, ey] = predictBall(g, { ...ball, x: shown.x, y: shown.y, late: undefined }, dt);
+      const ox = ex - px, oy = ey - py, keep = Math.exp(-dt / .06);
+      if (Math.hypot(ox, oy) < 1.2) { bx = px + ox * keep; by = py + oy * keep; }
+    }
+    trails.pongShown[ball.id] = { x: bx, y: by, t: f.t };
     const trail = trails.pongTrail[ball.id] ??= [];
     if (!f.reduced) { trail.push([bx, by]); if (trail.length > 10) trail.shift(); }
     trail.forEach(([tx, ty], i) => { ctx.fillStyle = `rgba(87,228,203,${(i + 1) / trail.length * .35})`; ctx.beginPath(); ctx.arc(X(tx), Y(ty), NP.ball * scale * (i + 1) / trail.length, 0, Math.PI * 2); ctx.fill(); });
@@ -61,6 +85,7 @@ function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
     ctx.fillStyle = "#fff9ed"; ctx.beginPath(); ctx.arc(X(bx), Y(by), NP.ball * scale * 1.2, 0, Math.PI * 2); ctx.fill();
   }
   for (const id of Object.keys(trails.pongTrail)) if (!g.balls.some(b => b.id === Number(id))) delete trails.pongTrail[Number(id)];
+  for (const id of Object.keys(trails.pongShown)) if (!g.balls.some(b => b.id === Number(id))) delete trails.pongShown[Number(id)];
   // Effects of each team as small chips.
   ctx.font = "800 13px 'Trebuchet MS', sans-serif";
   for (const side of [0, 1]) {
