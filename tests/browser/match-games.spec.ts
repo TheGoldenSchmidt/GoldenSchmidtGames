@@ -15,6 +15,8 @@ import type { RunGame } from "../../shared/matches/chaosRun";
 import type { ArrowGame } from "../../shared/matches/arrowMasters";
 import type { TowerGame } from "../../shared/matches/towerTumble";
 import type { HookGame } from "../../shared/matches/hookWars";
+import type { RacerGame } from "../../shared/matches/neonRacer";
+import type { SnowGame } from "../../shared/matches/snowball";
 import { CHARACTERS } from "../../shared/characters";
 import { miniPool } from "../../shared/minigameCatalog";
 
@@ -754,5 +756,137 @@ test("Hindernis-Parcours: wer raus ist, schaut zu und wechselt die gezeigte Pers
     await next.tap();
     await expect.poll(() => world.getAttribute("data-watch")).not.toBe(first);
     await page.screenshot({ path: testInfo.outputPath("parcours-watch.png") });
+  } finally { session.close(); }
+});
+
+test("Tower Tumble – Survival: keine Ziellinie, drei Leben in der Anzeige, Pfeile schieben", async ({ page }, testInfo) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "towersurvival" });
+  try {
+    await expect(page.getByRole("heading", { name: "Tower Tumble – Survival", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
+    await session.action({ type: "ready" }, session.ids[1]);
+    await matchStarted(page);
+    await expect(page.locator(".match-hud p[role=status]")).toContainText("3 von 3 Leben");
+    const tower = async () => ((await session.state()).partyGame!.mini!.match as MatchState<TowerGame>).game.towers[session.ids[0]];
+    await expect.poll(async () => Boolean((await tower()).piece), { timeout: 3000 }).toBe(true);
+    const before = (await tower()).piece!.tx;
+    await page.getByRole("button", { name: "Rechts", exact: true }).tap();
+    await expect.poll(async () => (await tower()).piece?.tx ?? before).toBeGreaterThan(before);
+    await page.screenshot({ path: testInfo.outputPath("tower-survival.png") });
+  } finally { session.close(); }
+});
+
+test("Neon Racer: Gas fährt, Lenkrad lenkt, Bremse hält, Item-Knopf ohne Item gesperrt", async ({ page }, testInfo) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  const errors: string[] = []; page.on("pageerror", e => errors.push(e.message));
+  const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "racer" });
+  try {
+    await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
+    await session.action({ type: "ready" }, session.ids[1]);
+    await matchStarted(page);
+    const match = async () => (await session.state()).partyGame!.mini!.match as MatchState<RacerGame>;
+    const car = async () => (await match()).game.cars[session.ids[0]];
+    const input = async () => (await match()).players.find(p => p.id === session.ids[0])!.input;
+    await expect(page.getByRole("button", { name: "Kein Item", exact: true })).toBeDisabled();
+    const start = (await car()).prog;
+    const gas = (await page.getByRole("button", { name: "Gas", exact: true }).boundingBox())!;
+    await page.mouse.move(gas.x + gas.width / 2, gas.y + gas.height / 2); await page.mouse.down();
+    await expect.poll(async () => (await car()).prog - start, { timeout: 4000 }).toBeGreaterThan(4);
+    await page.screenshot({ path: testInfo.outputPath("racer-gas.png") });
+    await page.mouse.up();
+    await expect.poll(async () => (await input()).ha).toBe(false);
+    // Lenkrad: oben anfassen und nach rechts drehen.
+    const wheel = (await page.getByRole("slider", { name: "Lenkrad" }).boundingBox())!, cx = wheel.x + wheel.width / 2, cy = wheel.y + wheel.height / 2;
+    await page.mouse.move(cx, cy - wheel.height * .4); await page.mouse.down();
+    await page.mouse.move(cx + wheel.width * .4, cy, { steps: 6 });
+    await expect.poll(async () => (await input()).x).toBeGreaterThan(.5);
+    await page.mouse.up();
+    await expect.poll(async () => (await input()).x).toBe(0);
+    const brake = page.getByRole("button", { name: "Bremse", exact: true }), box = (await brake.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down();
+    await expect.poll(async () => (await input()).hb).toBe(true);
+    await page.mouse.up();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    expect(errors).toEqual([]);
+  } finally { session.close(); }
+});
+
+test("Neon Racer – Kippen: Querformat füllt den Bildschirm, Kippen lenkt, ohne Sensor Pfeiltasten", async ({ page }, testInfo) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const errors: string[] = []; page.on("pageerror", e => errors.push(e.message));
+  const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "racertilt" });
+  try {
+    await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
+    await session.action({ type: "ready" }, session.ids[1]);
+    await matchStarted(page);
+    // Hochkant: Hinweis zum Drehen.
+    await expect(page.getByText("Dreh dein Handy ins Querformat.")).toBeVisible();
+    await page.setViewportSize({ width: 844, height: 390 });
+    await expect(page.getByText("Dreh dein Handy ins Querformat.")).toBeHidden();
+    const stage = (await page.locator(".match-game--racertilt").boundingBox())!;
+    expect(stage.width).toBeGreaterThan(800); expect(stage.height).toBeGreaterThan(370);
+    const input = async () => ((await session.state()).partyGame!.mini!.match as MatchState<RacerGame>).players.find(p => p.id === session.ids[0])!.input;
+    // Gas mit dem rechten Daumen.
+    const gas = (await page.getByRole("button", { name: "Gas", exact: true }).boundingBox())!;
+    await page.mouse.move(gas.x + gas.width / 2, gas.y + gas.height / 2); await page.mouse.down();
+    await expect.poll(async () => (await input()).ha).toBe(true);
+    await page.mouse.up();
+    // Sensor starten: erste Messung ist die Ruhelage, danach lenkt Drehen im Uhrzeigersinn nach rechts.
+    await page.getByRole("button", { name: "Bewegungssteuerung starten", exact: true }).tap();
+    // The listener is attached once the (possibly asynchronous) permission request is done.
+    await expect(page.getByRole("button", { name: "Lenkrad ausrichten", exact: true })).toBeVisible();
+    const angle = await page.evaluate(() => screen.orientation?.angle ?? 0);
+    const [rest, turned] = angle === 90 ? [[0, -90], [20, -90]] : angle === 270 ? [[0, 90], [-20, 90]] : [[90, 0], [70, 90]];
+    await page.evaluate(([b, g]) => window.dispatchEvent(new DeviceOrientationEvent("deviceorientation", { alpha: 0, beta: b, gamma: g })), rest);
+    await page.waitForTimeout(100);
+    await page.evaluate(([b, g]) => window.dispatchEvent(new DeviceOrientationEvent("deviceorientation", { alpha: 0, beta: b, gamma: g })), turned);
+    await expect.poll(async () => (await input()).x).toBeGreaterThan(.5);
+    await page.screenshot({ path: testInfo.outputPath("racer-tilt.png") });
+    // Ohne Sensorsignal (neuer Start, keine Ereignisse): Pfeiltasten erscheinen.
+    await page.reload();
+    await page.setViewportSize({ width: 844, height: 390 });
+    await page.getByRole("button", { name: "Bewegungssteuerung starten", exact: true }).tap();
+    const right = page.getByRole("button", { name: "Rechts lenken", exact: true });
+    await expect(right).toBeVisible({ timeout: 6000 });
+    const rb = (await right.boundingBox())!;
+    await page.mouse.move(rb.x + rb.width / 2, rb.y + rb.height / 2); await page.mouse.down();
+    await expect.poll(async () => (await input()).x).toBe(1);
+    await page.mouse.up();
+    expect(errors).toEqual([]);
+  } finally { session.close(); }
+});
+
+for (const motion of ["no-preference", "reduce"] as const) test(`Schneeballschlacht 3D (${motion}): Zielen zeigt die Wurflinie, Loslassen wirft, Formen füllt nach`, async ({ page }, testInfo) => {
+  await page.emulateMedia({ reducedMotion: motion });
+  const errors: string[] = []; page.on("pageerror", e => errors.push(e.message));
+  const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "snowball" });
+  try {
+    await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
+    await session.action({ type: "ready" }, session.ids[1]);
+    await matchStarted(page);
+    const world = page.locator(".match-world");
+    await expect(world).toHaveAttribute("data-webgl", "ready", { timeout: 20000 });
+    await expect(world).toHaveAttribute("data-camera", "chase");
+    const chosen = Object.fromEntries((await session.state()).partyGame!.players.map(p => [p.id, p.characterId]));
+    await expect.poll(async () => JSON.parse(await world.getAttribute("data-figures") ?? "{}")).toEqual(chosen);
+    const me = async () => ((await session.state()).partyGame!.mini!.match as MatchState<SnowGame>).game.players[session.ids[0]];
+    expect((await me()).balls).toBe(1);
+    const pad = (await page.getByRole("group", { name: "Zielen und werfen" }).boundingBox())!;
+    await page.mouse.move(pad.x + pad.width / 2, pad.y + pad.height / 2); await page.mouse.down();
+    await page.mouse.move(pad.x + pad.width / 2, pad.y + pad.height / 2 - 60, { steps: 4 });
+    await expect(world).toHaveAttribute("data-aim", "on");
+    await page.screenshot({ path: testInfo.outputPath(`snow-aim-${motion}.png`) });
+    await page.mouse.up();
+    await expect.poll(async () => (await me()).balls).toBe(0);
+    await expect(page.locator(".tank-aim-hint")).toContainText("formen");
+    // Formen: stillhalten und den Knopf gedrückt halten.
+    const form = (await page.getByRole("button", { name: "Formen", exact: true }).boundingBox())!;
+    await page.mouse.move(form.x + form.width / 2, form.y + form.height / 2); await page.mouse.down();
+    await expect.poll(async () => (await me()).balls, { timeout: 4000 }).toBe(1);
+    await page.mouse.up();
+    await page.screenshot({ path: testInfo.outputPath(`snow-formed-${motion}.png`) });
+    expect(Number(await world.getAttribute("data-draw-calls") ?? 0)).toBeLessThan(400);
+    expect(errors).toEqual([]);
   } finally { session.close(); }
 });

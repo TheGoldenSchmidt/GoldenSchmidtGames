@@ -134,8 +134,8 @@ body:has(.party-screen--playing .match-game) { padding-block:0; }
 .match-preview--arrows { background:linear-gradient(#8fd3ff, #d8f1ff 60%, #6fa84a 60%); color:#e3263b; }
 /* Tower Tumble: left thumb moves (arrows), right thumb turns and drops; one row keeps the tower base free. */
 .tower-arrows,.tower-buttons { display:flex; gap:8px; }
-.match-game--tower .match-controls .match-action { width:72px; height:72px; -webkit-touch-callout:none; }
-@media (max-width:360px) { .match-game--tower .match-controls { gap:6px; padding:10px; } .match-game--tower .match-controls .match-action { width:64px; height:64px; } }
+.match-game--tower .match-controls .match-action, .match-game--towersurvival .match-controls .match-action { width:72px; height:72px; -webkit-touch-callout:none; }
+@media (max-width:360px) { .match-game--tower .match-controls, .match-game--towersurvival .match-controls { gap:6px; padding:10px; } .match-game--tower .match-controls .match-action, .match-game--towersurvival .match-controls .match-action { width:64px; height:64px; } }
 /* Floor is Lava: jump on the thumb's home position, dive beside it, shove above. */
 .lava-buttons { display:grid; grid-template-columns:repeat(2, 70px); grid-template-areas:". push" "dive jump"; gap:8px; }
 .lava-buttons > :nth-child(1) { grid-area:push; }
@@ -162,10 +162,58 @@ body:has(.party-screen--playing .match-game) { padding-block:0; }
 .match-game--lava .match-banner { background:#2a0f0ae6; border-color:#ff6a1f; }
 .match-game--lava .match-banner b { color:#ffd166; }
 .match-game--lava .lava-buttons .match-action { width:70px; height:70px; }
-.match-preview--tower { background:linear-gradient(#ffd166, #ff86c8); color:#24133f; }
+.match-preview--tower, .match-preview--towersurvival { background:linear-gradient(#ffd166, #ff86c8); color:#24133f; }
 /* Hook Wars: stick bottom left, the right half fires and holds the hook. */
 .match-game--hooks .match-controls { justify-content:flex-start; }
 .hook-aim-half { position:absolute; top:0; right:0; bottom:0; width:50%; pointer-events:auto; }
 .hook-aim-half .match-aim-pad { border-left:2px dashed #fff9ed22; }
 .hook-hint { position:absolute; right:12px; bottom:18px; padding:4px 10px; border-radius:999px; background:#24133fcc; color:#57e4cb; font-size:.72rem; font-weight:800; pointer-events:none; }
 .match-preview--hooks { background:radial-gradient(circle at 50% 40%, #4b2a5c, #1b1f3b 70%); color:#57e4cb; }
+
+/* Neon Racer: steering wheel bottom left, item and pedals bottom right (portrait). */
+.match-preview--racer, .match-preview--racertilt { background:radial-gradient(circle at 50% 55%, #1b1440 30%, #ff86c8 31%, #ff86c8 34%, #07051a 35%); color:#57e4cb; }
+.racer-wheel { position:relative; width:138px; height:138px; border-radius:50%; background:#24133fb3; border:2px solid #fff9ed55; touch-action:none; flex-shrink:0; }
+.racer-wheel svg { width:100%; height:100%; display:block; }
+.racer-wheel.is-disabled { opacity:.45; }
+.racer-right { display:flex; flex-direction:column; align-items:flex-end; gap:10px; }
+.racer-pedals { display:flex; align-items:flex-end; gap:10px; }
+.racer-pedal { display:flex; align-items:flex-end; justify-content:center; padding-bottom:10px; border-radius:16px; border:2px solid #24133f; color:#24133f; font-weight:900; font-size:.72rem; text-transform:uppercase; box-shadow:0 5px 0 #24133f; touch-action:none; -webkit-touch-callout:none; user-select:none; -webkit-user-select:none; background:repeating-linear-gradient(0deg, transparent 0 9px, #24133f22 9px 12px); }
+.racer-pedal--gas { width:78px; height:116px; background-color:#57e4cb; }
+.racer-pedal--brake { width:66px; height:84px; background-color:#ff86c8; }
+.racer-pedal.is-down { transform:translateY(4px); box-shadow:0 1px 0 #24133f; filter:brightness(1.12); }
+.racer-pedal:disabled { opacity:.45; }
+.racer-pedal:focus-visible, .racer-item:focus-visible, .racer-chip:focus-visible { outline:3px solid #fff9ed; outline-offset:3px; }
+.racer-item { width:76px; height:76px; border-radius:50%; border:2px solid #24133f; background:#6544e8; color:#fff9ed; box-shadow:0 4px 0 #24133f; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; font-weight:900; touch-action:none; }
+.racer-item b { font-size:1.6rem; line-height:1; color:#ffe44e; }
+.racer-item span { font-size:.58rem; text-transform:uppercase; max-width:70px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.racer-item.is-ready { background:#ffe44e; color:#24133f; }
+.racer-item.is-ready b { color:#24133f; }
+.racer-item:disabled { opacity:.55; }
+@media (max-width:360px) { .racer-wheel { width:118px; height:118px; } .racer-pedal--gas { width:68px; height:104px; } .racer-pedal--brake { width:58px; height:76px; } .racer-item { width:66px; height:66px; } }
+
+/* Neon Racer – Kippen: landscape fills the screen; left half brakes, right half accelerates. */
+.match-game--racertilt .racer-portrait-hint { display:none; }
+.match-game--racertilt .racer-zone { position:absolute; bottom:0; top:30%; width:38%; border-radius:22px; border:2px dashed #fff9ed44; background:transparent; box-shadow:none; color:#fff9edcc; font-size:.8rem; padding-bottom:16px; }
+.match-game--racertilt .racer-zone--brake { left:0; border-color:#ff86c866; }
+.match-game--racertilt .racer-zone--gas { right:0; border-color:#57e4cb66; }
+.match-game--racertilt .racer-zone.is-down { background:#ffffff14; transform:none; box-shadow:none; }
+.racer-tilt-top { position:absolute; left:50%; top:52px; transform:translateX(-50%); display:flex; align-items:center; gap:10px; }
+.racer-chip { min-height:44px; padding:0 14px; border-radius:999px; border:2px solid #fff9ed66; background:#24133fe6; color:#fff9ed; font-weight:800; font-size:.78rem; display:inline-flex; align-items:center; max-width:220px; }
+.racer-steer-buttons { position:absolute; left:50%; bottom:12px; transform:translateX(-50%); display:flex; gap:12px; }
+.racer-steer { width:72px; height:64px; background-color:#ffe44e; }
+@media (orientation:landscape) {
+  .match-game--racertilt { position:fixed; inset:0; z-index:60; padding:max(6px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)); background:#07051a; gap:6px; }
+  .match-game--racertilt .match-hud { padding:4px 8px; }
+  .match-game--racertilt .match-hud h2 { font-size:.95rem; }
+  .match-game--racertilt .match-standings { display:none; }
+  .match-game--racertilt .match-stage { min-height:0; }
+}
+@media (orientation:portrait) {
+  .match-game--racertilt .racer-portrait-hint { display:block; position:absolute; left:12px; right:12px; top:40%; margin:0; padding:12px 16px; border-radius:18px; text-align:center; background:#16121fe6; border:2px solid #ffe44e; color:#ffe44e; font-weight:900; pointer-events:none; }
+}
+
+/* Schneeballschlacht: stick left, aim area right (like Turmsicht), form button above the stick. */
+.match-preview--snowball { background:radial-gradient(circle at 50% 40%, #ffffff 30%, #bfe0f7 32%, #24306b 75%); color:#24306b; }
+.match-game--snowball .snow-aim-half { top:45%; }
+.snow-form { position:absolute; left:12px; bottom:136px; pointer-events:auto; }
+.snow-form .match-action { width:72px; height:72px; }

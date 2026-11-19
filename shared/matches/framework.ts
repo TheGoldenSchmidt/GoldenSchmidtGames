@@ -10,18 +10,20 @@ import { sumoSmash } from "./sumoSmash";
 import { bumperMayhem } from "./bumperMayhem";
 import { chaosRun } from "./chaosRun";
 import { arrowMasters } from "./arrowMasters";
-import { towerTumble } from "./towerTumble";
+import { towerSurvival, towerTumble } from "./towerTumble";
 import { hookWars } from "./hookWars";
 import { lightTrails } from "./lightTrails";
+import { neonRacer, neonRacerTilt } from "./neonRacer";
+import { snowball } from "./snowball";
 import { parcoursModule } from "./parcours";
 
 /**
  * Registry of the new touch minigames ("Match-Minispiele"). Only complete
  * games are listed here; the lobby, pools and bots read this list.
  */
-export const MATCH_IDS = ["quickdraw", "trails", "pong", "tanks", "tankview", "bombs", "lava", "sumo", "bumpercars", "chaosrun", "arrows", "tower", "hooks", "tuerenlotto", "kreiselkurs", "wippenwerk", "glibberflut", "geisterpfad", "fallklappen", "windkanal", "kletterwand", "standhaft"] as const;
+export const MATCH_IDS = ["quickdraw", "trails", "pong", "tanks", "tankview", "bombs", "lava", "sumo", "bumpercars", "chaosrun", "arrows", "tower", "towersurvival", "racer", "racertilt", "snowball", "hooks", "tuerenlotto", "kreiselkurs", "wippenwerk", "glibberflut", "geisterpfad", "fallklappen", "windkanal", "kletterwand", "standhaft"] as const;
 export type MatchId = typeof MATCH_IDS[number];
-export const MATCH_MODULES: Record<MatchId, MatchModule<any>> = { quickdraw: quickDraw, trails: lightTrails, pong: neonPong, tanks: tankTrouble, tankview: tankView, bombs: bombArena, lava: floorIsLava, sumo: sumoSmash, bumpercars: bumperMayhem, chaosrun: chaosRun, arrows: arrowMasters, tower: towerTumble, hooks: hookWars,
+export const MATCH_MODULES: Record<MatchId, MatchModule<any>> = { quickdraw: quickDraw, trails: lightTrails, pong: neonPong, tanks: tankTrouble, tankview: tankView, bombs: bombArena, lava: floorIsLava, sumo: sumoSmash, bumpercars: bumperMayhem, chaosrun: chaosRun, arrows: arrowMasters, tower: towerTumble, towersurvival: towerSurvival, racer: neonRacer, racertilt: neonRacerTilt, snowball, hooks: hookWars,
   tuerenlotto: parcoursModule("tuerenlotto"), kreiselkurs: parcoursModule("kreiselkurs"), wippenwerk: parcoursModule("wippenwerk"), glibberflut: parcoursModule("glibberflut"), geisterpfad: parcoursModule("geisterpfad"),
   fallklappen: parcoursModule("fallklappen"), windkanal: parcoursModule("windkanal"), kletterwand: parcoursModule("kletterwand"), standhaft: parcoursModule("standhaft") };
 export const isMatchId = (id: unknown): id is MatchId => typeof id === "string" && (MATCH_IDS as readonly string[]).includes(id);

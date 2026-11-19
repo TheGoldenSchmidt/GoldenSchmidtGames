@@ -12,6 +12,8 @@ import { emit, hash, inputOfPlayer, presence, rank, shuffled, type MatchModule, 
  */
 export const TW = {
   baseHalf: 2.5, baseDepth: 1.2, laneHalf: 6, goal: 16, holdMs: 2000,
+  /** Survival: out after this many lost stones; falling gets faster over time (× `speedUp` at `survivalMs`). */
+  lives: 3, survivalMs: 180000, speedUp: 1.8,
   fall: 2.2, fastFall: 12, move: 16, spawnGap: 7, spawnDelay: 300, lostY: -6,
   gravity: 18, substeps: 3, iterations: 12, friction: .9, bias: .2, slop: .01,
   sleepSpeed: .08, sleepMs: 400, settleSpeed: .5, regular: 120000
@@ -78,8 +80,10 @@ export interface Tower {
   lost: number;
   holdSince?: number;
   finishedAt?: number;
+  /** Survival: time of the third lost stone (out). */
+  outAt?: number;
 }
-export interface TowerGame { sequence: PieceKind[]; towers: Record<string, Tower>; winner?: string; decided: boolean }
+export interface TowerGame { sequence: PieceKind[]; towers: Record<string, Tower>; winner?: string; decided: boolean; survival?: boolean }
 /** Packed body for the network view: [id, kind index, rotation, x, y, angle]. */
 export type PackedBody = [number, number, number, number, number, number];
 export interface TowerView extends Omit<Tower, "bodies" | "warm"> { packed: PackedBody[] }
@@ -117,6 +121,9 @@ function spawn(s: MatchState<TowerGame>, t: Tower) {
   t.next++;
 }
 
+/** Normal fall speed; in Survival it grows steadily so mistakes become likely. */
+const fallSpeed = (s: MatchState<TowerGame>) => s.game.survival ? TW.fall * (1 + (TW.speedUp - 1) * Math.min(1, s.time / TW.survivalMs)) : TW.fall;
+
 /** Moves the falling piece for one sub-step; on contact it joins the simulation. */
 function steer(s: MatchState<TowerGame>, id: string, t: Tower, fast: boolean, h: number) {
   const p = t.piece!;
@@ -124,7 +131,7 @@ function steer(s: MatchState<TowerGame>, id: string, t: Tower, fast: boolean, h:
     const nx = p.x + Math.max(-TW.move * h, Math.min(TW.move * h, p.tx - p.x));
     if (!blocked(t, pieceBody(p, p.y, nx))) p.x = nx; else p.tx = p.x;
   }
-  const speed = fast ? TW.fastFall : TW.fall, ny = p.y - speed * h;
+  const speed = fast ? TW.fastFall : fallSpeed(s), ny = p.y - speed * h;
   if (!blocked(t, pieceBody(p, ny))) {
     p.y = ny;
     // Steered past the pedestal: the piece is lost and the next one comes.
@@ -161,22 +168,39 @@ function measure(s: MatchState<TowerGame>, id: string, t: Tower) {
   const resting = t.bodies.filter(b => Math.hypot(b.vx, b.vy) < TW.settleSpeed && Math.abs(b.w) < TW.settleSpeed);
   t.height = Math.max(0, ...resting.map(bodyTop));
   t.best = Math.max(t.best, t.height);
+  // Survival has no finish line.
+  if (s.game.survival) return;
   if (t.height >= TW.goal) {
     if (t.holdSince === undefined) { t.holdSince = s.time; emit(s, "hold", "Über der Ziellinie – halten!", [id]); }
     else if (s.time - t.holdSince >= TW.holdMs && t.finishedAt === undefined) t.finishedAt = s.time;
   } else if (t.holdSince !== undefined) { t.holdSince = undefined; emit(s, "drop", "Wieder unter der Linie", [id]); }
 }
 
-export const towerTumble: MatchModule<TowerGame> = {
-  id: "tower",
-  meta: {
+const RACE_META: MatchModule["meta"] = {
     name: "Tower Tumble", seconds: TW.regular / 1000 + 2, players: [2, 3, 4, 5, 6], hz: 20,
     instruction: "Turmrennen: Alle bauen gleichzeitig auf einem eigenen, schmalen Sockel und bekommen dieselben Steine. Mit ⇦ und ⇨ schiebst du den fallenden Stein um eine halbe Zelle (gedrückt halten: weiter), tippe ⟳ zum Drehen und halte ⇩ zum schnellen Fallen. Sobald ein Stein aufsetzt, gilt echte Physik: Steine kippen, rutschen und stürzen ab. Wer zuerst zwei Sekunden lang über der Ziellinie steht, gewinnt. Nach zwei Minuten entscheidet die Höhe.",
     controls: "⇦ ⇨ verschieben · ⟳ drehen · ⇩ halten: schnell fallen.",
     look: { icon: "▦", action: "Bau schneller als die anderen", hint: "⇦ ⇨ schieben · ⟳ drehen · ⇩ fallen", goal: "Zuerst über der Ziellinie" }
-  },
+};
+const SURVIVAL_META: MatchModule["meta"] = {
+    name: "Tower Tumble – Survival", seconds: TW.survivalMs / 1000 + 2, players: [2, 3, 4, 5, 6], hz: 20,
+    instruction: "Turmbau ohne Ziellinie: Alle bauen gleichzeitig auf einem eigenen, schmalen Sockel und bekommen dieselben Steine. Mit ⇦ und ⇨ schiebst du den fallenden Stein (gedrückt halten: weiter), ⟳ dreht ihn, ⇩ gedrückt halten lässt ihn schnell fallen. Sobald ein Stein aufsetzt, gilt echte Physik. Baue immer weiter, ohne Steine zu verlieren: Fällt dein dritter Stein vom Turm, bist du raus. Die Steine fallen mit der Zeit immer schneller. Wer zuletzt noch baut, gewinnt; nach drei Minuten gewinnt der höchste Turm.",
+    controls: "⇦ ⇨ verschieben · ⟳ drehen · ⇩ halten: schnell fallen · 3 verlorene Steine = raus.",
+    look: { icon: "▥", action: "Bau weiter, verlier nichts", hint: "⇦ ⇨ schieben · ⟳ drehen · ⇩ fallen", goal: "Als Letzter ohne drei verlorene Steine" }
+};
+
+/**
+ * Tower Tumble as a race to the finish line (`tower`) or as Survival
+ * (`towersurvival`): no finish line, three lost stones and you are out,
+ * the last builder wins, at the time limit the highest tower.
+ */
+function towerModule(survival: boolean): MatchModule<TowerGame> {
+  const limit = survival ? TW.survivalMs : TW.regular;
+  return {
+  id: survival ? "towersurvival" : "tower",
+  meta: survival ? SURVIVAL_META : RACE_META,
   create(s) {
-    s.game = { sequence: [], towers: {}, decided: false };
+    s.game = { sequence: [], towers: {}, decided: false, ...(survival ? { survival: true } : {}) };
     for (const p of s.players) s.game.towers[p.id] = { bodies: [], warm: [], spawnAt: 0, next: 0, nextId: 1, asleep: true, calm: 0, height: 0, best: 0, placed: 0, lost: 0 };
     return s.game;
   },
@@ -184,22 +208,35 @@ export const towerTumble: MatchModule<TowerGame> = {
     const g = s.game;
     for (const p of s.players) {
       const t = g.towers[p.id];
-      if (p.gone) { t.piece = undefined; continue; }
+      if (p.gone || t.outAt !== undefined) { t.piece = undefined; continue; }
       if (!t.piece && s.time >= t.spawnAt) spawn(s, t);
       const input = inputOfPlayer(s, p);
       for (let i = 0; i < TW.substeps && t.piece; i++) steer(s, p.id, t, input.ha, dt / TW.substeps);
     }
     for (const p of s.players) simulate(s, p.id, g.towers[p.id], dt);
+    if (survival) {
+      for (const p of s.players) {
+        const t = g.towers[p.id];
+        if (p.gone || t.outAt !== undefined) continue;
+        measure(s, p.id, t);
+        if (t.lost >= TW.lives) { t.outAt = s.time; t.piece = undefined; emit(s, "out", "Drei Steine verloren – raus!", [p.id]); }
+      }
+      const building = s.players.filter(p => !p.gone && g.towers[p.id].outAt === undefined);
+      // The last builder wins at once; if the last ones drop out together they share the place.
+      if (building.length <= 1) { g.winner = building[0]?.id; g.decided = true; s.done = true; if (building.length) emit(s, "finish", "Letzter Baumeister!", [building[0].id]); }
+      else if (s.time >= limit) { g.decided = true; s.done = true; }
+      return;
+    }
     for (const p of s.players) if (!p.gone) measure(s, p.id, g.towers[p.id]);
     const finished = s.players.filter(p => !p.gone && g.towers[p.id].finishedAt !== undefined);
     if (finished.length) {
       g.winner = finished.length === 1 ? finished[0].id : undefined; g.decided = true; s.done = true;
       emit(s, "finish", "Ziel erreicht!", finished.map(p => p.id));
-    } else if (s.time >= TW.regular) { g.decided = true; s.done = true; }
+    } else if (s.time >= limit) { g.decided = true; s.done = true; }
   },
   press(s, p, kind, _at, value) {
     const t = s.game.towers[p.id], piece = t?.piece;
-    if (!piece || p.gone) return;
+    if (!piece || p.gone || t.outAt !== undefined) return;
     // Arrow taps: one half cell to the left (-1) or right (+1) of the current target.
     if (kind === "n") {
       if (value !== -1 && value !== 1) return;
@@ -217,6 +254,12 @@ export const towerTumble: MatchModule<TowerGame> = {
   remove(s, id) { const t = s.game.towers[id]; if (t) t.piece = undefined; },
   standings(s) {
     const g = s.game;
+    if (survival) return rank(s.players.map(p => {
+      const t = g.towers[p.id], out = t.outAt !== undefined;
+      return { id: p.id, score: Math.round(t.best * 10) / 10, detail: `${out ? "raus" : g.winner === p.id ? "Letzter Baumeister" : "baut noch"} · ${t.best.toFixed(1)} m · ${t.lost}/${TW.lives} verloren`,
+        // Still building beats out; later out beats earlier; then the height, then fewer lost stones.
+        keys: [presence(p), out ? 0 : 1, out ? t.outAt! : 0, Math.round(t.height * 100), -t.lost] };
+    }));
     return rank(s.players.map(p => {
       const t = g.towers[p.id], finished = t.finishedAt !== undefined;
       return { id: p.id, score: Math.round(t.height * 10) / 10, detail: `${finished ? "im Ziel" : `${t.height.toFixed(1)} m`} · ${t.placed} Steine · ${t.lost} verloren`,
@@ -233,22 +276,26 @@ export const towerTumble: MatchModule<TowerGame> = {
       towers[id] = { ...rest, ...(piece ? { piece: { ...piece } } : {}), packed: bodies.map(b => own ? [b.id, PIECE_KINDS.indexOf(b.k), b.r, b.x, b.y, b.a] : [b.id, PIECE_KINDS.indexOf(b.k), b.r, coarse(b.x), coarse(b.y), coarse(b.a)]) };
     }
     const upcoming = Math.max(...Object.values(g.towers).map(t => t.next)) + 1;
-    return { sequence: g.sequence.slice(0, upcoming), towers: towers as unknown as Record<string, Tower>, decided: g.decided, ...(g.winner !== undefined ? { winner: g.winner } : {}) };
+    return { sequence: g.sequence.slice(0, upcoming), towers: towers as unknown as Record<string, Tower>, decided: g.decided, ...(g.winner !== undefined ? { winner: g.winner } : {}), ...(g.survival ? { survival: true } : {}) };
   },
   bot(s, id) {
     const t = (s.game.towers as unknown as Record<string, TowerView>)[id], piece = t?.piece;
     if (!piece) return {};
-    const plan = botPlan(t, piece, hash(`${id}:${piece.n}`));
+    const plan = botPlan(t, piece, hash(`${id}:${piece.n}`), !!s.game.survival);
     const aligned = piece.r === plan.r && Math.abs(piece.x - plan.x) < .01;
     // One quarter turn at a time, roughly every 300 ms.
     const turn = piece.r !== plan.r && hash(`${id}:${Math.floor(s.time / 300)}`) % 2 === 0;
     // Bots wait a moment before dropping fast, so practice rounds keep a human pace.
-    const settled = aligned && piece.y < Math.max(0, t.height) + TW.spawnGap - 1.5;
+    // In Survival a fast drop slams onto the tower: careful bots let the piece fall slowly.
+    const settled = !s.game.survival && aligned && piece.y < Math.max(0, t.height) + TW.spawnGap - 1.5;
     // Like a person: one arrow tap per step towards the planned column.
     const step = Math.abs(piece.tx - plan.x) < .01 ? undefined : piece.tx < plan.x ? 1 : -1;
     return { ha: settled, pressA: turn, ...(step !== undefined ? { command: step } : {}) };
   }
 };
+}
+export const towerTumble = towerModule(false);
+export const towerSurvival = towerModule(true);
 
 /** Column surface heights (half-cell columns) of a packed tower, for bots. */
 export function surface(t: TowerView) {
@@ -275,8 +322,8 @@ export function restingY(t: TowerView, k: PieceKind, r: number, x: number, cols 
   return Number.isFinite(land) ? land : undefined;
 }
 
-/** Greedy placement: low, flat, centred and fully on the tower. */
-function botPlan(t: TowerView, piece: FallingPiece, salt: number) {
+/** Greedy placement: low, flat, centred and fully on the tower; in Survival much more careful than fast. */
+function botPlan(t: TowerView, piece: FallingPiece, salt: number, careful = false) {
   const cols = surface(t);
   let best = { r: piece.r, x: piece.x, score: Infinity };
   for (let r = 0; r < 4; r++) {
@@ -293,7 +340,11 @@ function botPlan(t: TowerView, piece: FallingPiece, salt: number) {
         if (gap > .25) unsupported += Number.isFinite(gap) ? gap : 4;
       }
       const top = land + Math.max(...cells.map(([, cy]) => cy + CELL));
-      const score = top + unsupported * 1.5 + Math.abs(px) * .15 + ((salt + r * 7 + Math.round(px * 2)) % 10) * .01;
+      // Cells beyond the pedestal edge tip the tower sooner or later.
+      const overhang = cells.reduce((n, [cx]) => n + Math.max(0, Math.abs(px + cx) + CELL - TW.baseHalf + .25), 0);
+      const score = careful
+        ? top * .6 + unsupported * 8 + overhang * 6 + Math.abs(px) * .5 + ((salt + r * 7 + Math.round(px * 2)) % 10) * .01
+        : top + unsupported * 1.5 + Math.abs(px) * .15 + ((salt + r * 7 + Math.round(px * 2)) % 10) * .01;
       if (score < best.score) best = { r, x: px, score };
     }
   }
