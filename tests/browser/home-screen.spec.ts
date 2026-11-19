@@ -117,3 +117,28 @@ test("Startbildschirm: Profil, Installationshilfe und schmale Ansicht", async ({
     await page.screenshot({ path: info.outputPath(`start-${viewport.width}x${viewport.height}.png`) });
   }
 });
+
+test("Startbildschirm: Fortsetzen und Updates teilen sich eine Zeile", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  const playerId = await page.evaluate(() => {
+    for (const key of Object.keys(localStorage)) {
+      try { const value = JSON.parse(localStorage.getItem(key) ?? "null"); if (value?.id) return value.id as string; } catch { /* not JSON */ }
+    }
+  });
+  await page.evaluate(playerId => localStorage.setItem("spielraum.last-host.v1", JSON.stringify({ playerId, nearby: { role: "host" }, sessionToken: "x" })), playerId);
+  for (const viewport of [{ width: 320, height: 640 }, { width: 412, height: 915 }]) {
+    await page.setViewportSize(viewport);
+    await page.reload();
+    const resume = page.getByRole("button", { name: "Handy-Tisch fortsetzen", exact: true });
+    const update = page.getByRole("button", { name: /Updates prüfen|Neue Version laden/ });
+    const install = page.getByRole("button", { name: "App installieren", exact: true });
+    for (const button of [resume, update, install]) await expect(button).toBeInViewport({ ratio: 1 });
+    const [r, u, i] = await Promise.all([resume, update, install].map(button => button.boundingBox()));
+    // Resume on the left, update on the right, all in one row without overlap.
+    expect(Math.abs(r!.y - u!.y)).toBeLessThan(2);
+    expect(r!.x + r!.width).toBeLessThanOrEqual(i!.x);
+    expect(i!.x + i!.width).toBeLessThanOrEqual(u!.x);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
+  }
+});

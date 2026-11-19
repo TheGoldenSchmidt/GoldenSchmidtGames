@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { GuestProfile } from "../../shared/types";
 import { InstallPrompt } from "../components/InstallPrompt";
 import { AppUpdate } from "../components/AppUpdate";
@@ -85,11 +85,22 @@ export function HomeScreen({profile, online, onProfile, onLocal, onOnline, onUni
         <button className="iw-slab iw-slab--stone expedition-universe" onClick={onUniverse}>
           <span className="iw-slab__face"><MenuIcon name="planet"/><span className="expedition-universe__copy"><strong>{UNIVERSE_TITLE}</strong><small>Experimente und neue Ideen</small></span><MenuIcon name="next"/></span>
         </button>
-        {onResumeHost && <button className="expedition-resume" onClick={onResumeHost}>Handy-Tisch fortsetzen</button>}
-        {onResumeOnline && <button className="expedition-resume" disabled={!online} onClick={onResumeOnline}>{resumeGameName === "Inselparty" ? "Online-Inselparty" : resumeGameName} wieder beitreten</button>}
-        {resumeError && <p role="alert">{resumeError}</p>}
-        <footer className="expedition-utilities"><InstallPrompt/><AppUpdate/></footer>
+        {resumeError && <p className="expedition-resume-error" role="alert">{resumeError}</p>}
+        <footer className="expedition-utilities">
+          {onResumeHost && <ResumeButton onClick={onResumeHost}>Handy-Tisch fortsetzen</ResumeButton>}
+          {onResumeOnline && <ResumeButton disabled={!online} onClick={onResumeOnline}>{resumeGameName === "Inselparty" ? "Online-Inselparty" : resumeGameName} wieder beitreten</ResumeButton>}
+          <InstallPrompt/><AppUpdate/>
+        </footer>
       </div>
     </div>
   </main>;
+}
+
+function ResumeButton({children, disabled, onClick}: {children: ReactNode; disabled?: boolean; onClick: () => void}) {
+  return <button className="dock-tool expedition-resume" disabled={disabled} onClick={onClick}>
+    <span className="dock-tool__contents">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10-6.5z"/></svg>
+      <span>{children}</span>
+    </span>
+  </button>;
 }

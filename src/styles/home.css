@@ -50,10 +50,11 @@
   background:linear-gradient(90deg,transparent,#191828eb 18% 82%,transparent);
   font:400 clamp(.85rem,3.8vw,1.1rem)/1.24 var(--iw-font-ui); text-shadow:0 1px 3px #161020; }
 .expedition-motto em { font-weight:560; color:#ffdb91; }
-.expedition-motto::before,.expedition-motto::after { position:absolute; color:#efd299;
-  font:1.95rem/1 var(--iw-font-display); }
-.expedition-motto::before { content:"“" / ""; top:0; left:7px; }
-.expedition-motto::after { content:"”" / ""; bottom:-8px; right:7px; }
+/* English motto: “ opens before the first line, ” closes after the second line, not after the signature. */
+.expedition-motto blockquote > span:first-child::before,
+.expedition-motto blockquote > span:last-child::after { color:#efd299; font-weight:560; font-size:1.2em; line-height:0; vertical-align:-.1em; }
+.expedition-motto blockquote > span:first-child::before { content:"“" / ""; margin-right:.08em; }
+.expedition-motto blockquote > span:last-child::after { content:"”" / ""; margin-left:.02em; }
 .motto-divider { display:flex; align-items:center; gap:4px; height:7px; color:#f8cd80; font-size:.6rem; }
 .motto-divider::before,.motto-divider::after { content:""; width:22px; height:1px;
   background:linear-gradient(90deg,transparent,#b99a62); }
@@ -85,8 +86,27 @@
 .expedition-universe__copy { display:grid; gap:1px; min-width:0; }
 .expedition-universe__copy strong { font:400 clamp(1.02rem,4.4vw,1.2rem)/1.1 var(--iw-font-display); text-transform:uppercase; text-shadow:0 1px 0 #0000005c; }
 .expedition-universe__copy small { font:480 clamp(.68rem,2.9vw,.8rem)/1.3 var(--iw-font-ui); color:#fff8eadd; }
-.expedition-resume { border-radius:8px; margin:10px 4px 0; font-size:.79rem; padding:6px 12px; }
-.expedition-utilities { position:relative; justify-content:center; gap:8px; margin-top:clamp(14px,3.3dvh,28px); }
+.expedition-resume-error { margin:10px 0 0; font-size:.79rem; }
+/* Resume (if any) sits left in the tool row, install and update stay right: one row instead of two. */
+.expedition-utilities { position:relative; justify-content:center; gap:8px; margin-top:clamp(12px,2.6dvh,24px); }
+.expedition-utilities:has(.expedition-resume) { justify-content:flex-end; align-items:stretch; }
+.expedition-utilities:has(.expedition-resume) > * { flex:0 1 auto; }
+.expedition-utilities > .expedition-resume { min-width:0; }
+.expedition-utilities:has(.expedition-resume) > :is(.install-card,.app-update) { min-width:min-content; }
+.expedition-utilities:has(.expedition-resume) .dock-tool { width:100%; height:100%; }
+.expedition-resume { margin-right:auto; text-align:left; }
+.dock-tool svg { flex:none; }
+/* On narrow phones three labelled tools do not fit next to each other: install keeps only its icon (label stays for screen readers). */
+@media (max-width:399px) {
+  .expedition-utilities:has(.expedition-resume) { gap:6px; }
+  .expedition-utilities:has(.expedition-resume) > .install-card { flex:none; }
+  .expedition-utilities:has(.expedition-resume) .install-card .dock-tool { width:44px; padding-inline:0; justify-content:center; }
+  .expedition-utilities:has(.expedition-resume) .install-card .dock-tool__contents { justify-content:center; }
+  .expedition-utilities:has(.expedition-resume) .install-card .dock-tool__contents > span {
+    position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+}
+.expedition-resume:disabled { opacity:.55; cursor:default; }
+.expedition-resume svg { fill:currentColor; stroke:none; }
 .expedition-utilities :is(.install-card,.app-update) { margin:0; background:none; border:0; padding:0; min-width:0; }
 .dock-tool { border-radius:10px; padding:4px 11px; }
 .dock-tool__contents { gap:6px; font:550 clamp(.65rem,2.65vw,.81rem)/1.2 var(--iw-font-ui); }
