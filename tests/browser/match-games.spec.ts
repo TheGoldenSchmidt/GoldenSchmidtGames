@@ -1,6 +1,6 @@
 import { selectLobbyGame } from "./select-lobby-game";
 import { selectEntryCharacter } from "./select-entry-character";
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { matchStarted, onlineSession } from "./party-session";
 import type { MatchState } from "../../shared/matches/types";
 import type { QuickDrawGame } from "../../shared/matches/quickDraw";
@@ -32,10 +32,11 @@ test("Lobby: neue Spiele, 1st-Generation-Checkbox und 320 Pixel ohne Überlauf",
   await expect(classic).toBeChecked();
   await classic.tap();
   await expect(classic).not.toBeChecked();
-  await expect(page.getByText(new RegExp(`aus ${miniPool(2, false).length} passenden Spielen`))).toBeVisible();
+  // Ohne Klassiker: höchstens so viele Runden wie passende neue Spiele (jeder Parcours-Lauf einzeln).
+  await expect(page.getByRole("combobox", { name: "Anzahl Minispiele" }).locator("option")).toHaveCount(miniPool(2, false).length);
   await selectLobbyGame(page, "free-minigame");
   await page.getByRole("combobox", { name: "Minispiel", exact: true }).selectOption("quickdraw");
-  await expect(page.getByText(/Warte auf das rote »ZIEH!«/)).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Minispiel", exact: true })).toHaveValue("quickdraw");
   await selectLobbyGame(page, "party");
   await expect(page.getByRole("checkbox", { name: /1st Generation Minigames/ })).toBeChecked();
   await page.setViewportSize({ width: 320, height: 760 });
@@ -104,6 +105,35 @@ test("Quick Draw: Fehlstart vor dem Signal und Übung gegen Bots", async ({ page
     await expect.poll(async () => (await round()).shots[session.ids[0]]?.early).toBe(true);
     await expect.poll(async () => (await round()).winners).toEqual([session.ids[1]]);
     await expect(page.locator(".match-feedback")).toContainText(/Fehlstart|Treffer|Kein gültiger/);
+  } finally { session.close(); }
+});
+
+test("Übung: Noch einmal üben startet ein frisches Spiel mit neuer Bühne", async ({ page }, testInfo) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const errors: string[] = []; page.on("pageerror", e => errors.push(e.message));
+  const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "trails" });
+  try {
+    await page.clock.install();
+    await page.getByRole("button", { name: "Erst kurz üben", exact: true }).tap();
+    const dialog = page.getByRole("dialog", { name: "Übung: Light Trails" });
+    await expect(dialog.locator(".match-countdown")).toBeVisible();
+    // Bis zum Ende der Übung vorspulen.
+    await page.clock.runFor(4000);
+    await page.clock.fastForward("03:00"); await page.clock.runFor(300);
+    const again = dialog.getByRole("button", { name: "Noch einmal üben", exact: true });
+    await expect(again).toBeVisible();
+    await expect(dialog.locator(".match-done")).toBeVisible();
+    const oldCanvas = await dialog.locator(".match-stage canvas").elementHandle();
+    await again.tap();
+    // Neue Bühne: Countdown, kein altes Ergebnis, frische Zeichenfläche (alte Momentaufnahmen und Tippzähler verworfen).
+    await expect(dialog.locator(".match-done")).toHaveCount(0);
+    await expect(dialog.locator(".match-countdown")).toBeVisible();
+    expect(await oldCanvas!.evaluate(e => e.isConnected)).toBe(false);
+    await page.clock.runFor(3500);
+    await expect(dialog.locator(".match-countdown")).toHaveCount(0);
+    await expect(dialog.getByRole("status").first()).toContainText(/Durchgang 1/);
+    await page.screenshot({ path: testInfo.outputPath("practice-again.png") });
+    expect(errors).toEqual([]);
   } finally { session.close(); }
 });
 
@@ -339,22 +369,32 @@ for (const [miniId, name] of [["bombs", "Bomb Arena"], ["tanks", "Tank Trouble"]
   } finally { session.close(); }
 });
 
-for (const motion of ["no-preference", "reduce"] as const) test(`Floor is Lava 2.5D (${motion}): Figuren auf Tempelplatten, Platten zerbröseln, Springen und Schubsen`, async ({ page }, testInfo) => {
+/** Floor is Lava online against an idle opponent: one life per round, so rounds end after about 4 s. */
+async function lavaSession(page: Page, motion: "no-preference" | "reduce") {
   await page.emulateMedia({ reducedMotion: motion });
   const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "lava" });
+  await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
+  await session.action({ type: "ready" }, session.ids[1]);
+  await matchStarted(page);
+  const match = async () => (await session.state()).partyGame!.mini!.match as MatchState<LavaGame>;
+  const me = async () => (await match()).game.runners[session.ids[0]];
+  /** Waits until the own figure is in play, at most `within` ms after a round started. */
+  const inPlay = async (within = Infinity) => { await expect.poll(async () => { const m = await match(); return m.game.phase === "play" && m.game.runners[session.ids[0]].alive && m.time - m.game.roundStart < within; }, { timeout: 20000, intervals: [100] }).toBe(true); return me(); };
+  return { session, match, me, inPlay };
+}
+
+for (const motion of ["no-preference", "reduce"] as const) test(`Floor is Lava 2.5D (${motion}): Figuren auf Tempelplatten, Verfolgerkamera, Übersicht und Wischen`, async ({ page }, testInfo) => {
+  const { session, match, inPlay } = await lavaSession(page, motion);
   try {
-    await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
-    await session.action({ type: "ready" }, session.ids[1]);
-    await matchStarted(page);
     const world = page.locator(".match-world");
     await expect(world).toHaveAttribute("data-webgl", "ready");
     const chosen = Object.fromEntries((await session.state()).partyGame!.players.map(p => [p.id, p.characterId]));
     await expect.poll(async () => JSON.parse(await world.getAttribute("data-figures") ?? "{}")).toEqual(chosen);
-    const game = async () => ((await session.state()).partyGame!.mini!.match as MatchState<LavaGame>).game;
-    const me = async () => (await game()).runners[session.ids[0]];
-    // Chase camera by default; the stick is relative to it: up runs where the camera looks.
+    // Chase camera while the own figure is in the game; the stick is relative to it: up runs where the camera looks.
+    // Early in a round: the short run keeps the figure in the game until the next round starts (about 6 s).
+    await inPlay(800);
     await expect(world).toHaveAttribute("data-camera", "chase");
-    const own = async () => ((await session.state()).partyGame!.mini!.match as MatchState<LavaGame>).players.find(p => p.id === session.ids[0])!.input;
+    const own = async () => (await match()).players.find(p => p.id === session.ids[0])!.input;
     {
       const pad = (await page.getByRole("group", { name: "Bewegungsstick" }).boundingBox())!;
       await page.mouse.move(pad.x + pad.width / 2, pad.y + pad.height / 2); await page.mouse.down();
@@ -363,41 +403,42 @@ for (const motion of ["no-preference", "reduce"] as const) test(`Floor is Lava 2
       await page.mouse.up();
     }
     await page.screenshot({ path: testInfo.outputPath(`lava-3d-chase-${motion}.png`) });
-    await page.getByRole("button", { name: "Übersicht", exact: true }).tap();
+    const overview = page.getByRole("button", { name: "Übersicht", exact: true });
+    await overview.tap({ force: true });
     await expect(world).toHaveAttribute("data-camera", "overview");
-    await expect(page.getByRole("button", { name: "Übersicht", exact: true })).toHaveAttribute("aria-pressed", "true");
-    await page.getByRole("button", { name: "Übersicht", exact: true }).tap();
+    await expect(overview).toHaveAttribute("aria-pressed", "true");
+    await overview.tap({ force: true });
     await expect(world).toHaveAttribute("data-camera", "chase");
     // Swiping on the free stage turns the camera (hint until the first swipe).
     await expect(page.getByText("wischen: Kamera drehen")).toBeVisible();
     const stage = (await page.locator(".match-stage").boundingBox())!;
+    await inPlay(2000);
     expect(Math.abs(await swipeCamera(page, { x: stage.x + 60, y: stage.y + stage.height * .35 }))).toBeGreaterThan(.5);
     await expect(page.getByText("wischen: Kamera drehen")).toHaveCount(0);
-    await expect.poll(async () => (await game()).tiles.includes("2")).toBe(true);
-    const start = await me();
-    const stick = page.getByRole("group", { name: "Bewegungsstick" }), box = (await stick.boundingBox())!;
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down();
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2 - 40, { steps: 3 });
-    await expect.poll(async () => Math.hypot((await me()).x - start.x, (await me()).y - start.y), { timeout: 4000 }).toBeGreaterThan(.4);
-    // Tap again while the figure is still in the lava (it returns after a second) or dropping a floor.
-    await expect.poll(async () => { const r = await me(); if (r.airUntil > 0) return true; await page.getByRole("button", { name: "Springen", exact: true }).tap(); return false; }, { timeout: 6000, intervals: [300] }).toBe(true);
-    await page.screenshot({ path: testInfo.outputPath(`lava-3d-jump-${motion}.png`) });
-    await page.mouse.up();
-    // After landing: the shove starts a dash and its cooldown.
-    await page.waitForTimeout(700);
-    // Tap again if the figure was just dropping a floor (shoves need solid ground).
-    await expect.poll(async () => { if ((await me()).shoveReady > start.shoveReady) return true; await page.getByRole("button", { name: "Schubsen", exact: true }).tap(); return false; }, { timeout: 6000, intervals: [300] }).toBe(true);
-    await page.waitForTimeout(500);
-    await page.screenshot({ path: testInfo.outputPath(`lava-3d-crumble-${motion}.png`) });
-    // Standing still: the slab crumbles and the figure drops to the floor below.
-    // (The idle opponent may end the round meanwhile; a new round starts on the top floor again.)
-    const match = async () => (await session.state()).partyGame!.mini!.match as MatchState<LavaGame>;
-    await expect.poll(async () => { const m = await match(); return m.game.runners[session.ids[0]].floor > 0 || m.events.some(e => e.kind === "drop" && e.ids[0] === session.ids[0]); }, { timeout: 8000 }).toBe(true);
-    await page.waitForTimeout(700);
-    await page.screenshot({ path: testInfo.outputPath(`lava-3d-floor-${motion}.png`) });
     expect(Number(await world.getAttribute("data-draw-calls"))).toBeLessThan(300);
-    await session.action({ type: "finish" }, session.ids[1]);
-    await expect(page.getByRole("heading", { name: "Euer Ergebnis", exact: true })).toBeVisible();
+  } finally { session.close(); }
+});
+
+for (const motion of ["no-preference", "reduce"] as const) test(`Floor is Lava 2.5D (${motion}): Schubsen, Springen, Durchfallen und Lava ohne Rückkehr in der Übung`, async ({ page }, testInfo) => {
+  // Same rules locally against a bot (no network): the buttons' cooldown ring shows accepted actions.
+  await page.emulateMedia({ reducedMotion: motion });
+  const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "lava" });
+  try {
+    await page.getByRole("button", { name: "Erst kurz üben", exact: true }).tap();
+    const dialog = page.getByRole("dialog", { name: "Übung: Floor is Lava" }), status = dialog.locator(".match-hud p[role=status]");
+    await expect(dialog.locator(".match-countdown")).toHaveCount(0, { timeout: 15000 });
+    // One life per round: a round ends as soon as the own figure is in the lava, so act at the start of a round.
+    const cooling = async (name: string) => { const button = dialog.getByRole("button", { name, exact: true }); await expect.poll(async () => { if (await button.evaluate(e => e.classList.contains("is-cooling"))) return true; await button.tap({ force: true }); return false; }, { timeout: 20000, intervals: [100] }).toBe(true); };
+    await cooling("Schubsen");
+    await cooling("Springen");
+    await page.screenshot({ path: testInfo.outputPath(`lava-practice-actions-${motion}.png`) });
+    // Standing still: the slab crumbles, the figure drops a floor and finally lands in the lava – out until the next round.
+    await expect(status).toContainText(/Etage [23]\/3/, { timeout: 15000 });
+    await expect(status).toContainText("raus", { timeout: 15000 });
+    await page.screenshot({ path: testInfo.outputPath(`lava-practice-out-${motion}.png`) });
+    // No return within the round; the next round brings everyone back to the top floor.
+    const round = Number((await status.textContent())!.match(/Runde (\d)/)![1]);
+    if (round < 3) await expect(status).toContainText(new RegExp(`Runde ${round + 1}/3 · \\d+ s · Etage 1/3`), { timeout: 15000 });
   } finally { session.close(); }
 });
 

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { advanceMatch, botMatchInput, createMatch, MATCH_MODULES, publicMatch, setMatchControl } from "../shared/matches/framework";
 import { TT, type TankGame } from "../shared/matches/tankTrouble";
-import { canSee, TV } from "../shared/matches/tankView";
+import { canSee, sightPolygon, TV } from "../shared/matches/tankView";
 import { wallRects } from "../shared/matches/tankTrouble";
 import type { MatchState } from "../shared/matches/types";
 import { createPartyGame, partyMiniResults, tickParty } from "../shared/party";
@@ -56,6 +56,27 @@ const cell = (c: number) => (c + .5) * TT.cell;
   assert.equal((publicMatch(s, "p0").game as TankGame).tanks.p1, undefined);
   // Zuschauer sehen alles.
   assert.ok((publicMatch(s, "zuschauer").game as TankGame).tanks.p1);
+}
+
+// Sichtbereich: ein Panzer, der halb um die Ecke ragt oder knapp am Rand steht, ist sichtbar; die Leuchtfläche passt dazu.
+{
+  const s = make(2); open(s); wall(s, "1");
+  const w = wallRects(s.game).find(r => r.axis === "v" && r.index === 2 + 2 * (TT.cols + 1))!;
+  put(s, "p0", cell(1), cell(2));
+  // Sichtgrenze verläuft über die untere Mauerecke; Mitte knapp dahinter, Rand ragt heraus.
+  const slope = (w.y1 - cell(2)) / (w.x0 - cell(1)), edgeY = cell(2) + slope * (cell(3) - cell(1));
+  put(s, "p1", cell(3), edgeY - TT.tank * .7);
+  assert.ok(!canSee(wallRects(s.game), s.game.tanks.p0, s.game.tanks.p1), "Mitte verdeckt");
+  assert.ok((publicMatch(s, "p0").game as TankGame).tanks.p1, "Halb sichtbarer Panzer erscheint");
+  put(s, "p1", cell(3), edgeY - TT.tank * 2.2);
+  assert.equal((publicMatch(s, "p0").game as TankGame).tanks.p1, undefined, "Ganz verdeckter Panzer bleibt unsichtbar");
+  open(s); put(s, "p1", cell(1) + TV.sight + TT.tank * .5, cell(2));
+  assert.ok((publicMatch(s, "p0").game as TankGame).tanks.p1, "Vorderkante in Reichweite reicht");
+  const ring = sightPolygon(wallRects(s.game), cell(1), cell(2));
+  assert.equal(ring.length, TV.rays);
+  assert.ok(ring.every(d => d > 0 && d <= TV.sight + 1e-9));
+  assert.ok(Math.abs(ring[0] - TV.sight) < 1e-9, "Nach rechts frei bis zur Reichweite");
+  assert.ok(Math.abs(ring[TV.rays / 2] - (cell(1) - TT.wall)) < 1e-6, "Nach links bis zur Außenmauer");
 }
 
 // Bots sehen nur ihre Sicht: ohne Gegner in Sicht fahren sie Streife statt stehen zu bleiben.

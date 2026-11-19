@@ -19,10 +19,10 @@ assert.equal(minigameOptions({ rounds: total }).rounds, total);
 assert.ok(miniPool(2, false).length >= 1 && miniPool(2, false).every(id => !isClassicMini(id)));
 // Hook Wars gehört zu den 1st Generation Minigames: nur mit Haken im Pool, aber weiter direkt wählbar.
 assert.ok(!miniPool(4, false).includes("hooks") && miniPool(4, true).includes("hooks") && isPlayableMini("hooks"));
-// Die Hindernis-Läufe zählen als ein Eintrag; Chaos Run ist jetzt 1st Generation.
-assert.equal(miniPool(2, true).length, total - PARCOURS_RUN_IDS.length + 1);
+// Jeder Hindernis-Lauf ist ein eigenständiges Minispiel im Pool; Chaos Run ist jetzt 1st Generation.
+assert.equal(miniPool(2, true).length, total);
 assert.ok(!miniPool(4, false).includes("chaosrun") && miniPool(4, true).includes("chaosrun"));
-assert.equal(miniPool(4, false).filter(isParcoursRun).length, 1, "Parcours nur einmal im Pool");
+assert.deepEqual(miniPool(4, false).filter(isParcoursRun), [...PARCOURS_RUN_IDS], "Alle Läufe einzeln im Pool");
 assert.throws(() => checkMinigameSetup("goldenschmidt", minigameOptions({ rounds: miniPool(2, false).length + 1, classic: false }), 2));
 checkMinigameSetup("goldenschmidt", minigameOptions({ rounds: miniPool(2, false).length, classic: false }), 2);
 
@@ -55,7 +55,7 @@ assert.deepEqual(play(createPartyGame(players, undefined, true, 123, now, "free-
 for (const [rounds, classic] of [[1, true], [5, true], [14, true], [miniPool(2, true).length, true], [miniPool(2, false).length, false]] as const) {
   let g = createPartyGame(players, undefined, true, 123, now, "goldenschmidt", { rounds, classic });
   if (!classic) assert.ok(g.miniBag.concat(g.mini!.id).every(id => !isClassicMini(id)), "Ohne 1st Generation nur neue Spiele");
-  assert.ok(g.miniBag.concat(g.mini!.id).filter(isParcoursRun).length <= 1, "Höchstens ein Hindernis-Lauf je Beutel");
+  if (rounds === miniPool(2, classic).length) assert.equal(g.miniBag.concat(g.mini!.id).filter(isParcoursRun).length, PARCOURS_RUN_IDS.length, "Jeder Hindernis-Lauf einmal je Beutel");
   const replay = createPartyGame(players, undefined, true, 123, now, "goldenschmidt", { rounds, classic });
   assert.equal(g.mini!.id, replay.mini!.id); assert.deepEqual(g.miniBag, replay.miniBag);
   const selected = new Set<string>();

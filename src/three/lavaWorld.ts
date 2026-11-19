@@ -21,7 +21,7 @@ const SLAB = .42, TILT = 62 * Math.PI / 180, EMBERS = 36, GAP = 2.4;
 /** Height of a floor's walking surface (top floor at 0). */
 const floorY = (floor: number) => -floor * GAP;
 const LAVA_Y = floorY(FLOORS - 1) - .7;
-const COLOR = { night: 0x2a0f0a, stone: 0xfff3dc, hot: 0xff6a1f, rune: 0x57e4cb, lava: 0xff5a14, glow: 0xffb347, own: 0xffe44e, life: 0xfff9ed, shadow: 0x1a0a06 } as const;
+const COLOR = { night: 0x2a0f0a, stone: 0xfff3dc, hot: 0xff6a1f, rune: 0x57e4cb, lava: 0xff5a14, glow: 0xffb347, own: 0xffe44e, shadow: 0x1a0a06 } as const;
 
 function texture(draw: (c: CanvasRenderingContext2D, n: number) => void, repeat = 1) {
   const canvas = document.createElement("canvas"); canvas.width = canvas.height = 256;
@@ -50,8 +50,8 @@ const slabTexture = () => texture((c, n) => {
 });
 
 interface Slab { state: string; changedAt: number; from: number }
-/** `fallAt`: when the figure began to fall into the lava (life lost); `backAt`: when it dropped back onto a tile. */
-interface Figure { fig: Character; lives: T.Mesh[]; marker?: T.Mesh; ring?: T.Mesh; shadow: T.Mesh; outAt?: number; top: number; fallAt?: number; fallY?: number; backAt?: number }
+/** `outAt`/`fallY`: when and from which height the figure fell into the lava (out for the round). */
+interface Figure { fig: Character; marker?: T.Mesh; ring?: T.Mesh; shadow: T.Mesh; outAt?: number; top: number; fallY?: number }
 
 export function createLavaWorld(host: HTMLElement, read: () => MatchWorldFrame, onError: () => void): MatchWorld {
   const kit = new SceneKit(host, onError), world = new T.Group();
@@ -97,17 +97,16 @@ export function createLavaWorld(host: HTMLElement, read: () => MatchWorldFrame, 
     const { fig, top } = fittedFigure(kit, world, style, selected, .38, 1.15);
     // Heading first, then the forward tilt of a dive about the figure's own side axis.
     fig.group.rotation.order = "YXZ";
-    const lives = Array.from({ length: FL.lives }, (_, i) => kit.ball(fig.group, COLOR.life, (i - (FL.lives - 1) / 2) * .17, top + .18, 0, .065));
     const marker = id === viewer ? kit.cone(fig.group, COLOR.own, 0, top + .5, 0, .2, .38) : undefined;
     if (marker) marker.rotation.x = Math.PI;
     const ring = id === viewer ? kit.mesh(world, new T.TorusGeometry(.42, .045, 6, 32), COLOR.own, 0, .02, 0) : undefined;
     if (ring) { ring.rotation.x = Math.PI / 2; ring.castShadow = false; }
     const shadow = new T.Mesh(new T.CircleGeometry(.3, 20), new T.MeshBasicMaterial({ color: COLOR.shadow, transparent: true, opacity: .45, depthWrite: false }));
     shadow.rotation.x = -Math.PI / 2; world.add(shadow);
-    f = { fig, lives, marker, ring, shadow, top }; figures.set(id, f); return f;
+    f = { fig, marker, ring, shadow, top }; figures.set(id, f); return f;
   };
 
-  // The return from the lava is a jump: not interpolated.
+  // A new round places everyone anew: not interpolated.
   const runnerPos = (r: Runner, before: Runner | undefined, alpha: number) => before?.alive && Math.hypot(before.x - r.x, before.y - r.y) < 1.5 ? [before.x + (r.x - before.x) * alpha, before.y + (r.y - before.y) * alpha] as const : [r.x, r.y] as const;
   /** Height of a runner's feet: its floor, or on the way down a fall that speeds up like a real one. */
   const feetY = (r: Runner, simTime: number, reduced: boolean) => {
@@ -189,11 +188,11 @@ export function createLavaWorld(host: HTMLElement, read: () => MatchWorldFrame, 
       const target = figures.get(e.ids[0]), runner = g.runners[e.ids[0]] ?? prev.runners?.[e.ids[0]];
       if (e.kind === "dash") target?.fig.act?.("attack", time);
       else if (e.kind === "shove") target?.fig.act?.("hit", time);
-      else if ((e.kind === "hit" || e.kind === "out") && target) {
+      else if (e.kind === "out" && target) {
         const at = prev.runners?.[e.ids[0]] ?? runner;
         if (at) { if (!reduced) splash.burst(wx(at.x), LAVA_Y + .2, wz(at.y), time, { count: 10, speed: 1.8, up: 4, size: .12, life: 650, color: COLOR.glow }); impact.hit(wx(at.x), wz(at.y), time, reduced, .8); }
-        // A lost life respawns the figure standing upright (no knock-down pose); only the last one is a fall.
-        if (e.kind === "out") { target.fig.act?.("death", time); target.outAt = time; }
+        // Out: the figure falls upright from where it stood into the lava (no lying death pose).
+        target.outAt = time; target.fallY = target.fig.group.position.y;
       } else if (e.kind === "drop" && runner && !reduced) {
         // Crumbs follow the runner through the hole.
         splash.burst(wx(runner.x), floorY(runner.floor - 1) - .1, wz(runner.y), time, { count: 6, speed: .8, up: .5, size: .09, life: 500, color: 0xc9b48a });
@@ -210,22 +209,14 @@ export function createLavaWorld(host: HTMLElement, read: () => MatchWorldFrame, 
       const falling = runner.dropUntil > f.simTime, ground = feetY(runner, f.simTime, reduced);
       const air = falling ? 0 : Math.max(0, Math.min(1, (runner.airUntil - f.simTime) / FL.jumpMs)), lift = air > 0 ? Math.sin((1 - air) * Math.PI) * .9 : 0;
       let height = ground + lift;
-      const inLava = runner.alive && (runner.respawnAt ?? 0) > 0;
-      if (inLava && fg.fallAt === undefined) { fg.fallAt = time; fg.fallY = height; }
-      else if (!inLava && fg.fallAt !== undefined) { fg.fallAt = undefined; fg.backAt = time; }
       if (!runner.alive) {
-        // Out: the figure sinks into the lava, then leaves.
-        const sink = fg.outAt === undefined ? 1 : Math.min(1, (time - fg.outAt) / 900);
-        height = floorY(FLOORS - 1) - sink * 1.6; fg.fig.group.visible = sink < 1 && fg.outAt !== undefined;
-      } else if (inLava) {
-        // Lost a life: falls (past the edge or through the hole) into the lava and stays out of sight until the return.
-        const k = reduced ? 1 : Math.min(1, (time - fg.fallAt!) / 600), from = fg.fallY ?? ground;
+        // Out: falls (past the edge or through the hole) into the lava and stays out of sight for the round.
+        const k = fg.outAt === undefined || reduced ? 1 : Math.min(1, (time - fg.outAt) / 650), from = fg.fallY ?? ground;
         height = from + (LAVA_Y - .6 - from) * k * k; fg.fig.group.visible = k < 1;
       } else {
-        fg.outAt = undefined; fg.fig.group.visible = !(f.simTime < runner.invulnUntil && !reduced && Math.floor(time / 110) % 2 === 0);
-        // Back from the lava: drops onto the safe tile from above.
-        const k = reduced || fg.backAt === undefined ? 1 : Math.min(1, (time - fg.backAt) / 450);
-        height += (1 - k) * (1 - k) * 2.6;
+        // A new round: standing again, whatever pose the figure held.
+        if (fg.outAt !== undefined) { fg.outAt = undefined; fg.fallY = undefined; fg.fig.revive?.(); }
+        fg.fig.group.visible = !(f.simTime < runner.invulnUntil && !reduced && Math.floor(time / 110) % 2 === 0);
       }
       // Opponents on a floor above the own one stay out of sight (they would hang in the air over the viewer's floor).
       const above = !!mine?.alive && runner.alive && p.id !== f.viewer && runner.floor < own;
@@ -239,10 +230,9 @@ export function createLavaWorld(host: HTMLElement, read: () => MatchWorldFrame, 
       fg.fig.pose(Math.atan2(runner.fx, runner.fy), sliding || diving || prone ? 0 : speed, time, falling ? .6 : diving ? 0 : lift, false, reduced);
       fg.fig.group.rotation.z = sliding && !reduced ? Math.sin(time / 40) * .15 : 0;
       fg.fig.group.rotation.x = diving || prone ? Math.PI / 2 * (diving && !reduced ? Math.min(1, diveK * 3) : 1) : 0;
-      fg.shadow.visible = runner.alive && !above && !inLava; fg.shadow.position.set(wx(x), floorY(runner.floor) + .01, wz(y)); fg.shadow.scale.setScalar(1 - lift * .4);
-      fg.lives.forEach((m, i) => { m.visible = runner.alive && !above && !inLava && i < runner.lives; });
+      fg.shadow.visible = runner.alive && !above; fg.shadow.position.set(wx(x), floorY(runner.floor) + .01, wz(y)); fg.shadow.scale.setScalar(1 - lift * .4);
       if (fg.marker) { fg.marker.visible = !chase; fg.marker.position.y = fg.top + .5 + (reduced ? 0 : Math.abs(Math.sin(time / 220)) * .1); }
-      if (fg.ring) { fg.ring.visible = runner.alive && !inLava; fg.ring.position.set(wx(x), ground + .02, wz(y)); }
+      if (fg.ring) { fg.ring.visible = runner.alive; fg.ring.position.set(wx(x), ground + .02, wz(y)); }
     }
 
     if (chase && mine) {

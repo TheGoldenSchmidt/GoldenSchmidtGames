@@ -275,7 +275,8 @@ verbleibende Spieler die beste Platzierung. Bei Gesamtgleichstand folgt
 eine Stechrunde.
 
 > Umgesetzt mit Abweichungen (Nov. 2026): drei Etagen übereinander, Lava erst
-> unter der untersten, Durchgänge bis 30 s, Randeinsturz ab 16 s, Schubser.
+> unter der untersten, Lava heißt raus ohne Respawn, Durchgänge bis 30 s,
+> Randeinsturz ab 16 s, Schubser.
 > Verbindlich ist die Tabelle „Dokumentierte Abweichungen“ in
 > [konzept.md](konzept.md).
 

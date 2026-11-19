@@ -1,5 +1,6 @@
 import * as T from "three";
 import { TANK_FIELD, TT, wallRects, type TankGame, type TankPower } from "../../shared/matches/tankTrouble";
+import { sightPolygon, TV } from "../../shared/matches/tankView";
 import { followCamera, headingOf, takeCameraTurn, type ChaseLocal, type MatchWorld, type MatchWorldFrame } from "../matches/client";
 import { ChaseCamera, Debris, fittedFigure, fitTiltedCamera, Impact } from "./matchScene";
 import { PLAYER_COLORS, SceneKit, type Character } from "./sceneKit";
@@ -11,8 +12,10 @@ import { PLAYER_COLORS, SceneKit, type Character } from "./sceneKit";
  * Pure presentation of the authoritative view.
  *
  * With `chase` (Tank Trouble – Turmsicht) the camera follows behind and above
- * the own tank, walls stand taller and fog fades out what lies beyond the
- * sight range; tanks missing from the view are simply not shown.
+ * the own tank, walls stand taller and fog fades out the distance. The floor
+ * outside the own sight (the same rays the authority uses) lies in darkness,
+ * so tanks missing from the view are always in the dark; a tank that leaves
+ * the light leaves a fading "last seen" ring.
  */
 const W = TANK_FIELD.width, H = TANK_FIELD.height;
 const wx = (x: number) => x - W / 2, wz = (y: number) => y - H / 2;
@@ -63,6 +66,40 @@ export function createTankWorld(host: HTMLElement, read: () => MatchWorldFrame, 
 
   // Aiming laser for the own tank (only while aiming).
   const laser = new T.Mesh(box, new T.MeshBasicMaterial({ color: COLOR.laser, transparent: true, opacity: .75, depthWrite: false })); laser.visible = false; world.add(laser);
+
+  // Turmsicht: darkness from the edge of the lit sight polygon outwards (one quad per ray, no triangulation).
+  const ghostMat = new Map<string, T.MeshBasicMaterial>(), ghosts = new Map<string, T.Group>(), lastSeen = new Map<string, { x: number; y: number; at: number }>();
+  let dark: T.Mesh | undefined, darkAt = "";
+  if (chase) {
+    const geometry = new T.BufferGeometry(), index: number[] = [];
+    geometry.setAttribute("position", new T.BufferAttribute(new Float32Array(TV.rays * 2 * 3), 3));
+    for (let i = 0; i < TV.rays; i++) { const a = i * 2, b = ((i + 1) % TV.rays) * 2; index.push(a, a + 1, b, b, a + 1, b + 1); }
+    geometry.setIndex(index);
+    dark = new T.Mesh(geometry, new T.MeshBasicMaterial({ color: COLOR.night, transparent: true, opacity: .66, depthWrite: false, side: T.DoubleSide }));
+    dark.frustumCulled = false; dark.renderOrder = 1; world.add(dark);
+  }
+  const updateDark = (g: TankGame, x: number, y: number) => {
+    const key = `${x.toFixed(2)},${y.toFixed(2)},${edges}`;
+    if (!dark || key === darkAt) return;
+    darkAt = key;
+    const ring = sightPolygon(wallRects(g), x, y), pos = dark.geometry.getAttribute("position") as T.BufferAttribute;
+    ring.forEach((d, i) => {
+      const a = i / TV.rays * Math.PI * 2, c = Math.cos(a), sn = Math.sin(a);
+      pos.setXYZ(i * 2, wx(x + c * d), .012, wz(y + sn * d));
+      pos.setXYZ(i * 2 + 1, wx(x + c * 40), .012, wz(y + sn * 40));
+    });
+    pos.needsUpdate = true;
+  };
+  const ghostFor = (id: string, color: number) => {
+    let group = ghosts.get(id);
+    if (group) return group;
+    const material = new T.MeshBasicMaterial({ color, transparent: true, opacity: .6, depthWrite: false });
+    group = new T.Group();
+    const ring = new T.Mesh(new T.TorusGeometry(.45, .05, 6, 28), material); ring.rotation.x = Math.PI / 2; ring.position.y = .06; group.add(ring);
+    const mark = new T.Mesh(new T.ConeGeometry(.12, .26, 10), material); mark.rotation.x = Math.PI; mark.position.y = .7; group.add(mark);
+    group.visible = false; world.add(group); ghosts.set(id, group); ghostMat.set(id, material);
+    return group;
+  };
 
   const impact = new Impact(world, kit);
   const debris = new Debris(world, 120, new T.MeshStandardMaterial({ roughness: .8 }));
@@ -137,6 +174,7 @@ export function createTankWorld(host: HTMLElement, read: () => MatchWorldFrame, 
     for (const e of s.events) {
       if (e.seq <= lastSeq) continue;
       const t = tanks.get(e.ids[0]), tank = g.tanks[e.ids[0]] ?? prev.tanks?.[e.ids[0]];
+      if (e.kind === "dead") lastSeen.delete(e.ids[0]);
       if (e.kind === "shot" && t) { t.recoilAt = time; t.driver.act?.("attack", time); }
       else if (e.kind === "hit" && t && tank) { t.driver.act?.("hit", time); if (!reduced) debris.burst(wx(tank.x), .4, wz(tank.y), time, { count: 5, speed: 1.6, up: 2.2, size: .08, life: 450, color: COLOR.tracer }); }
       else if (e.kind === "dead" && t) {
@@ -151,13 +189,24 @@ export function createTankWorld(host: HTMLElement, read: () => MatchWorldFrame, 
     for (const p of s.players) {
       const tank = g.tanks[p.id];
       // Out of sight (Turmsicht): the authority left this tank out of the view.
-      if (!tank) { const hidden = tanks.get(p.id); if (hidden) hidden.body.visible = hidden.hud.visible = hidden.wreck.visible = false; continue; }
+      if (!tank) {
+        const hidden = tanks.get(p.id); if (hidden) hidden.body.visible = hidden.hud.visible = hidden.wreck.visible = false;
+        // Left the light: a ring marks the last known spot and fades within 2 s.
+        const seen = lastSeen.get(p.id), age = seen ? time - seen.at : Infinity;
+        if (chase && seen && age < 2000) {
+          const ghost = ghostFor(p.id, PLAYER_COLORS[p.style % PLAYER_COLORS.length]);
+          ghost.visible = true; ghost.position.set(wx(seen.x), 0, wz(seen.y)); ghostMat.get(p.id)!.opacity = .6 * (1 - age / 2000);
+        } else if (ghosts.has(p.id)) ghosts.get(p.id)!.visible = false;
+        continue;
+      }
+      if (ghosts.has(p.id)) ghosts.get(p.id)!.visible = false;
       const t = tankFor(p.id, p.style, f.characters[p.id], f.viewer), before = prev.tanks?.[p.id];
       const smooth = before && before.alive && tank.alive ? f.alpha : 1;
       const x = before ? before.x + (tank.x - before.x) * smooth : tank.x, y = before ? before.y + (tank.y - before.y) * smooth : tank.y;
       t.body.visible = tank.alive; t.hud.visible = tank.alive;
       t.wreck.visible = !tank.alive; if (!tank.alive) { t.wreck.position.set(wx(x), .08, wz(y)); t.wreck.rotation.y = yaw(tank.angle); continue; }
       t.body.position.set(wx(x), 0, wz(y)); t.hud.position.set(wx(x), 0, wz(y));
+      if (p.id !== f.viewer) lastSeen.set(p.id, { x, y, at: time });
       const blend = (a: number, b: number) => a + Math.atan2(Math.sin(b - a), Math.cos(b - a)) * smooth;
       const angle = before ? blend(before.angle, tank.angle) : tank.angle;
       const aim = p.id === f.viewer && aiming ? Math.atan2(f.input.ay, f.input.ax) : before ? blend(before.aim, tank.aim) : tank.aim;
@@ -214,7 +263,9 @@ export function createTankWorld(host: HTMLElement, read: () => MatchWorldFrame, 
     debris.update(time);
     if (chase && me) {
       const before = prev.tanks?.[f.viewer], smooth = before && before.alive && me.alive ? f.alpha : 1;
-      target.set(wx(before ? before.x + (me.x - before.x) * smooth : me.x), 0, wz(before ? before.y + (me.y - before.y) * smooth : me.y));
+      const mx = before ? before.x + (me.x - before.x) * smooth : me.x, my = before ? before.y + (me.y - before.y) * smooth : me.y;
+      target.set(wx(mx), 0, wz(my));
+      updateDark(g, mx, my);
       // The camera starts (and restarts after a respawn) behind the hull; afterwards only a swipe turns it,
       // so steering with the stick never swings the view.
       if (me.alive && !wasAlive) camFresh = true;

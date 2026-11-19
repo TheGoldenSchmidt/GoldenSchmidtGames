@@ -81,7 +81,8 @@ export class SceneKit {
   }
 }
 
-export interface Character {group:T.Group;act?:(clip:"attack"|"hit"|"death",time:number)=>void;pose:(heading:number,speed:number,time:number,jump:number,punch:boolean,reduce:boolean)=>void}
+/** `revive` ends a held death pose (a new round brings the player back). */
+export interface Character {group:T.Group;act?:(clip:"attack"|"hit"|"death",time:number)=>void;revive?:()=>void;pose:(heading:number,speed:number,time:number,jump:number,punch:boolean,reduce:boolean)=>void}
 export function character(kit:SceneKit,parent:T.Object3D,index:number,name?:string,selected?:string):Character {
   const figure=figureCharacter(parent,characterId(selected,index),PLAYER_COLORS[index%6]);
   const ring=kit.mesh(figure.group,new T.TorusGeometry(.4,.045,6,24),PLAYER_COLORS[index%6],0,.045,0);ring.rotation.x=Math.PI/2;

@@ -190,7 +190,8 @@ export function createBombWorld(host: HTMLElement, read: () => MatchWorldFrame, 
       const [dx, dy] = DIR4[b.dir], moving = b.tx !== b.cx || b.ty !== b.cy;
       fig.fig.pose(Math.atan2(dx, dy), moving ? 4 : 0, time, 0, false, reduced);
       // A knocked-out figure finishes its fall, then leaves the field.
-      if (b.alive) fig.deadAt = undefined;
+      // Back in the next round: stand up again (the death pose of a figure is held until revived).
+      if (b.alive && fig.deadAt !== undefined) { fig.deadAt = undefined; fig.fig.revive?.(); }
       const gone = !b.alive && (fig.deadAt === undefined || time - fig.deadAt > 1100);
       const blink = b.alive && s.time < b.invulnUntil && !reduced && Math.floor(time / 120) % 2 === 0;
       fig.fig.group.visible = !gone && !blink;

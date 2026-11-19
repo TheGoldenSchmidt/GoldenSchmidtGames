@@ -15,7 +15,7 @@ function riggedCharacter(parent:T.Object3D, selected:string, color:number) {
   const fig=riggedFigure(characterKit(),selected,0,color,1.65), group=new T.Group(), body=new T.Group();
   body.add(fig.group);group.add(body);group.userData.characterId=selected;parent.add(group);
   let lastPunch=false,lastJump=false,lastTime=0;
-  return {group,act(clip:Clip,_time:number){fig.play(clip==="attack"?"punch":clip);},pose(heading:number,speed:number,time:number,jump:number,punch:boolean,_reduce:boolean){
+  return {group,act(clip:Clip,_time:number){fig.play(clip==="attack"?"punch":clip);},revive(){fig.stopShot();},pose(heading:number,speed:number,time:number,jump:number,punch:boolean,_reduce:boolean){
     group.rotation.y=heading;
     const dt=lastTime?Math.max(0,Math.min(.1,(time-lastTime)/1000)):1/60;lastTime=time;
     if(punch&&!lastPunch)fig.play("punch");
@@ -35,7 +35,7 @@ export function figureCharacter(parent:T.Object3D, selected:string, color=0x57e4
   const legs=[part(...RIG_JOINTS.leftLeg),part(...RIG_JOINTS.rightLeg)],arms=[part(...RIG_JOINTS.leftArm),part(...RIG_JOINTS.rightArm)];
   const feet=[part(...RIG_JOINTS.leftFoot),part(...RIG_JOINTS.rightFoot)].map((foot,index)=>foot&&!legs[index]?.getObjectById(foot.id)?foot:undefined);
   let lastPunch=false,lastJump=false,lastTime=0,walk=0,hit=0,wheel=0,air=0;
-  return {group,act(clip:Clip,time:number){if(!options.reducedMotion&&data.animations?.[clip])player.play(clip,time);},pose(heading:number,speed:number,time:number,jump:number,punch:boolean,reduce:boolean){
+  return {group,act(clip:Clip,time:number){if(!options.reducedMotion&&data.animations?.[clip])player.play(clip,time);},revive(){player.reset();},pose(heading:number,speed:number,time:number,jump:number,punch:boolean,reduce:boolean){
     group.rotation.y=heading;options.reducedMotion=reduce;
     const dt=lastTime?Math.max(0,Math.min(.1,(time-lastTime)/1000)):1/60;lastTime=time;
     walk+=((reduce?0:Math.min(1,speed/4.8))-walk)*(1-Math.exp(-dt*12));

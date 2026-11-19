@@ -13,7 +13,13 @@ export interface Fighter {
   ringOuts: number; outAt?: number;
   /** After a hard hit the fighter slides without control until this time. */
   stunUntil: number;
+  /** Bumper Mayhem: giant car (bigger, heavier) until this time. */
+  bigUntil?: number;
 }
+/** Bumper Mayhem extras: item boxes on the rink and oil slicks. */
+export type RingItemKind = "mega" | "oil" | "wave";
+export interface RingItem { id: number; kind: RingItemKind; x: number; y: number }
+export interface OilSlick { id: number; owner: string; x: number; y: number; until: number; armedAt: number }
 export interface Obstacle { id: number; x: number; y: number; r: number; angle: number }
 export interface RingGame {
   fighters: Record<string, Fighter>;
@@ -24,6 +30,10 @@ export interface RingGame {
   decided: boolean;
   /** After a ring-out everyone freezes and returns to their start places at this time. */
   resetAt?: number;
+  items?: RingItem[];
+  slicks?: OilSlick[];
+  nextItem?: number;
+  nextId?: number;
 }
 export interface RingRules {
   id: string; name: string; instruction: string; controls: string; look: MatchModule["meta"]["look"];
@@ -41,6 +51,10 @@ export interface RingRules {
   drive(f: Fighter, input: MatchInput, dt: number, now: number): void;
   /** Starts the button action (dash or turbo). */
   action(f: Fighter, now: number): void;
+  /** Body radius of one fighter (default `body`), e.g. for a giant car. */
+  bodyOf?(f: Fighter, now: number): number;
+  /** Extra rules each step after driving and before contacts (items, hazards); not during a restart pause. */
+  extras?(s: MatchState<RingGame>, dt: number): void;
   /** Contact between two fighters: resolve overlap and apply impulses. Returns the victim of a hard strike. */
   collide(a: Fighter, b: Fighter, now: number): Fighter | undefined;
   obstacles?(s: MatchState<RingGame>): Obstacle[];
@@ -60,7 +74,7 @@ function respawn(s: MatchState<RingGame>, rules: RingRules, f: Fighter) {
     const p = spawnPoint(i, 8, Math.min(1.6, g.radius * .4)), d = others.length ? Math.min(...others.map(o => dist(o.x, o.y, p.x, p.y))) : 9;
     if (d > score + 1e-9) { best = p; score = d; }
   }
-  Object.assign(f, { x: best.x, y: best.y, heading: best.heading, vx: 0, vy: 0, out: false, stunUntil: 0, shieldUntil: s.time + rules.shield, lastHitBy: undefined, lastHitAt: -9999 });
+  Object.assign(f, { x: best.x, y: best.y, heading: best.heading, vx: 0, vy: 0, out: false, stunUntil: 0, shieldUntil: s.time + rules.shield, lastHitBy: undefined, lastHitAt: -9999, bigUntil: 0 });
 }
 
 /** Everyone still in the match back to their own start place, standing still, briefly protected. */
@@ -70,7 +84,7 @@ function resetAll(s: MatchState<RingGame>, rules: RingRules) {
   s.players.forEach((p, seat) => {
     const f = g.fighters[p.id];
     if (!f?.alive || p.gone) return;
-    Object.assign(f, startPlace(s, rules, seat), { vx: 0, vy: 0, out: false, stunUntil: 0, actionUntil: 0, shieldUntil: s.time + rules.shield, lastHitBy: undefined, lastHitAt: -9999 });
+    Object.assign(f, startPlace(s, rules, seat), { vx: 0, vy: 0, out: false, stunUntil: 0, actionUntil: 0, shieldUntil: s.time + rules.shield, lastHitBy: undefined, lastHitAt: -9999, bigUntil: 0 });
   });
   emit(s, "reset", "Alle zurück auf die Startplätze!", []);
 }
@@ -97,9 +111,9 @@ function decide(s: MatchState<RingGame>) {
   const bestOuts = Math.max(...byLives.map(f => f.ringOuts)), top = byLives.filter(f => f.ringOuts === bestOuts);
   if (top.length === 1) { g.winner = top[0].id; g.decided = true; s.done = true; return; }
   if (g.sudden) { g.decided = true; s.done = true; return; }
-  g.sudden = { ids: top.map(f => f.id), start: s.time }; g.resetAt = undefined;
+  g.sudden = { ids: top.map(f => f.id), start: s.time }; g.resetAt = undefined; g.items = []; g.slicks = [];
   for (const f of Object.values(g.fighters)) if (!top.includes(f)) { f.alive = false; f.outAt ??= s.time; f.out = true; }
-  top.forEach((f, i) => { f.lives = 1; Object.assign(f, spawnPoint(i, top.length, 1.4), { vx: 0, vy: 0, out: false, stunUntil: 0, shieldUntil: s.time + 800 }); });
+  top.forEach((f, i) => { f.lives = 1; Object.assign(f, spawnPoint(i, top.length, 1.4), { vx: 0, vy: 0, out: false, stunUntil: 0, shieldUntil: s.time + 800, bigUntil: 0 }); });
   emit(s, "sudden", "Sudden Death!", top.map(f => f.id));
 }
 
@@ -138,22 +152,24 @@ export function ringModule(rules: RingRules): MatchModule<RingGame> {
         rules.drive(f, inputOfPlayer(s, p), dt, s.time);
         f.x += f.vx * dt; f.y += f.vy * dt;
       }
+      rules.extras?.(s, dt);
       const active = s.players.map(p => g.fighters[p.id]).filter(f => f.alive && !f.out);
+      const body = (f: Fighter) => rules.bodyOf?.(f, s.time) ?? rules.body;
       for (let i = 0; i < active.length; i++) for (let j = i + 1; j < active.length; j++) {
         const a = active[i], b = active[j];
-        if (dist(a.x, a.y, b.x, b.y) >= rules.body * 2) continue;
+        if (dist(a.x, a.y, b.x, b.y) >= body(a) + body(b)) continue;
         // Only hard strikes become events; ordinary contact happens every step.
         const victim = rules.collide(a, b, s.time);
         if (victim) emit(s, "strike", "", [victim.id, victim === a ? b.id : a.id]);
       }
       for (const f of active) for (const o of g.obstacles) {
-        const d = dist(f.x, f.y, o.x, o.y), min = rules.body + o.r;
+        const d = dist(f.x, f.y, o.x, o.y), min = body(f) + o.r;
         if (d >= min || d < 1e-9) continue;
         const nx = (f.x - o.x) / d, ny = (f.y - o.y) / d, along = f.vx * nx + f.vy * ny;
         f.x = o.x + nx * min; f.y = o.y + ny * min;
         if (along < 0) { f.vx -= 1.8 * along * nx; f.vy -= 1.8 * along * ny; emit(s, "bump", "", [f.id]); }
       }
-      for (const f of active) if (Math.hypot(f.x, f.y) > g.radius + rules.body * .4) ringOut(s, rules, f);
+      for (const f of active) if (Math.hypot(f.x, f.y) > g.radius + body(f) * .4) ringOut(s, rules, f);
       if (contenders(g).length <= 1) { decide(s); return; }
       if (g.sudden ? s.time - g.sudden.start >= rules.suddenMax : !g.sudden && s.time >= rules.regular) decide(s);
     },

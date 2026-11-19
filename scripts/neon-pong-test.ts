@@ -66,6 +66,41 @@ for (const n of [2, 4]) assert.ok(miniPool(n, false).includes("pong"));
   assert.ok(s.game.balls[0].vx < 0 && Math.abs(s.game.balls[0].x) <= NP.halfW, "Wandabpraller");
 }
 
+// Schräge Bälle: Trefferfläche wie der gezeichnete Ball, späte Rettung innerhalb der Laufzeit, Kurven nie flach.
+{
+  const s = make(2);
+  s.game.serveAt = Infinity; s.game.nextPower = Infinity;
+  const paddle = s.game.paddles[0], half = NP.paddleSolo / 2;
+  // Gezeichneter Ball berührt die Schlägerkante: zählt als Treffer.
+  s.game.balls = [ball({ x: paddle.x + half + NP.ball * 1.15, y: 5, vy: 8 })];
+  run(s, 400, { p0: 0 });
+  assert.ok(s.game.balls.length === 1 && s.game.balls[0].vy < 0, "Kantentreffer");
+  // Steiler Ball neben dem Schläger: Finger kommt eine Laufzeit zu spät, der Ball wird noch gerettet.
+  const late = make(2, 5);
+  late.game.serveAt = Infinity; late.game.nextPower = Infinity;
+  const angle = NP.maxAngle, speed = 12;
+  late.game.balls = [ball({ x: -.5, y: 4.5, vx: Math.sin(angle) * speed, vy: Math.cos(angle) * speed, speed })];
+  let crossedAt = -1;
+  while (late.time < 2000 && late.game.balls.length && crossedAt < 0) { run(late, 50, { p0: 0 }); if (late.game.balls[0]?.late) crossedAt = late.time; }
+  assert.ok(crossedAt > 0 && late.game.balls[0].late, "Ball verpasst den Schläger zunächst");
+  const target = late.game.balls[0].late!.x / (late.game.paddles[0].max - late.game.paddles[0].min) * 2;
+  run(late, 100, { p0: target });
+  assert.deepEqual(late.game.score, [0, 0], "Späte Rettung");
+  assert.ok(late.game.balls[0].vy < 0 && late.game.balls[0].lastTeam === 0);
+  // Ohne Bewegung oder nach Ablauf des Fensters zählt das Tor.
+  const miss = make(2, 5);
+  miss.game.serveAt = Infinity; miss.game.nextPower = Infinity;
+  miss.game.balls = [ball({ x: -.5, y: 4.5, vx: Math.sin(angle) * speed, vy: Math.cos(angle) * speed, speed })];
+  run(miss, 900, { p0: 0 });
+  assert.deepEqual(miss.game.score, [0, 1], "Kein Treffer ohne Schläger");
+  const curve = make(2, 6);
+  curve.game.serveAt = Infinity; curve.game.nextPower = Infinity;
+  curve.game.balls = [ball({ x: 0, y: 0, vx: 1, vy: -8, curve: 40, lastTeam: 0 })];
+  advanceMatch(curve, curve.time + 300);
+  const b = curve.game.balls[0];
+  assert.ok(Math.abs(Math.atan2(Math.abs(b.vx), Math.abs(b.vy))) <= NP.maxFlight + 1e-6, "Kurvenball bleibt steil genug");
+}
+
 // Tore, Aufschlag zum Team mit Gegentor, Mehrball zählt jeden Ball, Aufschlag erst nach allen Bällen.
 {
   const s = make(2);

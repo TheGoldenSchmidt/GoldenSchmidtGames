@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { advanceMatch, botMatchInput, createMatch, matchStandings, removeMatchPlayer, setMatchControl } from "../shared/matches/framework";
 import type { Fighter, RingGame } from "../shared/matches/ringCore";
 import { SUMO } from "../shared/matches/sumoSmash";
-import { BUMPER } from "../shared/matches/bumperMayhem";
+import { BUMPER, ITEMS } from "../shared/matches/bumperMayhem";
 import { NEUTRAL_MATCH_INPUT, type MatchInput, type MatchState } from "../shared/matches/types";
 import { createPartyGame, partyMiniResults, tickParty } from "../shared/party";
 import { PartyBotDriver } from "../shared/partyBots";
@@ -34,27 +34,19 @@ for (const id of ["sumo", "bumpercars"] as const) {
     step(s, 100);
     assert.equal(v.out, true); assert.equal(v.lives, 2); assert.equal(s.game.fighters.p1.ringOuts, 1);
     const p2 = s.game.fighters.p2, fresh = make(id, 3);
-    if (id === "bumpercars") {
-      // Bumper Mayhem: until the restart everyone stands still; then all are back on their own start places.
-      act(s, "p2", { x: 1 }); step(s, 600);
-      assert.ok(Math.hypot(p2.x + 3, p2.y + 3) < .2 && p2.actionAt < 0, "Pause nach dem Ring-Out: niemand fährt, keine Aktion");
-      step(s, 1400);
-      assert.equal(v.out, false); assert.ok(v.shieldUntil > s.time && Math.hypot(v.x, v.y) < s.game.radius - 1, "Respawn mit Schutz innen");
-      // (Bumper Mayhem's turning posts may already nudge a car in the step after the restart.)
-      for (const pid of ["p0", "p1", "p2"]) { const f = s.game.fighters[pid], start = fresh.game.fighters[pid]; assert.ok(Math.hypot(f.x - start.x, f.y - start.y) < .15, `${pid} wieder auf dem Startplatz`); }
-      assert.ok(s.events.some(e => e.kind === "reset"));
-    } else {
-      // Sumo with three: the others keep playing; only the fallen one returns, on a free spot with protection.
+    void fresh;
+    {
+      // Both games with three: the others keep playing; only the fallen one returns, on a free spot with protection.
       send(s, "p2", { x: 1 }); step(s, 600);
       assert.ok(Math.hypot(p2.x + 3, p2.y + 3) > .5, "Die anderen spielen weiter"); assert.equal(s.game.resetAt, undefined);
       step(s, 1400);
       assert.equal(v.out, false); assert.ok(v.shieldUntil > s.time && Math.hypot(v.x, v.y) < s.game.radius - 1, "Respawn mit Schutz innen");
       assert.ok(!s.events.some(e => e.kind === "reset"), "Kein Neustart für alle");
-      // One on one: everyone back on the start places.
+      // One on one: everyone back on the start places (Bumper Mayhem's turning posts may nudge a car right after the restart).
       const d = make(id, 2), fall = put(d, "p0", d.game.radius - .1, 0); fall.vx = 6; put(d, "p1", -1, 0);
       step(d, 100); assert.ok(d.game.resetAt !== undefined, "Zu zweit: Neustart");
       step(d, 2100); const start = make(id, 2);
-      for (const pid of ["p0", "p1"]) assert.ok(Math.hypot(d.game.fighters[pid].x - start.game.fighters[pid].x, d.game.fighters[pid].y - start.game.fighters[pid].y) < 1e-6, `${pid} im Duell auf dem Startplatz`);
+      for (const pid of ["p0", "p1"]) assert.ok(Math.hypot(d.game.fighters[pid].x - start.game.fighters[pid].x, d.game.fighters[pid].y - start.game.fighters[pid].y) < (id === "bumpercars" ? .4 : 1e-6), `${pid} im Duell auf dem Startplatz`);
     }
     const late = put(s, "p0", s.game.radius - .1, 0); late.vx = 6; late.lastHitBy = "p1"; late.lastHitAt = s.time - 3100;
     step(s, 100);
@@ -160,6 +152,45 @@ for (const id of ["sumo", "bumpercars"] as const) {
   const s = make("sumo", 2); put(s, "p0", -1.2, 0, 0); put(s, "p1", 0, 0);
   act(s, "p0", { x: 1 }); step(s, 100);
   assert.ok(s.game.fighters.p1.stunUntil > s.time, "Getroffene sind kurz ohne Kontrolle");
+}
+
+// Bumper Mayhem: Item-Kisten erscheinen, werden durch Hindurchfahren eingesammelt und wirken.
+{
+  const s = make("bumpercars", 3); s.game.obstacles = [];
+  for (const [pid, x] of [["p0", 0], ["p1", 3], ["p2", -3]] as const) put(s, pid, x, 0);
+  step(s, ITEMS.first + 50);
+  assert.equal(s.game.items?.length, 1, "Erste Kiste erscheint");
+  const item = s.game.items![0];
+  assert.ok(Math.hypot(item.x, item.y) <= s.game.radius * ITEMS.spread + 1e-9, "Kiste innen");
+  // Riesenauto: größer, rammt härter, wird kaum weggestoßen und gerät nicht ins Schleudern.
+  s.game.items = [{ id: 90, kind: "mega", x: 0, y: 0 }]; put(s, "p0", 0, 0); step(s, 50);
+  const mega = s.game.fighters.p0;
+  assert.ok((mega.bigUntil ?? 0) > s.time && s.game.items.length === 0 && s.events.some(e => e.kind === "mega"));
+  const hit = put(s, "p1", 1.4, 0, Math.PI); hit.vx = -5; put(s, "p0", 0, 0).bigUntil = s.time + 5000;
+  step(s, 50);
+  assert.ok(s.game.fighters.p0.stunUntil <= s.time, "Riesenauto schleudert nicht");
+  // Schockwelle: Autos in der Nähe fliegen weg, Gutschrift für den Sammler.
+  const w = make("bumpercars", 3); w.game.obstacles = []; w.game.nextItem = Infinity;
+  put(w, "p0", 0, 0); put(w, "p1", 1.6, 0); put(w, "p2", -4, 0);
+  w.game.items = [{ id: 91, kind: "wave", x: 0, y: 0 }]; step(w, 50);
+  assert.ok(w.game.fighters.p1.vx > 3 && w.game.fighters.p1.lastHitBy === "p0", "Nachbar weggestoßen");
+  assert.ok(Math.abs(w.game.fighters.p2.vx) < 1, "Außer Reichweite unberührt");
+  // Ölfleck: erst nach kurzer Zeit scharf, eigene Spur harmlos, Fremde schleudern mit Gutschrift.
+  const o = make("bumpercars", 2); o.game.obstacles = []; o.game.nextItem = Infinity;
+  put(o, "p0", 0, 0); put(o, "p1", 3, 3);
+  o.game.items = [{ id: 92, kind: "oil", x: 0, y: 0 }]; step(o, 50);
+  assert.equal(o.game.slicks?.length, 1);
+  step(o, ITEMS.oilArm + 50);
+  assert.ok(o.game.fighters.p0.stunUntil <= o.time, "Eigener Fleck ist harmlos");
+  put(o, "p0", 3, -3); put(o, "p1", 0, 0); step(o, 50);
+  assert.ok(o.game.fighters.p1.stunUntil > o.time && o.game.fighters.p1.lastHitBy === "p0", "Fremde rutschen aus");
+  step(o, ITEMS.oilMs);
+  assert.equal(o.game.slicks?.length, 0, "Ölfleck trocknet");
+  // Sudden Death räumt Kisten und Öl ab.
+  const sd = make("bumpercars", 2); sd.game.items = [{ id: 93, kind: "oil", x: 5, y: 5 }];
+  for (const f of Object.values(sd.game.fighters)) f.lives = 1;
+  step(sd, 75000 + 100);
+  assert.ok(sd.game.sudden === undefined || (sd.game.items?.length ?? 0) === 0);
 }
 
 // Komplette Partien mit Bots über die Party (2, 4, 6), Neustart, Determinismus.

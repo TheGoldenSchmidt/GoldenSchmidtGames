@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { advanceMatch, botMatchInput, createMatch, matchStandings, removeMatchPlayer, setMatchControl } from "../shared/matches/framework";
-import { FL, FLOOR_TILES, ring, type LavaGame } from "../shared/matches/floorIsLava";
+import { FL, FLOOR_TILES, type LavaGame } from "../shared/matches/floorIsLava";
 import { NEUTRAL_MATCH_INPUT, type MatchInput, type MatchState } from "../shared/matches/types";
 import { createPartyGame, partyMiniResults, tickParty } from "../shared/party";
 import { PartyBotDriver } from "../shared/partyBots";
@@ -41,7 +41,7 @@ for (const count of [2, 4, 6]) {
   assert.equal(tile(s, 4.5, 6.5), "2");
   step(s, 100);
   assert.equal(tile(s, 4.5, 6.5), "0");
-  assert.equal(s.game.runners.p0.lives, FL.lives - 1, "Lava kostet ein Leben");
+  assert.equal(s.game.runners.p0.alive, false, "Lava: raus für den Durchgang");
   const r = make(2, 3);
   r.game.regen = "1".repeat(FLOOR_TILES * FL.floors);
   put(r, "p0", 4.5, 6.5); put(r, "p1", 1.5, 1.5); park(r, "p1");
@@ -60,7 +60,7 @@ for (const count of [2, 4, 6]) {
   send(s, "p0", { x: 1, ca: 1 }); // laufen und springen im selben Paket
   step(s, FL.jumpMs - 50);
   assert.ok(s.game.runners.p0.x > 6.05, `Über die Lücke (${s.game.runners.p0.x})`);
-  assert.equal(s.game.runners.p0.lives, FL.lives, "Kein Schaden in der Luft");
+  assert.equal(s.game.runners.p0.alive, true, "Kein Lavasturz in der Luft");
   park(s, "p0"); // für die Abklingzeit-Prüfung nicht in die Lava fallen
   const before = s.game.runners.p0.airUntil;
   jump(s, "p0"); step(s, 100);
@@ -79,63 +79,52 @@ for (const count of [2, 4, 6]) {
   assert.ok((s.game.runners.p0.diveUntil ?? 0) > s.time, "Hechtet");
   step(s, FL.diveMs);
   const r = s.game.runners.p0;
-  assert.equal(r.lives, FL.lives, "Über die Lücke gehechtet"); assert.ok(r.x > 4, `Weite ${r.x - 1.5}`);
+  assert.equal(r.alive, true, "Über die Lücke gehechtet"); assert.ok(r.x > 4, `Weite ${r.x - 1.5}`);
   const x = r.x; send(s, "p0", { x: -1 }); step(s, FL.proneMs - 100);
   assert.ok(Math.abs(r.x - x) < .4, "Liegt kurz, keine Steuerung");
   send(s, "p0", { x: 1, cn: s.players[0].usedN + 1, n: 1 }); step(s, 50);
   assert.ok((r.diveUntil ?? 0) < s.time, "Abklingzeit");
 }
 
-// Lava ohne Sprung: Leben weg, kurz in der Lava, dann Rückkehr auf eine sichere Platte mit Schutz (sie bröselt nicht sofort); zweites Leben → raus.
+// Lava ohne Sprung: sofort raus für diesen Durchgang, kein Respawn.
 {
-  const s = make(2); noRegen(s);
-  put(s, "p0", 4.5, 6.5); put(s, "p1", 1.5, 1.5); park(s, "p1");
-  s.game.tiles = s.game.tiles.split("").map((t, i) => i === B + 6 * FL.cols + 4 ? "0" : t).join("");
+  const s = make(3); noRegen(s);
+  put(s, "p0", 4.5, 6.5); put(s, "p1", 1.5, 1.5); put(s, "p2", 7.5, 11.5); park(s, "p1"); park(s, "p2");
+  hole(s, [at(4.5, 6.5)]);
   step(s, 50);
   const r = s.game.runners.p0;
-  assert.equal(r.lives, 1); assert.ok((r.respawnAt ?? 0) > s.time, "Erst in der Lava");
+  assert.equal(r.alive, false); assert.equal(r.outAt, s.time);
+  assert.ok(s.events.some(e => e.kind === "out" && e.ids[0] === "p0"));
   assert.deepEqual(botMatchInput(s, "p0"), botMatchInput(s, "p0"));
-  step(s, FL.respawnMs);
-  assert.equal(r.respawnAt, 0, "Zurück auf dem Feld"); assert.ok(r.invulnUntil > s.time);
-  assert.equal(tile(s, r.x, r.y, r.floor), "1", "Respawn auf intakter Platte");
-  assert.ok(ring(at(r.x, r.y, r.floor)) >= 1, "Nicht am einstürzenden Rand");
-  // Standing still while protected: the tile does not start to crumble.
-  step(s, FL.invulnMs - 100);
-  assert.equal(tile(s, r.x, r.y, r.floor), "1", "Schutzzeit: Platte bröselt nicht");
-  step(s, 200);
-  assert.equal(tile(s, r.x, r.y, r.floor), "2", "Danach bröselt sie wie jede andere");
-  r.invulnUntil = 0;
-  s.game.tiles = s.game.tiles.split("").map((t, i) => i === at(r.x, r.y, r.floor) ? "0" : t).join("");
-  step(s, 50);
-  assert.equal(r.alive, false);
+  step(s, 3000);
+  assert.equal(r.alive, false, "Keine Rückkehr im selben Durchgang");
 }
 
-// Kein Geländer: Wer über den Rand läuft oder geschubst wird, fällt von jeder Etage direkt in die Lava; frisch Zurückgekehrte nicht.
+// Kein Geländer: Wer über den Rand läuft oder geschubst wird, fällt von jeder Etage direkt in die Lava; nur der Startschutz hält am Rand.
 {
   const s = make(2); noRegen(s); park(s, "p1"); put(s, "p1", 4.5, 6.5);
   put(s, "p0", .6, 6.5, 0);
   send(s, "p0", { x: -1 }); step(s, 600);
   const r = s.game.runners.p0;
-  assert.equal(r.lives, FL.lives - 1, "Über den Rand gefallen"); assert.ok((r.respawnAt ?? 0) > 0);
-  assert.ok(s.events.some(e => e.kind === "hit" && e.ids[0] === "p0"));
-  step(s, FL.respawnMs);
-  // Protected right after the return: walking towards the edge stops at it.
-  const side = r.x < FL.cols / 2 ? -1 : 1;
-  send(s, "p0", { x: side }); step(s, 900);
-  assert.equal(r.lives, FL.lives - 1, "Schutz: kein Sturz direkt nach der Rückkehr"); assert.ok(r.x >= FL.radius - 1e-9 && r.x <= FL.cols - FL.radius + 1e-9);
+  assert.equal(r.alive, false, "Über den Rand gefallen");
+  assert.ok(s.events.some(e => e.kind === "out" && e.ids[0] === "p0"));
+  // Start protection: walking towards the edge stops at it.
+  const q = make(2); noRegen(q);
+  put(q, "p0", .6, 6.5, 0); q.game.runners.p0.invulnUntil = q.time + FL.startGrace;
+  send(q, "p0", { x: -1 }); step(q, FL.startGrace - 100);
+  assert.ok(q.game.runners.p0.alive && q.game.runners.p0.x >= FL.radius - 1e-9, "Startschutz hält am Rand");
   // A shove over the edge is credited to the shover.
   const t = make(2); noRegen(t);
   put(t, "p0", 1, 6.5, 0); put(t, "p1", 2, 6.5, 0);
   send(t, "p1", { x: -1, cb: 1 }); step(t, 600);
-  assert.equal(t.game.runners.p0.lives, FL.lives - 1, "Über den Rand geschubst");
-  assert.ok(t.events.some(e => e.kind === "hit" && e.ids[0] === "p0" && e.ids[1] === "p1"), "Schubser bekommt die Gutschrift");
+  assert.equal(t.game.runners.p0.alive, false, "Über den Rand geschubst");
+  assert.ok(t.events.some(e => e.kind === "out" && e.ids[0] === "p0" && e.ids[1] === "p1"), "Schubser bekommt die Gutschrift");
 }
 
 // Rand verschwindet ab 10 s, Rundenende nach 20 s: Überlebende teilen Platz und Bonus.
 {
   const s = make(3); noRegen(s);
   put(s, "p0", 4.5, 6.5); put(s, "p1", 3.5, 6.5); put(s, "p2", .5, .5);
-  s.game.runners.p2.lives = 1;
   // Platten unter den Figuren bleiben für den Test intakt.
   const keep = () => { s.game.tiles = s.game.tiles.split("").map((t, i) => [B + 6 * FL.cols + 4, B + 6 * FL.cols + 3].includes(i) ? "1" : t).join(""); s.game.timers = {}; };
   for (let t = 0; t < FL.ringAt[0]; t += 500) { keep(); step(s, 500); }
@@ -151,7 +140,6 @@ for (const count of [2, 4, 6]) {
 {
   const s = make(3); noRegen(s);
   put(s, "p0", 4.5, 6.5); put(s, "p1", 2.5, 2.5); put(s, "p2", 6.5, 10.5);
-  for (const id of ["p1", "p2"]) s.game.runners[id].lives = 1;
   s.game.tiles = s.game.tiles.split("").map((t, i) => [B + 2 * FL.cols + 2, B + 10 * FL.cols + 6].includes(i) ? "0" : t).join("");
   step(s, 50);
   assert.deepEqual(s.game.history[0].points, { p0: 2 + FL.winBonus, p1: 0, p2: 0 });
@@ -221,7 +209,7 @@ for (const count of [2, 4, 6]) {
   hole(s, [at(4.5, 6.5, 0)]);
   step(s, 50);
   const r = s.game.runners.p0;
-  assert.equal(r.floor, 1, "Durch das Loch eine Etage tiefer"); assert.equal(r.lives, FL.lives, "Fallen kostet kein Leben");
+  assert.equal(r.floor, 1, "Durch das Loch eine Etage tiefer"); assert.equal(r.alive, true, "Durchfallen ist kein Aus");
   assert.ok(r.dropUntil > s.time && r.airUntil === r.dropUntil, "Während des Falls in der Luft");
   assert.ok(s.events.some(e => e.kind === "drop" && e.ids[0] === "p0"));
   step(s, FL.dropMs);
@@ -233,16 +221,7 @@ for (const count of [2, 4, 6]) {
   for (let i = 0; i < FL.floors - 1; i++) step(t, FL.dropMs + 50);
   assert.equal(t.game.runners.p0.floor, BOTTOM);
   step(t, 50);
-  assert.equal(t.game.runners.p0.lives, FL.lives - 1, "Loch in der untersten Etage = Lava");
-  step(t, FL.respawnMs);
-  assert.equal(t.game.runners.p0.floor, BOTTOM, "Respawn auf der untersten Etage, solange sie Platten hat");
-  // Respawn auf der tiefsten Etage mit intakten Platten.
-  const u = make(2); noRegen(u);
-  put(u, "p0", 4.5, 6.5); put(u, "p1", 1.5, 1.5, 0); park(u, "p1");
-  u.game.tiles = u.game.tiles.slice(0, B) + "0".repeat(FLOOR_TILES);
-  u.game.tiles = u.game.tiles.slice(0, FLOOR_TILES) + "0".repeat(FLOOR_TILES) + u.game.tiles.slice(2 * FLOOR_TILES);
-  step(u, 50 + FL.respawnMs);
-  assert.equal(u.game.runners.p0.floor, 0, "Ohne Platten unten: Respawn auf der obersten Etage mit Platten");
+  assert.equal(t.game.runners.p0.alive, false, "Loch in der untersten Etage = Lava");
   // Verschiedene Etagen: kein Schubser, kein Wegdrücken.
   const v = make(2); noRegen(v);
   put(v, "p0", 3.5, 6.5, 0); put(v, "p1", 3.9, 6.5, 1);
@@ -270,4 +249,4 @@ for (const count of [2, 4, 6]) {
   const a = play(), b = play();
   assert.deepEqual(a.game.points, b.game.points); assert.equal(a.time, b.time);
 }
-console.log("Floor is Lava erfolgreich: Startplätze, Etagen (Durchfallen, Lava nur unten, Respawn, getrennte Kontakte, Randeinsturz), Plattenzustände, Regeneration, Sprung über Lücken, Abklingzeit, Hechten mit Liegen, Lava, Sturz über den Rand, verzögerter Respawn mit Schutz, sicherer Respawn, Randabbruch, Zeitablauf mit geteilter Platzierung, gleichzeitiges Ausscheiden, Stechrunde, Schubser (Stoß, Abklingzeit, Rutschen, Gutschrift, Ausweichen, Schutz), Aufgeben, Bots und Determinismus.");
+console.log("Floor is Lava erfolgreich: Startplätze, Etagen (Durchfallen, Lava nur unten, getrennte Kontakte, Randeinsturz), Plattenzustände, Regeneration, Sprung über Lücken, Abklingzeit, Hechten mit Liegen, Lava ohne Respawn, Sturz über den Rand, Startschutz, Randabbruch, Zeitablauf mit geteilter Platzierung, gleichzeitiges Ausscheiden, Stechrunde, Schubser (Stoß, Abklingzeit, Rutschen, Gutschrift, Ausweichen, Schutz), Aufgeben, Bots und Determinismus.");
