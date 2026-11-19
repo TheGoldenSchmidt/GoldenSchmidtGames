@@ -16,12 +16,18 @@ export const cells: Cell[] = Array.from({ length: 13 }, (_, row) => {
   }));
 }).flat();
 
-export const centerLinks = cells.filter(cell => cell.row === 5 && Math.abs(cell.x) <= 2);
+const border = cells.filter(cell => cell.row === 5);
+export const centerLinks = border.filter(cell => Math.abs(cell.x) <= 2);
+export const sideLinks = border.filter(cell => Math.abs(cell.x) > 2);
+const sideLinkColumns = new Set(sideLinks.map(cell => cell.x));
 
 const neighbors = new Map(cells.map(cell => [cell.id, cells.filter(other => {
   if (cell.id === CENTER || other.id === CENTER) {
     const edge = cell.id === CENTER ? other : cell;
     return (edge.row === 5 || edge.row === 7) && Math.abs(edge.x) <= 2;
+  }
+  if (Math.min(cell.row, other.row) === 5 && Math.max(cell.row, other.row) === 7) {
+    return cell.x === other.x && sideLinkColumns.has(cell.x);
   }
   if (cell.row === other.row) return Math.abs(cell.x - other.x) === 1;
   if (Math.abs(cell.row - other.row) !== 1 || cell.x !== other.x) return false;

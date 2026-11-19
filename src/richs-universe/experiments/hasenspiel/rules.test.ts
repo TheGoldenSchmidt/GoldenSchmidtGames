@@ -14,6 +14,32 @@ for (const level of [1, 2, 3] as const) {
   }
 }
 
+for (const level of [1, 2, 3] as const) {
+  for (const [turn, from, to] of [["blue", 5, 7], ["gray", 7, 5]] as const) {
+    for (const x of [-5, -4, -3, 3, 4, 5]) {
+      const start = `${from}:${x}`;
+      const end = `${to}:${x}`;
+      const game = { ...newGame(level), turn, board: { [start]: piece("crossing", turn) } };
+      assert.equal(play(game, start, end).board[end]?.id, "crossing");
+      assert.ok(!moves(game, start).some(move => move.to === CENTER));
+      assert.ok(!moves(game, start).some(move => move.to === `${to}:${x + 1}`));
+    }
+    for (const x of [-2, -1, 0, 1, 2]) {
+      const start = `${from}:${x}`;
+      const game = { ...newGame(level), turn, board: { [start]: piece("central", turn) } };
+      assert.ok(moves(game, start).some(move => move.to === CENTER));
+      assert.ok(!moves(game, start).some(move => move.to === `${to}:${x}`));
+    }
+  }
+}
+
+const crossingJump: Game = { ...newGame(), board: {
+  "5:3": piece("attacker"), "7:3": piece("defender", "gray")
+} };
+const crossed = play(crossingJump, "5:3", "7:4");
+assert.equal(crossed.board["7:4"]?.id, "attacker");
+assert.equal(crossed.board["7:3"], undefined);
+
 const lateral: Game = { ...newGame(2), board: { "3:-2": piece("rabbit") } };
 assert.deepEqual(moves(lateral, "3:-2"), [{ to: "3:-1" }]);
 assert.deepEqual(moves({ ...lateral, level: 1 }, "3:-2"), []);

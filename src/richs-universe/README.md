@@ -53,7 +53,9 @@ Spielbarer Prototyp für zwei Personen auf einem Smartphone. Stufen 1–3
 lassen sich im Spiel auswählen. Beim Wechsel beginnt eine neue Partie. Stufe 1 beginnt
 mit 16 Hasen pro Seite. Zwei gespiegelte Dreiecke mit je sechs Reihen umgeben
 das Zentrum. Die fünf Zugänge pro Seite sind für Sprünge paarweise gerade
-gegenüber verbunden und gestrichelt markiert. Seitlich-vorwärts und vorwärts-seitlich sind als
+gegenüber verbunden und gestrichelt markiert. Links und rechts verbinden je
+drei weitere gestrichelte Linien die beiden Hälften für direkte Züge und
+Sprünge ab Stufe 1. Seitlich-vorwärts und vorwärts-seitlich sind als
 Sprünge erlaubt. Ein besetztes Zentrum kann nach drei gegnerischen Zügen
 zum Sieg führen. Wenn es keine legalen Züge gibt, wird gepasst. Zweimal
 aufeinanderfolgendes Passen bei leerem Zentrum ergibt ein Unentschieden.

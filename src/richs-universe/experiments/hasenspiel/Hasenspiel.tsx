@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { ExperimentProps } from "../../experiments";
-import { CENTER, canMove, cells, centerLinks, deerLine, movesFrom, newGame, play, type Cell, type Color, type Kind, type Level } from "./rules";
+import { CENTER, canMove, cells, centerLinks, deerLine, movesFrom, newGame, play, sideLinks, type Cell, type Color, type Kind, type Level } from "./rules";
 import "./hasenspiel.css";
 
 const side = 54;
@@ -84,6 +84,12 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
           <span>{center ? `${names[center.color]} hält das Zentrum · ${game.held}/3` : "Zentrum drei gegnerische Züge halten"}</span>
         </div>
         <svg className="hare-board" viewBox={`-2 -2 ${width + 4} ${boardHeight + 4}`} aria-label="Dreiecksbrett">
+          <g className="hare-side-links" aria-hidden="true">
+            {sideLinks.map(link => {
+              const x = width / 2 + link.x * side / 2;
+              return <line key={link.id} x1={x} x2={x} y1={6 * height} y2={6 * height + gap} />;
+            })}
+          </g>
           {cells.map(cell => {
             const isCenter = cell.id === CENTER;
             const shape = isCenter ? { x: width / 2, y: boardHeight / 2, points: "" } : triangle(cell);
@@ -138,6 +144,7 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
           <summary>Regeln für Stufe {game.level}</summary>
           <p>Wähle einen eigenen Hasen und tippe auf ein markiertes Zielfeld. Ziehe entlang einer Kante eine Reihe vorwärts oder springe über einen benachbarten Hasen auf ein freies Feld. Sprünge können seitlich und vorwärts führen.</p>
           <p>Gegnerische Hasen werden geschlagen. Eigene bleiben stehen. Im nächsten eigenen Zug darf derselbe Hase denselben eigenen Hasen nicht erneut überspringen.</p>
+          <p>Links und rechts vom Zentrum verbinden gestrichelte Linien je drei gegenüberliegende Feldpaare. Über diese Verbindungen kannst du direkt auf die andere Spielfeldhälfte ziehen oder springen.</p>
           <p>Das Zentrum ist aus beiden Richtungen über die jeweils fünf mittleren Felder erreichbar. Ein Sprung darüber landet gerade gegenüber. Dieselbe Figur gewinnt, wenn sie drei gegnerische Züge im Zentrum bleibt.</p>
           <p>Wer keinen legalen Zug hat, passt. Passen zählt beim Halten des Zentrums mit. Passen beide nacheinander bei leerem Zentrum, endet die Partie unentschieden.</p>
           {game.level >= 2 && <p>Hasen dürfen seitlich ein Feld zur Reihenmitte ziehen. Stehen drei gleichfarbige Hasen direkt nebeneinander, kann der mittlere nicht von einem Gegner übersprungen werden.</p>}
