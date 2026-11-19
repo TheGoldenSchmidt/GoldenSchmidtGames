@@ -1,8 +1,10 @@
 import {test,expect} from "@playwright/test";
+import {loginTestOwner} from "./account-session";
 for(const motion of ["no-preference","reduce"] as const)test(`Proberaum: Stationen, Bewegung, Pause, Vorschau und Rückkehr (${motion})`,async({page},info)=>{
  test.skip(info.project.name!=="phone","Nur Smartphone");
  await page.emulateMedia({reducedMotion:motion});
  const errors:string[]=[];page.on("pageerror",e=>errors.push(e.message));
+ await loginTestOwner(page.request);
  await page.goto("/");await page.getByRole("button",{name:/Lokal spielen/}).tap();
  await page.getByRole("button",{name:/Proberaum Eine Insel/}).tap();
  const root=page.locator(".practice-world"),world=page.getByRole("img",{name:"3D-Proberaum"});

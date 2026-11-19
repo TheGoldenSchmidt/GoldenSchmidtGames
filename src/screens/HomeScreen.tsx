@@ -20,6 +20,7 @@ let introShown = false;
 
 interface HomeProps {
   profile: GuestProfile;
+  signedIn?: boolean;
   online: boolean;
   onProfile: () => void;
   onLocal: () => void;
@@ -31,7 +32,7 @@ interface HomeProps {
   resumeError?: string;
 }
 
-export function HomeScreen({profile, online, onProfile, onLocal, onOnline, onUniverse, onResumeHost, onResumeOnline, resumeGameName = "Inselparty", resumeError}: HomeProps) {
+export function HomeScreen({profile, signedIn, online, onProfile, onLocal, onOnline, onUniverse, onResumeHost, onResumeOnline, resumeGameName = "Inselparty", resumeError}: HomeProps) {
   const name = displayName(profile);
   const hero = useRef<HTMLHeadingElement>(null);
   const [intro, setIntro] = useState<"loading" | "playing" | "complete">(() => introShown ? "complete" : "loading");
@@ -50,7 +51,7 @@ export function HomeScreen({profile, online, onProfile, onLocal, onOnline, onUni
   return <main className="home expedition-home" data-intro={intro}>
     <div className="expedition-bar">
       <span className="expedition-status"><i data-online={online} />{online ? "Online" : "Offline"}</span>
-      <div className="expedition-account"><MenuSound/><button className="expedition-profile" onClick={onProfile} aria-label={`Gastprofil: ${name}`}>
+      <div className="expedition-account"><MenuSound/><button className="expedition-profile" onClick={onProfile} aria-label={`${signedIn ? "Konto" : "Gastprofil"}: ${name}`}>
         <span aria-hidden="true">{name.slice(0,1).toUpperCase()}</span><b>{name}</b>
       </button></div>
     </div>

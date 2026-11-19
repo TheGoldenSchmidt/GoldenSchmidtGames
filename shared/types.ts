@@ -96,6 +96,8 @@ export interface RoomConfig {
 }
 
 export interface RoomState {
+  /** Stable across reconnects; replaced for every new game in the same room. */
+  statisticsId?: string;
   code: string;
   hostId: string;
   players: Player[];

@@ -209,6 +209,7 @@ function allPlayersReady(room: RoomState) {
 
 function startRoom(room: RoomState) {
   const players = connectedPlayers(room);
+  room.statisticsId = randomUUID();
   room.phase = "playing";
   room.players.forEach((player) => {
     player.score = 0;

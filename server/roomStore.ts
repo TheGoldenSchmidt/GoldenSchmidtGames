@@ -2,6 +2,8 @@ import { createClient, type Client, type Config, type InStatement } from "@libsq
 import { randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import type { SavedRoom } from "../shared/roomPorts";
+import { AccountStore } from "./accountStore";
+import { resultStatements } from "./gameStatistics";
 export type { SavedRoom } from "../shared/roomPorts";
 
 export function deploymentDatabase(): Config {
@@ -27,10 +29,12 @@ export function deploymentDatabase(): Config {
 /** A deployment takes ownership atomically. The outgoing process cannot overwrite its successor. */
 export class RoomStore {
   private readonly db: Client;
+  readonly accounts: AccountStore;
   private readonly owner = randomUUID();
-  constructor(config: Config) { this.db = createClient(config); }
+  constructor(config: Config) { this.db = createClient(config); this.accounts = new AccountStore(this.db); }
 
   async load(claim: boolean): Promise<SavedRoom[]> {
+    if (claim) await this.accounts.initialize();
     const setup: InStatement[] = claim ? [
       "CREATE TABLE IF NOT EXISTS gsg_writer (id INTEGER PRIMARY KEY, owner TEXT NOT NULL)",
       "CREATE TABLE IF NOT EXISTS gsg_rooms (code TEXT PRIMARY KEY, snapshot TEXT NOT NULL)",
@@ -53,6 +57,7 @@ export class RoomStore {
   async save(changes: Map<string, SavedRoom | null>) {
     const statements: InStatement[] = ["SELECT owner FROM gsg_writer WHERE id=1"];
     for (const [code, saved] of changes) {
+      if (saved) statements.push(...resultStatements(saved.room, this.owner));
       statements.push(saved ? {
         sql: `INSERT INTO gsg_rooms(code,snapshot) SELECT ?,? FROM gsg_writer WHERE id=1 AND owner=?
               ON CONFLICT(code) DO UPDATE SET snapshot=excluded.snapshot`,

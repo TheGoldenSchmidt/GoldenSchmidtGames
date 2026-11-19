@@ -3,7 +3,10 @@ const KEY = "gsg.match.sound";
 let context: AudioContext | undefined;
 
 export function soundEnabled() { try { return localStorage.getItem(KEY) !== "off"; } catch { return true; } }
-export function setSoundEnabled(on: boolean) { try { localStorage.setItem(KEY, on ? "on" : "off"); } catch { /* optional */ } }
+export function setSoundEnabled(on: boolean, sync = true) {
+  try { localStorage.setItem(KEY, on ? "on" : "off"); } catch { /* optional */ }
+  window.dispatchEvent(new CustomEvent("gsg:sound", { detail: { on, sync } }));
+}
 
 /** Must run inside a user gesture once so browsers allow audio. */
 export function unlockSound() {

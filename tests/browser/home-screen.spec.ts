@@ -33,6 +33,8 @@ for (const reducedMotion of ["no-preference", "reduce"] as const) {
     }
     await expect(page.locator(".expedition-actions .adventure-choice")).toHaveCount(2);
     await expect(page.locator(".home canvas")).toHaveCount(0);
+    // Start the idle check after the delayed controls have actually appeared.
+    await expect(local).toBeVisible();
     await expect.poll(() => page.evaluate(() => document.getAnimations()
       .filter(animation => (animation.effect as KeyframeEffect | null)?.target?.closest(".home"))
       .filter(animation => animation.playState === "running").length), { timeout: 5000 }).toBe(0);
@@ -95,9 +97,10 @@ test("Startbildschirm: Profil, Installationshilfe und schmale Ansicht", async ({
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   await page.getByRole("button", { name: /^Gastprofil:/ }).click();
-  await expect(page.getByRole("dialog", { name: "Dein Gastprofil" })).toBeVisible();
-  await page.getByRole("textbox", { name: "Anzeigename" }).fill("Die wilde Spielerunde");
-  await page.getByRole("button", { name: "Speichern", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Profil & Anmeldung" })).toBeVisible();
+  await page.getByText("Ohne Konto als Gast spielen", { exact: true }).click();
+  await page.getByRole("textbox", { name: "Gastname" }).fill("Die wilde Spielerunde");
+  await page.getByRole("button", { name: "Gastprofil speichern", exact: true }).click();
   await expect(page.getByRole("button", { name: "Gastprofil: Die wilde Spielerunde", exact: true })).toBeVisible();
   // The installation help opens above the utility row instead of growing the page.
   await page.getByRole("button", { name: "App installieren", exact: true }).click();

@@ -7,6 +7,8 @@ import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { Server } from "socket.io";
+import { accountRoutes, sessionCookie } from "./accountRoutes";
+import { hashToken } from "./accountStore";
 export function createSpielraumServer(store = new RoomStore({ url: ":memory:" })) {
   const app = express();
   app.set("trust proxy", 1);
@@ -22,6 +24,29 @@ export function createSpielraumServer(store = new RoomStore({ url: ":memory:" })
   const httpServer = createServer(app);
   const io = new Server(httpServer, {
     cors: { origin: true, credentials: true }
+  });
+  app.use("/api/account", accountRoutes(store.accounts, token => {
+    for (const socket of io.sockets.sockets.values()) if (socket.data.sessionHash === hashToken(token)) socket.disconnect(true);
+  }));
+  io.use(async (socket, next) => {
+    try {
+      const token = sessionCookie(socket.request.headers.cookie);
+      const account = await store.accounts.session(token);
+      socket.data.accountId = account?.id;
+      socket.data.sessionHash = token ? hashToken(token) : undefined;
+      socket.use((packet, proceed) => {
+        const [event, payload] = packet;
+        if (["room:create", "room:join", "party:test-create"].includes(event) &&
+          typeof payload?.playerId === "string" && payload.playerId.trim().startsWith("acct_") &&
+          payload.playerId.trim() !== socket.data.accountId) {
+          const reply = packet.at(-1);
+          if (typeof reply === "function") reply({ ok: false, error: "Bitte melde dich mit diesem Konto an." });
+          return;
+        }
+        proceed();
+      });
+      next();
+    } catch { next(new Error("Kontospeicher nicht erreichbar.")); }
   });
 
   const core = createRoomCore({
@@ -71,6 +96,7 @@ if (existsSync(distDirectory)) {
         });
       });
       try {
+        await store.accounts.initialize(process.env.GSG_ADMIN_INVITE);
         await core.start();
         return bound;
       } catch (error) {

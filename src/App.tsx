@@ -2,8 +2,10 @@ import { GAMES, isPartyMode } from "../shared/games";
 import { isMinigameMode } from "../shared/minigameModes";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import type { GameId, GuestProfile, RoomState } from "../shared/types";
-import { ProfileDialog } from "./components/ProfileDialog";
-import { loadProfile, saveProfile } from "./lib/profile";
+import { AccountDialog } from "./components/AccountDialog";
+import { loadGuestProfile, loadProfile, saveProfile } from "./lib/profile";
+import { accountProfile, accountRequest } from "./lib/account";
+import { canDevelop, type Account } from "../shared/accounts";
 import { GuestPair, HostInvite } from "./nearby/Pairing";
 import { socket, useTableTransport } from "./lib/socket";
 import { clearActiveSession, loadActiveSession, loadLastHost, storeActiveSession, type ActiveSession } from "./lib/roomSession";
@@ -17,7 +19,7 @@ import { KribbelnGameScreen } from "./screens/KribbelnGameScreen";
 import { PartyGameScreen, PARTY_ONLINE_SAVE, readPartySave, type PartySavedSession } from "./screens/PartyGameScreen";
 import { RoomScreen } from "./screens/RoomScreen";
 import { RichsUniverseScreen } from "./richs-universe/RichsUniverseScreen";
-import { playMenuClick } from "./matches/sfx";
+import { playMenuClick, setSoundEnabled } from "./matches/sfx";
 import { GameIntro } from "./components/GameIntro";
 import type {CharacterId} from "../shared/characters";
 
@@ -27,12 +29,19 @@ type View = "practice-world" | "home" | "local-setup" | "online-entry" | "host" 
 
 export default function App() {
   const [profile, setProfile] = useState<GuestProfile>(() => loadProfile());
+  const profileRef = useRef(profile);
+  profileRef.current = profile;
+  const [account, setAccount] = useState<Account>();
+  const accountRevision = useRef(0);
+  const [accountError, setAccountError] = useState("");
   const [session, setSession] = useState(() => loadActiveSession(profile.id));
   const [reconnecting, setReconnecting] = useState(Boolean(session));
   const [needsPairing, setNeedsPairing] = useState(session?.nearby?.role === "guest");
   const joinedSocket = useRef<string | undefined>(undefined);
   const lobbyRequest = useRef(0);
   const [view, setView] = useState<View>("home");
+  const viewRef = useRef(view);
+  viewRef.current = view;
   const [showProfile, setShowProfile] = useState(false);
   const [online, setOnline] = useState(navigator.onLine);
   const [room, setRoom] = useState<RoomState>();
@@ -45,6 +54,53 @@ export default function App() {
   const [resumeError,setResumeError]=useState("");
   const [canResumeParty,setCanResumeParty]=useState(false);
   const [lobbyError,setLobbyError]=useState("");
+
+  function acceptAccount(next?: Account) {
+    accountRevision.current++;
+    const current = profileRef.current;
+    if (next && !current.id.startsWith("acct_")) saveProfile(current);
+    const nextProfile = next ? accountProfile(next) : loadGuestProfile();
+    saveProfile(nextProfile); setProfile(nextProfile); profileRef.current = nextProfile;
+    setAccount(next); setAccountError("");
+    if (next) setSoundEnabled(next.settings.sound, false);
+    if (nextProfile.id !== current.id) { socket.disconnect(); setSession(loadActiveSession(nextProfile.id)); }
+    if (!canDevelop(next?.role) && viewRef.current === "practice-world") setView("local-setup");
+  }
+  useEffect(() => {
+    let active = true;
+    const refresh = () => {
+      if (viewRef.current !== "home") return;
+      const revision = accountRevision.current;
+      void accountRequest<{ account: Account | null }>("/me").then(result => {
+        if (active && viewRef.current === "home" && revision === accountRevision.current) acceptAccount(result.account ?? undefined);
+      }).catch(() => { /* Public and local games remain usable without the account server. */ });
+    };
+    refresh();
+    window.addEventListener("online", refresh);
+    window.addEventListener("focus", refresh);
+    return () => { active = false; window.removeEventListener("online", refresh); window.removeEventListener("focus", refresh); };
+  }, []);
+  useEffect(() => {
+    const update = (event: Event) => {
+      const { on, sync } = (event as CustomEvent<{ on: boolean; sync: boolean }>).detail;
+      if (!account || !sync) return;
+      const revision = accountRevision.current;
+      void accountRequest<{ account: Account }>("/settings", "PUT", { ...account.settings, sound: on })
+        .then(result => { if (revision === accountRevision.current) setAccount(result.account); })
+        .catch(error => { if (revision === accountRevision.current) setAccountError(error.message); });
+    };
+    window.addEventListener("gsg:sound", update);
+    return () => window.removeEventListener("gsg:sound", update);
+  }, [account]);
+
+  async function openPractice() {
+    const revision = accountRevision.current;
+    try {
+      await accountRequest("/developer");
+      if (revision === accountRevision.current && viewRef.current === "local-setup") { setAccountError(""); setView("practice-world"); }
+    }
+    catch (error) { setAccountError(error instanceof Error ? error.message : "Zugriff nicht möglich."); }
+  }
 
   useEffect(() => {
     const updateOnline = () => setOnline(navigator.onLine);
@@ -177,6 +233,14 @@ export default function App() {
   }, [session]);
 
   function updateProfile(nextProfile: GuestProfile) {
+    if (account) {
+      const revision = accountRevision.current;
+      void accountRequest<{ account: Account }>("/settings", "PUT", {
+        ...account.settings, displayName: nextProfile.username, characterId: nextProfile.characterId
+      }).then(result => { if (revision === accountRevision.current) { acceptAccount(result.account); setShowProfile(false); } })
+        .catch(error => { if (revision === accountRevision.current) setAccountError(error.message); });
+      return;
+    }
     saveProfile(nextProfile);
     setProfile(nextProfile);
     setShowProfile(false);
@@ -252,6 +316,7 @@ export default function App() {
       {view === "home" && (
         <HomeScreen
           profile={profile}
+          signedIn={Boolean(account)}
           online={online}
           onProfile={() => setShowProfile(true)}
           onLocal={() => setView("local-setup")}
@@ -263,10 +328,10 @@ export default function App() {
           resumeError={resumeError}
         />
       )}
-      {view === "practice-world" && <Suspense fallback={<p role="status">Proberaum wird geladen …</p>}><PracticeWorldScreen characterId={profile.characterId} onExit={()=>setView("local-setup")}/></Suspense>}
+      {view === "practice-world" && canDevelop(account?.role) && <Suspense fallback={<p role="status">Proberaum wird geladen …</p>}><PracticeWorldScreen characterId={profile.characterId} onExit={()=>setView("local-setup")}/></Suspense>}
       {view === "local-setup" && (
         <LocalSetupScreen
-          onPractice={()=>setView("practice-world")}
+          onPractice={canDevelop(account?.role) ? openPractice : undefined}
           onTest={gameId => { setTestGameId(gameId); setView("test"); }}
           onBack={() => setView("home")}
           onStart={(gameId, names, options) => {
@@ -329,8 +394,9 @@ export default function App() {
       {view==="game-online" && room && !room.partyTest && session?.nearby?.role==="host" && <HostInvite code={room.code}/>}
       {view==="game-online" && lobbyError && <p className="error-message lobby-return-error" role="alert">{lobbyError}</p>}
       {showProfile && (
-        <ProfileDialog profile={profile} onSave={updateProfile} onClose={() => setShowProfile(false)} />
+        <AccountDialog account={account} profile={profile} onAccount={acceptAccount} onGuestSave={updateProfile} onClose={() => setShowProfile(false)} />
       )}
+      {accountError && <p className="error-message account-sync-error" role="alert">{accountError}</p>}
     </div>
   );
 }
