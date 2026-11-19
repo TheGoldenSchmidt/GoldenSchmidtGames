@@ -1,0 +1,65 @@
+.ru-hasenspiel {
+  min-height: 100dvh;
+  padding: 12px;
+  color: #f5efdf;
+  background: radial-gradient(ellipse at center, #343d39, #172522 70%);
+}
+.ru-hasenspiel .hare-page {
+  width: min(100%, 520px);
+  margin-inline: auto;
+}
+.ru-hasenspiel .hare-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ru-hasenspiel h1 {
+  margin: 0;
+  font: 1.55rem Georgia, serif;
+}
+.ru-hasenspiel button, .ru-hasenspiel summary {
+  min-height: 44px;
+  color: inherit;
+  cursor: pointer;
+}
+.ru-hasenspiel button {
+  padding: 0 12px;
+  border: 1px solid #7a8c81;
+  border-radius: 8px;
+  background: #2b4037;
+}
+.ru-hasenspiel .hare-status {
+  display: grid;
+  gap: 4px;
+  margin: 12px 0 6px;
+  text-align: center;
+}
+.ru-hasenspiel .hare-status span {
+  color: #e2d8bf;
+  font-size: .875rem;
+}
+.ru-hasenspiel .hare-board {
+  display: block;
+  width: 100%;
+  height: min(73dvh, 710px);
+  touch-action: manipulation;
+}
+.ru-hasenspiel .hare-cell[role="button"] { cursor: pointer; }
+.ru-hasenspiel .hare-cell polygon, .ru-hasenspiel .hare-cell rect {
+  fill: #c6beb0;
+  stroke: #28332e;
+  stroke-width: 1.4;
+}
+.ru-hasenspiel .hare-cell polygon[data-side="blue"] { fill: #9db7bd; }
+.ru-hasenspiel .hare-cell rect { fill: #c7a86d; }
+.ru-hasenspiel .hare-cell[data-target="true"] > :first-child { fill: #f4de9a; }
+.ru-hasenspiel .hare-cell[data-selected="true"] > :first-child,
+.ru-hasenspiel .hare-cell:focus-visible > :first-child { stroke: #fff4ce; stroke-width: 3; }
+.ru-hasenspiel .hare-token, .ru-hasenspiel .hare-target { pointer-events: none; }
+.ru-hasenspiel .hare-token circle { fill: #4d535b; stroke: #292c30; }
+.ru-hasenspiel .hare-token-blue circle { fill: #12578d; stroke: #123957; }
+.ru-hasenspiel .hare-token path { fill: #fff4de; stroke: #fff4de; stroke-linecap: round; }
+.ru-hasenspiel .hare-target { fill: #6c4106; }
+.ru-hasenspiel details { margin-top: 8px; }
+.ru-hasenspiel summary { align-content: center; }
