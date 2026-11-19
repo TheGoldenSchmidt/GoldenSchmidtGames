@@ -46,3 +46,13 @@ Einmalig Chromium mit `npx playwright install chromium` installieren. Entwicklun
 Persönliche Aufgabenbranches: `rich/<thema>`; Agentenbranches gemäß [zentralen Regeln](../../AGENTS.md#zusammenarbeit-und-auslieferung). Vom aktuellen `origin/main` starten, vor PR aktualisieren und prüfen. Merge nur nach Freigabe durch TheGoldenSchmidt: `main` ist für Live-Auslieferung nach CI vorgesehen.
 
 Ein reguläres Online-Spiel gemeinsam planen: Regeln nach `shared/`, Einbindung über `shared/roomCore.ts`, Darstellung in `src/`. Experimente selbst laufen nur lokal.
+
+## Hasenspiel
+
+Spielbarer Prototyp für zwei Personen auf einem Smartphone. Stufe 1 beginnt
+mit 16 Hasen pro Seite. Zwei gespiegelte Dreiecke mit je sechs Reihen umgeben
+das Zentrum. Die fünf Zugänge pro Seite sind für Sprünge paarweise gerade
+gegenüber verbunden. Seitlich-vorwärts und vorwärts-seitlich sind als
+Sprünge erlaubt. Ein besetztes Zentrum kann nach drei gegnerischen Zügen
+zum Sieg führen. Wenn es keine legalen Züge gibt, wird gepasst. Zweimal
+aufeinanderfolgendes Passen bei leerem Zentrum ergibt ein Unentschieden.
