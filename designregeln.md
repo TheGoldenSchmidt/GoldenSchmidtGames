@@ -62,9 +62,9 @@ Feste Aktionen brauchen Inhaltsabstand und Safe Areas; Bildschirmtastatur berüc
 
 ## Start und Bewegung
 
-Startbildschirm eine Bildschirmhöhe ohne Scrollen; bei Platzmangel zuerst Illustration verkleinern, Touch-Ziele erhalten. Status/Ton/Profil oben; Wappen/Motto und Spielzugänge darübergelegt. Rich’s Universe als kompakte Stein-Tafel unter den Spielmodi; Installation/Updates/Fortsetzen erreichbar. Keine Figuren oder Live-3D-Szene; CSS-Himmel bis Bilder bereitstehen.
+Startbildschirm eine Bildschirmhöhe ohne Scrollen; bei Platzmangel zuerst Illustration verkleinern, Touch-Ziele erhalten. Status/Ton/Profil oben; Wappen/Motto und Spielzugänge darübergelegt. Rich’s Universe als kompakte Stein-Tafel unter den Spielmodi. Unten eine Werkzeugzeile: Fortsetzen links (falls verfügbar), Installation/Updates rechts; auf schmalen Handys Installation nur als Symbol. Kurzmeldungen als Glashinweis darüber, ohne Logo/Insel zu verkleinern. Keine Figuren oder Live-3D-Szene; CSS-Himmel bis Bilder bereitstehen.
 
-Beim ersten Einstieg landen Steintafel, GOLDEN, SCHMIDT, GAMES und Krone nacheinander; einmaliger warmer Kronenreflex. Zweizeiliges, signiertes Motto blendet ein, danach Spielbuttons. Bei Rückkehr/reduzierter Bewegung sofort verfügbar. Kurzer mechanischer Klick für Menüaktionen, Ton je Gerät schaltbar.
+Beim ersten Einstieg landen Steintafel, GOLDEN, SCHMIDT, GAMES und Krone nacheinander; einmaliger warmer Kronenreflex. Kursives, zweizeiliges Motto zwischen goldenen englischen Anführungszeichen (“ … ”), Signatur außerhalb; es blendet ein, danach Spielbuttons. Bei Rückkehr/reduzierter Bewegung sofort verfügbar. Kurzer mechanischer Klick für Menüaktionen, Ton je Gerät schaltbar.
 
 Bewegung erklärt Auftritt/Handlung; kein ständiges Wackeln/Blinken/Schweben. Höchstens ein Auftritt je Ansicht. `prefers-reduced-motion` entfernt Dekoration/Übergänge und erhält Auswahl, Bestätigung, Ergebnis. Fehlende Grafik blockiert keinen Zugang; WebGL-Ersatz bleibt nutzbar.
 

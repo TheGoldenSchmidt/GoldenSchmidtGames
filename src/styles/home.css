@@ -1,5 +1,8 @@
 /* The portrait composition reserves space for controls first. Only the painting can shrink. */
-.app-shell:has(> .expedition-home) { width: 100%; box-shadow: none; border-radius: 0; }
+.app-shell:has(> .expedition-home) { width: 100%; height: 100dvh; min-height: 0; box-shadow: none; border-radius: 0; }
+/* The start screen is one fixed frame: the page itself never scrolls or rubber-bands. */
+:is(html, body):has(.expedition-home) { height: 100%; overflow: hidden; overscroll-behavior: none; }
+body:has(.expedition-home) { padding: 0; }
 .expedition-home {
   position: relative; isolation: isolate; display: flex; flex-direction: column; align-items: center;
   height: 100dvh; min-height: 0; overflow: hidden; color: #fff6df;
@@ -50,10 +53,11 @@
   background:linear-gradient(90deg,transparent,#191828eb 18% 82%,transparent);
   font:400 clamp(.85rem,3.8vw,1.1rem)/1.24 var(--iw-font-ui); text-shadow:0 1px 3px #161020; }
 .expedition-motto em { font-weight:560; color:#ffdb91; }
-.expedition-motto::before,.expedition-motto::after { position:absolute; color:#efd299;
-  font:1.95rem/1 var(--iw-font-display); }
-.expedition-motto::before { content:"“" / ""; top:0; left:7px; }
-.expedition-motto::after { content:"”" / ""; bottom:-8px; right:7px; }
+/* English motto: “ opens before the first line, ” closes after the second line, not after the signature. */
+.expedition-motto blockquote > span:first-child::before,
+.expedition-motto blockquote > span:last-child::after { color:#efd299; font-weight:560; font-size:1.2em; line-height:0; vertical-align:-.1em; }
+.expedition-motto blockquote > span:first-child::before { content:"“" / ""; margin-right:.08em; }
+.expedition-motto blockquote > span:last-child::after { content:"”" / ""; margin-left:.02em; }
 .motto-divider { display:flex; align-items:center; gap:4px; height:7px; color:#f8cd80; font-size:.6rem; }
 .motto-divider::before,.motto-divider::after { content:""; width:22px; height:1px;
   background:linear-gradient(90deg,transparent,#b99a62); }
@@ -85,23 +89,50 @@
 .expedition-universe__copy { display:grid; gap:1px; min-width:0; }
 .expedition-universe__copy strong { font:400 clamp(1.02rem,4.4vw,1.2rem)/1.1 var(--iw-font-display); text-transform:uppercase; text-shadow:0 1px 0 #0000005c; }
 .expedition-universe__copy small { font:480 clamp(.68rem,2.9vw,.8rem)/1.3 var(--iw-font-ui); color:#fff8eadd; }
-.expedition-resume { border-radius:8px; margin:10px 4px 0; font-size:.79rem; padding:6px 12px; }
-.expedition-utilities { position:relative; justify-content:center; gap:8px; margin-top:clamp(14px,3.3dvh,28px); }
+.expedition-resume-error { margin:10px 0 0; font-size:.79rem; }
+/* Resume (if any) sits left in the tool row, install and update stay right: one row instead of two. */
+.expedition-utilities { position:relative; justify-content:center; gap:8px; margin-top:clamp(12px,2.6dvh,24px); }
+.expedition-utilities:has(.expedition-resume) { justify-content:flex-end; align-items:stretch; }
+.expedition-utilities:has(.expedition-resume) > * { flex:0 1 auto; }
+.expedition-utilities > .expedition-resume { min-width:0; }
+.expedition-utilities:has(.expedition-resume) > :is(.install-card,.app-update) { min-width:min-content; }
+.expedition-utilities:has(.expedition-resume) .dock-tool { width:100%; height:100%; }
+.expedition-resume { margin-right:auto; text-align:left; }
+.dock-tool svg { flex:none; }
+/* On narrow phones three labelled tools do not fit next to each other: install keeps only its icon (label stays for screen readers). */
+@media (max-width:399px) {
+  .expedition-utilities:has(.expedition-resume) { gap:6px; }
+  .expedition-utilities:has(.expedition-resume) > .install-card { flex:none; }
+  .expedition-utilities:has(.expedition-resume) .install-card .dock-tool { width:44px; padding-inline:0; justify-content:center; }
+  .expedition-utilities:has(.expedition-resume) .install-card .dock-tool__contents { justify-content:center; }
+  .expedition-utilities:has(.expedition-resume) .install-card .dock-tool__contents > span {
+    position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+}
+.expedition-resume:disabled { opacity:.55; cursor:default; }
+.expedition-resume svg { fill:currentColor; stroke:none; }
 .expedition-utilities :is(.install-card,.app-update) { margin:0; background:none; border:0; padding:0; min-width:0; }
 .dock-tool { border-radius:10px; padding:4px 11px; }
 .dock-tool__contents { gap:6px; font:550 clamp(.65rem,2.65vw,.81rem)/1.2 var(--iw-font-ui); }
 .dock-tool svg { width:16px; height:16px; fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round; }
-.expedition-utilities .install-help, .expedition-utilities .app-update:not([data-status=idle]) p {
+.expedition-utilities .install-help {
   position:absolute; bottom:calc(100% + 9px); left:0; right:0; z-index:4; margin:0; padding:17px 16px; max-height:60dvh;overflow:auto;
   background:#272538; color:#fff5e1; text-align:left; border:1px solid #cbab70; border-radius:12px; box-shadow:0 6px 22px #10101c8a; font-size:.84rem; line-height:1.5;
 }
 .expedition-utilities .install-help {z-index:5}
 .install-help p:first-of-type { padding-right:34px; }
 .expedition-utilities .install-help__close { position:absolute;right:5px;top:5px;width:44px;height:44px;background:none;border:0;color:white;font-size:1.5rem; }
-.expedition-utilities .app-update[data-status=idle] p, .expedition-utilities .app-update[data-status=unsupported] p { display:none; }
+/* Update result: a short glass note above the tool row. It overlays the slab and never shifts the layout.
+   While hidden it stays in the DOM (visually hidden) so screen readers still hear the status. */
+.expedition-utilities .app-update p { position:absolute; width:1px; height:1px; margin:0; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+.expedition-utilities .app-update[data-note=true] p {
+  left:0; right:0; bottom:calc(100% + 8px); z-index:4; width:auto; height:auto; clip-path:none; white-space:normal;
+  padding:9px 14px; background:#1f1c54f0; color:#fff8ea; border:1px solid #ffffff4d; border-radius:12px;
+  box-shadow:0 6px 18px #10101c8a; font:500 .78rem/1.4 var(--iw-font-ui); text-align:center; pointer-events:none; }
+@media (prefers-reduced-motion:no-preference) {
+  .expedition-utilities .app-update[data-note=true] p { animation:update-note 180ms ease-out; }
+}
+@keyframes update-note { from { opacity:0; transform:translateY(4px); } }
 .expedition-home :is(.menu-sound,.dock-tool,.expedition-profile):focus-visible { outline:3px solid #ffdd8e; outline-offset:3px; }
-.expedition-utilities:has(.app-update:not([data-status=idle],[data-status=unsupported])) {padding-bottom:44px;}
-.expedition-utilities .app-update:not([data-status=idle],[data-status=unsupported]) p {top:calc(100% - 39px);bottom:auto;padding:4px 8px;font-size:.7rem;max-height:40px;border:0;text-align:center;}
 @media (prefers-reduced-motion:no-preference) {
   .expedition-home { --crown-landed:3500ms; --intro-end:calc(var(--crown-landed) + 650ms); }
   .expedition-home:is([data-intro="loading"],[data-intro="playing"]) :is(.expedition-controls,.expedition-account) { visibility:hidden; }

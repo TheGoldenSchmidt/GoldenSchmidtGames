@@ -89,12 +89,21 @@ export class DirectLink {
   }
   private async description(desc: RTCSessionDescriptionInit, info: Omit<Signal,"sdp"|"type">) {
     await this.pc.setLocalDescription(desc);
+    // Without ICE servers only local host candidates exist and they arrive together. Some devices never
+    // report "complete" (e.g. an idle VPN or cellular interface), so a short quiet period after the last
+    // candidate ends the wait instead of the full timeout.
     if (this.pc.iceGatheringState !== "complete") await new Promise<void>((resolve,reject) => {
-      const finish = () => { clearTimeout(timeout); this.pc.removeEventListener("icegatheringstatechange", check); resolve(); };
+      let quiet: ReturnType<typeof setTimeout> | undefined;
+      const cleanup = () => { clearTimeout(timeout); clearTimeout(quiet);
+        this.pc.removeEventListener("icegatheringstatechange", check); this.pc.removeEventListener("icecandidate", found); };
+      const finish = () => { cleanup(); resolve(); };
       const check = () => { if (this.pc.iceGatheringState === "complete") finish(); };
-      const timeout = setTimeout(() => { this.pc.removeEventListener("icegatheringstatechange",check);
+      const found = (e: RTCPeerConnectionIceEvent) => { if (e.candidate) { clearTimeout(quiet); quiet = setTimeout(finish, 1000); } };
+      const timeout = setTimeout(() => { cleanup();
         if (this.pc.localDescription?.sdp.includes("a=candidate:")) resolve(); else reject(new Error("Keine lokale Netzwerkverbindung gefunden.")); },8000);
-      this.pc.addEventListener("icegatheringstatechange",check); check();
+      this.pc.addEventListener("icegatheringstatechange",check); this.pc.addEventListener("icecandidate",found);
+      if (this.pc.localDescription?.sdp.includes("a=candidate:")) quiet = setTimeout(finish, 1000);
+      check();
     });
     const sdp = this.pc.localDescription!.sdp;
     if (!sdp.includes("a=candidate:")) throw new Error("Keine lokale Adresse gefunden. WLAN oder Hotspot prüfen.");

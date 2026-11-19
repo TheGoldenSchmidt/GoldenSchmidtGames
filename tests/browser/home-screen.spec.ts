@@ -117,3 +117,51 @@ test("Startbildschirm: Profil, Installationshilfe und schmale Ansicht", async ({
     await page.screenshot({ path: info.outputPath(`start-${viewport.width}x${viewport.height}.png`) });
   }
 });
+
+test("Startbildschirm: Fortsetzen und Updates teilen sich eine Zeile", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  const playerId = await page.evaluate(() => {
+    for (const key of Object.keys(localStorage)) {
+      try { const value = JSON.parse(localStorage.getItem(key) ?? "null"); if (value?.id) return value.id as string; } catch { /* not JSON */ }
+    }
+  });
+  await page.evaluate(playerId => localStorage.setItem("spielraum.last-host.v1", JSON.stringify({ playerId, nearby: { role: "host" }, sessionToken: "x" })), playerId);
+  for (const viewport of [{ width: 320, height: 640 }, { width: 412, height: 915 }]) {
+    await page.setViewportSize(viewport);
+    await page.reload();
+    const resume = page.getByRole("button", { name: "Handy-Tisch fortsetzen", exact: true });
+    const update = page.getByRole("button", { name: /Updates prüfen|Neue Version laden/ });
+    const install = page.getByRole("button", { name: "App installieren", exact: true });
+    for (const button of [resume, update, install]) await expect(button).toBeInViewport({ ratio: 1 });
+    const [r, u, i] = await Promise.all([resume, update, install].map(button => button.boundingBox()));
+    // Resume on the left, update on the right, all in one row without overlap.
+    expect(Math.abs(r!.y - u!.y)).toBeLessThan(2);
+    expect(r!.x + r!.width).toBeLessThanOrEqual(i!.x);
+    expect(i!.x + i!.width).toBeLessThanOrEqual(u!.x);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
+  }
+});
+
+test("Startbildschirm: Update-Prüfung verändert weder Größe noch Scrollbarkeit", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  for (const viewport of [{ width: 320, height: 640 }, { width: 412, height: 915 }]) {
+    await page.setViewportSize(viewport);
+    await page.goto("/");
+    const hero = page.locator(".expedition-hero");
+    const before = (await hero.boundingBox())!;
+    await page.getByRole("button", { name: /Updates prüfen/ }).click();
+    const note = page.getByRole("complementary", { name: "App aktualisieren" }).getByRole("status");
+    await expect(note).toBeVisible();
+    // The note floats above the tool row instead of pushing the island up.
+    expect(await hero.boundingBox()).toEqual(before);
+    await page.mouse.wheel(0, 600);
+    await page.evaluate(() => window.scrollTo(0, 600));
+    expect(await page.evaluate(() => [window.scrollY, document.documentElement.scrollHeight <= innerHeight])).toEqual([0, true]);
+    // It hides by itself; the status text stays available to screen readers.
+    const tool = page.getByRole("complementary", { name: "App aktualisieren" });
+    await expect(tool).toHaveAttribute("data-note", "false", { timeout: 8000 });
+    await expect(note).not.toBeEmpty();
+    expect(await note.evaluate(element => element.getBoundingClientRect().width)).toBeLessThanOrEqual(1);
+  }
+});

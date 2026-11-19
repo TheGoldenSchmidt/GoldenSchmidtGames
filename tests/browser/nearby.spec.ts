@@ -69,7 +69,8 @@ test("Fünf Geräte steuern gemeinsam, ein zweiter Tisch bleibt unabhängig",asy
     });
     for(const device of [...devices,other])await enter(device, guests.includes(device));
     for(const host of [page,other])await host.getByRole("button",{name:"Neuen Raum erstellen"}).click();
-    await selectLobbyGame(page, "party");
+    // A free minigame defaults to the 3D arena "dash"; the island party would draw a random minigame.
+    await selectLobbyGame(page, "free-minigame");
     await expect(page.getByRole("combobox",{name:"Spielerzahl",exact:true})).toBeEnabled();
     await page.getByRole("combobox",{name:"Spielerzahl",exact:true}).selectOption("5");
     await expect(page.getByRole("combobox",{name:"Spielerzahl",exact:true})).toHaveValue("5");

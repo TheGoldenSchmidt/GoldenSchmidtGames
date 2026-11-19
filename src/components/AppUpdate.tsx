@@ -6,7 +6,16 @@ type Status = "idle" | "checking" | "ready" | "applying" | "current" | "error" |
 export function AppUpdate() {
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
+  const [note, setNote] = useState(false);
   const registration = useRef<Promise<ServiceWorkerRegistration> | undefined>(undefined);
+
+  // The result floats briefly above the tool row and then hides again; it never takes layout space.
+  useEffect(() => {
+    if (!["ready", "current", "error"].includes(status)) { setNote(false); return; }
+    setNote(true);
+    const timer = setTimeout(() => setNote(false), 5000);
+    return () => clearTimeout(timer);
+  }, [status, message]);
 
   function getRegistration() {
     if (!registration.current) {
@@ -51,7 +60,7 @@ export function AppUpdate() {
     catch (error) { setStatus("error"); setMessage(error instanceof Error ? error.message : "Aktualisierung fehlgeschlagen."); }
   }
 
-  return <aside className="app-update" aria-label="App aktualisieren" data-status={status}>
+  return <aside className="app-update" aria-label="App aktualisieren" data-status={status} data-note={note}>
     <button className="dock-tool" onClick={status === "ready" ? apply : check} disabled={["checking", "applying", "unsupported"].includes(status)}>
       <span className="dock-tool__contents">
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19.5 11a7.6 7.6 0 0 0-13.6-3.6M5.4 3.6v4.2h4.2M4.5 13a7.6 7.6 0 0 0 13.6 3.6M18.6 20.4v-4.2h-4.2" /></svg>
