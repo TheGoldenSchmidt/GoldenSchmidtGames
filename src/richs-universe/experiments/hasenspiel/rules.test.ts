@@ -180,4 +180,37 @@ for (const strength of ["Mittel", "Schwer"] as const) {
   assert.equal(botTurn(threat, strength).board[CENTER], undefined);
 }
 
+for (const [turn, inner, outer, further] of [
+  ["blue", "5:0", "7:0", "8:0"], ["gray", "7:0", "5:0", "4:0"]
+] as const) {
+  const backward: Game = { ...newGame(1), turn, board: {
+    [outer]: piece("hare", turn), [CENTER]: piece("middle", turn)
+  } };
+  assert.ok(!moves(backward, outer).some(move => move.to === inner));
+  const towardCenter: Game = { ...backward, board: {
+    [further]: piece("hare", turn), [outer]: piece("middle", turn)
+  } };
+  assert.ok(!moves(towardCenter, further).some(move => move.to === CENTER));
+}
+
+for (const kind of ["rabbit", "monkey", "deer"] as const) {
+  const hold: Game = { ...newGame(3), turn: "gray", held: 2, board: {
+    [CENTER]: piece("holder", "blue", kind)
+  } };
+  const next = play(hold);
+  assert.equal(next.held, kind === "rabbit" ? 3 : 0);
+  assert.equal(next.result, kind === "rabbit" ? "blue" : undefined);
+}
+
+for (const kind of ["rabbit", "monkey"] as const) {
+  const wallBoard = { "4:-2": piece("left", "gray", "deer"), "4:2": piece("right", "gray", "deer") };
+  const flank: Game = { ...newGame(3), board: { ...wallBoard, "4:-3": piece("attacker", "blue", kind) } };
+  assert.equal(play(flank, "4:-3", "4:-1").board["4:-2"], undefined);
+  const inside = { ...flank, board: { ...wallBoard, "4:-1": piece("attacker", "blue", kind) } };
+  assert.ok(!moves(inside, "4:-1").some(move => move.capture === "4:-2"));
+  const front = { ...flank, board: { ...wallBoard, "5:-2": piece("attacker", "blue", kind) } };
+  assert.ok(!moves(front, "5:-2").some(move => move.capture === "4:-2"));
+  assert.ok(!moves({ ...flank, restingDeer: ["left"] }, "4:-3").some(move => move.capture === "4:-2"));
+}
+
 console.log("Hasenspiel: Stufen 1–3 geprüft");

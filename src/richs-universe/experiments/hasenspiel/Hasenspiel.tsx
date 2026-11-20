@@ -94,7 +94,7 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
           {firstColor ? <>
             <span>Münzwurf · {firstPlayer}: {names[firstColor]} · {secondPlayer}: {names[secondColor]}</span>
             <strong>{status}</strong>
-            <span>{center ? `${names[center.color]} hält die Lichtung · ${game.held}/3` : "Lichtung drei gegnerische Züge halten"}</span>
+            <span>{center?.kind === "rabbit" ? `${names[center.color]} hält die Lichtung · ${game.held}/3` : "Lichtung mit einem Hasen drei gegnerische Züge halten"}</span>
           </> : <button type="button" onClick={() => setFirstColor(Math.random() < .5 ? "blue" : "gray")}>
             Münze werfen
           </button>}

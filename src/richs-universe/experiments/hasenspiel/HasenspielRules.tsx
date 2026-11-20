@@ -9,8 +9,8 @@ export function HasenspielRules({ level }: { level: Level }) {
       <p><strong>Das Spielprinzip.</strong> Ihr spielt 1 gegen 1. {advanced
         ? <><strong>Neu in Stufe 3:</strong> Jede Seite hat 12 Hasen, 2 Hirsche und 2 Affen.</>
         : "Beide Seiten haben je 16 Hasen."} Ein Münzwurf lost aus, wer Blau und wer Grau spielt.
-        Blau beginnt, danach zieht ihr abwechselnd. Wer mit {advanced ? "derselben Figur" : "demselben Hasen"} drei gegnerische Züge
-        in Folge auf der Lichtung bleibt, gewinnt. Ein gegnerischer Pass zählt mit.</p>
+        Blau beginnt, danach zieht ihr abwechselnd. Wer mit demselben Hasen drei gegnerische Züge
+        in Folge auf der Lichtung bleibt, gewinnt. Ein gegnerischer Pass zählt mit.{advanced && " Affen und Hirsche können die Lichtung besetzen, zählen aber nicht für den Sieg."}</p>
       <p><strong>Das Spielbrett.</strong> Zwei gespiegelte Dreiecke treffen an der Lichtung aufeinander.
         Jede Seite hat sechs nummerierte Reihen, vom einzelnen Dreieck in Reihe 1 bis zur breiten Reihe 6.
         Die gestrichelten Linien links und rechts verbinden je drei gegenüberliegende Feldpaare und zählen wie gemeinsame Kanten.
@@ -23,7 +23,7 @@ export function HasenspielRules({ level }: { level: Level }) {
       <p><strong>Hase ziehen.</strong> Ziehe eine Ebene vor auf ein freies Nachbarfeld oder auf die direkt verbundene Lichtung.</p>
       <RuleExample frames={level === 1 ? examples.step : examples.step.filter((_, index) => index !== 1)} />
       <p><strong>Hase springen.</strong> Springe vorwärts oder seitwärts über {advanced ? "eine benachbarte Figur" : "einen benachbarten Hasen"}
-        auf ein freies, damit verbundenes Feld. In derselben Reihe springst du geradeaus. Gegnerische Figuren werden geschlagen,
+        auf ein freies, damit verbundenes Feld. In derselben Reihe springst du geradeaus. Rückwärtssprünge sind auch zur oder über die Lichtung verboten. Gegnerische Figuren werden geschlagen,
         eigene bleiben stehen. Im nächsten eigenen Zug darf dieselbe Figur dieselbe eigene Figur nicht erneut überspringen.</p>
       <RuleExample frames={examples.jump} />
       {level >= 2 && <ul>
@@ -43,13 +43,13 @@ export function HasenspielRules({ level }: { level: Level }) {
           und liegen <strong>drei bis sechs Felder</strong> zwischen ihnen, entsteht auf diesen Feldern ein grüner Wall.
           Die eigene Farbe kann frei hindurchziehen. Gegnerische Figuren darauf
           setzen beim nächsten eigenen Zug aus, außer Hirschen. Danach können sie seitlich oder rückwärts herausziehen.
-          Gegnerische Affen können den Wall beim Hangeln überqueren. Der Wall verschwindet, sobald die Hirsche in verschiedenen Reihen stehen oder der Abstand außerhalb dieser Grenzen liegt.<RuleExample frames={examples.wall} /></li>
+          Gegnerische Affen können den Wall beim Hangeln überqueren. Vom Wall aus kann keine Figur über seine Hirsche springen. Hasen und Affen können einen Wallhirsch nur seitlich von außen auf ein freies Feld im Wall überspringen und dabei einen gegnerischen Hirsch schlagen. Der Wall verschwindet, sobald die Hirsche in verschiedenen Reihen stehen oder der Abstand außerhalb dieser Grenzen liegt.<RuleExample frames={examples.wall} /></li>
         <li><strong>Neu in Stufe 3 · Affen.</strong> Affen dürfen in alle Richtungen ziehen und springen, auch rückwärts.
           Beim Hangeln bewegen sie sich vorwärts oder seitwärts über mindestens zwei Hasen. Zwischen ihnen darf höchstens
           ein Feld frei sein. Der Affe landet auf einem freien Feld und schlägt beim Hangeln keine Figur.<RuleExample frames={examples.monkey} /></li>
       </ul>}
       <p><strong>Passen.</strong> Wer keinen erlaubten Zug hat, muss passen.
-        Passen beide direkt nacheinander bei leerer Lichtung, endet die Partie unentschieden.
+        Passen beide direkt nacheinander ohne Hasen auf der Lichtung, endet die Partie unentschieden.
         {advanced && " Solange noch eine Betäubung oder Hirschruhe aktiv ist, zählen Pässe dafür nicht."}</p>
     </details>
   );
