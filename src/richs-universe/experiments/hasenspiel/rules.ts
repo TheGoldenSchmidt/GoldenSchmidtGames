@@ -91,15 +91,22 @@ function protectedRabbit(board: Board, cell: Cell, piece: Piece) {
 
 function deerMoves(board: Board, from: Cell, piece: Piece): Move[] {
   const targets = new Set(adjacent(from)
-    .filter(to => !board[to.id] && (forward(piece, from, to) >= 0 || to.id === CENTER))
+    .filter(to => !board[to.id] && forward(piece, from, to) >= 0)
     .map(to => to.id));
-  // The triangles alternate orientation. Follow either diagonal, stepping
-  // sideways only when a direct forward edge is unavailable.
   for (const lateral of [-1, 1]) {
+    const nextSideways = (cell: Cell) => adjacent(cell)
+      .find(to => to.row === cell.row && to.x - cell.x === lateral);
+    let endOfRowRun = from;
+    for (let next = nextSideways(from); next && !board[next.id]; next = nextSideways(next)) {
+      endOfRowRun = next;
+    }
+    if (endOfRowRun !== from) targets.add(endOfRowRun.id);
+
+    // Follow either forward diagonal through the alternating triangles.
     let current = from;
     while (current.id !== CENTER) {
       const next = adjacent(current).find(to => forward(piece, current, to) > 0)
-        ?? adjacent(current).find(to => to.row === current.row && to.x - current.x === lateral);
+        ?? nextSideways(current);
       if (!next || board[next.id]) break;
       current = next;
     }

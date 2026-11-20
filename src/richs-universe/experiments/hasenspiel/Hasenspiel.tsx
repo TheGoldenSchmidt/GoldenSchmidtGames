@@ -150,7 +150,7 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
           {game.level >= 2 && <p>Hasen dürfen seitlich ein Feld zur Reihenmitte ziehen. Stehen drei gleichfarbige Hasen direkt nebeneinander, kann der mittlere nicht von einem Gegner übersprungen werden.</p>}
           {game.level === 3 && <>
             <p>Hasen und Affen dürfen zweimal springen, wenn sie erst eine eigene und dann eine gegnerische Figur überspringen.</p>
-            <p>Hirsche ziehen ein Feld vor oder zur Seite. Auf einer der beiden diagonalen Routen dürfen sie bis zum Hindernis oder Rand laufen. Stehen vier bis sechs Felder zwischen den Hirschen, ist der Bereich für gegnerische Hasen gesperrt. Hasen darin setzen einmal aus, sobald die Sperre entsteht. Danach dürfen sie hinausziehen. Die beiden Hirsche können von Affen übersprungen werden.</p>
+            <p>Hirsche ziehen ein Feld vor oder zur Seite. Sie können auch nach links, rechts oder diagonal vorwärts bis zum letzten freien Feld vor einem Hindernis oder dem Brettrand voranpreschen. Stehen vier bis sechs Felder zwischen den Hirschen, ist der Bereich für gegnerische Hasen gesperrt. Hasen darin setzen einmal aus, sobald die Sperre entsteht. Danach dürfen sie hinausziehen. Die beiden Hirsche können von Affen übersprungen werden.</p>
             <p>Affen ziehen und springen auch rückwärts. Beim Hangeln dürfen sie über mindestens zwei Hasen vorwärts oder seitlich klettern, mit höchstens einem leeren Feld dazwischen. Sie landen auf einem freien Feld und schlagen beim Hangeln keine Figur.</p>
           </>}
         </details>

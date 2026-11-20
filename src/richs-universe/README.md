@@ -62,6 +62,7 @@ aufeinanderfolgendes Passen bei leerem Zentrum ergibt ein Unentschieden.
 
 Stufe 2 erlaubt Hasen seitliche Schritte zur Reihenmitte und schützt den
 mittleren Hasen eines gleichfarbigen Dreiergespanns vor gegnerischen Sprüngen.
-Stufe 3 ergänzt Hirsche, Affen und Doppelsprünge. Zum Testen sperren Hirsche
+Stufe 3 ergänzt Hirsche, Affen und Doppelsprünge. Hirsche können seitlich oder
+diagonal vorwärts bis zum letzten freien Feld vor Hindernis oder Brettrand laufen. Zum Testen sperren Hirsche
 bei vier bis sechs Feldern Abstand dazwischen. Affen hangeln vorwärts oder
 seitlich, mit höchstens einer Lücke und ohne zu schlagen.

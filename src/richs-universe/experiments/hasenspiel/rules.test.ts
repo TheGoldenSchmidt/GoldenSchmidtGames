@@ -63,6 +63,26 @@ assert.equal(jumped.board["4:-2"], undefined);
 assert.deepEqual(jumped.previous.blue, { mover: "attacker", crossed: "ally" });
 assert.equal(moves({ ...double, level: 2 }, "3:-2").some(move => move.via), false);
 
+for (const [turn, row, behind, ahead] of [["blue", 5, 4, 7], ["gray", 7, 8, 5]] as const) {
+  const start = `${row}:0`;
+  const game: Game = { ...newGame(3), turn, board: {
+    [start]: piece("runner", turn, "deer"),
+    [`${row}:-3`]: piece("blocker", turn)
+  } };
+  const targets = moves(game, start).map(move => move.to);
+  assert.ok(targets.includes(`${row}:-2`));
+  assert.ok(targets.includes(`${row}:5`));
+  assert.ok(targets.includes(CENTER));
+  assert.ok(!targets.includes(`${row}:-3`));
+  assert.ok(!targets.includes(`${row}:-4`));
+  assert.ok(!targets.includes(`${behind}:0`));
+
+  const across: Game = { ...game, board: { [`${row}:3`]: piece("runner", turn, "deer") } };
+  assert.ok(moves(across, `${row}:3`).some(move => move.to === `${ahead}:3`));
+  const beyondCenter: Game = { ...game, board: { [`${ahead}:0`]: piece("runner", turn, "deer") } };
+  assert.ok(!moves(beyondCenter, `${ahead}:0`).some(move => move.to === CENTER));
+}
+
 const deer: Game = { ...newGame(3), board: {
   "4:-3": piece("left", "blue", "deer"), "4:3": piece("right", "blue", "deer"),
   "4:0": piece("trapped", "gray"), "4:4": piece("outside", "gray")
