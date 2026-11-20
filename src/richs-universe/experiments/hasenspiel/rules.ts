@@ -5,7 +5,7 @@ export type Kind = "rabbit" | "deer" | "monkey";
 type Piece = { id: string; color: Color; kind: Kind };
 type Board = Partial<Record<string, Piece>>;
 type Pair = { mover: string; crossed: string };
-export type Move = { to: string; via?: string; friendly?: string; capture?: string };
+export type Move = { to: string; via?: string; first?: string; friendly?: string; capture?: string };
 
 export const CENTER = "center";
 export const cells: Cell[] = Array.from({ length: 13 }, (_, row) => {
@@ -41,6 +41,7 @@ export type Game = {
   board: Board;
   level: Level;
   frozen: string[];
+  chargedDeer?: string;
   turn: Color;
   previous: Record<Color, Pair | undefined>;
   held: number;
@@ -123,28 +124,28 @@ function deerMoves(board: Board, from: Cell, piece: Piece): Move[] {
 }
 
 function hangingMoves(board: Board, from: Cell, piece: Piece): Move[] {
-  const targets = new Set<string>();
+  const targets = new Map<string, Move>();
   for (const lateral of [-1, 1]) {
     const visited = new Set<string>();
-    function follow(current: Cell, crossed: number, usedGap: boolean) {
-      const state = `${current.id}/${crossed}/${usedGap}`;
+    function follow(current: Cell, crossed: number, usedGap: boolean, first?: string) {
+      const state = `${current.id}/${crossed}/${usedGap}/${first}`;
       if (visited.has(state)) return;
       visited.add(state);
       for (const to of adjacent(current)) {
         const direction = forward(piece, current, to);
         if (direction < 0 || (direction === 0 && Math.sign(to.x - current.x) !== lateral)) continue;
         const next = board[to.id];
-        if (next?.kind === "rabbit") follow(to, Math.min(crossed + 1, 2), usedGap);
+        if (next?.kind === "rabbit") follow(to, Math.min(crossed + 1, 2), usedGap, first ?? to.id);
         if (next || (current !== from && !board[current.id])) continue;
-        if (crossed >= 2) targets.add(to.id);
+        if (crossed >= 2) targets.set(`${to.id}/${first}`, { to: to.id, first });
         if (crossed && !usedGap && adjacent(to).some(cell => board[cell.id]?.kind === "rabbit")) {
-          follow(to, crossed, true);
+          follow(to, crossed, true, first);
         }
       }
     }
     follow(from, 0, false);
   }
-  return [...targets].map(to => ({ to }));
+  return [...targets.values()];
 }
 
 export function movesFrom(game: Game, from: Cell): Move[] {
@@ -165,7 +166,7 @@ export function movesFrom(game: Game, from: Cell): Move[] {
     const result: { to: Cell; middle: Cell; crossed: Piece }[] = [];
     for (const middle of adjacent(start)) {
       const crossed = board[middle.id];
-      if (!crossed || (rabbit && middle.id !== CENTER && forward(piece, start, middle) < 0)) continue;
+      if (!crossed || crossed.id === game.chargedDeer || (rabbit && middle.id !== CENTER && forward(piece, start, middle) < 0)) continue;
       if (rabbit && (blocked.has(middle.id) || unjumpable.has(middle.id))) continue;
       if (crossed.color === piece.color && previous?.mover === piece.id && previous.crossed === crossed.id) continue;
       if (game.level >= 2 && crossed.color !== piece.color && protectedRabbit(board, middle, crossed)) continue;
@@ -210,7 +211,7 @@ export function movesFrom(game: Game, from: Cell): Move[] {
   if (!rabbit) moves.push(...hangingMoves(game.board, from, piece));
   const distinct = new Map<string, Move>();
   for (const move of moves) {
-    const key = JSON.stringify([move.to, move.friendly, move.capture]);
+    const key = JSON.stringify([move.to, move.friendly, move.capture, move.via, move.first]);
     if (!distinct.has(key)) distinct.set(key, move);
   }
   return [...distinct.values()];
@@ -231,15 +232,27 @@ export function play(game: Game, fromId?: string, toId?: string, choice = 0): Ga
 
 export function nextPositions(game: Game): Game[] {
   if (game.result) return [];
-  const positions = cells.flatMap(from => movesFrom(game, from).map(move => applyMove(game, from, move)));
+  const positions = cells.flatMap(from => {
+    // Different routes can lead to the same position for the bot.
+    const outcomes = new Map<string, Move>();
+    for (const move of movesFrom(game, from)) {
+      const key = JSON.stringify([move.to, move.friendly, move.capture]);
+      if (!outcomes.has(key)) outcomes.set(key, move);
+    }
+    return [...outcomes.values()].map(move => applyMove(game, from, move));
+  });
   return positions.length ? positions : [applyMove(game)];
 }
 
 function applyMove(game: Game, from?: Cell, move?: Move): Game {
   const board = { ...game.board };
   const previous = { ...game.previous, [game.turn]: undefined };
+  let chargedDeer: string | undefined;
   if (move && from) {
     const mover = board[from.id]!;
+    if (mover.kind === "deer" && !adjacent(from).some(to => to.id === move.to)) {
+      chargedDeer = mover.id;
+    }
     const ally = move.friendly ? board[move.friendly] : undefined;
     if (ally) previous[game.turn] = { mover: mover.id, crossed: ally.id };
     if (move.capture) delete board[move.capture];
@@ -259,5 +272,5 @@ function applyMove(game: Game, from?: Cell, move?: Move): Game {
     const piece = board[cell.id];
     return !oldLine.has(cell.id) && piece?.kind === "rabbit" && piece.color === turn ? [piece.id] : [];
   });
-  return { ...game, board, previous, held, passes, result, turn, frozen };
+  return { ...game, board, previous, held, passes, result, turn, frozen, chargedDeer };
 }

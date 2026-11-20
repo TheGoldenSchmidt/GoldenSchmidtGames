@@ -41,6 +41,25 @@ const crossed = play(crossingJump, "5:3", "7:4");
 assert.equal(crossed.board["7:4"]?.id, "attacker");
 assert.equal(crossed.board["7:3"], undefined);
 
+const sharedTarget: Game = { ...newGame(3), board: {
+  "5:-1": piece("monkey", "blue", "monkey"), "5:-2": piece("opponent", "gray")
+} };
+assert.deepEqual(moves(sharedTarget, "5:-1").filter(move => move.to === CENTER), [
+  { to: CENTER }, { to: CENTER, capture: "5:-2" }
+]);
+assert.equal(play(sharedTarget, "5:-1", CENTER, 0).board["5:-2"]?.id, "opponent");
+assert.equal(play(sharedTarget, "5:-1", CENTER, 1).board["5:-2"], undefined);
+
+const hangingRoutes: Game = { ...newGame(3), board: {
+  "1:-1": piece("climber", "blue", "monkey"),
+  "1:0": piece("upper"), "2:-1": piece("left"), "2:1": piece("right")
+} };
+assert.deepEqual(moves(hangingRoutes, "1:-1").filter(move => move.to === "2:2"), [
+  { to: "2:2", first: "1:0" }, { to: "2:2", first: "2:-1" }
+]);
+assert.equal(play(hangingRoutes, "1:-1", "2:2", 1).board["2:2"]?.id, "climber");
+assert.equal(nextPositions(hangingRoutes).filter(position => position.board["2:2"]?.id === "climber").length, 1);
+
 const lateral: Game = { ...newGame(2), board: { "3:-2": piece("rabbit") } };
 assert.deepEqual(moves(lateral, "3:-2"), [{ to: "3:-1" }]);
 assert.deepEqual(moves({ ...lateral, level: 1 }, "3:-2"), []);
@@ -83,6 +102,22 @@ for (const [turn, row, behind, ahead] of [["blue", 5, 4, 7], ["gray", 7, 8, 5]] 
   const beyondCenter: Game = { ...game, board: { [`${ahead}:0`]: piece("runner", turn, "deer") } };
   assert.ok(!moves(beyondCenter, `${ahead}:0`).some(move => move.to === CENTER));
 }
+
+const chargeProtection: Game = { ...newGame(3), board: {
+  "4:-3": piece("runner", "blue", "deer"), "4:1": piece("monkey", "gray", "monkey"),
+  "2:-2": piece("blue-rabbit"), "10:2": piece("gray-rabbit", "gray")
+} };
+const charged = play(chargeProtection, "4:-3", "4:0");
+assert.equal(charged.board["4:0"]?.id, "runner");
+assert.equal(charged.chargedDeer, "runner");
+assert.ok(nextPositions(chargeProtection).some(position => position.chargedDeer === "runner"));
+assert.ok(!moves(charged, "4:1").some(move => move.capture === "4:0"));
+const afterReply = play(charged, "10:2", "9:2");
+assert.equal(afterReply.turn, "blue");
+const afterRound = play(afterReply, "2:-2", "3:-2");
+assert.equal(afterRound.turn, "gray");
+assert.ok(moves(afterRound, "4:1").some(move => move.capture === "4:0"));
+assert.equal(play(chargeProtection, "4:-3", "4:-2").chargedDeer, undefined);
 
 const deer: Game = { ...newGame(3), board: {
   "4:-3": piece("left", "blue", "deer"), "4:3": piece("right", "blue", "deer"),

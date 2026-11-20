@@ -100,8 +100,31 @@
   stroke-dasharray: 3 2;
 }
 .ru-hasenspiel .hare-choices {
-  display: grid;
-  gap: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: 6px 0;
+}
+.ru-hasenspiel .hare-choices button {
+  min-width: 44px;
+  color: var(--route-ink);
+  background: var(--route-color);
+  border-color: var(--route-color);
+  font-weight: 700;
+}
+.ru-hasenspiel .hare-cell[data-route="true"]:not([data-selected="true"]) > polygon,
+.ru-hasenspiel .hare-cell[data-route="true"] > .hare-center rect {
+  fill: var(--route-color);
+}
+.ru-hasenspiel .hare-route-markers { pointer-events: none; }
+.ru-hasenspiel .hare-route-markers circle {
+  fill: var(--route-color);
+  stroke: #172522;
+}
+.ru-hasenspiel .hare-route-markers text {
+  fill: var(--route-ink);
+  font: bold 8px system-ui, sans-serif;
 }
 .ru-hasenspiel .hare-token path[data-kind="deer"] { fill: none; stroke-width: 1.5; }
 

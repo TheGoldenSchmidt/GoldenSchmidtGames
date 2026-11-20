@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import type { ExperimentProps } from "../../experiments";
 import { CENTER, canMove, cells, centerLinks, deerLine, movesFrom, newGame, play, sideLinks, type Cell, type Color, type Kind, type Level } from "./rules";
 import { botLevels, botTurn, type BotLevel } from "./bot";
@@ -19,6 +19,15 @@ const shapes: Record<Kind, string> = {
   deer: "M0 7 Q-5 6-4 1 L-8-3 M-5 0 L-5-7 M-5-4 L-8-6 M-4 1 Q0-3 4 1 L8-3 M5 0 L5-7 M5-4 L8-6 M4 1 Q5 6 0 7",
   monkey: "M-5 0 A2 2 0 1 0-5 4 M5 0 A2 2 0 1 1 5 4 M-5 1 Q-5-6 0-6 Q5-6 5 1 Q7 7 0 7 Q-7 7-5 1Z"
 };
+
+const routeColors = ["#f4de9a", "#a9ed84", "#267347", "#203e78", "#53aaff"];
+
+function routeStyle(index: number): CSSProperties {
+  return {
+    "--route-color": routeColors[index] ?? `hsl(${(index * 137.5) % 360} 72% 66%)`,
+    "--route-ink": index === 2 || index === 3 ? "#fff" : "#172522",
+  } as CSSProperties;
+}
 
 function fieldName(cell: Cell) {
   return cell.id === CENTER ? "Zentrum" : `${cell.row < 6 ? "Blaue" : "Graue"} Seite, Reihe ${7 - Math.abs(cell.row - 6)}, Feld ${cell.x + 7 - Math.abs(cell.row - 6)}`;
@@ -52,6 +61,11 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
   const [destination, setDestination] = useState<Cell>();
   const targets = selected ? movesFrom(game, selected) : [];
   const choices = destination ? targets.filter(move => move.to === destination.id) : [];
+  const routeStarts = new Map<string, number[]>();
+  if (selected) choices.forEach((move, index) => {
+    const first = move.friendly ?? move.capture ?? move.first ?? selected.id;
+    routeStarts.set(first, [...(routeStarts.get(first) ?? []), index]);
+  });
   const protectedFields = new Set(colors.flatMap(color =>
     deerLine(game.board, color).between.map(cell => cell.id)));
   const center = game.board[CENTER];
@@ -110,6 +124,22 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
           <strong>{status}</strong>
           <span>{center ? `${names[center.color]} hält das Zentrum · ${game.held}/3` : "Zentrum drei gegnerische Züge halten"}</span>
         </div>
+        {destination && <div className="hare-choices" role="group" aria-label="Weg zum Zielfeld wählen">
+          {choices.map((move, index) => {
+            const first = cells.find(cell => cell.id === (move.friendly ?? move.capture ?? move.first));
+            const landing = cells.find(cell => cell.id === move.via);
+            const capture = cells.find(cell => cell.id === move.capture);
+            const description = [
+              first ? `über ${fieldName(first)}` : "direkt",
+              landing && `Zwischenlandung auf ${fieldName(landing)}`,
+              capture && `schlägt auf ${fieldName(capture)}`,
+            ].filter(Boolean).join(", ");
+            return <button type="button" key={index} style={routeStyle(index)}
+              aria-label={`Weg ${index + 1}, ${description}`} onClick={() => takeMove(destination, index)}>
+              {index + 1}
+            </button>;
+          })}
+        </div>}
         <div className="hare-playfield">
           <svg className="hare-board" viewBox={`-2 -2 ${width + 4} ${boardHeight + 4}`} aria-label="Dreiecksbrett">
             <g className="hare-side-links" aria-hidden="true">
@@ -122,11 +152,14 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
               const isCenter = cell.id === CENTER;
               const shape = isCenter ? { x: width / 2, y: boardHeight / 2, points: "" } : triangle(cell);
               const rabbit = game.board[cell.id];
-              const target = targets.find(move => move.to === cell.id);
-              const active = !game.result && !botThinking && (rabbit?.color === game.turn || !!target);
+              const legalTarget = targets.some(move => move.to === cell.id);
+              const target = destination ? destination === cell : legalTarget;
+              const routes = routeStarts.get(cell.id);
+              const active = !game.result && !botThinking && (rabbit?.color === game.turn || legalTarget);
               const frozen = rabbit && game.frozen.includes(rabbit.id);
               return (
-                <g key={cell.id} className="hare-cell" data-target={!!target} data-selected={selected === cell} data-protected={protectedFields.has(cell.id)}
+                <g key={cell.id} className="hare-cell" data-target={target} data-route={routes?.length === 1 || undefined}
+                  style={routes?.length === 1 ? routeStyle(routes[0]) : undefined} data-selected={selected === cell} data-protected={protectedFields.has(cell.id)}
                   role={active ? "button" : undefined} tabIndex={active ? 0 : undefined}
                   aria-label={active ? `${fieldName(cell)}${rabbit ? `, ${species[rabbit.kind]} ${names[rabbit.color]}${frozen ? ", blockiert" : ""}` : ""}` : undefined}
                   onClick={() => select(cell)}
@@ -155,24 +188,26 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
                 </g>
               );
             })}
+            <g className="hare-route-markers" aria-hidden="true">
+              {[...routeStarts].map(([field, routes]) => {
+                const cell = cells.find(entry => entry.id === field)!;
+                const { x, y } = cell.id === CENTER ? { x: width / 2, y: boardHeight / 2 } : triangle(cell);
+                return routes.map((index, position) => (
+                  <g key={index} style={routeStyle(index)}
+                    transform={`translate(${x + (position % 3 - (Math.min(3, routes.length) - 1) / 2) * 13} ${y + 9 + Math.floor(position / 3) * 13})`}>
+                    <circle r="6.5" />
+                    <text textAnchor="middle" dominantBaseline="central">{index + 1}</text>
+                  </g>
+                ));
+              })}
+            </g>
           </svg>
           {winner && <Victory title={`${winner} gewinnt`} />}
         </div>
-        {destination && <section className="hare-choices" aria-label="Sprung auswählen">
-          <strong>Mehrere Züge führen auf dieses Feld</strong>
-          {choices.map((move, index) => {
-            const capture = cells.find(cell => cell.id === move.capture);
-            const ally = cells.find(cell => cell.id === move.friendly);
-            return <button type="button" key={index} onClick={() => takeMove(destination, index)}>
-              {ally ? `Über eigene Figur auf ${fieldName(ally)}` : null}
-              {capture ? `${ally ? " · " : ""}Schlage auf ${fieldName(capture)}` : ally ? null : "Ohne Schlagen ziehen"}
-            </button>;
-          })}
-        </section>}
         {!game.result && !botThinking && !canMove(game) && <button type="button" onClick={() => { setGame(play(game)); setSelected(undefined); setDestination(undefined); }}>Kein Zug möglich · Passen</button>}
         <details>
           <summary>Regeln für Stufe {game.level}</summary>
-          <p>Wähle einen eigenen Hasen und tippe auf ein markiertes Zielfeld. Ziehe entlang einer Kante eine Reihe vorwärts oder springe über einen benachbarten Hasen auf ein freies Feld. Sprünge können seitlich und vorwärts führen.</p>
+          <p>Wähle einen eigenen Hasen und tippe auf ein markiertes Zielfeld. Ziehe entlang einer Kante eine Reihe vorwärts oder springe über einen benachbarten Hasen auf ein freies Feld. Sprünge können seitlich und vorwärts führen. Gibt es mehrere Wege, wähle oben die passende Farbe. Bei einem direkten Zug sitzt die Markierung auf dem Startfeld.</p>
           <p>Gegnerische Hasen werden geschlagen. Eigene bleiben stehen. Im nächsten eigenen Zug darf derselbe Hase denselben eigenen Hasen nicht erneut überspringen.</p>
           <p>Links und rechts vom Zentrum verbinden gestrichelte Linien je drei gegenüberliegende Feldpaare. Über diese Verbindungen kannst du direkt auf die andere Spielfeldhälfte ziehen oder springen.</p>
           <p>Das Zentrum ist aus beiden Richtungen über die jeweils fünf mittleren Felder erreichbar. Ein Sprung darüber landet gerade gegenüber. Dieselbe Figur gewinnt, wenn sie drei gegnerische Züge im Zentrum bleibt.</p>
@@ -180,7 +215,7 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
           {game.level >= 2 && <p>Hasen dürfen seitlich ein Feld zur Reihenmitte ziehen. Stehen drei gleichfarbige Hasen direkt nebeneinander, kann der mittlere nicht von einem Gegner übersprungen werden.</p>}
           {game.level === 3 && <>
             <p>Hasen und Affen dürfen zweimal springen, wenn sie erst eine eigene und dann eine gegnerische Figur überspringen.</p>
-            <p>Hirsche ziehen ein Feld vor oder zur Seite. Sie können auch nach links, rechts oder diagonal vorwärts bis zum letzten freien Feld vor einem Hindernis oder dem Brettrand voranpreschen, auch über die Spielfeldmitte hinweg. Stehen vier bis sechs Felder zwischen den Hirschen, ist der Bereich für gegnerische Hasen gesperrt. Hasen darin setzen einmal aus, sobald die Sperre entsteht. Danach dürfen sie hinausziehen. Die beiden Hirsche können von Affen übersprungen werden.</p>
+            <p>Hirsche ziehen ein Feld vor oder zur Seite. Sie können auch nach links, rechts oder diagonal vorwärts bis zum letzten freien Feld vor einem Hindernis oder dem Brettrand voranpreschen, auch über die Spielfeldmitte hinweg. Stehen vier bis sechs Felder zwischen den Hirschen, ist der Bereich für gegnerische Hasen gesperrt. Hasen darin setzen einmal aus, sobald die Sperre entsteht. Danach dürfen sie hinausziehen. Nach einem Anstürmen über mehrere Felder kann der Hirsch im nächsten gegnerischen Zug nicht übersprungen werden. Sonst können Affen die beiden Hirsche überspringen.</p>
             <p>Affen ziehen und springen auch rückwärts. Beim Hangeln dürfen sie über mindestens zwei Hasen vorwärts oder seitlich klettern, mit höchstens einem leeren Feld dazwischen. Sie landen auf einem freien Feld und schlagen beim Hangeln keine Figur.</p>
           </>}
         </details>
