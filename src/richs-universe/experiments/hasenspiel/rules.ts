@@ -5,7 +5,7 @@ export type Kind = "rabbit" | "deer" | "monkey";
 type Piece = { id: string; color: Color; kind: Kind };
 type Board = Partial<Record<string, Piece>>;
 type Pair = { mover: string; crossed: string };
-export type Move = { to: string; via?: string; friendly?: string; capture?: string };
+export type Move = { to: string; distance?: number; via?: string; friendly?: string; capture?: string };
 
 export const CENTER = "center";
 export const cells: Cell[] = Array.from({ length: 13 }, (_, row) => {
@@ -41,6 +41,7 @@ export type Game = {
   board: Board;
   level: Level;
   frozen: string[];
+  restingDeer?: string[];
   turn: Color;
   previous: Record<Color, Pair | undefined>;
   held: number;
@@ -54,7 +55,7 @@ export function newGame(level: Level = 1): Game {
     if (cell.row <= 3 || cell.row >= 9) {
       const depth = 6 - Math.abs(cell.row - 6);
       const kind = level === 3 && Math.abs(cell.x) === depth
-        ? depth === 1 ? "monkey" : depth === 2 ? "deer" : "rabbit"
+        ? depth === 1 ? "monkey" : depth === 3 ? "deer" : "rabbit"
         : "rabbit";
       board[cell.id] = { id: cell.id, color: cell.row <= 3 ? "blue" : "gray", kind };
     }
@@ -70,16 +71,23 @@ function adjacent(cell: Cell) {
   return neighbors.get(cell.id) ?? [];
 }
 
-export function deerLine(board: Board, color: Color): { between: Cell[]; ends: string[] } {
-  const deer = cells.filter(cell => board[cell.id]?.kind === "deer" && board[cell.id]?.color === color);
-  const [left, right] = deer;
-  if (!left || !right || left.row !== right.row) return { between: [], ends: [] };
-  const distance = right.x - left.x - 1;
-  if (distance < 4 || distance > 6) return { between: [], ends: [] };
-  return {
-    between: cells.filter(cell => cell.row === left.row && cell.x > left.x && cell.x < right.x),
-    ends: [left.id, right.id]
-  };
+function deerWalls(board: Board) {
+  return (["blue", "gray"] as const).flatMap(color => {
+    const deer = cells.filter(cell => board[cell.id]?.kind === "deer" && board[cell.id]?.color === color);
+    const [left, right] = deer;
+    if (!left || !right || left.row !== right.row || right.x - left.x < 2) return [];
+    return [{
+      id: `${color}/${left.id}/${right.id}`,
+      color,
+      between: cells.filter(cell => cell.row === left.row && cell.x > left.x && cell.x < right.x)
+    }];
+  });
+}
+
+export function wallFields(board: Board, color?: Color): Set<string> {
+  return new Set(deerWalls(board)
+    .filter(wall => color === undefined || wall.color === color)
+    .flatMap(wall => wall.between.map(cell => cell.id)));
 }
 
 function protectedRabbit(board: Board, cell: Cell, piece: Piece) {
@@ -89,37 +97,44 @@ function protectedRabbit(board: Board, cell: Cell, piece: Piece) {
   });
 }
 
-function deerMoves(board: Board, from: Cell, piece: Piece): Move[] {
-  const targets = new Set(adjacent(from)
-    .filter(to => !board[to.id] && forward(piece, from, to) >= 0)
-    .map(to => to.id));
-  for (const lateral of [-1, 1]) {
-    const nextSideways = (cell: Cell) => adjacent(cell)
-      .find(to => to.row === cell.row && to.x - cell.x === lateral);
-    let endOfRowRun = from;
-    for (let next = nextSideways(from); next && !board[next.id]; next = nextSideways(next)) {
-      endOfRowRun = next;
-    }
-    if (endOfRowRun !== from) targets.add(endOfRowRun.id);
+const cellsById = new Map(cells.map(cell => [cell.id, cell]));
 
-    // Follow either forward diagonal through the alternating triangles.
-    const starts = from.id === CENTER
-      ? adjacent(from).filter(to => forward(piece, from, to) > 0 && !board[to.id])
-      : [from];
-    for (const start of starts) {
-      let current = start;
-      let entryColumn = start.x;
-      for (;;) {
-        const next = adjacent(current).find(to => forward(piece, current, to) > 0
-          && (current.id !== CENTER || to.x === entryColumn)) ?? nextSideways(current);
-        if (!next || board[next.id]) break;
-        entryColumn = current.x;
-        current = next;
+function deerMoves(board: Board, from: Cell, allowed: (start: Cell, end: Cell) => boolean): Move[] {
+  const targets = new Map<string, Move>();
+
+  function follow(start: Cell, x: number, rowStep: number, xStep: number, distance: number) {
+    let current = start;
+    for (;;) {
+      let row = current.row + rowStep;
+      x += xStep;
+      if (row === 6 && rowStep && xStep === 0 && sideLinkColumns.has(x)) row += rowStep;
+      const next = row === 6 && Math.abs(x) <= 2 ? cellsById.get(CENTER) : cellsById.get(`${row}:${x}`);
+      if (!next || board[next.id] || !allowed(current, next)) return;
+      if ((current.id === CENTER || next.id === CENTER) && !adjacent(current).includes(next)) return;
+      distance++;
+      if ((targets.get(next.id)?.distance ?? Infinity) > distance) {
+        targets.set(next.id, { to: next.id, distance });
       }
-      if (forward(piece, from, current) > 0) targets.add(current.id);
+      current = next;
     }
   }
-  return [...targets].map(to => ({ to }));
+
+  if (from.id === CENTER) {
+    for (const exit of adjacent(from)) {
+      if (board[exit.id] || !allowed(from, exit)) continue;
+      targets.set(exit.id, { to: exit.id, distance: 1 });
+      for (const xStep of [-1, 0, 1]) {
+        follow(exit, exit.x, Math.sign(exit.row - from.row), xStep, 1);
+      }
+    }
+  } else {
+    for (const rowStep of [-1, 0, 1]) {
+      for (const xStep of [-1, 0, 1]) {
+        if (rowStep || xStep) follow(from, from.x, rowStep, xStep, 0);
+      }
+    }
+  }
+  return [...targets.values()];
 }
 
 function hangingMoves(board: Board, from: Cell, piece: Piece): Move[] {
@@ -149,14 +164,14 @@ function hangingMoves(board: Board, from: Cell, piece: Piece): Move[] {
 
 export function movesFrom(game: Game, from: Cell): Move[] {
   const piece = game.board[from.id];
-  if (game.result || piece?.color !== game.turn || game.frozen.includes(piece.id)) return [];
-  if (piece.kind === "deer") return deerMoves(game.board, from, piece);
+  if (game.result || piece?.color !== game.turn || game.frozen.includes(piece.id)
+    || game.restingDeer?.includes(piece.id)) return [];
+  const wall = wallFields(game.board, piece.color === "blue" ? "gray" : "blue");
+  const allowed = (start: Cell, end: Cell) => wall.has(end.id)
+    ? wall.has(start.id)
+    : !wall.has(start.id) || forward(piece, start, end) <= 0;
+  if (piece.kind === "deer") return deerMoves(game.board, from, allowed);
 
-  const opponent = piece.color === "blue" ? "gray" : "blue";
-  const enemyLine = deerLine(game.board, opponent);
-  const ownLine = deerLine(game.board, piece.color);
-  const blocked = new Set(enemyLine.between.map(cell => cell.id));
-  const unjumpable = new Set([...enemyLine.ends, ...ownLine.ends]);
   const previous = game.previous[game.turn];
   const rabbit = piece.kind === "rabbit";
   const moves: Move[] = [];
@@ -165,13 +180,13 @@ export function movesFrom(game: Game, from: Cell): Move[] {
     const result: { to: Cell; middle: Cell; crossed: Piece }[] = [];
     for (const middle of adjacent(start)) {
       const crossed = board[middle.id];
-      if (!crossed || (rabbit && middle.id !== CENTER && forward(piece, start, middle) < 0)) continue;
-      if (rabbit && (blocked.has(middle.id) || unjumpable.has(middle.id))) continue;
+      if (!crossed || game.restingDeer?.includes(crossed.id) || (rabbit && middle.id !== CENTER && forward(piece, start, middle) < 0)) continue;
+      if (!allowed(start, middle) || wall.has(middle.id)) continue;
       if (crossed.color === piece.color && previous?.mover === piece.id && previous.crossed === crossed.id) continue;
       if (game.level >= 2 && crossed.color !== piece.color && protectedRabbit(board, middle, crossed)) continue;
 
       for (const to of adjacent(middle)) {
-        if (board[to.id] || (rabbit && blocked.has(to.id))) continue;
+        if (board[to.id] || !allowed(middle, to)) continue;
         if (middle.id === CENTER) {
           if (to.row === start.row || to.x !== start.x) continue;
         } else {
@@ -185,7 +200,7 @@ export function movesFrom(game: Game, from: Cell): Move[] {
   };
 
   for (const to of adjacent(from)) {
-    if (game.board[to.id] || (rabbit && blocked.has(to.id))) continue;
+    if (game.board[to.id] || !allowed(from, to)) continue;
     if (!rabbit || to.id === CENTER || forward(piece, from, to) > 0
       || (game.level >= 2 && to.row === from.row && Math.abs(to.x) < Math.abs(from.x))) {
       moves.push({ to: to.id });
@@ -238,8 +253,11 @@ export function nextPositions(game: Game): Game[] {
 function applyMove(game: Game, from?: Cell, move?: Move): Game {
   const board = { ...game.board };
   const previous = { ...game.previous, [game.turn]: undefined };
+  const restingDeer = (game.restingDeer ?? []).filter(id =>
+    Object.values(game.board).some(piece => piece?.id === id && piece.color !== game.turn));
   if (move && from) {
     const mover = board[from.id]!;
+    if ((move.distance ?? 0) > 2) restingDeer.push(mover.id);
     const ally = move.friendly ? board[move.friendly] : undefined;
     if (ally) previous[game.turn] = { mover: mover.id, crossed: ally.id };
     if (move.capture) delete board[move.capture];
@@ -251,13 +269,20 @@ function applyMove(game: Game, from?: Cell, move?: Move): Game {
   const held = occupant && occupant === game.board[CENTER] && from?.id !== CENTER
     ? game.held + Number(occupant.color !== game.turn)
     : 0;
-  const passes = move ? 0 : game.passes + 1;
+  // A skipped turn under a temporary effect does not count toward a stalemate.
+  const temporaryBlock = game.frozen.length || game.restingDeer?.length;
+  const passes = move || temporaryBlock ? 0 : game.passes + 1;
   const result = held >= 3 ? occupant?.color : passes >= 2 && !occupant ? "draw" : undefined;
   const turn = game.turn === "blue" ? "gray" : "blue";
-  const oldLine = new Set(deerLine(game.board, game.turn).between.map(cell => cell.id));
-  const frozen = deerLine(board, game.turn).between.flatMap(cell => {
-    const piece = board[cell.id];
-    return !oldLine.has(cell.id) && piece?.kind === "rabbit" && piece.color === turn ? [piece.id] : [];
-  });
-  return { ...game, board, previous, held, passes, result, turn, frozen };
+  const oldWalls = new Set(deerWalls(game.board).map(wall => wall.id));
+  const frozen = new Set(game.frozen.filter(id =>
+    Object.values(board).some(piece => piece?.id === id && piece.color !== game.turn)));
+  for (const wall of deerWalls(board)) {
+    if (oldWalls.has(wall.id)) continue;
+    for (const cell of wall.between) {
+      const piece = board[cell.id];
+      if (piece && piece.color !== wall.color && piece.kind !== "deer") frozen.add(piece.id);
+    }
+  }
+  return { ...game, board, previous, held, passes, result, turn, frozen: [...frozen], restingDeer };
 }

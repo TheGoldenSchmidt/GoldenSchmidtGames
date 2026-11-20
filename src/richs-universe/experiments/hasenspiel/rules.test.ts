@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { botLevels, botTurn } from "./bot";
-import { CENTER, cells, deerLine, movesFrom, newGame, nextPositions, play, type Color, type Game, type Kind } from "./rules";
+import { CENTER, cells, wallFields, movesFrom, newGame, nextPositions, play, type Color, type Game, type Kind } from "./rules";
 
 const piece = (id: string, color: Color = "blue", kind: Kind = "rabbit") => ({ id, color, kind });
 const moves = (game: Game, id: string) => movesFrom(game, cells.find(cell => cell.id === id)!);
@@ -64,48 +64,64 @@ assert.equal(jumped.board["4:-2"], undefined);
 assert.deepEqual(jumped.previous.blue, { mover: "attacker", crossed: "ally" });
 assert.equal(moves({ ...double, level: 2 }, "3:-2").some(move => move.via), false);
 
-for (const [turn, row, behind, ahead] of [["blue", 5, 4, 7], ["gray", 7, 8, 5]] as const) {
-  const start = `${row}:0`;
-  const game: Game = { ...newGame(3), turn, board: {
-    [start]: piece("runner", turn, "deer"),
-    [`${row}:-3`]: piece("blocker", turn)
-  } };
-  const targets = moves(game, start).map(move => move.to);
-  assert.ok(targets.includes(`${row}:-2`));
-  assert.ok(targets.includes(`${row}:5`));
-  assert.ok(targets.includes(CENTER));
-  assert.ok(!targets.includes(`${row}:-3`));
-  assert.ok(!targets.includes(`${row}:-4`));
-  assert.ok(!targets.includes(`${behind}:0`));
-
-  const across: Game = { ...game, board: { [`${row}:3`]: piece("runner", turn, "deer") } };
-  assert.ok(moves(across, `${row}:3`).some(move => move.to === `${ahead}:3`));
-  const beyondCenter: Game = { ...game, board: { [`${ahead}:0`]: piece("runner", turn, "deer") } };
-  assert.ok(!moves(beyondCenter, `${ahead}:0`).some(move => move.to === CENTER));
+for (const field of ["3:-3", "3:3", "9:-3", "9:3"]) {
+  assert.equal(newGame(3).board[field]?.kind, "deer");
 }
 
-const deer: Game = { ...newGame(3), board: {
-  "4:-3": piece("left", "blue", "deer"), "4:3": piece("right", "blue", "deer"),
-  "4:0": piece("trapped", "gray"), "4:4": piece("outside", "gray")
+const runner: Game = { ...newGame(3), board: {
+  "4:0": piece("runner", "blue", "deer"),
+  "4:-2": piece("obstacle", "gray"), "4:4": piece("jumper", "gray", "monkey")
 } };
-const fenced = play(deer, "4:3", "4:2");
-assert.deepEqual(fenced.frozen, []);
-const activated = play({ ...deer, board: { ...deer.board, "4:-4": deer.board["4:-3"], "4:-3": undefined } }, "4:3", "4:2");
-assert.equal(deerLine(activated.board, "blue").between.length, 5);
-assert.deepEqual(activated.frozen, []);
+const targets = moves(runner, "4:0").map(move => move.to);
+for (const field of ["4:-1", "4:1", "4:2", "4:3", "3:0", "5:0", "3:1", "5:-1"]) {
+  assert.ok(targets.includes(field), field);
+}
+for (const field of ["4:-2", "4:-3", "4:4"]) assert.ok(!targets.includes(field), field);
+assert.deepEqual(play(runner, "4:0", "4:2").restingDeer, []);
+const rested = play(runner, "4:0", "4:3");
+assert.deepEqual(rested.restingDeer, ["runner"]);
+assert.ok(!moves(rested, "4:4").some(move => move.capture === "4:3"));
+const reply = play(rested, "4:4", "5:4");
+assert.equal(reply.turn, "blue");
+assert.deepEqual(moves(reply, "4:3"), []);
+const afterRest = play(reply);
+assert.deepEqual(afterRest.restingDeer, []);
+assert.ok(moves({ ...afterRest, turn: "blue" }, "4:3").length > 0);
 
-// Moving from seven intervening fields to six activates the line and immobilizes a rabbit once.
-const wide: Game = { ...newGame(3), board: {
-  "4:-4": piece("left", "blue", "deer"), "4:4": piece("right", "blue", "deer"),
-  "4:1": piece("trapped", "gray"), "4:0": piece("inside", "gray")
+const wallSetup: Game = { ...newGame(3), board: {
+  "4:-4": piece("left", "blue", "deer"), "3:2": piece("right", "blue", "deer"),
+  "4:-2": piece("blue-inside", "blue", "monkey"), "4:1": piece("gray-inside", "gray", "monkey"),
+  "3:-1": piece("blue-reserve"), "9:1": piece("gray-reserve", "gray")
 } };
-const blocked = play(wide, "4:4", "4:3");
-assert.deepEqual(blocked.frozen, ["inside", "trapped"]);
-assert.deepEqual(moves(blocked, "4:1"), []);
-const afterPass = play(blocked);
-assert.deepEqual(afterPass.frozen, []);
-assert.ok(moves({ ...afterPass, turn: "gray" }, "4:1").some(move => move.to === "3:1"));
-assert.ok(!moves({ ...afterPass, turn: "gray" }, "4:1").some(move => move.to === "4:0"));
+const formed = play(wallSetup, "3:2", "4:3");
+assert.deepEqual([...wallFields(formed.board)], ["4:-3", "4:-2", "4:-1", "4:0", "4:1", "4:2"]);
+assert.deepEqual(formed.frozen, ["gray-inside"]);
+assert.equal(wallFields({
+  ...formed.board, "4:3": piece("right", "gray", "deer")
+}).size, 0);
+assert.deepEqual(moves(formed, "4:1"), []);
+const grayMoved = play(formed, "9:1", "8:1");
+assert.deepEqual(grayMoved.frozen, []);
+assert.ok(moves(grayMoved, "4:-2").some(move => move.to === "5:-2"));
+assert.ok(moves(grayMoved, "3:-1").some(move => move.to === "4:-1"));
+const blueMoved = play(grayMoved, "3:-1", "4:-4");
+assert.equal(blueMoved, grayMoved);
+const thawed = play(grayMoved, "4:3", "5:3");
+assert.deepEqual(thawed.frozen, []);
+assert.equal(wallFields(thawed.board).size, 0);
+const stillWall = { ...formed, frozen: [] };
+assert.ok(moves(stillWall, "4:1").some(move => move.to === "4:2"));
+assert.ok(!moves(stillWall, "4:1").some(move => move.to === "3:1"));
+
+const traverseWall: Game = { ...newGame(3), board: {
+  "4:-4": piece("left", "gray", "deer"), "4:4": piece("right", "gray", "deer"),
+  "3:-2": piece("climber", "blue", "monkey"),
+  "3:-1": piece("hold"), "4:-1": piece("wall-hold", "gray"), "4:0": piece("next-hold")
+} };
+assert.ok(moves(traverseWall, "3:-2").some(move => move.to === "5:0" && !move.capture));
+assert.ok(!moves({ ...traverseWall, board: { ...traverseWall.board,
+  "3:-2": piece("rabbit")
+} }, "3:-2").some(move => move.to === "5:0"));
 
 const monkey: Game = { ...newGame(3), board: {
   "5:-4": piece("monkey", "blue", "monkey"),
