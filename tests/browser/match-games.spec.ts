@@ -431,6 +431,8 @@ for (const motion of ["no-preference", "reduce"] as const) test(`Floor is Lava 2
 
 for (const motion of ["no-preference", "reduce"] as const) test(`Floor is Lava 2.5D (${motion}): Schubsen, Springen, Durchfallen und Lava ohne Rückkehr in der Übung`, async ({ page }, testInfo) => {
   // Same rules locally against a bot (no network): the buttons' cooldown ring shows accepted actions.
+  // Software rendering of the full-screen 3D view is slow here; the practice may need a second run.
+  test.setTimeout(120000);
   await page.emulateMedia({ reducedMotion: motion });
   const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "lava" });
   try {
