@@ -189,3 +189,64 @@
   dominant-baseline: central;
   pointer-events: none;
 }
+
+.ru-hasenspiel .hare-rule-example {
+  margin: 8px 0 16px;
+  border: 1px solid #627767;
+  border-radius: 12px;
+  background: #172c24;
+  overflow: hidden;
+}
+.ru-hasenspiel .hare-rule-diagram {
+  display: block;
+  width: 100%;
+  height: 152px;
+  background: #20372d;
+}
+.ru-hasenspiel .hare-rule-example figcaption {
+  padding: 8px;
+  text-align: center;
+}
+.ru-hasenspiel .hare-rule-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 6px;
+}
+.ru-hasenspiel .hare-rule-controls button { min-width: 44px; }
+.ru-hasenspiel .hare-rule-controls button[aria-pressed="true"] {
+  background: #f4de9a;
+  color: #172522;
+}
+.ru-hasenspiel .hare-rule-route {
+  fill: none;
+  stroke: #184729;
+  stroke-width: 5;
+  stroke-linejoin: round;
+  paint-order: stroke;
+  filter: drop-shadow(0 0 2px #fff4de);
+}
+.ru-hasenspiel .hare-rule-route[data-blocked="true"] {
+  stroke: #8d2528;
+  stroke-dasharray: 5 3;
+}
+.ru-hasenspiel .hare-rule-cross {
+  fill: #8d2528;
+  stroke: #fff4de;
+  stroke-width: 3px;
+  paint-order: stroke;
+  text-anchor: middle;
+  dominant-baseline: central;
+  font: bold 25px system-ui, sans-serif;
+}
+.ru-hasenspiel .hare-rule-highlight {
+  fill: none;
+  stroke: #fff4de;
+  stroke-width: 2;
+}
+.ru-hasenspiel .hare-rule-bridge {
+  stroke: #fff4de;
+  stroke-width: 2;
+  stroke-dasharray: 3 3;
+}
