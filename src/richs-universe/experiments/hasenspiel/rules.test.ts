@@ -91,6 +91,13 @@ const afterRest = play(reply);
 assert.deepEqual(afterRest.restingDeer, []);
 assert.ok(moves({ ...afterRest, turn: "blue" }, "4:3").length > 0);
 
+for (const [gap, expected] of [[2, 0], [3, 3], [6, 6], [7, 0]]) {
+  assert.equal(wallFields({
+    "4:-4": piece("left", "blue", "deer"),
+    [`4:${gap - 3}`]: piece("right", "blue", "deer")
+  }).size, expected);
+}
+
 const wallSetup: Game = { ...newGame(3), board: {
   "4:-4": piece("left", "blue", "deer"), "3:2": piece("right", "blue", "deer"),
   "4:-2": piece("blue-inside", "blue", "monkey"), "4:1": piece("gray-inside", "gray", "monkey"),
@@ -117,7 +124,7 @@ assert.ok(moves(stillWall, "4:1").some(move => move.to === "4:2"));
 assert.ok(!moves(stillWall, "4:1").some(move => move.to === "3:1"));
 
 const traverseWall: Game = { ...newGame(3), board: {
-  "4:-4": piece("left", "gray", "deer"), "4:4": piece("right", "gray", "deer"),
+  "4:-4": piece("left", "gray", "deer"), "4:3": piece("right", "gray", "deer"),
   "3:-2": piece("climber", "blue", "monkey"),
   "3:-1": piece("hold"), "4:-1": piece("wall-hold", "gray"), "4:0": piece("next-hold")
 } };

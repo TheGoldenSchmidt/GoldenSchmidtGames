@@ -75,7 +75,9 @@ function adjacent(cell: Cell) {
 function deerWalls(board: Board) {
   return (["blue", "gray"] as const).flatMap(color => {
     const [left, right] = cells.filter(cell => board[cell.id]?.kind === "deer" && board[cell.id]?.color === color);
-    if (!left || !right || left.row !== right.row || right.x - left.x < 2) return [];
+    if (!left || !right || left.row !== right.row) return [];
+    const wallLength = right.x - left.x - 1;
+    if (wallLength < 3 || wallLength > 6) return [];
     return [{
       id: `${color}/${left.id}/${right.id}`,
       color,

@@ -8,7 +8,8 @@ export function HasenspielRules({ level }: { level: Level }) {
       <p><strong>Das Spielprinzip.</strong> Ihr spielt 1 gegen 1. {advanced
         ? <><strong>Neu in Stufe 3:</strong> Jede Seite hat 12 Hasen, 2 Hirsche und 2 Affen.</>
         : "Beide Seiten haben je 16 Hasen."} Ein Münzwurf lost aus, wer Blau und wer Grau spielt.
-        Blau beginnt, danach zieht ihr abwechselnd.</p>
+        Blau beginnt, danach zieht ihr abwechselnd. Wer mit {advanced ? "derselben Figur" : "demselben Hasen"} drei gegnerische Züge
+        in Folge auf der Lichtung bleibt, gewinnt. Ein gegnerischer Pass zählt mit.</p>
       <p><strong>Das Spielbrett.</strong> Zwei gespiegelte Dreiecke treffen an der Lichtung aufeinander.
         Jede Seite hat sechs nummerierte Reihen, vom einzelnen Dreieck in Reihe 1 bis zur breiten Reihe 6.
         Die gestrichelten Linien links und rechts verbinden je drei gegenüberliegende Feldpaare und zählen wie gemeinsame Kanten.
@@ -36,16 +37,16 @@ export function HasenspielRules({ level }: { level: Level }) {
         <li><strong>Neu in Stufe 3 · Hirsche.</strong> Hirsche ziehen waagerecht, senkrecht oder diagonal über freie Felder.
           Sie springen nicht. Nach einem Zug über mindestens drei Felder setzen sie beim nächsten eigenen Zug aus.
           Bis dahin können sie nicht übersprungen werden.</li>
-        <li><strong>Neu in Stufe 3 · Hirschwall.</strong> Bringt ein Zug zwei gleichfarbige Hirsche in dieselbe Reihe,
-          entsteht zwischen ihnen ein grüner Wall. Die eigene Farbe kann frei hindurchziehen. Gegnerische Figuren darauf
+        <li><strong>Neu in Stufe 3 · Hirschwall.</strong> Stehen nach einem Zug zwei gleichfarbige Hirsche in derselben Reihe
+          und liegen <strong>drei bis sechs Felder</strong> zwischen ihnen, entsteht auf diesen Feldern ein grüner Wall.
+          Die eigene Farbe kann frei hindurchziehen. Gegnerische Figuren darauf
           setzen beim nächsten eigenen Zug aus, außer Hirschen. Danach können sie seitlich oder rückwärts herausziehen.
-          Gegnerische Affen können den Wall beim Hangeln überqueren. Der Wall verschwindet, sobald die Hirsche nicht mehr in derselben Reihe stehen.</li>
+          Gegnerische Affen können den Wall beim Hangeln überqueren. Der Wall verschwindet, sobald die Hirsche in verschiedenen Reihen stehen oder weniger als drei oder mehr als sechs Felder zwischen ihnen liegen.</li>
         <li><strong>Neu in Stufe 3 · Affen.</strong> Affen dürfen in alle Richtungen ziehen und springen, auch rückwärts.
           Beim Hangeln bewegen sie sich vorwärts oder seitwärts über mindestens zwei Hasen. Zwischen ihnen darf höchstens
           ein Feld frei sein. Der Affe landet auf einem freien Feld und schlägt beim Hangeln keine Figur.</li>
       </ul>}
-      <p><strong>Gewinnen und passen.</strong> Wer mit {advanced ? "derselben Figur" : "demselben Hasen"} drei gegnerische Züge
-        in Folge auf der Lichtung bleibt, gewinnt. Ein gegnerischer Pass zählt mit. Wer keinen erlaubten Zug hat, muss passen.
+      <p><strong>Passen.</strong> Wer keinen erlaubten Zug hat, muss passen.
         Passen beide direkt nacheinander bei leerer Lichtung, endet die Partie unentschieden.
         {advanced && " Solange noch eine Betäubung oder Hirschruhe aktiv ist, zählen Pässe dafür nicht."}</p>
     </details>
