@@ -73,19 +73,20 @@ function adjacent(cell: Cell) {
 }
 
 function deerWalls(board: Board) {
-  const deer = cells.filter(cell => board[cell.id]?.kind === "deer");
-  return deer.flatMap((left, index) => {
-    const right = deer[index + 1];
-    if (!right || left.row !== right.row || right.x - left.x < 2) return [];
+  return (["blue", "gray"] as const).flatMap(color => {
+    const [left, right] = cells.filter(cell => board[cell.id]?.kind === "deer" && board[cell.id]?.color === color);
+    if (!left || !right || left.row !== right.row || right.x - left.x < 2) return [];
     return [{
-      id: `${left.id}/${right.id}`,
+      id: `${color}/${left.id}/${right.id}`,
+      color,
       between: cells.filter(cell => cell.row === left.row && cell.x > left.x && cell.x < right.x)
     }];
   });
 }
 
-export function wallFields(board: Board, initialWalls: string[] = []): Set<string> {
-  return new Set(deerWalls(board).filter(wall => !initialWalls.includes(wall.id))
+export function wallFields(board: Board, initialWalls: string[] = [], color?: Color): Set<string> {
+  return new Set(deerWalls(board)
+    .filter(wall => !initialWalls.includes(wall.id) && (color === undefined || wall.color === color))
     .flatMap(wall => wall.between.map(cell => cell.id)));
 }
 
@@ -165,7 +166,7 @@ export function movesFrom(game: Game, from: Cell): Move[] {
   const piece = game.board[from.id];
   if (game.result || piece?.color !== game.turn || game.frozen.includes(piece.id)
     || game.restingDeer?.includes(piece.id)) return [];
-  const wall = wallFields(game.board, game.initialWalls);
+  const wall = wallFields(game.board, game.initialWalls, piece.color === "blue" ? "gray" : "blue");
   const allowed = (start: Cell, end: Cell) => wall.has(end.id)
     ? wall.has(start.id)
     : !wall.has(start.id) || forward(piece, start, end) <= 0;
@@ -282,7 +283,7 @@ function applyMove(game: Game, from?: Cell, move?: Move): Game {
     if (oldWalls.has(wall.id)) continue;
     for (const cell of wall.between) {
       const piece = board[cell.id];
-      if (piece && piece.kind !== "deer") frozen.add(piece.id);
+      if (piece && piece.color !== wall.color && piece.kind !== "deer") frozen.add(piece.id);
     }
   }
   return { ...game, board, previous, held, passes, result, turn, frozen: [...frozen], restingDeer, initialWalls };

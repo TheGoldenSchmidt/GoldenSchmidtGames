@@ -1,7 +1,8 @@
 import { useEffect, useId, useState } from "react";
 import type { ExperimentProps } from "../../experiments";
-import { CENTER, canMove, cells, centerLinks, wallFields, movesFrom, newGame, play, sideLinks, type Cell, type Kind, type Level } from "./rules";
+import { CENTER, canMove, cells, centerLinks, wallFields, movesFrom, newGame, play, sideLinks, type Cell, type Color, type Kind, type Level } from "./rules";
 import { botLevels, botTurn, type BotLevel } from "./bot";
+import { HasenspielRules } from "./HasenspielRules";
 import { Victory } from "./Victory";
 import "./hasenspiel.css";
 
@@ -20,7 +21,7 @@ const shapes: Record<Kind, string> = {
 };
 
 function fieldName(cell: Cell) {
-  return cell.id === CENTER ? "Zentrum" : `${cell.row < 6 ? "Blaue" : "Graue"} Seite, Reihe ${7 - Math.abs(cell.row - 6)}, Feld ${cell.x + 7 - Math.abs(cell.row - 6)}`;
+  return cell.id === CENTER ? "Lichtung" : `${cell.row < 6 ? "Blaue" : "Graue"} Seite, Reihe ${6 - Math.abs(cell.row - 6)}, Feld ${cell.x + 7 - Math.abs(cell.row - 6)}`;
 }
 
 function triangle(cell: Cell) {
@@ -37,7 +38,11 @@ function triangle(cell: Cell) {
 export default function Hasenspiel({ onExit }: ExperimentProps) {
   const [game, setGame] = useState(() => newGame());
   const [botLevel, setBotLevel] = useState<BotLevel>();
-  const botThinking = !!botLevel && !game.result && game.turn === "gray";
+  const [firstColor, setFirstColor] = useState<Color>();
+  const secondColor = firstColor === "blue" ? "gray" : "blue";
+  const botThinking = !!botLevel && !!firstColor && !game.result && game.turn === secondColor;
+  const firstPlayer = botLevel ? "Du" : "Person 1";
+  const secondPlayer = botLevel ? "Bot" : "Person 2";
   useEffect(() => {
     if (!botLevel || !botThinking) return;
     const timer = window.setTimeout(() => {
@@ -55,7 +60,7 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
   const bushPattern = useId();
   const center = game.board[CENTER];
   const winner = game.result && game.result !== "draw"
-    ? botLevel && game.result === "gray" ? "Bot" : names[game.result]
+    ? botLevel && game.result === secondColor ? "Bot" : names[game.result]
     : undefined;
   const status = game.result === "draw" ? "Unentschieden" : winner
     ? "Partie beendet"
@@ -63,6 +68,7 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
 
   function reset(level: Level) {
     setGame(newGame(level));
+    setFirstColor(undefined);
     setSelected(undefined);
     setDestination(undefined);
   }
@@ -75,7 +81,7 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
   }
 
   function select(cell: Cell) {
-    if (game.result || botThinking) return;
+    if (!firstColor || game.result || botThinking) return;
     setDestination(undefined);
     const count = targets.filter(move => move.to === cell.id).length;
     if (count > 1) setDestination(cell);
@@ -106,11 +112,26 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
             onClick={() => { if (level !== game.level) reset(level); }}>Stufe {level}</button>)}
         </div>
         <div className="hare-status" aria-live="polite">
-          <strong>{status}</strong>
-          <span>{center ? `${names[center.color]} hält das Zentrum · ${game.held}/3` : "Zentrum drei gegnerische Züge halten"}</span>
+          {firstColor ? <>
+            <span>Münzwurf · {firstPlayer}: {names[firstColor]} · {secondPlayer}: {names[secondColor]}</span>
+            <strong>{status}</strong>
+            <span>{center ? `${names[center.color]} hält die Lichtung · ${game.held}/3` : "Lichtung drei gegnerische Züge halten"}</span>
+          </> : <button type="button" onClick={() => setFirstColor(Math.random() < .5 ? "blue" : "gray")}>
+            Münze werfen
+          </button>}
         </div>
         <div className="hare-playfield">
-          <svg className="hare-board" viewBox={`-2 -2 ${width + 4} ${boardHeight + 4}`} aria-label="Dreiecksbrett">
+          <svg className="hare-board" viewBox={`-2 -2 ${width + 27} ${boardHeight + 4}`} aria-label="Dreiecksbrett">
+            <g className="hare-row-numbers" aria-hidden="true">
+              {[0, 1, 2, 3, 4, 5].map(depth => {
+                const y = (depth + .5) * height;
+                const x = width / 2 + (depth + 1) * side / 2 + 13;
+                return <g key={depth}>
+                  <text x={x} y={y}>{depth + 1}</text>
+                  <text x={x} y={boardHeight - y}>{depth + 1}</text>
+                </g>;
+              })}
+            </g>
             <defs>
               <pattern id={bushPattern} width="18" height="13" patternUnits="userSpaceOnUse">
                 <rect width="18" height="13" fill="#23533a" />
@@ -129,7 +150,7 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
               const shape = isCenter ? { x: width / 2, y: boardHeight / 2, points: "" } : triangle(cell);
               const rabbit = game.board[cell.id];
               const target = targets.find(move => move.to === cell.id);
-              const active = !game.result && !botThinking && (rabbit?.color === game.turn || !!target);
+              const active = !!firstColor && !game.result && !botThinking && (rabbit?.color === game.turn || !!target);
               const resting = rabbit && game.restingDeer?.includes(rabbit.id);
               const frozen = rabbit && game.frozen.includes(rabbit.id);
               return (
@@ -177,22 +198,8 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
             </button>;
           })}
         </section>}
-        {!game.result && !botThinking && !canMove(game) && <button type="button" onClick={() => { setGame(play(game)); setSelected(undefined); setDestination(undefined); }}>Kein Zug möglich · Passen</button>}
-        <details>
-          <summary>Regeln für Stufe {game.level}</summary>
-          <p>Wähle einen eigenen Hasen und tippe auf ein markiertes Zielfeld. Ziehe entlang einer Kante eine Reihe vorwärts oder springe über einen benachbarten Hasen auf ein freies Feld. Sprünge können seitlich und vorwärts führen.</p>
-          <p>Gegnerische Hasen werden geschlagen. Eigene bleiben stehen. Im nächsten eigenen Zug darf derselbe Hase denselben eigenen Hasen nicht erneut überspringen.</p>
-          <p>Links und rechts vom Zentrum verbinden gestrichelte Linien je drei gegenüberliegende Feldpaare. Über diese Verbindungen kannst du direkt auf die andere Spielfeldhälfte ziehen oder springen.</p>
-          <p>Das Zentrum ist aus beiden Richtungen über die jeweils fünf mittleren Felder erreichbar. Ein Sprung darüber landet gerade gegenüber. Dieselbe Figur gewinnt, wenn sie drei gegnerische Züge im Zentrum bleibt.</p>
-          <p>Wer keinen legalen Zug hat, passt. Passen zählt beim Halten des Zentrums mit. Passen beide nacheinander bei leerem Zentrum, endet die Partie unentschieden.</p>
-          {game.level >= 2 && <p>Hasen dürfen seitlich ein Feld zur Reihenmitte ziehen. Stehen drei gleichfarbige Hasen direkt nebeneinander, kann der mittlere nicht von einem Gegner übersprungen werden.</p>}
-          {game.level === 3 && <>
-            <p>Hasen und Affen dürfen zweimal springen, wenn sie erst eine eigene und dann eine gegnerische Figur überspringen.</p>
-            <p>Sie ziehen wie eine Schachdame waagerecht, senkrecht oder diagonal in beide Richtungen über freie Felder. Hirsche springen nicht. Nach einem Zug über mehr als zwei Felder setzen sie beim nächsten eigenen Zug aus und können bis dahin nicht übersprungen werden.</p>
-            <p>Bringt ein Zug zwei Hirsche in dieselbe Reihe, entsteht zwischen ihnen ein grüner Wall. Figuren beider Farben auf einem neu entstandenen Wall setzen beim nächsten eigenen Zug aus, außer Hirschen. Danach können sie seitlich oder nach hinten herausziehen. Nur Affen können den Wall beim Hangeln überqueren.</p>
-            <p>Affen ziehen und springen auch rückwärts. Beim Hangeln dürfen sie über mindestens zwei Hasen vorwärts oder seitlich klettern, mit höchstens einem leeren Feld dazwischen. Sie landen auf einem freien Feld und schlagen beim Hangeln keine Figur.</p>
-          </>}
-        </details>
+        {firstColor && !game.result && !botThinking && !canMove(game) && <button type="button" onClick={() => { setGame(play(game)); setSelected(undefined); setDestination(undefined); }}>Kein Zug möglich · Passen</button>}
+        <HasenspielRules level={game.level} />
       </div>
     </main>
   );
