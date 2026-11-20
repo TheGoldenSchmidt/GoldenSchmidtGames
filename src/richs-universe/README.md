@@ -43,7 +43,7 @@ Einmalig Chromium mit `npx playwright install chromium` installieren. Entwicklun
 
 ## Zusammenarbeit über Git
 
-Persönliche Aufgabenbranches: `rich/<thema>`; Agentenbranches gemäß [zentralen Regeln](../../AGENTS.md#zusammenarbeit-und-auslieferung). Vom aktuellen `origin/main` starten, vor PR aktualisieren und prüfen. Merge nur nach Freigabe durch TheGoldenSchmidt: `main` ist für Live-Auslieferung nach CI vorgesehen.
+Persönliche Aufgabenbranches folgen dem Muster `rich/<thema>`, Agentenbranches den [zentralen Regeln](../../AGENTS.md#zusammenarbeit-und-auslieferung). Vom aktuellen `origin/main` starten, vor dem PR aktualisieren und prüfen. Liegen alle Dateiänderungen unter `src/richs-universe/` und ist die schnelle CI für den aktuellen PR-Stand grün, darf Rich selbst nach `main` mergen. Sobald der PR auch Dateien außerhalb dieses Ordners ändert, braucht der Merge die Freigabe von TheGoldenSchmidt.
 
 Ein reguläres Online-Spiel gemeinsam planen: Regeln nach `shared/`, Einbindung über `shared/roomCore.ts`, Darstellung in `src/`. Experimente selbst laufen nur lokal.
 

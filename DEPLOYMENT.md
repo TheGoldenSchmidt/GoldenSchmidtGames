@@ -93,7 +93,7 @@ Empfehlung für eure kostenlose Freundesrunde: **ein separater Render-Testservic
 1. In Render einen zusätzlichen Webservice im Free-Tarif anlegen; Repository, Aufgabenbranch und vorhandenes Dockerfile wählen. Health Check: `/api/health`. Zunächst manuell deployen; der Testbranch muss vorher auf GitHub gepusht sein.
 2. **Eigene Testdatenbank und eigenen Turso-Token** verwenden. Live-Zugangsdaten und Live-Umgebungsgruppen niemals übernehmen. Ohne Turso kann man mit flüchtigen Testkonten/-räumen prüfen. Für wiederverwendbare Testkonten eine getrennte Turso-Datenbank einrichten; eigenes `GSG_ADMIN_INVITE` verwenden.
 3. Die neue `https://…onrender.com`-Adresse auf euren Handys öffnen. Alle Teilnehmenden einer Testpartie müssen dieselbe Testadresse verwenden. Konten, Räume und PWA-Daten der Live-Adresse bleiben getrennt.
-4. Weitere Commits auf denselben Aufgabenbranch pushen und im Testservice ausliefern. Für einen anderen Zwischenstand den Branch **nur am Testservice** wechseln. Erst nach Prüfung und Freigabe den PR nach `main` mergen.
+4. Weitere Commits auf denselben Aufgabenbranch pushen und im Testservice ausliefern. Für einen anderen Zwischenstand den Branch **nur am Testservice** wechseln. Für den Merge nach `main` gelten die [Projektregeln](AGENTS.md#zusammenarbeit-und-auslieferung).
 
 [Render Service Previews](https://render.com/docs/service-previews) können alternativ einzelne PRs mit eigener temporärer URL bereitstellen. Sie übernehmen zunächst auch die Umgebungsvariablen des Basisdienstes. Deshalb erst eine sichere Trennung der Datenbankkonfiguration vorbereiten; nicht einfach Vorschauen am Live-Service aktivieren. Der Raumserver erlaubt nur einen schreibenden Prozess pro Datenbank: Eine Vorschau mit Live-Datenbank könnte den Live-Server verdrängen. Vollständige [Preview Environments](https://render.com/docs/preview-environments) benötigen laut Render einen bezahlten Workspace-Tarif.
 
@@ -105,10 +105,11 @@ Im selben WLAN geht es auch lokal: Aufgabenbranch auschecken, `npm ci`, `npm run
 
 Stand 19. November 2026: GitHub meldet das Repository als **öffentlich**, `main` ungeschützt und automatisches Branch-Löschen aus. Die App ist weiterhin für eine private Freundesrunde gedacht.
 
+Rich (`rreicherter`) hat Schreibzugriff auf das Repository (geprüft am 20. November 2026).
+
 Noch einzurichten/zu bestätigen:
 
-- Einladung an `rreicherter` annehmen lassen und Schreibrecht prüfen; erst dann kann der CODEOWNERS-Eintrag Reviews zuweisen.
-- `main` schützen: PR und erfolgreichen CI-Job `test` verlangen, Force-Push/Löschen verbieten. Merge-Freigabe bleibt bei TheGoldenSchmidt; CODEOWNERS allein erzwingt sie nicht.
+- Branchschutz für `main` einrichten. PR und erfolgreichen CI-Job `test` verlangen, Force-Push und Löschen verbieten. Die Review-Einstellungen müssen Richs eigenständigen Merge gemäß den [Projektregeln](AGENTS.md#zusammenarbeit-und-auslieferung) zulassen.
 - Automatisches Löschen gemergter Aufgabenbranches aktivieren. Alte Branches gemeinsam auf offene Arbeit prüfen, erst danach löschen.
 - Render-Blueprint synchronisieren; Deploy-Branch `main` und CI-Abwarten im Dashboard bestätigen.
 

@@ -23,4 +23,4 @@ Darf jederzeit live gehen? Einschränkungen/Spielabend:
 
 Offene Punkte:
 
-<!-- Merge nur nach Freigabe durch TheGoldenSchmidt; CODEOWNERS ersetzt sie nicht. -->
+<!-- Für die Merge-Freigabe gilt AGENTS.md, Abschnitt „Zusammenarbeit und Auslieferung“, einschließlich der Ausnahme für Rich’s Universe. -->
