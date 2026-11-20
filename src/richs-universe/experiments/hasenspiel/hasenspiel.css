@@ -172,3 +172,11 @@
 @media (prefers-reduced-motion: reduce) {
   .ru-hasenspiel .hare-leaves { display: none; }
 }
+
+.ru-hasenspiel .hare-row-numbers {
+  fill: #f5efdf;
+  font: bold 15px system-ui, sans-serif;
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+}

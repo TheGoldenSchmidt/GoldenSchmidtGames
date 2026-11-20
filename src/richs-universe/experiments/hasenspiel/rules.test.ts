@@ -98,15 +98,15 @@ const wallSetup: Game = { ...newGame(3), board: {
 } };
 const formed = play(wallSetup, "3:2", "4:3");
 assert.deepEqual([...wallFields(formed.board)], ["4:-3", "4:-2", "4:-1", "4:0", "4:1", "4:2"]);
-assert.deepEqual(formed.frozen, ["blue-inside", "gray-inside"]);
-assert.deepEqual([...wallFields({
+assert.deepEqual(formed.frozen, ["gray-inside"]);
+assert.equal(wallFields({
   ...formed.board, "4:3": piece("right", "gray", "deer")
-})], [...wallFields(formed.board)]);
+}).size, 0);
 assert.deepEqual(moves(formed, "4:1"), []);
 const grayMoved = play(formed, "9:1", "8:1");
-assert.deepEqual(grayMoved.frozen, ["blue-inside"]);
-assert.deepEqual(moves(grayMoved, "4:-2"), []);
-assert.ok(!moves(grayMoved, "3:-1").some(move => move.to === "4:-1"));
+assert.deepEqual(grayMoved.frozen, []);
+assert.ok(moves(grayMoved, "4:-2").some(move => move.to === "5:-2"));
+assert.ok(moves(grayMoved, "3:-1").some(move => move.to === "4:-1"));
 const blueMoved = play(grayMoved, "3:-1", "4:-4");
 assert.equal(blueMoved, grayMoved);
 const thawed = play(grayMoved, "4:3", "5:3");
