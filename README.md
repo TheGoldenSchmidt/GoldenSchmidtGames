@@ -10,12 +10,14 @@ Installierbare Smartphone-PWA für eine Freundesrunde: lokale Tischspiele, Brett
 | Inselparty, Roll It Up! | Brettspiele auf getrennten Handys; allein mit 1–5 Bots |
 | Freies Minispiel | Passendes Minispiel direkt wählen |
 | Schlag den GoldenSchmidt | Wettbewerb mit einmaligen verdeckten Einsätzen |
-| Proberaum | Lokale Übungsinsel für Bewegung, Hindernisse und Animationen |
+| Proberaum | Lokale Übungsinsel für Entwickler und Admins; Verbindung zum Öffnen erforderlich |
 | Rich’s Universe | Eigener Bereich für lokale Experimente |
 
 Vorher eine Figur wählen. Modi/Spielerzahlen: [Spielekatalog](shared/games.ts), einzelne Minispiele: [Minispielkatalog](shared/minigameCatalog.ts). Binokel ist angekündigt, noch nicht spielbar.
 
-**Lokal spielen** führt zu Tischspielen, Bot-Partien und Proberaum; **Online spielen** zu Erstellen/Beitreten. Nach vollständigem Laden der PWA funktionieren lokale Spiele und Handy-Räume offline.
+**Lokal spielen** führt zu Tischspielen, Bot-Partien und für freigeschaltete Konten zum Proberaum; **Online spielen** zu Erstellen/Beitreten. Nach vollständigem Laden der PWA funktionieren lokale Spiele und Handy-Räume offline.
+
+Über das Profil anmelden oder ein Einladungskonto anlegen: Anzeigename, Figur und Spieltöne werden geräteübergreifend gespeichert; abgeschlossene Online-Partien und Siege pro Spiel unter **Deine Statistiken** angezeigt. Admins verteilen Einladungen und Entwicklerrechte. [Kontoeinrichtung und Grenzen](DEPLOYMENT.md#konten-rechte-und-statistiken).
 
 ## Zwei Hostingarten
 
@@ -37,6 +39,7 @@ npm run dev
 
 Client: `http://localhost:5173`; Server: `http://localhost:3001`.
 Produktion: `npm run build`, danach `npm start`.
+Zwischenstände gemeinsam auf Handys prüfen, bevor sie nach `main` kommen: [separate Testadresse einrichten](DEPLOYMENT.md#zwischenstände-testen-ohne-main).
 Für Browserprüfungen einmal `npx playwright install chromium`; Standardprojekt ist `phone`. Prüfungen und Build-Reihenfolge: [AGENTS.md](AGENTS.md#passende-prüfungen).
 
 ## Mitarbeiten

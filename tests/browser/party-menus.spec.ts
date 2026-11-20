@@ -7,9 +7,10 @@ for (const reducedMotion of ["reduce", "no-preference"] as const) {
     await page.emulateMedia({ reducedMotion });
     await page.goto("/");
     await page.getByRole("button", { name: /^Gastprofil:/ }).click();
-    await page.getByRole("textbox", { name: "Anzeigename" }).fill("Spieleabend");
+    await page.getByText("Ohne Konto als Gast spielen", { exact: true }).click();
+    await page.getByRole("textbox", { name: "Gastname" }).fill("Spieleabend");
     await page.screenshot({ path: info.outputPath("profil.png") });
-    await page.getByRole("button", { name: "Speichern", exact: true }).click();
+    await page.getByRole("button", { name: "Gastprofil speichern", exact: true }).click();
     await page.getByRole("button", { name: /Lokal spielen/ }).click();
     await expect(page.getByRole("navigation", {name: "Spiel auswählen"})).toBeVisible();
     await page.getByRole("button", { name: /^Durak / }).click();
