@@ -47,7 +47,7 @@ Persönliche Aufgabenbranches folgen dem Muster `rich/<thema>`, Agentenbranches 
 
 Ein reguläres Online-Spiel gemeinsam planen: Regeln nach `shared/`, Einbindung über `shared/roomCore.ts`, Darstellung in `src/`. Experimente selbst laufen nur lokal.
 
-## Hasenspiel
+## Die Lichtung
 
 Spielbarer Prototyp für zwei Personen auf einem Smartphone oder
 für eine Person gegen einen Bot (Leicht, Mittel oder Schwer). Stufen 1–3

@@ -94,7 +94,7 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
       <div className="hare-page">
         <header className="hare-header">
           <button type="button" onClick={onExit}>Zurück</button>
-          <h1>Hasenspiel</h1>
+          <h1>Die Lichtung</h1>
           <button type="button" onClick={() => reset(game.level)}>Neu</button>
         </header>
         <label className="hare-mode">
@@ -121,7 +121,7 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
           </button>}
         </div>
         <div className="hare-playfield">
-          <svg className="hare-board" viewBox={`-2 -2 ${width + 27} ${boardHeight + 4}`} aria-label="Dreiecksbrett">
+          <svg className="hare-board" viewBox={`-25 -2 ${width + 50} ${boardHeight + 4}`} aria-label="Dreiecksbrett">
             <g className="hare-row-numbers" aria-hidden="true">
               {[0, 1, 2, 3, 4, 5].map(depth => {
                 const y = (depth + .5) * height;
@@ -194,7 +194,7 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
             const ally = cells.find(cell => cell.id === move.friendly);
             return <button type="button" key={index} onClick={() => takeMove(destination, index)}>
               {ally ? `Über eigene Figur auf ${fieldName(ally)}` : null}
-              {capture ? `${ally ? " · " : ""}Schlage auf ${fieldName(capture)}` : ally ? null : "Ohne Schlagen ziehen"}
+              {capture ? `${ally ? " · " : ""}Figur auf ${fieldName(capture)} schlagen` : ally ? null : "Direkt ziehen"}
             </button>;
           })}
         </section>}
