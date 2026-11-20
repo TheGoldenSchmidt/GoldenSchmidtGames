@@ -84,9 +84,8 @@
 }
 .ru-hasenspiel .hare-center line { stroke: #584628; }
 .ru-hasenspiel .hare-side-links line { stroke: #e2d8bf; stroke-width: 2; }
-.ru-hasenspiel .hare-cell[data-protected="true"] polygon {
-  fill: #c7a77b;
-  stroke: #694010;
+.ru-hasenspiel .hare-cell[data-wall="true"] polygon {
+  stroke: #183c29;
   stroke-width: 2;
 }
 .ru-hasenspiel .hare-cell[data-target="true"] > .hare-center rect,
@@ -95,7 +94,7 @@
 }
 .ru-hasenspiel .hare-token .hare-frozen {
   fill: none;
-  stroke: #853c18;
+  stroke: #ffe4a3;
   stroke-width: 2;
   stroke-dasharray: 3 2;
 }

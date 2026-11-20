@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import type { ExperimentProps } from "../../experiments";
-import { CENTER, canMove, cells, centerLinks, deerLine, movesFrom, newGame, play, sideLinks, type Cell, type Color, type Kind, type Level } from "./rules";
+import { CENTER, canMove, cells, centerLinks, wallFields, movesFrom, newGame, play, sideLinks, type Cell, type Kind, type Level } from "./rules";
 import { botLevels, botTurn, type BotLevel } from "./bot";
 import { Victory } from "./Victory";
 import "./hasenspiel.css";
@@ -11,7 +11,6 @@ const gap = 28;
 const width = 6 * side;
 const boardHeight = 12 * height + gap;
 const names = { blue: "Blau", gray: "Grau" };
-const colors: Color[] = ["blue", "gray"];
 const levels: Level[] = [1, 2, 3];
 const species: Record<Kind, string> = { rabbit: "Hase", deer: "Hirsch", monkey: "Affe" };
 const shapes: Record<Kind, string> = {
@@ -52,8 +51,8 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
   const [destination, setDestination] = useState<Cell>();
   const targets = selected ? movesFrom(game, selected) : [];
   const choices = destination ? targets.filter(move => move.to === destination.id) : [];
-  const protectedFields = new Set(colors.flatMap(color =>
-    deerLine(game.board, color).between.map(cell => cell.id)));
+  const wall = wallFields(game.board, game.initialWalls);
+  const bushPattern = useId();
   const center = game.board[CENTER];
   const winner = game.result && game.result !== "draw"
     ? botLevel && game.result === "gray" ? "Bot" : names[game.result]
@@ -112,6 +111,13 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
         </div>
         <div className="hare-playfield">
           <svg className="hare-board" viewBox={`-2 -2 ${width + 4} ${boardHeight + 4}`} aria-label="Dreiecksbrett">
+            <defs>
+              <pattern id={bushPattern} width="18" height="13" patternUnits="userSpaceOnUse">
+                <rect width="18" height="13" fill="#23533a" />
+                <path d="M0 11Q0 6 4 7Q4 2 8 3Q12 3 12 7Q17 6 18 11V13H0Z" fill="#39764b" />
+                <path d="M3 10Q5 6 9 7M11 10Q13 7 15 9" fill="none" stroke="#76a867" strokeWidth="1.3" />
+              </pattern>
+            </defs>
             <g className="hare-side-links" aria-hidden="true">
               {sideLinks.map(link => {
                 const x = width / 2 + link.x * side / 2;
@@ -124,11 +130,12 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
               const rabbit = game.board[cell.id];
               const target = targets.find(move => move.to === cell.id);
               const active = !game.result && !botThinking && (rabbit?.color === game.turn || !!target);
+              const resting = rabbit && game.restingDeer?.includes(rabbit.id);
               const frozen = rabbit && game.frozen.includes(rabbit.id);
               return (
-                <g key={cell.id} className="hare-cell" data-target={!!target} data-selected={selected === cell} data-protected={protectedFields.has(cell.id)}
+                <g key={cell.id} className="hare-cell" data-target={!!target} data-selected={selected === cell} data-wall={wall.has(cell.id)}
                   role={active ? "button" : undefined} tabIndex={active ? 0 : undefined}
-                  aria-label={active ? `${fieldName(cell)}${rabbit ? `, ${species[rabbit.kind]} ${names[rabbit.color]}${frozen ? ", blockiert" : ""}` : ""}` : undefined}
+                  aria-label={active ? `${fieldName(cell)}${rabbit ? `, ${species[rabbit.kind]} ${names[rabbit.color]}${resting ? ", ruht" : frozen ? ", betäubt" : ""}` : ""}` : undefined}
                   onClick={() => select(cell)}
                   onKeyDown={event => {
                     if (active && (event.key === "Enter" || event.key === " ")) {
@@ -144,11 +151,12 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
                         return <line key={link.id} x1={x} x2={x} y1={6 * height} y2={6 * height + gap} />;
                       })}
                     </g>
-                    : <polygon points={shape.points} data-side={cell.row < 6 ? "blue" : "gray"} />}
+                    : <polygon points={shape.points} data-side={cell.row < 6 ? "blue" : "gray"}
+                      style={wall.has(cell.id) ? { fill: `url(#${bushPattern})` } : undefined} />}
                   {rabbit && <g className={`hare-token hare-token-${rabbit.color}`} transform={`translate(${shape.x} ${shape.y})`}>
                     <circle r="11" />
                     <path data-kind={rabbit.kind} d={shapes[rabbit.kind]} />
-                    {frozen && <circle className="hare-frozen" r="13" />}
+                    {(frozen || resting) && <circle className="hare-frozen" r="13" />}
                     {rabbit.color === "gray" && <path d="M-4 9H4" />}
                   </g>}
                   {target && <circle className="hare-target" cx={shape.x + (rabbit ? 9 : 0)} cy={shape.y} r={rabbit ? 3 : 4} />}
@@ -180,7 +188,8 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
           {game.level >= 2 && <p>Hasen dürfen seitlich ein Feld zur Reihenmitte ziehen. Stehen drei gleichfarbige Hasen direkt nebeneinander, kann der mittlere nicht von einem Gegner übersprungen werden.</p>}
           {game.level === 3 && <>
             <p>Hasen und Affen dürfen zweimal springen, wenn sie erst eine eigene und dann eine gegnerische Figur überspringen.</p>
-            <p>Hirsche ziehen ein Feld vor oder zur Seite. Sie können auch nach links, rechts oder diagonal vorwärts bis zum letzten freien Feld vor einem Hindernis oder dem Brettrand voranpreschen, auch über die Spielfeldmitte hinweg. Stehen vier bis sechs Felder zwischen den Hirschen, ist der Bereich für gegnerische Hasen gesperrt. Hasen darin setzen einmal aus, sobald die Sperre entsteht. Danach dürfen sie hinausziehen. Die beiden Hirsche können von Affen übersprungen werden.</p>
+            <p>Sie ziehen wie eine Schachdame waagerecht, senkrecht oder diagonal in beide Richtungen über freie Felder. Hirsche springen nicht. Nach einem Zug über mehr als zwei Felder setzen sie beim nächsten eigenen Zug aus und können bis dahin nicht übersprungen werden.</p>
+            <p>Bringt ein Zug zwei Hirsche in dieselbe Reihe, entsteht zwischen ihnen ein grüner Wall. Figuren beider Farben auf einem neu entstandenen Wall setzen beim nächsten eigenen Zug aus, außer Hirschen. Danach können sie seitlich oder nach hinten herausziehen. Nur Affen können den Wall beim Hangeln überqueren.</p>
             <p>Affen ziehen und springen auch rückwärts. Beim Hangeln dürfen sie über mindestens zwei Hasen vorwärts oder seitlich klettern, mit höchstens einem leeren Feld dazwischen. Sie landen auf einem freien Feld und schlagen beim Hangeln keine Figur.</p>
           </>}
         </details>
