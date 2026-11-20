@@ -53,6 +53,8 @@ export const examples = {
   crossing: [
     frame("Über die gestrichelte Verbindung ziehen", position(1, { "5:3": piece("hare") }), ["5:3", "7:3"]),
     frame("Über die Lichtung gerade gegenüber landen", centerJump, ["5:0", CENTER, "7:0"]),
+    frame("Rückwärts über die Lichtung springen ist verboten",
+      position(1, { "7:0": piece("hare"), [CENTER]: piece("opponent", "gray") }), ["7:0", CENTER, "5:0"], true),
   ],
   sideways: [frame("Ein freies Feld zur Reihenmitte", position(2, { "3:-2": piece("hare") }), ["3:-2", "3:-1"])],
   trio: [
@@ -80,6 +82,12 @@ export const examples = {
     frame("Vorwärts bleibt der Wall für Grau gesperrt", { ...wall, frozen: [] }, ["4:1", "3:1"], true),
     frame("Blau kann frei hindurchziehen", { ...wall, turn: "blue" }, ["4:-2", "5:-2"]),
     frame("Blau hangelt über einen grauen Wall", wallClimb, ["3:-2", "3:-1", "4:-1", "4:0", "5:0"]),
+    frame("Nur von außen seitlich kann Blau den Hirsch schlagen", position(3, {
+      "4:-2": piece("left", "gray", "deer"), "4:2": piece("right", "gray", "deer"), "4:-3": piece("hare"),
+    }), ["4:-3", "4:-2", "4:-1"]),
+    frame("Vom Wall aus ist der Sprung über den Hirsch gesperrt", position(3, {
+      "4:-2": piece("left", "gray", "deer"), "4:2": piece("right", "gray", "deer"), "4:-1": piece("monkey", "blue", "monkey"),
+    }), ["4:-1", "4:-2", "4:-3"], true),
   ],
   monkey: [
     frame("Vorwärts ziehen", monkey, ["4:0", "5:0"]),

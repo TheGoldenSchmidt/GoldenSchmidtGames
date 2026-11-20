@@ -25,7 +25,7 @@ function evaluate(game: Game, color: Color): number {
     else closestOpponent = Math.min(closestOpponent, distance);
   }
   const center = game.board[CENTER];
-  if (center) score += (center.color === color ? 1 : -1) * (180 + 100 * game.held);
+  if (center?.kind === "rabbit") score += (center.color === color ? 1 : -1) * (180 + 100 * game.held);
   return score + 30 * (closestOpponent - closestOwn);
 }
 

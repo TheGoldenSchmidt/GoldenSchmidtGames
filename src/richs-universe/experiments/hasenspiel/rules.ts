@@ -81,6 +81,7 @@ function deerWalls(board: Board) {
     return [{
       id: `${color}/${left.id}/${right.id}`,
       color,
+      ends: [left.id, right.id],
       between: cells.filter(cell => cell.row === left.row && cell.x > left.x && cell.x < right.x)
     }];
   });
@@ -174,6 +175,9 @@ export function movesFrom(game: Game, from: Cell): Move[] {
     : !wall.has(start.id) || forward(piece, start, end) <= 0;
   if (piece.kind === "deer") return deerMoves(game.board, from, allowed);
 
+  const wallEnds = new Map(deerWalls(game.board)
+    .filter(wall => !game.initialWalls?.includes(wall.id))
+    .flatMap(wall => wall.ends.map(id => [id, new Set(wall.between.map(cell => cell.id))] as const)));
   const previous = game.previous[game.turn];
   const rabbit = piece.kind === "rabbit";
   const moves: Move[] = [];
@@ -182,17 +186,20 @@ export function movesFrom(game: Game, from: Cell): Move[] {
     const result: { to: Cell; middle: Cell; crossed: Piece }[] = [];
     for (const middle of adjacent(start)) {
       const crossed = board[middle.id];
-      if (!crossed || game.restingDeer?.includes(crossed.id) || (rabbit && middle.id !== CENTER && forward(piece, start, middle) < 0)) continue;
-      if (!allowed(start, middle) || wall.has(middle.id)) continue;
+      if (!crossed || game.restingDeer?.includes(crossed.id) || (rabbit && forward(piece, start, middle) < 0)) continue;
+      const protectedWall = wallEnds.get(middle.id);
+      if (!allowed(start, middle) || wall.has(middle.id)
+        || (protectedWall && (protectedWall.has(start.id) || start.row !== middle.row))) continue;
       if (crossed.color === piece.color && previous?.mover === piece.id && previous.crossed === crossed.id) continue;
       if (game.level >= 2 && crossed.color !== piece.color && protectedRabbit(board, middle, crossed)) continue;
 
       for (const to of adjacent(middle)) {
-        if (board[to.id] || !allowed(middle, to)) continue;
+        if (board[to.id]) continue;
+        if (protectedWall ? !protectedWall.has(to.id) : !allowed(middle, to)) continue;
+        if (rabbit && forward(piece, middle, to) < 0) continue;
         if (middle.id === CENTER) {
           if (to.row === start.row || to.x !== start.x) continue;
         } else {
-          if (rabbit && to.id !== CENTER && forward(piece, middle, to) < 0) continue;
           if (start.row === middle.row && middle.row === to.row && to.x - middle.x !== middle.x - start.x) continue;
         }
         result.push({ to, middle, crossed });
@@ -268,13 +275,13 @@ function applyMove(game: Game, from?: Cell, move?: Move): Game {
   }
 
   const occupant = board[CENTER];
-  const held = occupant && occupant === game.board[CENTER] && from?.id !== CENTER
+  const held = occupant?.kind === "rabbit" && occupant === game.board[CENTER] && from?.id !== CENTER
     ? game.held + Number(occupant.color !== game.turn)
     : 0;
   // A skipped turn under a temporary effect does not count toward a stalemate.
   const temporaryBlock = game.frozen.length || game.restingDeer?.length;
   const passes = move || temporaryBlock ? 0 : game.passes + 1;
-  const result = held >= 3 ? occupant?.color : passes >= 2 && !occupant ? "draw" : undefined;
+  const result = held >= 3 ? occupant?.color : passes >= 2 && occupant?.kind !== "rabbit" ? "draw" : undefined;
   const turn = game.turn === "blue" ? "gray" : "blue";
   const oldWalls = new Set(deerWalls(game.board).map(wall => wall.id));
   const frozen = new Set(game.frozen.filter(id =>
