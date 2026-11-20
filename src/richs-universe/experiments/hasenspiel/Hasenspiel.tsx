@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { ExperimentProps } from "../../experiments";
 import { CENTER, canMove, cells, centerLinks, deerLine, movesFrom, newGame, play, sideLinks, type Cell, type Color, type Kind, type Level } from "./rules";
 import { botLevels, botTurn, type BotLevel } from "./bot";
+import { Victory } from "./Victory";
 import "./hasenspiel.css";
 
 const side = 54;
@@ -54,8 +55,11 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
   const protectedFields = new Set(colors.flatMap(color =>
     deerLine(game.board, color).between.map(cell => cell.id)));
   const center = game.board[CENTER];
-  const status = game.result === "draw" ? "Unentschieden" : game.result
-    ? `${botLevel && game.result === "gray" ? "Bot" : names[game.result]} gewinnt`
+  const winner = game.result && game.result !== "draw"
+    ? botLevel && game.result === "gray" ? "Bot" : names[game.result]
+    : undefined;
+  const status = game.result === "draw" ? "Unentschieden" : winner
+    ? "Partie beendet"
     : botThinking ? "Der Bot ist am Zug" : `${names[game.turn]} ist am Zug`;
 
   function reset(level: Level) {
@@ -106,51 +110,54 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
           <strong>{status}</strong>
           <span>{center ? `${names[center.color]} hält das Zentrum · ${game.held}/3` : "Zentrum drei gegnerische Züge halten"}</span>
         </div>
-        <svg className="hare-board" viewBox={`-2 -2 ${width + 4} ${boardHeight + 4}`} aria-label="Dreiecksbrett">
-          <g className="hare-side-links" aria-hidden="true">
-            {sideLinks.map(link => {
-              const x = width / 2 + link.x * side / 2;
-              return <line key={link.id} x1={x} x2={x} y1={6 * height} y2={6 * height + gap} />;
+        <div className="hare-playfield">
+          <svg className="hare-board" viewBox={`-2 -2 ${width + 4} ${boardHeight + 4}`} aria-label="Dreiecksbrett">
+            <g className="hare-side-links" aria-hidden="true">
+              {sideLinks.map(link => {
+                const x = width / 2 + link.x * side / 2;
+                return <line key={link.id} x1={x} x2={x} y1={6 * height} y2={6 * height + gap} />;
+              })}
+            </g>
+            {cells.map(cell => {
+              const isCenter = cell.id === CENTER;
+              const shape = isCenter ? { x: width / 2, y: boardHeight / 2, points: "" } : triangle(cell);
+              const rabbit = game.board[cell.id];
+              const target = targets.find(move => move.to === cell.id);
+              const active = !game.result && !botThinking && (rabbit?.color === game.turn || !!target);
+              const frozen = rabbit && game.frozen.includes(rabbit.id);
+              return (
+                <g key={cell.id} className="hare-cell" data-target={!!target} data-selected={selected === cell} data-protected={protectedFields.has(cell.id)}
+                  role={active ? "button" : undefined} tabIndex={active ? 0 : undefined}
+                  aria-label={active ? `${fieldName(cell)}${rabbit ? `, ${species[rabbit.kind]} ${names[rabbit.color]}${frozen ? ", blockiert" : ""}` : ""}` : undefined}
+                  onClick={() => select(cell)}
+                  onKeyDown={event => {
+                    if (active && (event.key === "Enter" || event.key === " ")) {
+                      event.preventDefault();
+                      select(cell);
+                    }
+                  }}>
+                  {isCenter
+                    ? <g className="hare-center">
+                      <rect x={width / 2 - side * 1.25} y={6 * height} width={side * 2.5} height={gap} rx="4" />
+                      {centerLinks.map(link => {
+                        const x = width / 2 + link.x * side / 2;
+                        return <line key={link.id} x1={x} x2={x} y1={6 * height} y2={6 * height + gap} />;
+                      })}
+                    </g>
+                    : <polygon points={shape.points} data-side={cell.row < 6 ? "blue" : "gray"} />}
+                  {rabbit && <g className={`hare-token hare-token-${rabbit.color}`} transform={`translate(${shape.x} ${shape.y})`}>
+                    <circle r="11" />
+                    <path data-kind={rabbit.kind} d={shapes[rabbit.kind]} />
+                    {frozen && <circle className="hare-frozen" r="13" />}
+                    {rabbit.color === "gray" && <path d="M-4 9H4" />}
+                  </g>}
+                  {target && <circle className="hare-target" cx={shape.x + (rabbit ? 9 : 0)} cy={shape.y} r={rabbit ? 3 : 4} />}
+                </g>
+              );
             })}
-          </g>
-          {cells.map(cell => {
-            const isCenter = cell.id === CENTER;
-            const shape = isCenter ? { x: width / 2, y: boardHeight / 2, points: "" } : triangle(cell);
-            const rabbit = game.board[cell.id];
-            const target = targets.find(move => move.to === cell.id);
-            const active = !game.result && !botThinking && (rabbit?.color === game.turn || !!target);
-            const frozen = rabbit && game.frozen.includes(rabbit.id);
-            return (
-              <g key={cell.id} className="hare-cell" data-target={!!target} data-selected={selected === cell} data-protected={protectedFields.has(cell.id)}
-                role={active ? "button" : undefined} tabIndex={active ? 0 : undefined}
-                aria-label={active ? `${fieldName(cell)}${rabbit ? `, ${species[rabbit.kind]} ${names[rabbit.color]}${frozen ? ", blockiert" : ""}` : ""}` : undefined}
-                onClick={() => select(cell)}
-                onKeyDown={event => {
-                  if (active && (event.key === "Enter" || event.key === " ")) {
-                    event.preventDefault();
-                    select(cell);
-                  }
-                }}>
-                {isCenter
-                  ? <g className="hare-center">
-                    <rect x={width / 2 - side * 1.25} y={6 * height} width={side * 2.5} height={gap} rx="4" />
-                    {centerLinks.map(link => {
-                      const x = width / 2 + link.x * side / 2;
-                      return <line key={link.id} x1={x} x2={x} y1={6 * height} y2={6 * height + gap} />;
-                    })}
-                  </g>
-                  : <polygon points={shape.points} data-side={cell.row < 6 ? "blue" : "gray"} />}
-                {rabbit && <g className={`hare-token hare-token-${rabbit.color}`} transform={`translate(${shape.x} ${shape.y})`}>
-                  <circle r="11" />
-                  <path data-kind={rabbit.kind} d={shapes[rabbit.kind]} />
-                  {frozen && <circle className="hare-frozen" r="13" />}
-                  {rabbit.color === "gray" && <path d="M-4 9H4" />}
-                </g>}
-                {target && <circle className="hare-target" cx={shape.x + (rabbit ? 9 : 0)} cy={shape.y} r={rabbit ? 3 : 4} />}
-              </g>
-            );
-          })}
-        </svg>
+          </svg>
+          {winner && <Victory title={`${winner} gewinnt`} />}
+        </div>
         {destination && <section className="hare-choices" aria-label="Sprung auswählen">
           <strong>Mehrere Züge führen auf dieses Feld</strong>
           {choices.map((move, index) => {
