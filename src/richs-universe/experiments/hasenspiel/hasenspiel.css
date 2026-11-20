@@ -121,7 +121,13 @@
   font: inherit;
 }
 
-.ru-hasenspiel .hare-playfield { position: relative; }
+.ru-hasenspiel .hare-playfield {
+  position: relative;
+  border-radius: 14px;
+  background: linear-gradient(#11251b40, #11251b40), url("./forest-clearing.webp") center / cover no-repeat #172522;
+}
+.ru-hasenspiel .hare-center rect { fill-opacity: .82; }
+.ru-hasenspiel .hare-cell[data-target="true"] > .hare-center rect { fill-opacity: 1; }
 
 .ru-hasenspiel .hare-victory,
 .ru-hasenspiel .hare-leaves,
@@ -176,6 +182,9 @@
 .ru-hasenspiel .hare-row-numbers {
   fill: #f5efdf;
   font: bold 15px system-ui, sans-serif;
+  paint-order: stroke;
+  stroke: #172522;
+  stroke-width: 3px;
   text-anchor: middle;
   dominant-baseline: central;
   pointer-events: none;

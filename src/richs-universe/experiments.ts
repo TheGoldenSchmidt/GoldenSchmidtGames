@@ -30,7 +30,7 @@ export interface UniverseExperiment {
 export const EXPERIMENTS: UniverseExperiment[] = [
   {
     id: "hasenspiel",
-    title: "Hasenspiel",
+    title: "Die Lichtung",
     detail: "Zu zweit um das Zentrum spielen",
     component: lazy(() => import("./experiments/hasenspiel/Hasenspiel"))
   },
