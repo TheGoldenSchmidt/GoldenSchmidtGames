@@ -161,7 +161,7 @@ export function MatchStage({ game, id, now, control, busy = false, menu, doneAct
       const inset = client.fullBleed ? 0 : topRef.current;
       ctx.fillStyle = client.backdrop ?? "#120a22"; ctx.fillRect(0, 0, width, height);
       ctx.save(); ctx.translate(0, inset);
-      client.render(ctx, { ...frameRef.current(t), names, w: width, h: height - inset, top: client.fullBleed ? topRef.current : 0 });
+      client.render(ctx, { ...frameRef.current(t), names, w: width, h: Math.max(1, height - inset), top: client.fullBleed ? topRef.current : 0 });
       ctx.restore();
       frame = requestAnimationFrame(draw);
     };
@@ -183,7 +183,7 @@ export function MatchStage({ game, id, now, control, busy = false, menu, doneAct
       <div className="match-controls"><Controls io={io} view={match} viewer={id} active={active} world={world === "ready"} /></div>
       {count > 0 && <div className="match-countdown" role="status"><b key={count}>{count}</b><span>{meta.controls}</span></div>}
       {measuring && <MeasurePanel gameId={matchId} name={meta.name} local={local.current} arrivals={arrivals} rtt={own?.rtt} chase={!!client.chase && world === "ready"} />}
-      {match.done && <div className="match-countdown match-done" role="status"><b>✓</b><span>Das Ergebnis steht fest!</span>{doneActions && <div className="match-done__actions">{doneActions}</div>}</div>}
+      {match.done && <div className="match-countdown match-done"><div className="match-done__note" role="status"><b>✓</b><span>Das Ergebnis steht fest!</span></div>{doneActions && <div className="match-done__actions">{doneActions}</div>}</div>}
       {!own && <div className="match-countdown" role="status"><span>Du schaust zu.</span></div>}
       {feedback.text && count <= 0 && !match.done && <p className={`match-feedback ${feedback.good ? "is-good" : "is-bad"}`} key={feedback.key} role="status">{feedback.text}</p>}
     </div>

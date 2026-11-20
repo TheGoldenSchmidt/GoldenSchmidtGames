@@ -95,6 +95,7 @@ body:has(.match-game) { overflow:hidden; }
 .party-screen--playing:has(.match-game) .party-header,.party-screen--playing:has(.match-game) .party-mini-player { display:none; }
 /* Disconnected: the notice sits above the game (it pauses anyway). */
 .party-screen--playing:has(.match-game) .party-connection { position:fixed; left:12px; right:12px; top:max(12px, env(safe-area-inset-top)); z-index:70; }
+.match-done__note { display:flex; flex-direction:column; align-items:center; gap:12px; }
 .match-done__actions { display:grid; gap:8px; width:min(280px, 86%); pointer-events:auto; }
 
 @media (prefers-reduced-motion: reduce) {
