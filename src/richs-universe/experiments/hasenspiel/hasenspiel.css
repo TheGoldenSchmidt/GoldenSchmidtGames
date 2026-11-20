@@ -104,3 +104,20 @@
   gap: 8px;
 }
 .ru-hasenspiel .hare-token path[data-kind="deer"] { fill: none; stroke-width: 1.5; }
+
+.ru-hasenspiel .hare-mode {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+.ru-hasenspiel .hare-mode select {
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid #7a8c81;
+  border-radius: 8px;
+  color: inherit;
+  background: #2b4037;
+  font: inherit;
+}
