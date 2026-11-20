@@ -17,6 +17,14 @@ TheGoldenSchmidt verantwortet Integration und Betrieb, Rich seinen [Bereich](src
 
 Technische Einrichtung und noch offene Betreiberaufgaben: [Deployment](DEPLOYMENT.md#einrichtung-durch-den-betreiber).
 
+## Codesuche mit Graphify
+
+- Codesuche und Architekturorientierung zuerst über Graphify für `TheGoldenSchmidt/GoldenSchmidtGames` durchführen, sofern der Index verfügbar ist. Symbole mit `graphify_find`, Zusammenhänge mit `query_graph`, Dateiabhängigkeiten mit `graphify_file_neighbors` und Änderungsfolgen mit `graphify_impact` untersuchen.
+- Zunächst gezielte Abfragen, Signaturen oder Dateiübersichten verwenden; vollständige Definitionen nur bei Bedarf mit `graphify_node` nachladen. Keine breiten Dateidumps oder wiederholten Suchläufe ohne neue Fragestellung.
+- Den zurückgegebenen `commitSha` mit dem untersuchten Branchstand vergleichen und lokale Änderungen berücksichtigen. Bei passendem Stand und ausreichender Abdeckung Ergebnisse nicht nochmals mit `rg` verifizieren.
+- Bei fehlendem/veraltetem Index, leeren, unvollständigen oder abgeschnittenen Ergebnissen sowie nicht indexierten Dateien gezielt aktuelle Dateien lesen bzw. `rg` verwenden. Fehlende Graphkanten beweisen keine fehlenden Abhängigkeiten; semantische Treffer sind Vorschläge.
+- Vor Änderungen die betroffenen aktuellen Dateien lesen. Graphify unterstützt die Orientierung und ersetzt weder verbindliche Repo-Dokumentation noch Builds, Tests oder die Prüfung des Diffs.
+
 ## Architektur
 
 - Regeln/Wertung in `shared/`; lokal, Node und Handy-Host verwenden dieselben Funktionen. Einstieg: [Katalog](shared/games.ts), [Raumkern](shared/roomCore.ts), [Ansichtsauswahl](src/App.tsx).
