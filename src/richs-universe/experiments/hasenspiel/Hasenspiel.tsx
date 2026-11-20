@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ExperimentProps } from "../../experiments";
 import { CENTER, canMove, cells, centerLinks, deerLine, movesFrom, newGame, play, sideLinks, type Cell, type Color, type Kind, type Level } from "./rules";
+import { botLevels, botTurn, type BotLevel } from "./bot";
 import "./hasenspiel.css";
 
 const side = 54;
@@ -35,6 +36,17 @@ function triangle(cell: Cell) {
 
 export default function Hasenspiel({ onExit }: ExperimentProps) {
   const [game, setGame] = useState(() => newGame());
+  const [botLevel, setBotLevel] = useState<BotLevel>();
+  const botThinking = !!botLevel && !game.result && game.turn === "gray";
+  useEffect(() => {
+    if (!botLevel || !botThinking) return;
+    const timer = window.setTimeout(() => {
+      const next = botTurn(game, botLevel);
+      setGame(current => current === game ? next : current);
+    }, 400);
+    return () => window.clearTimeout(timer);
+  }, [botLevel, botThinking, game]);
+
   const [selected, setSelected] = useState<Cell>();
   const [destination, setDestination] = useState<Cell>();
   const targets = selected ? movesFrom(game, selected) : [];
@@ -43,7 +55,8 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
     deerLine(game.board, color).between.map(cell => cell.id)));
   const center = game.board[CENTER];
   const status = game.result === "draw" ? "Unentschieden" : game.result
-    ? `${names[game.result]} gewinnt` : `${names[game.turn]} ist am Zug`;
+    ? `${botLevel && game.result === "gray" ? "Bot" : names[game.result]} gewinnt`
+    : botThinking ? "Der Bot ist am Zug" : `${names[game.turn]} ist am Zug`;
 
   function reset(level: Level) {
     setGame(newGame(level));
@@ -59,7 +72,7 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
   }
 
   function select(cell: Cell) {
-    if (game.result) return;
+    if (game.result || botThinking) return;
     setDestination(undefined);
     const count = targets.filter(move => move.to === cell.id).length;
     if (count > 1) setDestination(cell);
@@ -75,6 +88,16 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
           <h1>Hasenspiel</h1>
           <button type="button" onClick={() => reset(game.level)}>Neu</button>
         </header>
+        <label className="hare-mode">
+          Gegner
+          <select value={botLevel ?? ""} onChange={event => {
+            setBotLevel(botLevels.find(level => level === event.target.value));
+            reset(game.level);
+          }}>
+            <option value="">Zweite Person</option>
+            {botLevels.map(level => <option key={level} value={level}>Bot · {level}</option>)}
+          </select>
+        </label>
         <div className="hare-levels" role="group" aria-label="Schwierigkeitsstufe">
           {levels.map(level => <button key={level} type="button" aria-pressed={game.level === level}
             onClick={() => { if (level !== game.level) reset(level); }}>Stufe {level}</button>)}
@@ -95,7 +118,7 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
             const shape = isCenter ? { x: width / 2, y: boardHeight / 2, points: "" } : triangle(cell);
             const rabbit = game.board[cell.id];
             const target = targets.find(move => move.to === cell.id);
-            const active = !game.result && (rabbit?.color === game.turn || !!target);
+            const active = !game.result && !botThinking && (rabbit?.color === game.turn || !!target);
             const frozen = rabbit && game.frozen.includes(rabbit.id);
             return (
               <g key={cell.id} className="hare-cell" data-target={!!target} data-selected={selected === cell} data-protected={protectedFields.has(cell.id)}
@@ -139,7 +162,7 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
             </button>;
           })}
         </section>}
-        {!game.result && !canMove(game) && <button type="button" onClick={() => { setGame(play(game)); setSelected(undefined); setDestination(undefined); }}>Kein Zug möglich · Passen</button>}
+        {!game.result && !botThinking && !canMove(game) && <button type="button" onClick={() => { setGame(play(game)); setSelected(undefined); setDestination(undefined); }}>Kein Zug möglich · Passen</button>}
         <details>
           <summary>Regeln für Stufe {game.level}</summary>
           <p>Wähle einen eigenen Hasen und tippe auf ein markiertes Zielfeld. Ziehe entlang einer Kante eine Reihe vorwärts oder springe über einen benachbarten Hasen auf ein freies Feld. Sprünge können seitlich und vorwärts führen.</p>
@@ -150,7 +173,7 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
           {game.level >= 2 && <p>Hasen dürfen seitlich ein Feld zur Reihenmitte ziehen. Stehen drei gleichfarbige Hasen direkt nebeneinander, kann der mittlere nicht von einem Gegner übersprungen werden.</p>}
           {game.level === 3 && <>
             <p>Hasen und Affen dürfen zweimal springen, wenn sie erst eine eigene und dann eine gegnerische Figur überspringen.</p>
-            <p>Hirsche ziehen ein Feld vor oder zur Seite. Sie können auch nach links, rechts oder diagonal vorwärts bis zum letzten freien Feld vor einem Hindernis oder dem Brettrand voranpreschen. Stehen vier bis sechs Felder zwischen den Hirschen, ist der Bereich für gegnerische Hasen gesperrt. Hasen darin setzen einmal aus, sobald die Sperre entsteht. Danach dürfen sie hinausziehen. Die beiden Hirsche können von Affen übersprungen werden.</p>
+            <p>Hirsche ziehen ein Feld vor oder zur Seite. Sie können auch nach links, rechts oder diagonal vorwärts bis zum letzten freien Feld vor einem Hindernis oder dem Brettrand voranpreschen, auch über die Spielfeldmitte hinweg. Stehen vier bis sechs Felder zwischen den Hirschen, ist der Bereich für gegnerische Hasen gesperrt. Hasen darin setzen einmal aus, sobald die Sperre entsteht. Danach dürfen sie hinausziehen. Die beiden Hirsche können von Affen übersprungen werden.</p>
             <p>Affen ziehen und springen auch rückwärts. Beim Hangeln dürfen sie über mindestens zwei Hasen vorwärts oder seitlich klettern, mit höchstens einem leeren Feld dazwischen. Sie landen auf einem freien Feld und schlagen beim Hangeln keine Figur.</p>
           </>}
         </details>

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { CENTER, cells, deerLine, movesFrom, newGame, play, type Color, type Game, type Kind } from "./rules";
+import { botLevels, botTurn } from "./bot";
+import { CENTER, cells, deerLine, movesFrom, newGame, nextPositions, play, type Color, type Game, type Kind } from "./rules";
 
 const piece = (id: string, color: Color = "blue", kind: Kind = "rabbit") => ({ id, color, kind });
 const moves = (game: Game, id: string) => movesFrom(game, cells.find(cell => cell.id === id)!);
@@ -118,5 +119,39 @@ assert.equal(moves({ ...monkey, board: {
   ...monkey.board, "5:-1": undefined, "5:0": piece("second", "gray")
 } }, "5:-4").some(move => move.to === "5:1"), false);
 assert.ok(moves({ ...monkey, board: { "5:-4": monkey.board["5:-4"] } }, "5:-4").some(move => move.to === "4:-4"));
+
+for (const [color, from, across, obstacle] of [
+  ["blue", "5:0", "7:0", "8:0"],
+  ["gray", "7:0", "5:0", "4:0"]
+] as const) {
+  const game: Game = { ...newGame(3), turn: color, board: {
+    [from]: piece("runner", color, "deer"), [obstacle]: piece("obstacle")
+  } };
+  assert.equal(play(game, from, across).board[across]?.id, "runner");
+  assert.ok(!moves(game, from).some(move => move.to === obstacle));
+  const occupied = { ...game, board: { ...game.board, [across]: piece("blocker") } };
+  assert.ok(moves(occupied, from).some(move => move.to === CENTER));
+  assert.ok(!moves(occupied, from).some(move => move.to === across));
+}
+
+for (const level of [1, 2, 3] as const) {
+  const game: Game = { ...newGame(level), turn: "gray" };
+  for (const strength of botLevels) {
+    const next = botTurn(game, strength, () => 0);
+    assert.ok(nextPositions(game).some(position => JSON.stringify(position) === JSON.stringify(next)));
+    assert.equal(next.turn, "blue");
+    const blocked: Game = { ...game, board: {} };
+    assert.equal(botTurn(blocked, strength).passes, 1);
+    const finished: Game = { ...game, result: "blue" };
+    assert.equal(botTurn(finished, strength), finished);
+  }
+}
+
+const threat: Game = { ...newGame(2), turn: "gray", held: 2, board: {
+  [CENTER]: piece("leader"), "7:0": piece("defender", "gray"), "7:4": piece("reserve", "gray")
+} };
+for (const strength of ["Mittel", "Schwer"] as const) {
+  assert.equal(botTurn(threat, strength).board[CENTER], undefined);
+}
 
 console.log("Hasenspiel: Stufen 1–3 geprüft");

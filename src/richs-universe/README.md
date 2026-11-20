@@ -49,7 +49,8 @@ Ein reguläres Online-Spiel gemeinsam planen: Regeln nach `shared/`, Einbindung 
 
 ## Hasenspiel
 
-Spielbarer Prototyp für zwei Personen auf einem Smartphone. Stufen 1–3
+Spielbarer Prototyp für zwei Personen auf einem Smartphone oder
+für eine Person gegen einen Bot (Leicht, Mittel oder Schwer). Stufen 1–3
 lassen sich im Spiel auswählen. Beim Wechsel beginnt eine neue Partie. Stufe 1 beginnt
 mit 16 Hasen pro Seite. Zwei gespiegelte Dreiecke mit je sechs Reihen umgeben
 das Zentrum. Die fünf Zugänge pro Seite sind für Sprünge paarweise gerade
@@ -63,6 +64,7 @@ aufeinanderfolgendes Passen bei leerem Zentrum ergibt ein Unentschieden.
 Stufe 2 erlaubt Hasen seitliche Schritte zur Reihenmitte und schützt den
 mittleren Hasen eines gleichfarbigen Dreiergespanns vor gegnerischen Sprüngen.
 Stufe 3 ergänzt Hirsche, Affen und Doppelsprünge. Hirsche können seitlich oder
-diagonal vorwärts bis zum letzten freien Feld vor Hindernis oder Brettrand laufen. Zum Testen sperren Hirsche
+diagonal vorwärts bis zum letzten freien Feld vor Hindernis oder Brettrand laufen,
+auch über die Spielfeldmitte hinweg. Zum Testen sperren Hirsche
 bei vier bis sechs Feldern Abstand dazwischen. Affen hangeln vorwärts oder
 seitlich, mit höchstens einer Lücke und ohne zu schlagen.

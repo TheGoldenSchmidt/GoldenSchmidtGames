@@ -103,14 +103,21 @@ function deerMoves(board: Board, from: Cell, piece: Piece): Move[] {
     if (endOfRowRun !== from) targets.add(endOfRowRun.id);
 
     // Follow either forward diagonal through the alternating triangles.
-    let current = from;
-    while (current.id !== CENTER) {
-      const next = adjacent(current).find(to => forward(piece, current, to) > 0)
-        ?? nextSideways(current);
-      if (!next || board[next.id]) break;
-      current = next;
+    const starts = from.id === CENTER
+      ? adjacent(from).filter(to => forward(piece, from, to) > 0 && !board[to.id])
+      : [from];
+    for (const start of starts) {
+      let current = start;
+      let entryColumn = start.x;
+      for (;;) {
+        const next = adjacent(current).find(to => forward(piece, current, to) > 0
+          && (current.id !== CENTER || to.x === entryColumn)) ?? nextSideways(current);
+        if (!next || board[next.id]) break;
+        entryColumn = current.x;
+        current = next;
+      }
+      if (forward(piece, from, current) > 0) targets.add(current.id);
     }
-    if (forward(piece, from, current) > 0) targets.add(current.id);
   }
   return [...targets].map(to => ({ to }));
 }
@@ -219,6 +226,16 @@ export function play(game: Game, fromId?: string, toId?: string, choice = 0): Ga
   const move = from && movesFrom(game, from).filter(candidate => candidate.to === toId)[choice];
   if (!move && (fromId !== undefined || canMove(game))) return game;
 
+  return applyMove(game, from, move);
+}
+
+export function nextPositions(game: Game): Game[] {
+  if (game.result) return [];
+  const positions = cells.flatMap(from => movesFrom(game, from).map(move => applyMove(game, from, move)));
+  return positions.length ? positions : [applyMove(game)];
+}
+
+function applyMove(game: Game, from?: Cell, move?: Move): Game {
   const board = { ...game.board };
   const previous = { ...game.previous, [game.turn]: undefined };
   if (move && from) {
