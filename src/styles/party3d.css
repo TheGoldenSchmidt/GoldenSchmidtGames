@@ -119,3 +119,34 @@
 .roll-it-up .party-map-scroll { background:#423c30; }
 .roll-finale { background:var(--tray-paper); border-radius:14px; padding:24px; }
 .roll-sunset { display:block; width:100%; max-height:200px; margin:0 auto 16px; }
+
+/* 1st-generation arenas fill the whole screen like the match games; heading and status float on top. */
+body:has(.party-action-game) { overflow:hidden; }
+.party-screen--playing:has(.party-action-game) .party-header,.party-screen--playing:has(.party-action-game) .party-mini-player { display:none; }
+.party-screen--playing:has(.party-action-game) .party-connection { position:fixed; left:12px; right:12px; top:max(12px, env(safe-area-inset-top)); z-index:70; }
+.party-action-game { --arena-top:max(8px, env(safe-area-inset-top)); position:fixed; inset:0; z-index:30; overflow:hidden; background:#94def1; }
+.party-action-game .party-action-stage,.party-screen--playing .party-action-game .party-action-stage,.party-practice .party-action-game .party-action-stage { position:absolute; inset:0; height:auto; min-height:0; border-radius:0; }
+.party-action-game .party-action-heading,.party-screen--playing .party-action-game .party-action-heading { position:absolute; z-index:7; top:var(--arena-top); left:max(8px, env(safe-area-inset-left)); right:max(8px, env(safe-area-inset-right)); gap:8px; padding:6px 8px 6px 12px; border-radius:16px; background:#fff9e8eb; box-shadow:0 3px 0 #10485b55; pointer-events:none; }
+.party-action-game .party-action-heading h2 { display:flex; flex-wrap:wrap; align-items:baseline; gap:2px 6px; font-size:1.05rem; }
+.party-action-game .party-action-heading h2 small { padding:1px 7px; border-radius:999px; background:#10485b; color:#fff9e8; font-size:.6rem; letter-spacing:0; }
+.party-action-game .party-action-heading p { display:none; }
+.party-action-game .party-action-heading > span { width:40px; height:40px; font-size:.75rem; }
+.party-arena-menu { position:relative; pointer-events:auto; }
+.party-arena-menu summary { display:grid; place-items:center; width:44px; height:44px; border-radius:50%; border:2px solid #b9d2bd; background:#fff; color:#10485b; font-size:1.1rem; font-weight:900; list-style:none; cursor:pointer; touch-action:manipulation; }
+.party-arena-menu summary::-webkit-details-marker { display:none; }
+.party-arena-menu summary:focus-visible { outline:3px solid #10485b; outline-offset:2px; }
+.party-arena-menu[open] summary { background:#ffd258; border-color:#10485b; }
+.party-arena-menu__panel { position:absolute; right:0; top:52px; display:grid; gap:8px; width:min(250px, calc(100vw - 24px)); padding:12px; border-radius:16px; background:#fff9e8; border:2px solid #b9d2bd; box-shadow:0 12px 30px #10485b55; }
+.party-arena-menu__panel p { margin:0; font-size:.75rem; line-height:1.35; color:#315e47; }
+.party-arena-menu__panel button,.party-arena-done-actions button { min-height:46px; padding:0 14px; border-radius:14px; border:2px solid #10485b; background:#ffd258; color:#10485b; font-weight:900; touch-action:manipulation; }
+.party-arena-menu__panel button.is-quiet,.party-arena-done-actions button.is-quiet { background:#fff; }
+.party-arena-done-actions { display:grid; gap:8px; width:min(280px, 86%); margin-top:10px; pointer-events:auto; }
+.party-action-game .party-arena-status,.party-screen--playing .party-action-game .party-arena-status { position:absolute; z-index:6; top:calc(var(--arena-top) + 62px); left:max(8px, env(safe-area-inset-left)); right:max(8px, env(safe-area-inset-right)); flex-direction:row; align-items:center; min-height:0; margin:0; padding:5px 10px; border-radius:12px; background:#fff0b9e6; pointer-events:none; }
+.party-action-game .party-arena-status p { font-size:.75rem; }
+.party-action-game .party-action-feedback { top:calc(var(--arena-top) + 112px); }
+.party-action-game .party-game-controls { padding:12px max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); }
+.party-action-game .party-tilt-panel,.party-screen--playing .party-action-game .party-tilt-panel { position:absolute; z-index:6; left:50%; bottom:calc(max(12px, env(safe-area-inset-bottom)) + 124px); transform:translateX(-50%); width:min(92%, 420px); margin:0; padding:6px 10px; border-radius:14px; background:#e1edd8eb; }
+.party-action-game .party-tilt-panel > p { width:auto; flex:1; margin:0; text-align:left; font-size:.7rem; }
+/* Practice: the learning goals float below the arena HUD. */
+.party-practice:has(.party-arena-menu[open]) .party-practice-goals { display:none; }
+.party-practice:has(.party-action-game) .party-practice-goals { position:fixed; z-index:31; top:calc(max(8px, env(safe-area-inset-top)) + 112px); left:max(8px, env(safe-area-inset-left)); right:max(8px, env(safe-area-inset-right)); margin:0; padding:6px 10px; border-radius:12px; background:#fff9e8e6; pointer-events:none; }

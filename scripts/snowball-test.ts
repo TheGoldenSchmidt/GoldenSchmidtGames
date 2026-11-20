@@ -82,6 +82,14 @@ const LANE = 8.3;
   thrower.balls = 2; target.hitAt = s.time;
   send(s, "p0", { ax: 1, ay: 0 }, true); run(s, 250);
   assert.equal(target.hits, 1, "Kurze Schutzzeit");
+  // Loslassen ohne Zielrichtung im selben Paket: Wurf geht in die zuletzt gezielte Richtung, nicht in die Laufrichtung.
+  const aimed = make(3); put(aimed, "p0", 2, LANE); put(aimed, "p1", 7, LANE); put(aimed, "p2", 20, 20);
+  aimed.game.players.p0.balls = 1; aimed.game.players.p0.fx = 0; aimed.game.players.p0.fy = 1;
+  send(aimed, "p0", { ax: 1, ay: 0 }); advanceMatch(aimed, aimed.time + 50);
+  send(aimed, "p0", {}, true); advanceMatch(aimed, aimed.time + 50);
+  assert.ok(aimed.game.balls[0].vx > 0 && Math.abs(aimed.game.balls[0].vy) < 1e-9, "Wurf in Zielrichtung");
+  run(aimed, 500);
+  assert.equal(aimed.game.players.p1.hits, 1, "Trifft das anvisierte Ziel");
   // Ohne Ball kein Wurf.
   const empty = make(); put(empty, "p0", 2, LANE); empty.game.players.p0.balls = 0;
   send(empty, "p0", { ax: 1 }, true); advanceMatch(empty, empty.time + 50);

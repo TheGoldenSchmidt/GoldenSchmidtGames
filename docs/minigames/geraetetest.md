@@ -25,7 +25,8 @@ Android und iPhone, möglichst älteres Gerät; sechs für Volllast. Je relevant
 | Turmsicht | Orientierung, Lesbarkeit hell/dunkel und „zuletzt gesehen“, kamerarelatives Zielen, gleichzeitiges Lenken/Kamerawischen oben rechts |
 | Neon Pong | Schräge/schnelle Bälle treffbar, kein Flackern, späte Rettung wirkt fair für beide Seiten |
 | Bumper Mayhem | Item-Kisten erkennbar, Ölfleck/Schockwelle verständlich, Riesenauto-Größe |
-| Neon Racer | Lenkrad und Pedale mit zwei Daumen, Item-Knopf, Lesbarkeit bei voller Fahrt; Kippen: Querformat, Freigabe (iOS), Lenkrichtung, „Lenkrad ausrichten“, Pfeil-Rückfall |
+| Neon Racer | Lenkrad und Pedale mit zwei Daumen, Item-Knopf, Lesbarkeit bei voller Fahrt; Kippen: gedrehtes Querformat in der installierten App, Safe Areas, Freigabe (iOS), Lenkrichtung, „Lenkrad ausrichten“, Pfeil-Rückfall |
+| Vollbild | HUD lesbar und nicht über wichtigen Spielteilen, Menü „⋯“ (Aufgeben/Übung), Notch/Home-Leiste, Verbindungshinweis |
 | Tower Survival / Schneeballschlacht | Survival-Tempo gegen Ende; Schneeball-Wurf, Formen, 3D-Leistung mit sechs Figuren |
 | Parcours | Laufzeiten, Aktionen, Balkentreffer, Klettern/Wippen/Flut, Klappenwarnung/Wind/Standhaft |
 | Übrige | FPS/Ruckler, kleine Figuren, Quick-Draw-Fairness, Light-Trails-Lenkung |

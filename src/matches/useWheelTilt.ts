@@ -31,12 +31,14 @@ export function steerFromRoll(roll: number, rest: number) {
 /**
  * Tilt steering for the landscape racer: hold the phone like a steering
  * wheel. `enable` must run in a tap (iOS asks for permission); the first
- * sample is the rest position, `calibrate` sets it again.
+ * sample is the rest position, `calibrate` sets it again. `extraAngle` is a
+ * rotation of the game on screen (degrees, clockwise) on top of the screen's own.
  */
-export function useWheelTilt(onSteer: (x: number) => void) {
+export function useWheelTilt(onSteer: (x: number) => void, extraAngle: () => number = () => 0) {
   const [status, setStatus] = useState<WheelTiltStatus>("off");
   const rest = useRef<number | undefined>(undefined), latest = useRef<number | undefined>(undefined), steer = useRef(onSteer), cleanup = useRef<() => void>(() => {}), mounted = useRef(true);
-  steer.current = onSteer;
+  const extra = useRef(extraAngle);
+  steer.current = onSteer; extra.current = extraAngle;
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; cleanup.current(); }; }, []);
   async function enable() {
     cleanup.current(); rest.current = undefined;
@@ -51,7 +53,8 @@ export function useWheelTilt(onSteer: (x: number) => void) {
     let received = false;
     const event = (e: DeviceOrientationEvent) => {
       if (e.beta === null || e.gamma === null || document.hidden) return;
-      const angle = screen.orientation?.angle ?? (window as Window & { orientation?: number }).orientation ?? 0, roll = screenRoll(e.beta, e.gamma, angle);
+      // The screen's own rotation plus a turn of the game itself (portrait-locked app showing landscape).
+      const angle = ((screen.orientation?.angle ?? (window as Window & { orientation?: number }).orientation ?? 0) + extra.current()) % 360, roll = screenRoll(e.beta, e.gamma, angle);
       if (roll === undefined) return;
       if (!received) { received = true; setStatus("active"); }
       latest.current = roll; rest.current ??= roll;

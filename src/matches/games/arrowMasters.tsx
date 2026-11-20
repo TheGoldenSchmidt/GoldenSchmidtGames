@@ -65,6 +65,7 @@ function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
 }
 
 export const arrowMastersClient: MatchClient = {
+  backdrop: "#8fd3ff",
   render,
   quiet: ["fire"],
   Controls({ io, view, viewer, active }) {

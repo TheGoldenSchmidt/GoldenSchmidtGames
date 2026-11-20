@@ -812,7 +812,7 @@ test("Neon Racer: Gas fährt, Lenkrad lenkt, Bremse hält, Item-Knopf ohne Item 
   } finally { session.close(); }
 });
 
-test("Neon Racer – Kippen: Querformat füllt den Bildschirm, Kippen lenkt, ohne Sensor Pfeiltasten", async ({ page }, testInfo) => {
+test("Neon Racer – Kippen: im Hochformat gedrehtes Querformat, Kippen lenkt, ohne Sensor Pfeiltasten", async ({ page }, testInfo) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   const errors: string[] = []; page.on("pageerror", e => errors.push(e.message));
   const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "racertilt" });
@@ -820,32 +820,35 @@ test("Neon Racer – Kippen: Querformat füllt den Bildschirm, Kippen lenkt, ohn
     await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
     await session.action({ type: "ready" }, session.ids[1]);
     await matchStarted(page);
-    // Hochkant: Hinweis zum Drehen.
-    await expect(page.getByText("Dreh dein Handy ins Querformat.")).toBeVisible();
-    await page.setViewportSize({ width: 844, height: 390 });
-    await expect(page.getByText("Dreh dein Handy ins Querformat.")).toBeHidden();
-    const stage = (await page.locator(".match-game--racertilt").boundingBox())!;
-    expect(stage.width).toBeGreaterThan(800); expect(stage.height).toBeGreaterThan(370);
+    // The app is locked to portrait: the game itself turns and fills the screen sideways.
+    const game = page.locator(".match-game--racertilt");
+    expect(await game.evaluate(e => getComputedStyle(e).transform)).not.toBe("none");
+    const box = (await game.boundingBox())!, viewport = page.viewportSize()!;
+    expect(Math.abs(box.width - viewport.width)).toBeLessThan(2); expect(Math.abs(box.height - viewport.height)).toBeLessThan(2);
+    const canvas = await page.locator(".match-canvas").evaluate(e => [e.clientWidth, e.clientHeight]);
+    expect(canvas[0]).toBeGreaterThan(canvas[1]);
     const input = async () => ((await session.state()).partyGame!.mini!.match as MatchState<RacerGame>).players.find(p => p.id === session.ids[0])!.input;
-    // Gas mit dem rechten Daumen.
+    // Gas with the right thumb (bottom of the turned screen).
     const gas = (await page.getByRole("button", { name: "Gas", exact: true }).boundingBox())!;
     await page.mouse.move(gas.x + gas.width / 2, gas.y + gas.height / 2); await page.mouse.down();
     await expect.poll(async () => (await input()).ha).toBe(true);
     await page.mouse.up();
-    // Sensor starten: erste Messung ist die Ruhelage, danach lenkt Drehen im Uhrzeigersinn nach rechts.
+    // Sensor: the first sample is the rest position; turning the phone clockwise steers right.
     await page.getByRole("button", { name: "Bewegungssteuerung starten", exact: true }).tap();
-    // The listener is attached once the (possibly asynchronous) permission request is done.
     await expect(page.getByRole("button", { name: "Lenkrad ausrichten", exact: true })).toBeVisible();
-    const angle = await page.evaluate(() => screen.orientation?.angle ?? 0);
-    const [rest, turned] = angle === 90 ? [[0, -90], [20, -90]] : angle === 270 ? [[0, 90], [-20, 90]] : [[90, 0], [70, 90]];
-    await page.evaluate(([b, g]) => window.dispatchEvent(new DeviceOrientationEvent("deviceorientation", { alpha: 0, beta: b, gamma: g })), rest);
-    await page.waitForTimeout(100);
-    await page.evaluate(([b, g]) => window.dispatchEvent(new DeviceOrientationEvent("deviceorientation", { alpha: 0, beta: b, gamma: g })), turned);
+    // Held sideways with the top edge left (as the turned game asks): gamma −90, beta is the turn.
+    const sample = (beta: number) => page.evaluate(b => window.dispatchEvent(new DeviceOrientationEvent("deviceorientation", { alpha: 0, beta: b, gamma: -90 })), beta);
+    await sample(0); await page.waitForTimeout(100); await sample(20);
     await expect.poll(async () => (await input()).x).toBeGreaterThan(.5);
-    await page.screenshot({ path: testInfo.outputPath("racer-tilt.png") });
-    // Ohne Sensorsignal (neuer Start, keine Ereignisse): Pfeiltasten erscheinen.
-    await page.reload();
+    await sample(-20);
+    await expect.poll(async () => (await input()).x).toBeLessThan(-.5);
+    await page.screenshot({ path: testInfo.outputPath("racer-tilt-turned.png") });
+    // A phone that does rotate: no extra turn, same controls.
     await page.setViewportSize({ width: 844, height: 390 });
+    expect(await game.evaluate(e => getComputedStyle(e).transform)).toBe("none");
+    // Without a sensor signal (fresh start, no events): arrow buttons appear.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.reload();
     await page.getByRole("button", { name: "Bewegungssteuerung starten", exact: true }).tap();
     const right = page.getByRole("button", { name: "Rechts lenken", exact: true });
     await expect(right).toBeVisible({ timeout: 6000 });

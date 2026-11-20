@@ -89,6 +89,7 @@ function LavaControls({ io, view, viewer, active, world }: MatchControlsProps) {
 }
 
 export const floorIsLavaClient: MatchClient = {
+  backdrop: "#8a1d12",
   render,
   chase: true,
   // 2.5D presentation; the canvas above stays as fallback without WebGL.

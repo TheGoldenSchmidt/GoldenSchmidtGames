@@ -18,10 +18,12 @@ export interface MatchFrame {
   t: number;
   /** Estimated authority time (ms since start) for this frame, for smooth extrapolation. */
   simTime: number;
+  /** Height covered by the floating HUD at the top (only for `fullBleed` games; others start below it). */
+  top: number;
 }
 
 /** Frame for a 3D world: the same snapshot data as the canvas, plus the chosen figures. */
-export interface MatchWorldFrame extends Omit<MatchFrame, "w" | "h"> {
+export interface MatchWorldFrame extends Omit<MatchFrame, "w" | "h" | "top"> {
   /** Figure per player id (as chosen in the lobby). */
   characters: Record<string, string | undefined>;
 }
@@ -51,6 +53,10 @@ export interface MatchClient {
   quiet?: readonly string[];
   /** Label under the HUD score; defaults to "Punkte". */
   unit?: string;
+  /** Colour under the floating HUD for canvas games (the canvas starts below it). */
+  backdrop?: string;
+  /** The canvas draws the full screen and keeps its own HUD items below `frame.top`. */
+  fullBleed?: boolean;
   /**
    * Optional 2.5D/3D presentation, loaded on demand. Without WebGL or after an
    * error the stage falls back to `render` on the canvas; rules are unaffected.

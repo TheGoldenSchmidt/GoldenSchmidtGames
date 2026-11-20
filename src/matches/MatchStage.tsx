@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { PartyGame } from "../../shared/party";
 import { MATCH_MODULES, matchStandings, type MatchId } from "../../shared/matches/framework";
 import { NEUTRAL_MATCH_INPUT, type MatchInput, type MatchState } from "../../shared/matches/types";
@@ -16,13 +16,18 @@ function webglAvailable() {
   return webgl;
 }
 
-interface Props { game: PartyGame; id: string; now: number; control: (input: MatchInput, reliable: boolean) => void; busy?: boolean }
+/**
+ * `menu`: actions for the HUD menu (give up, close the practice); `doneActions`:
+ * buttons on the result overlay (practice again); `note`: a small tag next to the title.
+ */
+export interface MatchUi { menu?: ReactNode; doneActions?: ReactNode; note?: string }
+interface Props extends MatchUi { game: PartyGame; id: string; now: number; control: (input: MatchInput, reliable: boolean) => void; busy?: boolean }
 
 /**
  * Shared stage for all match games: canvas with interpolation, HUD,
  * countdown, touch controls and input sending. Game rules stay in `shared/`.
  */
-export function MatchStage({ game, id, now, control, busy = false }: Props) {
+export function MatchStage({ game, id, now, control, busy = false, menu, doneActions, note }: Props) {
   const match = game.mini!.match!, matchId = match.id as MatchId, meta = MATCH_MODULES[matchId].meta, client = MATCH_CLIENTS[matchId];
   const own = match.players.find(p => p.id === id);
   const startAt = game.mini!.startAt;
@@ -96,6 +101,18 @@ export function MatchStage({ game, id, now, control, busy = false }: Props) {
     if (mine) setFeedback({ text: mine.text, key: mine.seq, good: !/false|hit|out|dead|lost/.test(mine.kind) || !mine.ids.includes(id) });
   }, [match.eventSeq]);
 
+  // The HUD floats over the full-screen stage; its height keeps canvas fields and overview cameras clear of it.
+  const hud = useRef<HTMLDivElement>(null), [top, setTop] = useState(0), topRef = useRef(0);
+  topRef.current = top;
+  useLayoutEffect(() => {
+    const element = hud.current;
+    if (!element) return;
+    const measure = () => setTop(Math.round(element.offsetTop + element.offsetHeight));
+    measure();
+    const observer = new ResizeObserver(measure); observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
   // Interpolation data for one drawn frame (canvas and 3D world alike).
   const frameData = (t: number) => {
     const snap = snapshots.current, interval = 1000 / meta.hz;
@@ -131,16 +148,21 @@ export function MatchStage({ game, id, now, control, busy = false }: Props) {
     const names = Object.fromEntries(game.players.map(p => [p.id, p.name]));
     let frame = 0, width = 0, height = 0;
     const resize = () => {
-      const box = element.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
-      width = box.width; height = box.height;
+      // Layout size (not the bounding box), so a rotated stage keeps its own width and height.
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      width = element.clientWidth; height = element.clientHeight;
       element.width = Math.max(1, Math.round(width * dpr)); element.height = Math.max(1, Math.round(height * dpr));
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
     resize();
     const observer = new ResizeObserver(resize); observer.observe(element);
     const draw = (t: number) => {
-      ctx.clearRect(0, 0, width, height);
-      client.render(ctx, { ...frameRef.current(t), names, w: width, h: height });
+      // Full-bleed games draw under the HUD themselves; the others get the area below it on their own backdrop.
+      const inset = client.fullBleed ? 0 : topRef.current;
+      ctx.fillStyle = client.backdrop ?? "#120a22"; ctx.fillRect(0, 0, width, height);
+      ctx.save(); ctx.translate(0, inset);
+      client.render(ctx, { ...frameRef.current(t), names, w: width, h: height - inset, top: client.fullBleed ? topRef.current : 0 });
+      ctx.restore();
       frame = requestAnimationFrame(draw);
     };
     frame = requestAnimationFrame(draw);
@@ -150,17 +172,8 @@ export function MatchStage({ game, id, now, control, busy = false }: Props) {
   const standings = matchStandings(match), score = standings.find(s => s.id === id)?.score ?? 0;
   const count = Math.ceil((startAt - now) / 1000);
   const Controls = client.Controls;
-  return <section className={`match-game match-game--${matchId}`} aria-label={meta.name}>
-    <header className="match-hud">
-      <div><h2>{meta.name}</h2><p role="status">{client.status?.(match, id) ?? meta.look.hint}</p></div>
-      <strong className="match-score"><b>{score}</b><small>{client.unit ?? "Punkte"}</small></strong>
-      <button type="button" className="match-sound" aria-pressed={sound} aria-label={sound ? "Ton ausschalten" : "Ton einschalten"} onClick={() => { const next = !sound; setSound(next); setSoundEnabled(next); if (next) unlockSound(); }}>{sound ? "♪" : "×"}</button>
-    </header>
-    <ol className="match-standings" aria-label="Zwischenstand">
-      {standings.map(s => { const p = match.players.find(q => q.id === s.id)!; return <li key={s.id} className={`${s.id === id ? "is-you" : ""} ${p.gone ? "is-gone" : ""}`} style={{ ["--player" as string]: playerColor(p.style) }}>
-        <i aria-hidden="true" /><span>{game.players.find(q => q.id === s.id)?.name ?? "?"}</span><b>{s.score}</b>
-      </li>; })}
-    </ol>
+  const status = client.status?.(match, id) ?? meta.look.hint;
+  return <section className={`match-game match-game--${matchId}`} aria-label={meta.name} style={{ ["--match-top" as string]: `${top}px` }}>
     <div className="match-stage">
       {world === "off"
         ? <canvas ref={canvas} className="match-canvas" role="img" aria-label={`Spielfeld: ${meta.name}`} />
@@ -170,9 +183,26 @@ export function MatchStage({ game, id, now, control, busy = false }: Props) {
       <div className="match-controls"><Controls io={io} view={match} viewer={id} active={active} world={world === "ready"} /></div>
       {count > 0 && <div className="match-countdown" role="status"><b key={count}>{count}</b><span>{meta.controls}</span></div>}
       {measuring && <MeasurePanel gameId={matchId} name={meta.name} local={local.current} arrivals={arrivals} rtt={own?.rtt} chase={!!client.chase && world === "ready"} />}
-      {match.done && <div className="match-countdown match-done" role="status"><b>✓</b><span>Das Ergebnis steht fest!</span></div>}
+      {match.done && <div className="match-countdown match-done" role="status"><b>✓</b><span>Das Ergebnis steht fest!</span>{doneActions && <div className="match-done__actions">{doneActions}</div>}</div>}
       {!own && <div className="match-countdown" role="status"><span>Du schaust zu.</span></div>}
       {feedback.text && count <= 0 && !match.done && <p className={`match-feedback ${feedback.good ? "is-good" : "is-bad"}`} key={feedback.key} role="status">{feedback.text}</p>}
+    </div>
+    {/* Floating HUD: title, status and players on the left, own score, sound and menu on the right. */}
+    <div className="match-hud" ref={hud}>
+      <header className="match-hud__info">
+        <h2>{meta.name}{note && <small>{note}</small>}</h2>
+        <p role="status">{status}</p>
+        <ol className="match-standings" aria-label="Zwischenstand">
+          {standings.map(s => { const p = match.players.find(q => q.id === s.id)!; return <li key={s.id} className={`${s.id === id ? "is-you" : ""} ${p.gone ? "is-gone" : ""}`} style={{ ["--player" as string]: playerColor(p.style) }}>
+            <i aria-hidden="true" /><span>{game.players.find(q => q.id === s.id)?.name ?? "?"}</span><b>{s.score}</b>
+          </li>; })}
+        </ol>
+      </header>
+      <div className="match-hud__side">
+        <strong className="match-score"><b>{score}</b><small>{client.unit ?? "Punkte"}</small></strong>
+        <button type="button" className="match-sound" aria-pressed={sound} aria-label={sound ? "Ton ausschalten" : "Ton einschalten"} onClick={() => { const next = !sound; setSound(next); setSoundEnabled(next); if (next) unlockSound(); }}>{sound ? "♪" : "×"}</button>
+        {menu && <details className="match-menu"><summary aria-label="Spielmenü">⋯</summary><div className="match-menu__panel">{menu}</div></details>}
+      </div>
     </div>
   </section>;
 }

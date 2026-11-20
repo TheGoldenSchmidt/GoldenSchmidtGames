@@ -75,6 +75,7 @@ function RunControls({ io, active }: MatchControlsProps) {
 }
 
 export const chaosRunClient: MatchClient = {
+  backdrop: "#3b1d64",
   render,
   // 2.5D with rigged characters and a chase camera; the canvas above stays as fallback without WebGL.
   world: async () => {

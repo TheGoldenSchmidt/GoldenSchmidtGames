@@ -103,6 +103,7 @@ function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
 }
 
 export const neonPongClient: MatchClient = {
+  backdrop: "#070418",
   render,
   quiet: ["hit", "wall", "serve"],
   Controls({ io, active }) {

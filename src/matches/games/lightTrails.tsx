@@ -76,6 +76,7 @@ function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
 }
 
 export const lightTrailsClient: MatchClient = {
+  backdrop: "#07051a",
   render,
   Controls({ io, view, viewer, active }) {
     const g = view.game as TrailsGame, alive = active && g.phase === "play" && !!g.riders[viewer]?.alive;

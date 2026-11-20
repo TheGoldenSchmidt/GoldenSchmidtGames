@@ -64,6 +64,7 @@ function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
 }
 
 export const bombArenaClient: MatchClient = {
+  backdrop: "#1d1a2b",
   render,
   // 2.5D presentation; the canvas above stays as fallback without WebGL.
   world: () => import("../../three/bombWorld").then(m => m.createBombWorld),

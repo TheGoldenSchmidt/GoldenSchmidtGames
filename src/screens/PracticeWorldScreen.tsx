@@ -44,7 +44,7 @@ export function PracticeWorldScreen({characterId,onExit}:{characterId?:Character
   useEffect(()=>{
     if(mode!=="flat"||!canvas.current)return;
     const element=canvas.current,ctx=element.getContext("2d")!;let request=0;
-    const paint=()=>{const {width:w,height:h}=element.getBoundingClientRect();if(element.width!==w||element.height!==h){element.width=w;element.height=h;}parcoursClient.render(ctx,{...read.current(),w,h});request=requestAnimationFrame(paint);};paint();
+    const paint=()=>{const {width:w,height:h}=element.getBoundingClientRect();if(element.width!==w||element.height!==h){element.width=w;element.height=h;}parcoursClient.render(ctx,{...read.current(),w,h,top:0});request=requestAnimationFrame(paint);};paint();
     return()=>cancelAnimationFrame(request);
   },[mode]);
   function travel(index:number){neutral();input.current={...NEUTRAL_MATCH_INPUT};delete local.current.camYaw;local.current.camTurn=0;local.current.practiceTravel=(local.current.practiceTravel??0)+1;visitStation(current.current,index);prev.current=structuredClone(current.current);at.current=performance.now();setSnapshot(structuredClone(current.current));setPanel(undefined);setPreview("");delete local.current.practiceLoop;}

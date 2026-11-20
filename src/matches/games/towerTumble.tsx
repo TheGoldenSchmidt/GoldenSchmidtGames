@@ -156,6 +156,7 @@ function Arrow({ io, dir, disabled }: { io: MatchIO; dir: -1 | 1; disabled: bool
 }
 
 export const towerTumbleClient: MatchClient = {
+  backdrop: "#6b5bd6",
   render,
   unit: "Meter",
   quiet: ["lost", "hold", "drop"],
