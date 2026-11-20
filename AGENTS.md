@@ -19,7 +19,8 @@ Technische Einrichtung und noch offene Betreiberaufgaben: [Deployment](DEPLOYMEN
 
 ## Codesuche mit Graphify
 
-- Codesuche und Architekturorientierung zuerst über Graphify für `TheGoldenSchmidt/GoldenSchmidtGames` durchführen, sofern der Index verfügbar ist. Symbole mit `graphify_find`, Zusammenhänge mit `query_graph`, Dateiabhängigkeiten mit `graphify_file_neighbors` und Änderungsfolgen mit `graphify_impact` untersuchen.
+- Graphify ist optional und keine Voraussetzung für die Mitarbeit. Nur wenn die Werkzeuge in der aktuellen Sitzung verfügbar sind und Zugriff auf einen nutzbaren Repository-Index besteht, Codesuche und Architekturorientierung zuerst über Graphify für `TheGoldenSchmidt/GoldenSchmidtGames` durchführen. Ohne Graphify, Verbindung oder Berechtigung direkt gezielte Dateisuche, `rg` und aktuelle Dateien verwenden; die Arbeit ohne Installationsaufforderung oder wiederholte Verbindungsversuche fortsetzen.
+- Bei verfügbarem Graphify: Symbole mit `graphify_find`, Zusammenhänge mit `query_graph`, Dateiabhängigkeiten mit `graphify_file_neighbors` und Änderungsfolgen mit `graphify_impact` untersuchen.
 - Zunächst gezielte Abfragen, Signaturen oder Dateiübersichten verwenden; vollständige Definitionen nur bei Bedarf mit `graphify_node` nachladen. Keine breiten Dateidumps oder wiederholten Suchläufe ohne neue Fragestellung.
 - Den zurückgegebenen `commitSha` mit dem untersuchten Branchstand vergleichen und lokale Änderungen berücksichtigen. Bei passendem Stand und ausreichender Abdeckung Ergebnisse nicht nochmals mit `rg` verifizieren.
 - Bei fehlendem/veraltetem Index, leeren, unvollständigen oder abgeschnittenen Ergebnissen sowie nicht indexierten Dateien gezielt aktuelle Dateien lesen bzw. `rg` verwenden. Fehlende Graphkanten beweisen keine fehlenden Abhängigkeiten; semantische Treffer sind Vorschläge.
