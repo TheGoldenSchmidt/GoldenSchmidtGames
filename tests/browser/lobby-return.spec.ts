@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
 import { selectEntryCharacter } from "./select-entry-character";
 import { selectLobbyGame } from "./select-lobby-game";
+import { minigameMenu } from "./party-session";
 
 async function enterRoom(page: Page, name: string, code?: string) {
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -18,12 +19,14 @@ async function joinOrCreate(page: Page, code?: string) {
   await expect(page.getByRole("heading", { name: "Mitspieler", exact: true })).toBeVisible();
 }
 /** Ends the own attempt in whichever minigame was drawn (3D arena or match game). */
+/** The give-up button in the HUD menu exists only while the own attempt runs. */
+const ownAttempt = (page: Page) => page.locator(".match-menu__panel button, .party-arena-menu__panel button", { hasText: /Jetzt aufgeben|Versuch beenden/ });
 async function giveUp(page: Page) {
-  const attempt = page.locator(".party-end-attempt summary");
-  await expect(attempt).toBeVisible();
+  const menu = minigameMenu(page);
+  await expect(menu).toBeVisible();
   await expect(page.locator(".match-countdown, .party-action-countdown")).toHaveCount(0, { timeout: 10000 });
-  await attempt.click();
-  await page.locator(".party-end-attempt button").click();
+  await menu.click();
+  await page.getByRole("button", { name: /^(Jetzt aufgeben|Versuch beenden)$/ }).click();
 }
 
 test("Nach dem Spiel zurück in die Lobby, dort verlassen oder für alle beenden", async ({ page, browser }, testInfo) => {
@@ -45,7 +48,7 @@ test("Nach dem Spiel zurück in die Lobby, dort verlassen oder für alle beenden
     // A 3D arena waits for every attempt; a match game ends once one player is left.
     const results = (device: Page) => device.getByRole("button", { name: "Zurück zur Lobby", exact: true });
     const outcome = async () => await results(guest).isVisible() ? "finished"
-      : await guest.locator(".party-end-attempt summary").isVisible() && !await page.locator(".party-end-attempt").count() && !await results(page).isVisible() ? "waiting" : "pending";
+      : await minigameMenu(guest).isVisible() && !await ownAttempt(page).count() && !await results(page).isVisible() ? "waiting" : "pending";
     await expect.poll(outcome).not.toBe("pending");
     if (await outcome() === "waiting") await giveUp(guest);
     for (const device of [page, guest]) {

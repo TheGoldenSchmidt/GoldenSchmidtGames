@@ -201,7 +201,7 @@ export function MatchStage({ game, id, now, control, busy = false, menu, doneAct
       <div className="match-hud__side">
         <strong className="match-score"><b>{score}</b><small>{client.unit ?? "Punkte"}</small></strong>
         <button type="button" className="match-sound" aria-pressed={sound} aria-label={sound ? "Ton ausschalten" : "Ton einschalten"} onClick={() => { const next = !sound; setSound(next); setSoundEnabled(next); if (next) unlockSound(); }}>{sound ? "♪" : "×"}</button>
-        {menu && <details className="match-menu"><summary aria-label="Spielmenü">⋯</summary><div className="match-menu__panel">{menu}</div></details>}
+        {menu && <details className="match-menu"><summary aria-label="Minispielmenü">⋯</summary><div className="match-menu__panel">{menu}</div></details>}
       </div>
     </div>
   </section>;
