@@ -128,7 +128,7 @@ function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
 
   // Minimap: whole circuit with every car as a dot.
   const t = TRACK, minX = Math.min(...t.x), maxX = Math.max(...t.x), minY = Math.min(...t.y), maxY = Math.max(...t.y);
-  const mw = landscape ? 86 : 70, mh = mw * (maxY - minY) / (maxX - minX), ms = mw / (maxX - minX), mx0 = w - mw - 10, my0 = 10;
+  const mw = landscape ? 86 : 70, mh = mw * (maxY - minY) / (maxX - minX), ms = mw / (maxX - minX), mx0 = w - mw - 10, my0 = f.top + 10;
   ctx.fillStyle = "#07051acc"; ctx.beginPath(); ctx.roundRect(mx0 - 6, my0 - 6, mw + 12, mh + 12, 10); ctx.fill();
   ctx.save(); ctx.translate(mx0 - minX * ms, my0 - minY * ms); ctx.scale(ms, ms);
   ctx.strokeStyle = "#57e4cb88"; ctx.lineWidth = 2.6 / ms * .9; ctx.stroke(p.centre);
@@ -140,15 +140,16 @@ function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
   if (own) {
     const place = 1 + Object.values(g.cars).filter(c => c.id !== own.id && (c.finishAt !== undefined ? own.finishAt === undefined || c.finishAt < own.finishAt : own.finishAt === undefined && c.prog > own.prog)).length;
     const lap = Math.max(1, Math.min(NR.laps, Math.floor(own.prog / TRACK.length) + 1));
-    ctx.fillStyle = "#07051acc"; ctx.beginPath(); ctx.roundRect(10, 10, 104, 52, 12); ctx.fill();
-    ctx.fillStyle = "#ffe44e"; ctx.font = "900 30px 'Trebuchet MS', sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.fillText(`${place}.`, 18, 37);
-    ctx.fillStyle = "#fff9ed"; ctx.font = "800 12px 'Trebuchet MS', sans-serif"; ctx.fillText(`von ${s.players.length}`, 56, 30); ctx.fillText(own.finishAt !== undefined ? "Im Ziel" : `Runde ${lap}/${NR.laps}`, 56, 46);
+    const by = f.top + 10;
+    ctx.fillStyle = "#07051acc"; ctx.beginPath(); ctx.roundRect(10, by, 104, 52, 12); ctx.fill();
+    ctx.fillStyle = "#ffe44e"; ctx.font = "900 30px 'Trebuchet MS', sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.fillText(`${place}.`, 18, by + 27);
+    ctx.fillStyle = "#fff9ed"; ctx.font = "800 12px 'Trebuchet MS', sans-serif"; ctx.fillText(`von ${s.players.length}`, 56, by + 20); ctx.fillText(own.finishAt !== undefined ? "Im Ziel" : `Runde ${lap}/${NR.laps}`, 56, by + 36);
     const seg = own.seg, along = Math.cos(own.a) * TRACK.tx[seg] + Math.sin(own.a) * TRACK.ty[seg];
     if (along < -.3 && own.v > 2 && own.finishAt === undefined) local.wrongSince ??= f.t; else local.wrongSince = undefined;
     if (local.wrongSince !== undefined && f.t - local.wrongSince > 900) {
-      ctx.fillStyle = "#ff86c8"; ctx.font = "900 20px 'Trebuchet MS', sans-serif"; ctx.textAlign = "center"; ctx.fillText("Falsche Richtung!", w / 2, h * .2);
+      ctx.fillStyle = "#ff86c8"; ctx.font = "900 20px 'Trebuchet MS', sans-serif"; ctx.textAlign = "center"; ctx.fillText("Falsche Richtung!", w / 2, f.top + 90);
     }
-    if (f.simTime < own.spinUntil) { ctx.fillStyle = "#ffe44e"; ctx.font = "900 18px 'Trebuchet MS', sans-serif"; ctx.textAlign = "center"; ctx.fillText("Schleudern!", w / 2, h * .26); }
+    if (f.simTime < own.spinUntil) { ctx.fillStyle = "#ffe44e"; ctx.font = "900 18px 'Trebuchet MS', sans-serif"; ctx.textAlign = "center"; ctx.fillText("Schleudern!", w / 2, f.top + 116); }
   }
 }
 
@@ -229,12 +230,13 @@ function RacerControls({ io, view, viewer, active }: MatchControlsProps) {
 function TiltControls({ io, view, viewer, active }: MatchControlsProps) {
   const { car, off } = racing(view, viewer, active);
   const last = useRef(0);
-  const tilt = useWheelTilt(x => { if (off) return; if (Math.abs(x - last.current) > .03 || (x === 0) !== (last.current === 0)) { last.current = x; io.set({ x }, true); } });
+  // In portrait the game is turned by 90° (see CSS), so the phone is held as in landscape.
+  const tilt = useWheelTilt(x => { if (off) return; if (Math.abs(x - last.current) > .03 || (x === 0) !== (last.current === 0)) { last.current = x; io.set({ x }, true); } },
+    () => window.matchMedia("(orientation: portrait)").matches ? 90 : 0);
   const keys = useRef({ left: false, right: false });
   const fallback = tilt.status === "denied" || tilt.status === "missing" || tilt.status === "insecure";
   useEffect(() => { if (off) { last.current = 0; io.set({ x: 0 }); } }, [off]);
   return <>
-    <p className="racer-portrait-hint" role="status">Dreh dein Handy ins Querformat.</p>
     <Pedal label="Bremse" className="racer-zone racer-zone--brake" disabled={off} onChange={down => io.set({ hb: down }, true)} />
     <Pedal label="Gas" className="racer-zone racer-zone--gas" disabled={off} onChange={down => io.set({ ha: down }, true)} />
     <div className="racer-tilt-top">
@@ -252,6 +254,8 @@ function TiltControls({ io, view, viewer, active }: MatchControlsProps) {
 
 const common: Omit<MatchClient, "Controls"> = {
   render,
+  // The circuit runs under the HUD; place and minimap sit below it.
+  fullBleed: true,
   unit: "%",
   quiet: ["wall", "item", "shot"],
   status(view, viewer) {

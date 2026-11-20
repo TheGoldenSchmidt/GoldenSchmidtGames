@@ -69,6 +69,7 @@ function HookControls({ io, active }: MatchControlsProps) {
 }
 
 export const hookWarsClient: MatchClient = {
+  backdrop: "#1b1f3b",
   render,
   quiet: ["latch", "release", "miss", "core"],
   Controls: HookControls,

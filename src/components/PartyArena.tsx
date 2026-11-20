@@ -1,12 +1,13 @@
 import {challengeCue,CHALLENGE_HINTS} from "../../shared/arenaChallenges";
 import {preloadFigures} from "../figures/catalog";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ARENA_META, checkedInput, NEUTRAL_INPUT, type ArenaInput } from "../../shared/partyArena";
 import type { PartyGame } from "../../shared/party";
 import type { ArenaFrame } from "../three/arenaWorld";
 import { usePartyTilt } from "./usePartyTilt";
 
-export function PartyArena({game,id,now,control,busy=false}:{game:PartyGame;id:string;now:number;control:(input:ArenaInput,reliable?:boolean)=>void;busy?:boolean}) {
+/** `menu`/`doneActions`/`note` as for the match games: the arena fills the screen, so these live in its floating HUD. */
+export function PartyArena({game,id,now,control,busy=false,menu,doneActions,note}:{game:PartyGame;id:string;now:number;control:(input:ArenaInput,reliable?:boolean)=>void;busy?:boolean;menu?:ReactNode;doneActions?:ReactNode;note?:string}) {
   const arena=game.mini!.arena!,meta=ARENA_META[arena.id],own=arena.actors.find(a=>a.id===id),run=game.mini!.runs[id];
   const active=game.phase==="mini-play"&&now>=game.mini!.startAt&&now<game.deadline&&!busy&&!run.done&&!own?.finished&&!game.pausedAt;
   const [error,setError]=useState(false),[ready,setReady]=useState(false),[axes,setAxes]=useState({...NEUTRAL_INPUT});
@@ -42,14 +43,14 @@ export function PartyArena({game,id,now,control,busy=false}:{game:PartyGame;id:s
   const virtualAction=(kind:"jump"|"punch")=>{pulse.current[kind]=Date.now()+110;if(active)controlRef.current(reader.current());};
   const seconds=Math.max(0,Math.ceil((game.deadline-now)/1000)),count=Math.ceil((game.mini!.startAt-now)/1000);
   return <section className={`party-action-game party-action-game--${arena.id}`} aria-label={meta.name}>
-    <div className="party-action-heading"><div><h2>{meta.name}</h2><p>{CHALLENGE_HINTS[arena.id]??(meta.tilt?"Neigen oder mit dem Stick lenken":meta.punch?"Laufen, springen und Kisten aufschlagen":"Lenke deine Figur und sammle Punkte")}</p></div><span role="timer">{count>0?"Bereit":`${seconds} s`}</span><strong><b>{own?.score??run.score}</b> Punkte</strong></div>
+    <div className="party-action-heading"><div><h2>{meta.name}{note&&<small>{note}</small>}</h2><p>{CHALLENGE_HINTS[arena.id]??(meta.tilt?"Neigen oder mit dem Stick lenken":meta.punch?"Laufen, springen und Kisten aufschlagen":"Lenke deine Figur und sammle Punkte")}</p></div><span role="timer">{count>0?"Bereit":`${seconds} s`}</span><strong><b>{own?.score??run.score}</b> Punkte</strong>{menu&&<details className="party-arena-menu"><summary aria-label="Minispielmenü">⋯</summary><div className="party-arena-menu__panel">{menu}</div></details>}</div>
     <div className="party-arena-status"><p role="status">{challengeCue(arena)}</p><span aria-label="Verbleibende Stürze">{own?.eliminated?"Ausgeschieden":`${Math.max(0,2-(own?.falls??0))} Stürze übrig`}</span></div>
     <div className="party-action-stage">
       <div className="party-action-world" ref={host} role="img" aria-label={`3D-Spielarena: ${meta.name}`}/>
       {!ready&&!error&&<div className="party-world-loading" role="status">Deine Arena entsteht …</div>}
       {error&&<div className="party-3d-error" role="alert"><h3>3D konnte nicht gestartet werden</h3><p>Prüfe die Grafikbeschleunigung deines Browsers oder öffne den Spiel-Link in einem aktuellen Browser. Dein Raum bleibt erhalten.</p><button className="button button--secondary" onClick={()=>location.reload()}>Ansicht neu laden</button></div>}
       {count>0&&<div className="party-action-countdown" role="status"><b key={count}>{count}</b><span>Mach dich bereit!</span></div>}
-      {run.done&&<div className={`party-action-countdown ${own?.eliminated?"party-spectator-notice":""}`} role="status"><b>{own?.eliminated?"◉":"✓"}</b><h3>{own?.eliminated?"Du schaust jetzt zu":own?.finished&&own.z<=-21?"Ziel erreicht!":"Dein Ergebnis steht!"}</h3><span>{run.score} Punkte bleiben · Die anderen spielen noch.</span></div>}
+      {run.done&&<div className={`party-action-countdown ${own?.eliminated?"party-spectator-notice":""}`}><div className="party-arena-done-note" role="status"><b>{own?.eliminated?"◉":"✓"}</b><h3>{own?.eliminated?"Du schaust jetzt zu":own?.finished&&own.z<=-21?"Ziel erreicht!":"Dein Ergebnis steht!"}</h3><span>{run.score} Punkte bleiben · Die anderen spielen noch.</span></div>{doneActions&&<div className="party-arena-done-actions">{doneActions}</div>}</div>}
       {own&&arena.time<own.respawnAt&&<div className="party-respawn" role="status">Platsch! Gleich bist du zurück.</div>}
       {!run.done&&<div className="party-action-feedback" role="status" key={own?.feedback}>{own?.feedback??"Mach dich bereit!"}</div>}
       <div className="party-game-controls" aria-label="Figur steuern">

@@ -1,6 +1,6 @@
 import { test,expect } from "@playwright/test";
 import { ACTION_MINI_IDS, ARENA_META, NEUTRAL_INPUT } from "../../shared/partyArena";
-import { onlineSession, toArenaMini, practiceSession } from "./party-session";
+import { minigameMenu, onlineSession, toArenaMini, practiceSession } from "./party-session";
 
 // Independent rooms allow the expanded arena palette to be evenly sharded in CI.
 test.describe.configure({mode:"parallel"});
@@ -126,6 +126,8 @@ test("Online: beide Figuren bewegen sich in derselben Arena",async({page})=>{
     const own=async()=>(await session.state()).partyGame!.mini!.arena!.actors.find(actor=>actor.id===session.ids[0])!;
     await page.keyboard.down(key);
     await expect.poll(async()=>{const actor=await own();return sideways?actor.input.x:actor.input.z;}).not.toBe(0);
+    // Full screen: the game menu is reached through the minigame's own menu.
+    await minigameMenu(page).click();
     await page.getByRole("button",{name:"Spielmenü öffnen",exact:true}).click();
     await expect.poll(async()=>(await own()).input).toEqual(NEUTRAL_INPUT);
     const inputSeq=(await own()).inputSeq;

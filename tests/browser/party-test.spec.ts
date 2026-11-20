@@ -1,5 +1,6 @@
 import { selectEntryCharacter } from "./select-entry-character";
 import { test, expect } from "@playwright/test";
+import { minigameMenu } from "./party-session";
 import { CHARACTERS } from "../../shared/characters";
 import { randomUUID } from "node:crypto";
 
@@ -78,10 +79,10 @@ test("Lokal spielen: Partymodi allein mit Bots, auch ohne Internet",async({page,
   const intro=page.getByRole("button",{name:"Intro überspringen"});if(await intro.count())await intro.click();
   // Opening minigame, then onto the board: all without a network connection.
   await page.locator(".party-mini-intro").getByRole("button",{name:"Ich bin bereit",exact:true}).click();
-  const attempt=page.locator(".party-end-attempt summary");
+  const attempt=minigameMenu(page);
   await expect(attempt).toBeVisible();
   await expect(page.locator(".match-countdown, .party-action-countdown")).toHaveCount(0,{timeout:10000});
-  await attempt.click();await page.locator(".party-end-attempt button").click();
+  await attempt.click();await page.getByRole("button",{name:/^(Jetzt aufgeben|Versuch beenden)$/}).click();
   const onward=page.getByRole("button",{name:"Ab auf die Insel",exact:true});
   await expect.poll(async()=>await onward.isVisible()||await page.locator("[data-board-phase]").count()>0,{timeout:70000}).toBe(true);
   if(await onward.isVisible())await onward.click();

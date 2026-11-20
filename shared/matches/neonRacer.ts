@@ -304,8 +304,8 @@ export const neonRacerTilt: MatchModule<RacerGame> = {
   meta: {
     ...neonRacer.meta,
     name: "Neon Racer – Kippen",
-    instruction: "Neon Racer im Querformat: Halte das Handy quer wie ein Lenkrad und kippe es nach links oder rechts zum Lenken. Rechter Daumen: Gas, linker Daumen: Bremse (im Stand rückwärts). Oben in der Mitte setzt du das Item aus den leuchtenden Kisten ein: Turbo, Blaster (drei Schüsse), Lenkrakete oder Schild. Ohne Bewegungssensor lenkst du mit den Pfeiltasten. Wer zuerst drei Runden schafft, gewinnt; danach bleiben den anderen 15 Sekunden.",
-    controls: "Handy quer · kippen zum Lenken · rechts Gas, links Bremse · Item oben.",
+    instruction: "Neon Racer im Querformat: Halte das Handy quer wie ein Lenkrad (Oberkante links; das Spiel dreht sich mit) und drehe es nach links oder rechts zum Lenken. Rechter Daumen: Gas, linker Daumen: Bremse (im Stand rückwärts). Oben in der Mitte setzt du das Item aus den leuchtenden Kisten ein: Turbo, Blaster (drei Schüsse), Lenkrakete oder Schild. Ohne Bewegungssensor lenkst du mit den Pfeiltasten. Wer zuerst drei Runden schafft, gewinnt; danach bleiben den anderen 15 Sekunden.",
+    controls: "Handy quer halten, Oberkante links · drehen zum Lenken · rechts Gas, links Bremse.",
     look: { icon: "↻", action: "Kippen statt Lenkrad", hint: "Quer halten · kippen · Gas/Bremse", goal: "Zuerst drei Runden im Ziel" }
   }
 };

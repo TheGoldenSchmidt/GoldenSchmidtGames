@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { minigameMenu } from "./party-session";
 import { randomUUID } from "node:crypto";
 
 /** Duellfelder (Inselparty): challenge from the board, the 1v1 match against a bot, the pot and the way back to the island. */
@@ -35,12 +36,12 @@ for (const motion of ["reduce", "no-preference"] as const) test(`Duellfeld (${mo
   await page.getByRole("button", { name: "Ich bin bereit", exact: true }).click();
   // The match runs (a quick bot may already decide it); otherwise give up after a moment of play.
   const result = page.getByRole("heading", { name: /gewinnt!|Unentschieden|Duell gewonnen!/ });
-  await expect(page.getByText("Duell um 10 Münzen").or(result)).toBeVisible({ timeout: 20000 });
+  await expect(page.getByText("Duell um 10 Münzen").filter({ visible: true }).or(result)).toBeVisible({ timeout: 20000 });
   await page.waitForTimeout(4500);
   if (!(await result.isVisible())) {
     await page.screenshot({ path: info.outputPath(`duel-play-${motion}.png`) });
-    const giveUp = page.locator(".party-end-attempt summary");
-    if (await giveUp.isVisible()) { await giveUp.click(); await page.getByRole("button", { name: "Jetzt aufgeben", exact: true }).click(); }
+    const giveUp = minigameMenu(page);
+    if (await giveUp.isVisible()) { await giveUp.click(); await page.getByRole("button", { name: /^(Jetzt aufgeben|Versuch beenden)$/ }).click(); }
   }
   await expect(result).toBeVisible({ timeout: 20000 });
   await page.screenshot({ path: info.outputPath(`duel-result-${motion}.png`) });

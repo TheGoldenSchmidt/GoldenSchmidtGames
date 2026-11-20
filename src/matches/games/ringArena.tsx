@@ -93,6 +93,7 @@ function render(skin: Skin) {
 function client(skin: Skin, actionLabel: string, icon: string, cooldown: number): MatchClient {
   return {
     render: render(skin),
+    backdrop: skin === "sumo" ? "#7fc8f8" : "#14102e",
     quiet: ["action", "bump", "strike", "item"],
     Controls({ io, view, viewer, active }) {
       const g = view.game as RingGame, me = g.fighters[viewer];

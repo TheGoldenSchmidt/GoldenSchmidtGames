@@ -68,6 +68,7 @@ function ParcoursControls({ io, view, viewer, active, world }: MatchControlsProp
 export const finalClient = (): MatchClient => ({ ...parcoursClient, unit: "Sekunden" });
 
 export const parcoursClient: MatchClient = {
+  backdrop: "#1d2466",
   render,
   chase: true,
   unit: "Meter",

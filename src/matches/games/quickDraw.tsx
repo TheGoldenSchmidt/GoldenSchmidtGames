@@ -147,6 +147,7 @@ function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
 }
 
 export const quickDrawClient: MatchClient = {
+  backdrop: "#3b1d64",
   render,
   quiet: ["signal", "decoy", "shot"],
   Controls({ io, view, active }) {

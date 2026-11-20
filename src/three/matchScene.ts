@@ -11,15 +11,22 @@ import { character, type Character, type SceneKit } from "./sceneKit";
  * Tilted camera at the closest distance (and matching aim point) at which a
  * field of `halfW × halfD` with blocks up to `top` stays on screen. A strip of
  * `reservePx` at the bottom stays free for the touch controls (stick, buttons),
- * so no thumb covers a part of the field – also on small phones.
+ * so no thumb covers a part of the field – also on small phones. The floating
+ * HUD at the top is kept free the same way.
  */
+/** Top limit in clip space below the floating match HUD (its height is the stage's `--match-top`). */
+function hudLimit(kit: SceneKit, height: number, normal: number) {
+  const hud = parseFloat(getComputedStyle(kit.host).getPropertyValue("--match-top")) || 0;
+  return Math.min(normal, 1 - 2 * hud / height - .03);
+}
+
 export function fitTiltedCamera(kit: SceneKit, halfW: number, halfD: number, top: number, tilt: number, reservePx = 132) {
-  const height = kit.host.getBoundingClientRect().height || 600, bottom = Math.min(-.2, -1 + 2 * reservePx / height + .02);
+  const height = kit.host.getBoundingClientRect().height || 600, bottom = Math.min(-.2, -1 + 2 * reservePx / height + .02), upper = hudLimit(kit, height, .95);
   const corners = [-1, 1].flatMap(sx => [-1, 1].flatMap(sz => [0, top].map(y => new T.Vector3(sx * halfW, y, sz * halfD))));
   const place = (d: number, aim: number) => { kit.camera.position.set(0, Math.sin(tilt) * d, Math.cos(tilt) * d + aim); kit.camera.lookAt(0, 0, aim); kit.camera.updateMatrixWorld(); };
   for (let d = 12; d < 160; d += .25) for (let aim = -2; aim <= 12; aim += .2) {
     place(d, aim);
-    if (corners.every(c => { const p = c.clone().project(kit.camera); return Math.abs(p.x) < .97 && p.y < .95 && p.y > bottom; })) return;
+    if (corners.every(c => { const p = c.clone().project(kit.camera); return Math.abs(p.x) < .97 && p.y < upper && p.y > bottom; })) return;
   }
 }
 
@@ -99,7 +106,7 @@ export class Impact {
  * the camera, so callers can glide towards it.
  */
 export function frameBox(kit: SceneKit, x0: number, x1: number, z0: number, z1: number, top: number, tilt: number, reservePx = 132) {
-  const height = kit.host.getBoundingClientRect().height || 600, bottom = Math.min(-.2, -1 + 2 * reservePx / height + .02), upper = .9, mid = (upper + bottom) / 2;
+  const height = kit.host.getBoundingClientRect().height || 600, bottom = Math.min(-.2, -1 + 2 * reservePx / height + .02), upper = hudLimit(kit, height, .9), mid = (upper + bottom) / 2;
   const camera = kit.camera.clone(), corners = [x0, x1].flatMap(x => [z0, z1].flatMap(z => [0, top].map(y => new T.Vector3(x, y, z))));
   const target = new T.Vector3((x0 + x1) / 2, 0, (z0 + z1) / 2), pos = new T.Vector3();
   const place = (d: number) => { pos.set(target.x, Math.sin(tilt) * d, target.z + Math.cos(tilt) * d); camera.position.copy(pos); camera.lookAt(target); camera.updateMatrixWorld(); };

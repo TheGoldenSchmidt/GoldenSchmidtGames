@@ -12,7 +12,9 @@ import { emit, hash, inputOfPlayer, presence, rank, type MatchModule, type Match
 export const SB = {
   size: 22, radius: .42, speed: 4.4, slowPerHit: .1, hitsOut: 3, maxBalls: 2,
   formMs: 1000, throwGap: 450, ballSpeed: 15, range: 12, ballRadius: .2, hitGrace: 500,
-  pileRespawn: 6000, pileRadius: .7, maxMs: 120000, substeps: 2
+  pileRespawn: 6000, pileRadius: .7, maxMs: 120000, substeps: 2,
+  /** A throw without aim in its own packet uses the aim seen this recently. */
+  aimMemory: 800
 } as const;
 
 export interface Snowballer {
@@ -21,6 +23,8 @@ export interface Snowballer {
   /** Forming a ball: progress in ms while standing still and holding the button. */
   form: number;
   lastThrow: number; hitAt: number; outAt?: number;
+  /** Last aim direction seen while aiming, and when (a throw may arrive in a packet without it). */
+  aimX?: number; aimY?: number; aimAt?: number;
 }
 export interface Snowball { id: number; owner: string; x: number; y: number; vx: number; vy: number; born: number; sx: number; sy: number }
 export interface Pile { id: number; x: number; y: number; readyAt: number }
@@ -64,7 +68,8 @@ function steerAround(me: Snowballer, dx: number, dy: number, side: number): [num
 }
 
 function move(s: MatchState<SnowGame>, p: MatchPlayer, me: Snowballer, h: number) {
-  const input = inputOfPlayer(s, p), stick = Math.hypot(input.x, input.y);
+  const input = inputOfPlayer(s, p), stick = Math.hypot(input.x, input.y), aim = Math.hypot(input.ax, input.ay);
+  if (aim > .2) { me.aimX = input.ax / aim; me.aimY = input.ay / aim; me.aimAt = s.time; }
   if (stick > .15) {
     const speed = SB.speed * slowFactor(me) * Math.min(1, stick);
     me.x += input.x / stick * speed * h; me.y += input.y / stick * speed * h;
@@ -143,8 +148,11 @@ export const snowball: MatchModule<SnowGame> = {
   press(s, p, kind) {
     const me = s.game.players[p.id];
     if (kind !== "a" || !me || p.gone || me.outAt !== undefined || me.balls <= 0 || s.time - me.lastThrow < SB.throwGap) return;
-    // Direction from the aim of the same packet; without aim along the facing.
-    const aim = Math.hypot(p.input.ax, p.input.ay), dx = aim > .2 ? p.input.ax / aim : me.fx, dy = aim > .2 ? p.input.ay / aim : me.fy;
+    // Direction from the aim of the same packet, else the aim seen just before (the release
+    // packet may carry none), else along the facing.
+    const aim = Math.hypot(p.input.ax, p.input.ay), recent = me.aimAt !== undefined && s.time - me.aimAt <= SB.aimMemory;
+    const dx = aim > .2 ? p.input.ax / aim : recent ? me.aimX! : me.fx, dy = aim > .2 ? p.input.ay / aim : recent ? me.aimY! : me.fy;
+    me.aimAt = undefined;
     me.fx = dx; me.fy = dy; me.balls--; me.lastThrow = s.time; me.form = 0;
     const x = me.x + dx * (SB.radius + .1), y = me.y + dy * (SB.radius + .1);
     s.game.balls.push({ id: s.game.nextId++, owner: me.id, x, y, vx: dx * SB.ballSpeed, vy: dy * SB.ballSpeed, born: s.time, sx: x, sy: y });

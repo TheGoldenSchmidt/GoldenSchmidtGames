@@ -86,6 +86,7 @@ function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
 }
 
 export const tankTroubleClient: MatchClient = {
+  backdrop: "#2c2a1e",
   render,
   // 2.5D presentation; the canvas above stays as fallback without WebGL.
   world: () => import("../../three/tankWorld").then(m => m.createTankWorld),

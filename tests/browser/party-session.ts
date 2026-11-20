@@ -80,9 +80,11 @@ export async function participate(page:Page,session:Session,otherSeq:number) {
   await session.control(session.ids[1],{x:.1,z:0,jump:false,punch:false},otherSeq);
   return "arena" as const;
 }
-/** Ends the page's own attempt through the visible UI (give up in match games). */
+/** The minigame's own menu (⋯ in the full-screen HUD) of a match game or a 3D arena. */
+export const minigameMenu=(page:Page)=>page.locator(".match-menu summary, .party-arena-menu summary");
+/** Ends the page's own attempt through the visible UI: give up (match game) or end the attempt (3D arena) in the HUD menu. */
 export async function endOwnAttempt(page:Page,kind:"match"|"arena") {
-  await page.getByText(kind==="match"?"Aufgeben":"Versuch vorzeitig beenden",{exact:true}).click();
+  await minigameMenu(page).click();
   await page.getByRole("button",{name:kind==="match"?"Jetzt aufgeben":"Versuch beenden",exact:true}).click();
 }
 

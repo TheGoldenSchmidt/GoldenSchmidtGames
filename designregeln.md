@@ -76,7 +76,7 @@ Brettansicht eine Bildschirmhöhe; Spielerleiste unten, Ziel/Inventar und selten
 
 Schlussrunden gelb markieren; bis erstem Wurf tiefblaue ×2-Ansage, Würfeln erreichbar. Siegerehrung: drei Bonuszeilen mit goldenen/grauen Sternen, danach Konfetti/Sieg; reduzierte Bewegung zeigt alles sofort.
 
-Match-Spiele teilen dunkles HUD mit gelbem Titel, eigenen Punkten/Ton, Zwischenstand und großer Spielfläche; eigene Themen je Spiel. Stick links, Aktionen rechts; bei Bomb Arena/Tank Trouble 132 px Steuerreserve und gelber Eigenmarker. Countdown/Ergebnis/Rückmeldung gemeinsam; keine Tastatur-/PC-Erweiterung. [Minispiel-Konzept](docs/minigames/konzept.md).
+Minispiele laufen im Vollbild (Nov. 2026): Die Spielfläche füllt den ganzen Bildschirm samt Safe Areas, ohne Rahmen. Match-Spiele: schwebendes dunkles Glas-HUD oben (links Titel in Gelb, Status, Spielerchips; rechts eigene Punkte, Ton, Menü „⋯“ mit Aufgeben bzw. Übung neu starten/schließen); Canvas-Spiele beginnen unter dem HUD auf ihrer Hintergrundfarbe, Übersichtskameras halten das Feld darunter frei. 1st-Generation-Arenen behalten ihr Inselwelt-HUD als schwebende Tafeln. Eigene Themen je Spiel. Stick links, Aktionen rechts; bei Bomb Arena/Tank Trouble 132 px Steuerreserve und gelber Eigenmarker. Countdown/Ergebnis/Rückmeldung gemeinsam; keine Tastatur-/PC-Erweiterung. [Minispiel-Konzept](docs/minigames/konzept.md).
 
 ## Prüfung
 

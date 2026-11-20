@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { SB, SNOW_TREES, SNOW_WALLS, type SnowGame } from "../../../shared/matches/snowball";
 import { ActionButton, AimPad, CameraSwipe, Stick } from "../controls";
 import { chaseAim, chaseStick, lerp, playerColor, type ChaseLocal, type MatchClient, type MatchControlsProps, type MatchFrame } from "../client";
@@ -44,13 +45,21 @@ function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
 
 function SnowControls({ io, view, viewer, active, world }: MatchControlsProps) {
   const g = view.game as SnowGame, me = g.players[viewer], local = io.local as ChaseLocal;
-  const off = !active || !me || me.outAt !== undefined;
-  const aim = (x: number, y: number) => world ? chaseAim(io, x, y) : io.set({ ax: x, ay: y }, true);
+  const off = !active || !me || me.outAt !== undefined, clear = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(clear.current), []);
+  const aim = (x: number, y: number) => { window.clearTimeout(clear.current); if (world) chaseAim(io, x, y); else io.set({ ax: x, ay: y }, true); };
   return <>
     {world && <CameraSwipe local={io.local} className="tank-camera-swipe" />}
     <div className="tank-aim-half snow-aim-half"><AimPad label="Zielen und werfen" radius={70}
       onAim={(x, y) => { if (!off) aim(x, y); }}
-      onRelease={(x, y) => { if (off) return; if (world) chaseAim(io, x, y, false); else io.set({ ax: x, ay: y }); io.press("a"); local.aimX = local.aimY = 0; io.set({ ax: 0, ay: 0 }); }}>
+      onRelease={(x, y) => {
+        if (off) return;
+        if (world) chaseAim(io, x, y, false); else io.set({ ax: x, ay: y });
+        io.press("a");
+        // Keep the aim until the throw packet has surely left (packets are spaced), then stop aiming.
+        local.aimX = local.aimY = 0;
+        window.clearTimeout(clear.current); clear.current = window.setTimeout(() => io.set({ ax: 0, ay: 0 }), 150);
+      }}>
       <span className="tank-aim-hint" aria-hidden="true">{me && me.balls > 0 ? `Ziehen · loslassen = Wurf (${me.balls})` : "Kein Schneeball – formen!"}</span>
     </AimPad></div>
     <Stick disabled={off} onMove={(x, y) => world ? chaseStick(io, x, y) : io.set({ x, y }, true)} />
@@ -63,6 +72,7 @@ function SnowControls({ io, view, viewer, active, world }: MatchControlsProps) {
 }
 
 export const snowballClient: MatchClient = {
+  backdrop: "#24306b",
   render,
   chase: true,
   unit: "Treffer",
