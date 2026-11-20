@@ -17,6 +17,18 @@ TheGoldenSchmidt verantwortet Integration und Betrieb, Rich seinen [Bereich](src
 
 Technische Einrichtung und noch offene Betreiberaufgaben: [Deployment](DEPLOYMENT.md#einrichtung-durch-den-betreiber).
 
+## Codesuche und Kontextstrategie
+
+- Graphify ist optional und keine Voraussetzung für die Mitarbeit. Nur wenn die Werkzeuge in der aktuellen Sitzung verfügbar sind und Zugriff auf einen nutzbaren Repository-Index besteht, Codesuche und Architekturorientierung zuerst über Graphify für `TheGoldenSchmidt/GoldenSchmidtGames` durchführen. Ohne Graphify, Verbindung oder Berechtigung direkt gezielte Dateisuche, `rg` und aktuelle Dateien verwenden; die Arbeit ohne Installationsaufforderung oder wiederholte Verbindungsversuche fortsetzen.
+- Bei Architekturfragen und Aufgaben über mehrere Dateien Graphify vor breiten Repository-Suchen abfragen, sofern verfügbar. Bei trivialen, isolierten Änderungen mit bereits bekannter Zieldatei Graphify überspringen.
+- Zur ersten Orientierung `graphify_rank_files` oder `query_graph` mit `skeleton=true` und kleinem `budget` bevorzugen. Symbole mit `graphify_find`, Dateiabhängigkeiten mit `graphify_file_neighbors` untersuchen; vollständige Definitionen nur bei Bedarf mit `graphify_node` nachladen.
+- Vor Änderungen an gemeinsam genutzten Schnittstellen oder Kernsystemen bei verfügbarem Graphify mit `graphify_impact` potenziell betroffene Komponenten ermitteln. Das Ergebnis ist ein erster, begrenzter Überblick und keine vollständige Liste aller Folgen.
+- Große Modell-, Animations- und Figuren-Datendateien (insbesondere in `src/3DModels/`, `public/models/` und `src/figures/data/`) bei allgemeinen Codesuchen auslassen und nur bei konkretem Bedarf gezielt lesen. Zunächst Kataloge, Ladefunktionen und Schnittstellen untersuchen.
+- Keine vollständigen Codegraphen, breiten Dateidumps oder wiederholten Suchläufe ohne neue Fragestellung in den Kontext laden.
+- Den zurückgegebenen `commitSha` mit dem untersuchten Branchstand vergleichen und lokale Änderungen berücksichtigen. Bei passendem Stand und ausreichender Abdeckung Ergebnisse nicht nochmals mit `rg` verifizieren.
+- Bei fehlendem/veraltetem Index, leeren, unvollständigen oder abgeschnittenen Ergebnissen sowie nicht indexierten Dateien gezielt aktuelle Dateien lesen bzw. `rg` verwenden. Fehlende Graphkanten beweisen keine fehlenden Abhängigkeiten; semantische Treffer sind Vorschläge.
+- Vor Änderungen die betroffenen tatsächlichen Quelldateien lesen und prüfen; Graphify kann nicht eingecheckte oder nur auf dem Arbeitsbranch vorhandene Änderungen noch nicht enthalten. Graphify ersetzt weder verbindliche Repo-Dokumentation noch Builds, Tests oder die Prüfung des Diffs.
+
 ## Architektur
 
 - Regeln/Wertung in `shared/`; lokal, Node und Handy-Host verwenden dieselben Funktionen. Einstieg: [Katalog](shared/games.ts), [Raumkern](shared/roomCore.ts), [Ansichtsauswahl](src/App.tsx).
