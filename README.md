@@ -44,7 +44,7 @@ Für Browserprüfungen einmal `npx playwright install chromium`; Standardprojekt
 
 ## Mitarbeiten
 
-[Zusammenarbeit und Auslieferung](AGENTS.md#zusammenarbeit-und-auslieferung) gilt für Menschen und Agenten: eigene Branches, Pull Requests, passende Prüfungen, Merge-Freigabe durch TheGoldenSchmidt. `main` ist für Live-Auslieferung vorgesehen. Rich: [Bereich und Anleitung](src/richs-universe/README.md). Claude Code lädt dieselben Regeln über `CLAUDE.md`.
+Die [Regeln für Zusammenarbeit und Auslieferung](AGENTS.md#zusammenarbeit-und-auslieferung) legen für Menschen und Agenten fest, welche Prüfungen und Freigaben ein PR braucht. `main` ist für die Live-Auslieferung vorgesehen. Richs Arbeitsablauf steht in [seiner Anleitung](src/richs-universe/README.md#zusammenarbeit-über-git). Claude Code lädt dieselben Regeln über `CLAUDE.md`.
 
 ## Dokumentation
 
