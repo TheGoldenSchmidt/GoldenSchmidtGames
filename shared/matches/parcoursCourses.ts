@@ -52,8 +52,8 @@ export interface Course {
   doorRows: DoorRow[]; tileRows: TileRow[]; seesaws: number;
   /** Door rows with lanes behind them (dead ends and trapdoors); their doors are part of the door count. */
   laneRows?: LaneRow[];
-  /** Rising goo: height at match time t (ms) is start + rate · max(0, t − delay)/1000. */
-  goo?: { start: number; rate: number; delay: number };
+  /** Rising goo: height at match time t (ms) is start + rate · s + accel · s²/2 with s = max(0, t − delay)/1000. */
+  goo?: { start: number; rate: number; delay: number; accel?: number };
   winds: Wind[];
   /** Final: no checkpoints, a fall eliminates; the last ones standing win. */
   elimination?: boolean;
@@ -167,6 +167,16 @@ function wippenwerk(): Course {
   return { id: "wippenwerk", name: "Wippenwerk", width: 10, finishZ: 49, finishY: 1.85, killY: -8, boxes, sweepers: [], checkpoints: [{ z: 1, y: 0 }, { z: 28.5, y: 0 }, { z: 39, y: 1.85 }], doorRows: [], tileRows: [], seesaws: 3, winds: [] };
 }
 
+/** Trapdoor plates over the void in `rows` × `cols`; every plate opens on its own beat (`phase` per plate), warning first. */
+function trapField(boxes: Box[], z0: number, rows: number, period: number, open: number, phase: (row: number, col: number) => number, y = 0, cols = 5, x0 = -5, x1 = 5) {
+  const pitch = (x1 - x0) / cols;
+  for (let row = 0; row < rows; row++) for (let col = 0; col < cols; col++) {
+    const x = x0 + pitch * (col + .5);
+    boxes.push({ x0: x - pitch / 2 + .05, x1: x + pitch / 2 - .05, y0: y - .4, y1: y, z0: z0 + row * 2, z1: z0 + row * 2 + 1.9, look: "trap", blink: { period, phase: phase(row, col), open } });
+  }
+  return z0 + rows * 2;
+}
+
 function glibberflut(): Course {
   const boxes: Box[] = [floor(-2, 6), ...stairs(6, 11, 0, 1.5)];
   boxes.push({ ...floor(11, 19, 1.5), look: "belt", belt: -3.4 });
@@ -178,12 +188,21 @@ function glibberflut(): Course {
   for (const [z0, z1] of [[31, 33], [34.1, 36.1], [37.2, 39.2]]) boxes.push(floor(z0, z1, 4.7, -3, 3));
   boxes.push({ ...floor(40.3, 48, 4.7), look: "belt", belt: -3.8 }, ...stairs(48, 53, 4.7, 6.2));
   boxes.push({ x0: -5, x1: 5, y0: -1, y1: 7.9, z0: 53, z1: 62, look: "ledge" });
-  // Upper deck: rolling logs, stairs, a narrow beam with a pusher, then the last wall.
+  // Upper deck: rolling logs, stairs, a narrow beam with a pusher, then the next wall.
   for (const [z, phase, period] of [[55.5, 0, 2400], [58.5, 2.2, 2000]] as const) boxes.push({ x0: -.9, x1: .9, y0: 7.9, y1: 8.45, z0: z, z1: z + .7, look: "roller", move: { axis: "x", amp: 4, period, phase } });
   boxes.push(...stairs(62, 66, 7.9, 9.1), floor(66, 74, 9.1, -1.1, 1.1), floor(74, 76, 9.1, -5, 5));
   boxes.push({ x0: -.6, x1: .6, y0: 9.1, y1: 10.3, z0: 69.5, z1: 70.5, look: "pusher", move: { axis: "x", amp: 1.6, period: 1800, phase: 0 } });
-  boxes.push({ x0: -5, x1: 5, y0: -1, y1: 10.8, z0: 76, z1: 84, look: "finish" });
-  return { id: "glibberflut", name: "Glibberflut", width: 10, finishZ: 80, finishY: 10.8, killY: -8, boxes, sweepers: [], checkpoints: [{ z: 1, y: 0 }, { z: 20, y: 3.2 }, { z: 31.5, y: 4.7 }, { z: 49, y: 5 }, { z: 54, y: 7.9 }, { z: 66.5, y: 9.1 }], doorRows: [], tileRows: [], seesaws: 0, winds: [], goo: { start: -1.4, rate: .34, delay: 3500 } };
+  boxes.push({ x0: -5, x1: 5, y0: -1, y1: 10.8, z0: 76, z1: 80, look: "ledge" });
+  // Roof: trapdoors over the goo, a backward belt with rolling logs, a beam with a pusher and the last wall.
+  trapField(boxes, 80, 3, 3400, .3, (row, col) => spread(row * 5 + col + 300), 10.8);
+  boxes.push(floor(86, 89, 10.8), ...stairs(89, 92, 10.8, 12.3), { ...floor(92, 100, 12.3), look: "belt", belt: -3 });
+  for (const [z, phase, period] of [[94.5, 1, 2200], [97.5, 3.2, 1900]] as const) boxes.push({ x0: -.9, x1: .9, y0: 12.3, y1: 12.85, z0: z, z1: z + .7, look: "roller", move: { axis: "x", amp: 4, period, phase } });
+  boxes.push({ x0: -5, x1: 5, y0: -1, y1: 14.1, z0: 100, z1: 104, look: "ledge" }, floor(104, 112, 14.1, -1.2, 1.2));
+  boxes.push({ x0: -.6, x1: .6, y0: 14.1, y1: 15.3, z0: 107.5, z1: 108.5, look: "pusher", move: { axis: "x", amp: 1.7, period: 1600, phase: 1 } });
+  boxes.push({ x0: -5, x1: 5, y0: -1, y1: 15.9, z0: 112, z1: 120, look: "finish" });
+  return { id: "glibberflut", name: "Glibberflut", width: 10, finishZ: 116, finishY: 15.9, killY: -8, boxes, sweepers: [],
+    checkpoints: [{ z: 1, y: 0 }, { z: 20, y: 3.2 }, { z: 31.5, y: 4.7 }, { z: 49, y: 5 }, { z: 54, y: 7.9 }, { z: 66.5, y: 9.1 }, { z: 76.5, y: 10.8 }, { z: 86.5, y: 10.8 }, { z: 100.5, y: 14.1 }],
+    doorRows: [], tileRows: [], seesaws: 0, winds: [], goo: { start: -1.4, rate: .28, delay: 3000, accel: .0095 } };
 }
 
 function geisterpfad(): Course {
@@ -207,34 +226,49 @@ const spread = (i: number) => ((Math.imul(i + 1, 2654435761) >>> 0) % 1000) / 10
 
 function fallklappen(): Course {
   const boxes: Box[] = [floor(-2, 6)];
-  // Two fields of trapdoors over the void; every plate opens on its own beat, warning first.
-  const field = (z0: number, rows: number, period: number, open: number, seed: number) => {
-    for (let row = 0; row < rows; row++) for (let col = 0; col < 5; col++) {
-      const x = -4 + col * 2;
-      boxes.push({ x0: x - .95, x1: x + .95, y0: -.4, y1: 0, z0: z0 + row * 2, z1: z0 + row * 2 + 1.9, look: "trap", blink: { period, phase: spread(seed + row * 5 + col), open } });
-    }
-  };
-  field(6.2, 5, 4200, .28, 0);
-  boxes.push(floor(16.4, 21));
-  field(21.2, 6, 3200, .36, 40);
-  boxes.push(...stairs(33.4, 35.4, 0, .6), floor(35.4, 42, .6, -5, 5, "finish"));
-  return { id: "fallklappen", name: "Fallklappen", width: 10, finishZ: 39, finishY: .6, killY: -8, boxes, sweepers: [], checkpoints: [{ z: 1, y: 0 }, { z: 17, y: 0 }], doorRows: [], tileRows: [], seesaws: 0, winds: [] };
+  // 1: every plate on its own slow beat.
+  let z = trapField(boxes, 6.2, 5, 4200, .3, (row, col) => spread(row * 5 + col));
+  boxes.push(floor(z + .2, z + 4.6));
+  // 2: faster, open longer; a pusher sweeps the rest platform behind it.
+  z = trapField(boxes, z + 4.8, 6, 3200, .38, (row, col) => spread(row * 5 + col + 40));
+  boxes.push(floor(z + .2, z + 5), { x0: -1.2, x1: 1.2, y0: 0, y1: 1.4, z0: z + 2, z1: z + 3.2, look: "pusher", move: { axis: "x", amp: 3.6, period: 2400, phase: 0 } });
+  // 3: checkerboard – neighbours take turns, hop diagonally onto the plates that just closed.
+  const checker = z + 5.2;
+  z = trapField(boxes, checker, 5, 3000, .48, (row, col) => (row + col) % 2 ? .5 : 0);
+  boxes.push(floor(z + .2, z + 4.6));
+  // 4: a narrow plank of plates, fast and one after another, with a gap between each.
+  const plank = z + 4.8;
+  for (let i = 0; i < 6; i++) boxes.push({ x0: -.9, x1: .9, y0: -.4, y1: 0, z0: plank + i * 2.2, z1: plank + i * 2.2 + 1.7, look: "trap", blink: { period: 2600, phase: spread(i + 70), open: .3 } });
+  z = plank + 6 * 2.2;
+  boxes.push(floor(z + .2, z + 3), ...stairs(z + 3, z + 5, 0, .6), floor(z + 5, z + 11, .6, -5, 5, "finish"));
+  return { id: "fallklappen", name: "Fallklappen", width: 10, finishZ: z + 8, finishY: .6, killY: -8, boxes, sweepers: [],
+    checkpoints: [{ z: 1, y: 0 }, { z: 17, y: 0 }, { z: checker - 4, y: 0 }, { z: plank - 4, y: 0 }], doorRows: [], tileRows: [], seesaws: 0, winds: [] };
 }
 
 function windkanal(): Course {
   const boxes: Box[] = [floor(-2, 6)], winds: Wind[] = [];
-  // Narrow walkways over the void; side winds switch direction, then a headwind ramp.
+  const gust = (z0: number, z1: number, vx: number, vz: number, period: number, phase: number, on: number, x0 = -6, x1 = 6) => winds.push({ x0, x1, y0: -2, y1: 18, z0, z1, vx, vz, period, phase, on });
+  // Narrow walkways over the void; side winds switch direction.
   boxes.push(floor(6, 18, 0, -1.8, 1.8));
-  winds.push({ x0: -6, x1: 6, y0: -2, y1: 6, z0: 6, z1: 12, vx: 2.6, vz: 0, period: 3000, phase: 0, on: .55 });
-  winds.push({ x0: -6, x1: 6, y0: -2, y1: 6, z0: 12, z1: 18, vx: -2.6, vz: 0, period: 3000, phase: .5, on: .55 });
+  gust(6, 12, 2.6, 0, 3000, 0, .55); gust(12, 18, -2.6, 0, 3000, .5, .55);
   boxes.push(floor(18, 22));
   // Stepping stones across a gap with a crosswind that never stops.
   for (const [z0, x] of [[23, -2], [25.4, 1], [27.8, -1], [30.2, 2]] as const) boxes.push(floor(z0, z0 + 1.6, 0, x - .9, x + .9));
-  winds.push({ x0: -6, x1: 6, y0: -2, y1: 6, z0: 22, z1: 32, vx: -1.8, vz: 0, period: 1000, phase: 0, on: 1 });
-  boxes.push(floor(32.2, 36), ...stairs(36, 44, 0, 2.4, -2, 2));
-  winds.push({ x0: -2, x1: 2, y0: -1, y1: 6, z0: 36, z1: 44, vx: 0, vz: -3.4, period: 2600, phase: 0, on: .6 });
-  boxes.push(floor(44, 50, 2.4, -5, 5, "finish"));
-  return { id: "windkanal", name: "Windkanal", width: 10, finishZ: 47, finishY: 2.4, killY: -8, boxes, sweepers: [], checkpoints: [{ z: 1, y: 0 }, { z: 19, y: 0 }, { z: 33, y: 0 }], doorRows: [], tileRows: [], seesaws: 0, winds };
+  gust(22, 32, -1.8, 0, 1000, 0, 1);
+  boxes.push(floor(32.2, 36));
+  // Gust bridge: even narrower, short gusts from alternating sides.
+  boxes.push(floor(36, 50, 0, -1.3, 1.3));
+  gust(36, 40.7, 3, 0, 2000, 0, .5); gust(40.7, 45.3, -3, 0, 2000, .33, .5); gust(45.3, 50, 3, 0, 2000, .66, .5);
+  boxes.push(floor(50, 54));
+  // Drifting islands over the void against a steady headwind.
+  for (const [z0, phase] of [[54.6, 0], [57.6, 1.5], [60.6, 3], [63.6, 4.5]] as const) boxes.push({ x0: -1.6, x1: 1.6, y0: -1, y1: 0, z0, z1: z0 + 2.4, look: "floor", move: { axis: "x", amp: 2.4, period: 3200, phase } });
+  gust(54, 66.6, 0, -1.4, 1000, 0, 1);
+  boxes.push(floor(66.6, 70));
+  // Headwind ramp with side gusts at the top.
+  boxes.push(...stairs(70, 78, 0, 2.4, -1.6, 1.6));
+  gust(70, 78, 0, -3.4, 2600, 0, .6, -1.6, 1.6); gust(74, 78, 2.2, 0, 1800, .25, .45, -1.6, 1.6);
+  boxes.push(floor(78, 84, 2.4, -5, 5, "finish"));
+  return { id: "windkanal", name: "Windkanal", width: 10, finishZ: 81, finishY: 2.4, killY: -8, boxes, sweepers: [], checkpoints: [{ z: 1, y: 0 }, { z: 19, y: 0 }, { z: 33, y: 0 }, { z: 51, y: 0 }, { z: 67.5, y: 0 }], doorRows: [], tileRows: [], seesaws: 0, winds };
 }
 
 function kletterwand(): Course {
@@ -310,4 +344,8 @@ export function windAt(c: Pick<Course, "winds">, x: number, y: number, z: number
   return { vx, vz };
 }
 /** Goo height at time `t` (ms), or −Infinity without goo. */
-export const gooAt = (c: Course, t: number) => c.goo ? c.goo.start + c.goo.rate * Math.max(0, t - c.goo.delay) / 1000 : -Infinity;
+export function gooAt(c: Course, t: number) {
+  if (!c.goo) return -Infinity;
+  const sec = Math.max(0, t - c.goo.delay) / 1000;
+  return c.goo.start + c.goo.rate * sec + (c.goo.accel ?? 0) * sec * sec / 2;
+}

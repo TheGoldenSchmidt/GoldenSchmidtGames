@@ -157,6 +157,9 @@ export class ChaseCamera {
    * turn towards at `turnRate` per second; `snap` jumps there at once.
    */
   update(target: T.Vector3, wantedYaw: number | undefined, dt: number, reduced: boolean, turnRate = 1.6) {
+    // The first animation frame may report a time slightly before the world was made: never a negative step
+    // (it would count as a fresh hand turn and skip placing the camera behind the figure).
+    dt = Math.max(0, dt);
     this.manual = Math.max(0, this.manual - dt);
     if (!this.ready && wantedYaw !== undefined && !this.manual) this.yaw = wantedYaw;
     else if (wantedYaw !== undefined && !this.manual) this.yaw += angleDelta(this.yaw, wantedYaw) * (reduced ? 1 : 1 - Math.exp(-dt * turnRate * this.turnK));

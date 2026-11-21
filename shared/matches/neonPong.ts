@@ -13,18 +13,24 @@ export const NP = {
   serveDelay: 1200, goalsToWin: 7, regular: 90000, goldenMax: 30000,
   powerEvery: [10000, 15000] as const, powerRadius: .5,
   wideMs: 5000, curveMs: 6000, slowMs: 4000, slowFactor: .55, curveAccel: 8, substeps: 6,
-  /** The ball is drawn 1.2× its physical radius; hits count for the drawn ball plus a small margin. */
-  hitSlack: .15,
+  /** The ball is drawn 1.2× its physical radius; hits count for the drawn ball plus a hair. */
+  hitSlack: .04,
   /** A curved ball never flies flatter than this (radians from the field axis). */
   maxFlight: 1.22,
-  /** Late save window after a ball passed a paddle: the team's round trip plus one snapshot, within these bounds. */
-  lateMin: 100, lateMax: 250,
+  /** Late save window after a ball passed a paddle: the input's way to the authority (half a round trip) plus one snapshot, within these bounds. */
+  lateMin: 80, lateMax: 170,
+  /**
+   * Only a paddle this close (m beyond its reach) when the ball passed may still
+   * save it late: it was on its way there and only its input was in transit.
+   * A paddle far off cannot catch up afterwards.
+   */
+  lateReach: .7,
   /** Overlap of the two 2v2 ranges around the centre line. */
   duoOverlap: .9
 } as const;
 export type PowerKind = "wide" | "multi" | "curve" | "slow";
-/** `late`: the ball passed a paddle of `team` at `x`; that team may still save it until `until` (network delay). */
-export interface Ball { id: number; x: number; y: number; vx: number; vy: number; speed: number; lastTeam: number; curve: number; extra: boolean; late?: { team: number; x: number; until: number } }
+/** `late`: the ball passed the paddles `ids` of `team` narrowly at `x`; they may still save it until `until` (network delay). */
+export interface Ball { id: number; x: number; y: number; vx: number; vy: number; speed: number; lastTeam: number; curve: number; extra: boolean; late?: { team: number; x: number; until: number; ids: string[] } }
 export interface Paddle { id: string; team: number; x: number; min: number; max: number }
 export interface PongGame {
   score: [number, number];
@@ -91,10 +97,10 @@ function bounce(s: MatchState<PongGame>, ball: Ball, paddle: Paddle, hitX: numbe
   emit(s, "hit", "", [paddle.id]);
 }
 
-/** Save window for a team: its slowest round trip plus one snapshot interval. */
+/** Save window for a team: the way of its slowest input to the authority (half a round trip) plus one snapshot interval. */
 function lateWindow(s: MatchState<PongGame>, team: number) {
   const rtt = Math.max(0, ...s.players.filter(p => p.team === team && !p.gone).map(p => p.rtt));
-  return Math.max(NP.lateMin, Math.min(NP.lateMax, rtt + 50));
+  return Math.max(NP.lateMin, Math.min(NP.lateMax, rtt / 2 + 50));
 }
 
 function moveBall(s: MatchState<PongGame>, ball: Ball, dt: number) {
@@ -119,13 +125,17 @@ function moveBall(s: MatchState<PongGame>, ball: Ball, dt: number) {
     // Nearest paddle of the defending team that covers the crossing point.
     const paddle = g.paddles.filter(p => p.team === team && Math.abs(hitX - p.x) <= reach(g, p)).sort((a, b) => Math.abs(hitX - a.x) - Math.abs(hitX - b.x))[0];
     if (paddle) { bounce(s, ball, paddle, hitX); ball.x = hitX; ball.y = edge; }
-    else ball.late = { team, x: hitX, until: s.time + lateWindow(s, team) };
+    else {
+      // Narrow misses only: paddles that were almost there may still arrive with their delayed input.
+      const ids = g.paddles.filter(p => p.team === team && Math.abs(hitX - p.x) <= reach(g, p) + NP.lateReach).map(p => p.id);
+      ball.late = ids.length ? { team, x: hitX, until: s.time + lateWindow(s, team), ids } : undefined;
+    }
   } else if (ball.late && (ball.late.team !== team || s.time > ball.late.until)) ball.late = undefined;
   else if (ball.late) {
     // Late save: the defender saw the ball a round trip ago; a paddle that reaches the crossing point
     // (or the ball itself, which also covers side hits) within the window still returns it.
     const late = ball.late;
-    const paddle = g.paddles.find(p => p.team === team && (Math.abs(late.x - p.x) <= reach(g, p) || Math.abs(ball.x - p.x) <= reach(g, p)));
+    const paddle = g.paddles.find(p => late.ids.includes(p.id) && (Math.abs(late.x - p.x) <= reach(g, p) || Math.abs(ball.x - p.x) <= reach(g, p)));
     if (paddle) {
       const hitX = Math.abs(late.x - paddle.x) <= reach(g, paddle) ? late.x : ball.x;
       bounce(s, ball, paddle, hitX);
@@ -216,8 +226,9 @@ export const neonPong: MatchModule<PongGame> = {
     const incoming = g.balls.filter(b => paddle.team === 0 ? b.vy > 0 : b.vy < 0)
       .map(b => { const t = (line - b.y) / b.vy, raw = b.x + b.vx * t, span = 2 * (NP.halfW - NP.ball); let x = ((raw + NP.halfW - NP.ball) % (2 * span) + 2 * span) % (2 * span); if (x > span) x = 2 * span - x; return { t, x: x - NP.halfW + NP.ball }; })
       .sort((a, b) => a.t - b.t);
-    // Bots react once a ball is in their half and aim with a per-rally error, so they can miss.
-    const error = ((hash(`${id}:${g.nextBall}:${g.score.join()}:${Math.floor(s.time / 4000)}`) % 100) / 100 - .5) * 3.2;
+    // Bots react once a ball is in their half and aim with a per-rally error that grows with the ball's speed, so they miss now and then.
+    const fastest = Math.max(NP.startSpeed, ...g.balls.map(b => b.speed));
+    const error = ((hash(`${id}:${g.nextBall}:${g.score.join()}:${Math.floor(s.time / 4000)}`) % 100) / 100 - .5) * 2 * (1.2 + (fastest - NP.startSpeed) / (NP.maxSpeed - NP.startSpeed) * 1.1);
     const ownHalf = incoming.filter(b => b.t < 1.1);
     const target = ownHalf.length ? ownHalf[0].x + error : (paddle.min + paddle.max) / 2;
     const screen = paddle.team === 0 ? (target - paddle.min) / (paddle.max - paddle.min) : (paddle.max - target) / (paddle.max - paddle.min);
