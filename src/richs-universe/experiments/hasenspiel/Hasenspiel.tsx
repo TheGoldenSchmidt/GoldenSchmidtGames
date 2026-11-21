@@ -3,18 +3,18 @@ import type { ExperimentProps } from "../../experiments";
 import { CENTER, canMove, cells, centerLinks, wallFields, movesFrom, newGame, play, sideLinks, type Cell, type Color, type Kind, type Level } from "./rules";
 import { botLevels, botTurn, type BotLevel } from "./bot";
 import { HasenspielRules } from "./HasenspielRules";
-import { boardHeight, gap, height, shapes, side, triangle, width } from "./boardDrawing";
-import { Clearing3d } from "./Clearing3d";
+import { boardHeight, gap, height, side, triangle, width } from "./boardDrawing";
+import { PieceEmblem } from "./PieceEmblem";
 import { Victory } from "./Victory";
 import "./hasenspiel.css";
 
 const names = { blue: "Blau", gray: "Grau" };
 const boardMaterials = {
-  "blue-field": ["#83ad61", "#608d49"],
-  "gray-field": ["#52774a", "#355538"],
+  "blue-field": ["#c7d9d8", "#8faeb4"],
+  "gray-field": ["#e8ddc5", "#b9ac96"],
   "clearing": ["#e3c887", "#ae854b"],
-  "blue-piece": ["#548fc2", "#123b64"],
-  "gray-piece": ["#85868a", "#393a43"],
+  "blue-piece": ["#2b72b9", "#17477d"],
+  "gray-piece": ["#d1d4d8", "#929ba5"],
   "bush": ["#84aa63", "#235238"],
 } as const;
 
@@ -25,7 +25,6 @@ function fieldName(cell: Cell) {
 }
 
 export default function Hasenspiel({ onExit }: ExperimentProps) {
-  const [sceneReady, setSceneReady] = useState(false);
   const [game, setGame] = useState(() => newGame());
   const [botLevel, setBotLevel] = useState<BotLevel>();
   const [firstColor, setFirstColor] = useState<Color>();
@@ -113,8 +112,7 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
             Münze werfen
           </button>}
         </div>
-        <div className="hare-playfield" data-scene-ready={sceneReady}>
-          <Clearing3d board={game.board} wall={wall} onReady={setSceneReady} />
+        <div className="hare-playfield">
           <svg className="hare-board" style={boardPaint} viewBox={`-25 -2 ${width + 50} ${boardHeight + 4}`} aria-label="Dreiecksbrett">
             <g className="hare-row-numbers" aria-hidden="true">
               {[0, 1, 2, 3, 4, 5].map(depth => {
@@ -173,16 +171,14 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
                         return <line key={link.id} x1={x} x2={x} y1={6 * height} y2={6 * height + gap} />;
                       })}
                     </g>
-                    : <polygon points={shape.points} data-side={(cell.x + Math.min(cell.row, 12 - cell.row)) % 2 === 0 ? "blue" : "gray"}
+                    : <polygon points={shape.points} data-side={cell.row < 6 ? "blue" : "gray"}
                       style={wall.has(cell.id) ? { fill: `url(#${bushPattern})` } : undefined} />}
                   {rabbit && <g className={`hare-token hare-token-${rabbit.color}`} transform={`translate(${shape.x} ${shape.y})`}>
-                    <ellipse className="hare-piece-shadow" cy="8" rx="12" ry="5" />
-                    <circle className="hare-piece-base" cy="2" r="11" />
-                    <circle className="hare-piece-face" r="11" />
-                    <path className="hare-piece-highlight" d="M-8-5A9 9 0 0 1 4-9" />
-                    <path data-kind={rabbit.kind} d={shapes[rabbit.kind]} />
-                    {(frozen || resting) && <circle className="hare-frozen" r="13" />}
-                    {rabbit.color === "gray" && <path d="M-4 9H4" />}
+                    <ellipse className="hare-piece-shadow" cy="7" rx="12" ry="7" />
+                    <circle className="hare-piece-base" cy="2.5" r="12" />
+                    <circle className="hare-piece-face" r="12" />
+                    <PieceEmblem kind={rabbit.kind} />
+                    {(frozen || resting) && <circle className="hare-frozen" r="13.5" />}
                   </g>}
                   {target && <circle className="hare-target" cx={shape.x + (rabbit ? 9 : 0)} cy={shape.y} r={rabbit ? 3 : 4} />}
                 </g>
