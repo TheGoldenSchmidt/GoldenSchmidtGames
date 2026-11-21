@@ -124,7 +124,7 @@
 .ru-hasenspiel .hare-playfield {
   position: relative;
   border-radius: 14px;
-  background: linear-gradient(#11251b40, #11251b40), url("./forest-clearing.webp") center / cover no-repeat #172522;
+  background: linear-gradient(#11251b20, #11251b20), url("./forest-clearing.webp") center / cover no-repeat #172522;
 }
 .ru-hasenspiel .hare-center rect { fill-opacity: .82; }
 .ru-hasenspiel .hare-cell[data-target="true"] > .hare-center rect { fill-opacity: 1; }
@@ -295,7 +295,7 @@
 .ru-hasenspiel .hare-playfield[data-scene-ready="true"] .hare-board .hare-cell polygon,
 .ru-hasenspiel .hare-playfield[data-scene-ready="true"] .hare-board .hare-center rect {
   fill-opacity: 0;
-  stroke: #e2e4c58a;
+  stroke: #34251cc0;
   stroke-width: 1.15;
 }
 .ru-hasenspiel .hare-playfield[data-scene-ready="true"] .hare-board .hare-cell[data-target="true"] polygon,
