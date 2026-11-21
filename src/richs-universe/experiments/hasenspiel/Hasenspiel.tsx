@@ -2,6 +2,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSPrope
 import type { ExperimentProps } from "../../experiments";
 import { CENTER, canMove, cells, centerLinks, wallFields, movesFrom, newGame, play, sideLinks, type Cell, type Color, type Kind, type Level, type Game, type Move } from "./rules";
 import { botLevels, botTurn, type BotLevel } from "./bot";
+import { MovementIntro } from "./MovementIntro";
 import { HasenspielRules } from "./HasenspielRules";
 import { boardHeight, gap, height, side, triangle, width } from "./boardDrawing";
 import { PieceEmblem } from "./PieceEmblem";
@@ -149,6 +150,7 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
           {levels.map(level => <button key={level} type="button" aria-pressed={levelChosen && game.level === level} disabled={!!firstColor}
             onClick={() => { reset(level); setLevelChosen(true); }}>Stufe {level}</button>)}
         </div>
+        {levelChosen && !firstColor && <MovementIntro level={game.level} key={game.level} />}
         <div className="hare-status" aria-live="polite">
           {firstColor ? <>
             <span>Münzwurf · {firstPlayer}: {names[firstColor]} · {secondPlayer}: {names[secondColor]}</span>

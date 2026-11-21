@@ -30,6 +30,15 @@ for (const level of [1, 2, 3] as const) {
       const game = { ...newGame(level), turn, board: { [start]: piece("central", turn) } };
       assert.ok(moves(game, start).some(move => move.to === CENTER));
       assert.ok(!moves(game, start).some(move => move.to === `${to}:${x}`));
+      for (const color of ["blue", "gray"] as const) {
+        const occupied = { ...game, board: { ...game.board, [CENTER]: piece("occupant", color) } };
+        const across = moves(occupied, start).filter(move => move.friendly === CENTER || move.capture === CENTER);
+        assert.deepEqual(across.map(move => move.to), [`${to}:${x}`]);
+        const landed = play(occupied, start, across[0].to);
+        assert.equal(landed.board[CENTER]?.id, color === turn ? "occupant" : undefined);
+        assert.ok(!moves({ ...landed, turn }, across[0].to).some(move =>
+          cells.find(cell => cell.id === move.to)!.row * (to - from) < to * (to - from)));
+      }
     }
   }
 }
