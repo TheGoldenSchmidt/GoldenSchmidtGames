@@ -2,11 +2,24 @@ import { useState } from "react";
 import { examples, RuleExample } from "./RuleExamples";
 import type { Level } from "./rules";
 
+const monkeyLessons = [...examples.monkey.slice(0, 5), examples.longHang];
+
 const lessons = {
-  1: [examples.step[0], examples.jump[0], examples.jump[1], examples.crossing[3]],
+  1: [
+    examples.edges,
+    { ...examples.step[0], label: "Richtig · beim Ziehen muss der Hase eine Ebene vor. Hier zieht Blau von Reihe 4 in Reihe 5." },
+    { ...examples.step[1], label: "Falsch · ein einfacher Schritt zur Seite bleibt in derselben Ebene." },
+    { ...examples.step[2], label: "Falsch · ein Hase darf nicht zurück zu seiner eigenen Reihe 1 ziehen." },
+    { ...examples.jump[5], label: "Richtig · vorwärts über einen eigenen Hasen springen. Er bleibt stehen." },
+    { ...examples.jump[0], captureAt: "3:-1", label: "Richtig · seitlich über einen Gegner springen und ihn schlagen." },
+    examples.backwardJump,
+    examples.crossing[0], examples.centerMap, examples.enter, examples.leave,
+    ...examples.crossing.slice(1, 6).map(frame => ({ ...frame, captureAt: "center" })),
+  ],
   2: [examples.sideways[0], ...examples.trio],
-  3: [examples.double[0], examples.double[1], examples.monkey[2], examples.monkey[4],
-    examples.deer[0], examples.deer[1], examples.wall[0], examples.wall[1]],
+  3: [examples.fullDouble, ...monkeyLessons,
+    ...examples.deer, examples.resting, ...examples.wall],
+
 };
 
 export function MovementIntro({ level }: { level: Level }) {
@@ -16,6 +29,7 @@ export function MovementIntro({ level }: { level: Level }) {
     {level === 1 ? "Bewegungen zeigen" : `Neu in Stufe ${level} ansehen`}
   </button>;
   return <section aria-label={`Bewegungsintro Stufe ${level}`}>
+    {level === 3 && <h3>{step === 0 ? "Doppelsprung" : step <= monkeyLessons.length ? "Neu · Der Affe" : "Neu · Der Hirsch"}</h3>}
     <RuleExample key={step} frames={[frames[step]]} animate={!window.matchMedia("(prefers-reduced-motion: reduce)").matches} />
     <div className="hare-rule-controls">
       <button type="button" disabled={!step} onClick={() => setStep(step - 1)}>Zurück</button>
