@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useState, type CSSProperties } from "react";
 import type { ExperimentProps } from "../../experiments";
 import { CENTER, canMove, cells, centerLinks, wallFields, movesFrom, newGame, play, sideLinks, type Cell, type Color, type Kind, type Level } from "./rules";
 import { botLevels, botTurn, type BotLevel } from "./bot";
@@ -8,6 +8,15 @@ import { Victory } from "./Victory";
 import "./hasenspiel.css";
 
 const names = { blue: "Blau", gray: "Grau" };
+const boardMaterials = {
+  "blue-field": ["#c7d9d8", "#8faeb4"],
+  "gray-field": ["#e8ddc5", "#b9ac96"],
+  "clearing": ["#e3c887", "#ae854b"],
+  "blue-piece": ["#548fc2", "#123b64"],
+  "gray-piece": ["#85868a", "#393a43"],
+  "bush": ["#84aa63", "#235238"],
+} as const;
+
 const levels: Level[] = [1, 2, 3];
 const species: Record<Kind, string> = { rabbit: "Hase", deer: "Hirsch", monkey: "Affe" };
 function fieldName(cell: Cell) {
@@ -36,7 +45,10 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
   const targets = selected ? movesFrom(game, selected) : [];
   const choices = destination ? targets.filter(move => move.to === destination.id) : [];
   const wall = wallFields(game.board, game.initialWalls);
-  const bushPattern = useId();
+  const boardId = useId();
+  const bushPattern = `${boardId}-bush-pattern`;
+  const boardPaint = Object.fromEntries(Object.keys(boardMaterials)
+    .map(name => [`--hare-${name}`, `url(#${boardId}-${name})`])) as CSSProperties;
   const center = game.board[CENTER];
   const winner = game.result && game.result !== "draw"
     ? botLevel && game.result === secondColor ? "Bot" : names[game.result]
@@ -100,7 +112,7 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
           </button>}
         </div>
         <div className="hare-playfield">
-          <svg className="hare-board" viewBox={`-25 -2 ${width + 50} ${boardHeight + 4}`} aria-label="Dreiecksbrett">
+          <svg className="hare-board" style={boardPaint} viewBox={`-25 -2 ${width + 50} ${boardHeight + 4}`} aria-label="Dreiecksbrett">
             <g className="hare-row-numbers" aria-hidden="true">
               {[0, 1, 2, 3, 4, 5].map(depth => {
                 const y = (depth + .5) * height;
@@ -112,10 +124,17 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
               })}
             </g>
             <defs>
+              {Object.entries(boardMaterials).map(([name, [light, dark]]) => (
+                <linearGradient key={name} id={`${boardId}-${name}`} x1="12%" y1="0%" x2="80%" y2="100%">
+                  <stop stopColor={light} />
+                  <stop offset="1" stopColor={dark} />
+                </linearGradient>
+              ))}
               <pattern id={bushPattern} width="18" height="13" patternUnits="userSpaceOnUse">
-                <rect width="18" height="13" fill="#23533a" />
-                <path d="M0 11Q0 6 4 7Q4 2 8 3Q12 3 12 7Q17 6 18 11V13H0Z" fill="#39764b" />
-                <path d="M3 10Q5 6 9 7M11 10Q13 7 15 9" fill="none" stroke="#76a867" strokeWidth="1.3" />
+                <rect width="18" height="13" fill="#2c563d" />
+                <ellipse cx="9" cy="10.5" rx="8" ry="2" fill="#172e22" opacity=".65" />
+                <path d="M1 9Q0 5 4 5Q5 1 9 2Q13 1 14 5Q18 5 17 9Q14 12 9 10Q4 12 1 9Z" fill={`url(#${boardId}-bush)`} />
+                <path d="M4 7Q5 5 7 5M9 5Q11 3 13 6" fill="none" stroke="#a0bf7f" strokeWidth="1" opacity=".8" />
               </pattern>
             </defs>
             <g className="hare-side-links" aria-hidden="true">
@@ -154,7 +173,10 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
                     : <polygon points={shape.points} data-side={cell.row < 6 ? "blue" : "gray"}
                       style={wall.has(cell.id) ? { fill: `url(#${bushPattern})` } : undefined} />}
                   {rabbit && <g className={`hare-token hare-token-${rabbit.color}`} transform={`translate(${shape.x} ${shape.y})`}>
-                    <circle r="11" />
+                    <ellipse className="hare-piece-shadow" cy="8" rx="12" ry="5" />
+                    <circle className="hare-piece-base" cy="2" r="11" />
+                    <circle className="hare-piece-face" r="11" />
+                    <path className="hare-piece-highlight" d="M-8-5A9 9 0 0 1 4-9" />
                     <path data-kind={rabbit.kind} d={shapes[rabbit.kind]} />
                     {(frozen || resting) && <circle className="hare-frozen" r="13" />}
                     {rabbit.color === "gray" && <path d="M-4 9H4" />}
