@@ -210,7 +210,7 @@ export function movesFrom(game: Game, from: Cell): Move[] {
 
   for (const to of adjacent(from)) {
     if (game.board[to.id] || !allowed(from, to)) continue;
-    if (!rabbit || to.id === CENTER || forward(piece, from, to) > 0
+    if (!rabbit || forward(piece, from, to) > 0
       || (game.level >= 2 && to.row === from.row && Math.abs(to.x) < Math.abs(from.x))) {
       moves.push({ to: to.id });
     }

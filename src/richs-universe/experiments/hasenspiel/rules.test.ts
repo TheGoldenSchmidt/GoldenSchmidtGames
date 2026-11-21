@@ -183,6 +183,10 @@ for (const strength of ["Mittel", "Schwer"] as const) {
 for (const [turn, inner, outer, further] of [
   ["blue", "5:0", "7:0", "8:0"], ["gray", "7:0", "5:0", "4:0"]
 ] as const) {
+  const crossing: Game = { ...newGame(1), turn, board: { [outer]: piece("hare", turn) } };
+  assert.ok(!moves(crossing, outer).some(move => move.to === CENTER));
+  const approaching = { ...crossing, board: { [inner]: piece("hare", turn) } };
+  assert.ok(moves(approaching, inner).some(move => move.to === CENTER));
   const backward: Game = { ...newGame(1), turn, board: {
     [outer]: piece("hare", turn), [CENTER]: piece("middle", turn)
   } };
