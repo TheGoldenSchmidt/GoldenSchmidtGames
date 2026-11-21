@@ -1,8 +1,8 @@
 .ru-hasenspiel {
   min-height: 100dvh;
   padding: 12px;
-  color: #f5efdf;
-  background: radial-gradient(ellipse at center, #343d39, #172522 70%);
+  color: #20301c;
+  background: radial-gradient(ellipse at 40% 15%, #dce6b0, #a9c282 65%, #92ac70);
 }
 .ru-hasenspiel .hare-page {
   width: min(100%, 520px);
@@ -25,9 +25,10 @@
 }
 .ru-hasenspiel button {
   padding: 0 12px;
-  border: 1px solid #7a8c81;
+  border: 1px solid #63794c;
   border-radius: 8px;
-  background: #2b4037;
+  background: #496536;
+  color: #fffbed;
 }
 .ru-hasenspiel .hare-status {
   display: grid;
@@ -36,7 +37,7 @@
   text-align: center;
 }
 .ru-hasenspiel .hare-status span {
-  color: #e2d8bf;
+  color: #344329;
   font-size: .875rem;
 }
 .ru-hasenspiel .hare-board {
@@ -47,18 +48,18 @@
 }
 .ru-hasenspiel .hare-cell[role="button"] { cursor: pointer; }
 .ru-hasenspiel .hare-cell polygon, .ru-hasenspiel .hare-cell rect {
-  fill: #c6beb0;
-  stroke: #28332e;
+  fill: #cbd59a;
+  stroke: #37492c;
   stroke-width: 1.4;
 }
-.ru-hasenspiel .hare-cell polygon[data-side="blue"] { fill: #9db7bd; }
-.ru-hasenspiel .hare-cell rect { fill: #c7a86d; }
+.ru-hasenspiel .hare-cell polygon[data-side="blue"] { fill: #9ab27b; }
+.ru-hasenspiel .hare-cell rect { fill: #d7bb73; }
 .ru-hasenspiel .hare-cell[data-target="true"] > :first-child { fill: #f4de9a; }
 .ru-hasenspiel .hare-cell[data-selected="true"] > :first-child,
 .ru-hasenspiel .hare-cell:focus-visible > :first-child { stroke: #fff4ce; stroke-width: 3; }
 .ru-hasenspiel .hare-token, .ru-hasenspiel .hare-target { pointer-events: none; }
-.ru-hasenspiel .hare-token circle { fill: #4d535b; stroke: #292c30; }
-.ru-hasenspiel .hare-token-blue circle { fill: #12578d; stroke: #123957; }
+.ru-hasenspiel .hare-token circle { fill: #a36d49; stroke: #40281c; }
+.ru-hasenspiel .hare-token-blue circle { fill: #f7f4e9; stroke: #534d42; }
 .ru-hasenspiel .hare-token > path { fill: #fff4de; stroke: #fff4de; stroke-linecap: round; }
 .ru-hasenspiel .hare-target { fill: #6c4106; }
 .ru-hasenspiel details { margin-top: 8px; }
@@ -71,7 +72,7 @@
   margin-top: 8px;
 }
 .ru-hasenspiel .hare-levels [aria-pressed="true"] {
-  color: #172522;
+  color: #293922;
   background: #f4de9a;
   border-color: #f4de9a;
   font-weight: 700;
@@ -83,7 +84,7 @@
   pointer-events: none;
 }
 .ru-hasenspiel .hare-center line { stroke: #584628; }
-.ru-hasenspiel .hare-side-links line { stroke: #e2d8bf; stroke-width: 2; }
+.ru-hasenspiel .hare-side-links line { stroke: #fffbed; stroke-width: 2; }
 .ru-hasenspiel .hare-cell[data-wall="true"] polygon {
   stroke: #183c29;
   stroke-width: 2;
@@ -114,17 +115,17 @@
 .ru-hasenspiel .hare-mode select {
   min-height: 44px;
   padding: 0 10px;
-  border: 1px solid #7a8c81;
+  border: 1px solid #63794c;
   border-radius: 8px;
-  color: inherit;
-  background: #2b4037;
+  background: #496536;
+  color: #fffbed;
   font: inherit;
 }
 
 .ru-hasenspiel .hare-playfield {
   position: relative;
   border-radius: 14px;
-  background: linear-gradient(#11251b20, #11251b20), url("./forest-clearing.webp") center / cover no-repeat #172522;
+  background: url("./fern-clearing.webp") center / cover no-repeat #a0b774;
 }
 .ru-hasenspiel .hare-center rect { fill-opacity: .82; }
 .ru-hasenspiel .hare-cell[data-target="true"] > .hare-center rect { fill-opacity: 1; }
@@ -167,10 +168,10 @@
 
 .ru-hasenspiel .hare-announcement strong {
   padding: 10px 20px;
-  border: 2px solid #e7af50;
+  border: 2px solid #edd58b;
   border-radius: 12px;
   color: #fff4de;
-  background: #172522;
+  background: #293922;
   box-shadow: 0 4px 20px #0008;
   font: bold clamp(1.65rem, 7vw, 2.6rem)/1.15 Georgia, serif;
 }
@@ -183,7 +184,7 @@
   fill: #f5efdf;
   font: bold 15px system-ui, sans-serif;
   paint-order: stroke;
-  stroke: #172522;
+  stroke: #293922;
   stroke-width: 3px;
   text-anchor: middle;
   dominant-baseline: central;
@@ -192,16 +193,16 @@
 
 .ru-hasenspiel .hare-rule-example {
   margin: 8px 0 16px;
-  border: 1px solid #627767;
+  border: 1px solid #6a8053;
   border-radius: 12px;
-  background: #172c24;
+  background: #cfdda9;
   overflow: hidden;
 }
 .ru-hasenspiel .hare-rule-diagram {
   display: block;
   width: 100%;
   height: 152px;
-  background: #20372d;
+  background: #9db77c;
 }
 .ru-hasenspiel .hare-rule-example figcaption {
   padding: 8px;
@@ -217,7 +218,7 @@
 .ru-hasenspiel .hare-rule-controls button { min-width: 44px; }
 .ru-hasenspiel .hare-rule-controls button[aria-pressed="true"] {
   background: #f4de9a;
-  color: #172522;
+  color: #293922;
 }
 .ru-hasenspiel .hare-rule-route {
   fill: none;
@@ -228,11 +229,11 @@
   filter: drop-shadow(0 0 2px #fff4de);
 }
 .ru-hasenspiel .hare-rule-route[data-blocked="true"] {
-  stroke: #8d2528;
+  stroke: #873b29;
   stroke-dasharray: 5 3;
 }
 .ru-hasenspiel .hare-rule-cross {
-  fill: #8d2528;
+  fill: #873b29;
   stroke: #fff4de;
   stroke-width: 3px;
   paint-order: stroke;
@@ -272,10 +273,10 @@
   stroke-width: 3;
 }
 .ru-hasenspiel .hare-board .hare-piece-shadow { fill: #101d18; opacity: .55; }
-.ru-hasenspiel .hare-board .hare-piece-base { fill: #292832; stroke: #1a2229; }
-.ru-hasenspiel .hare-board .hare-token-blue .hare-piece-base { fill: #142c48; }
-.ru-hasenspiel .hare-board .hare-piece-face { fill: var(--hare-gray-piece); stroke: #353740; }
-.ru-hasenspiel .hare-board .hare-token-blue .hare-piece-face { fill: var(--hare-blue-piece); stroke: #173f63; }
+.ru-hasenspiel .hare-board .hare-piece-base { fill: #805437; stroke: #362419; }
+.ru-hasenspiel .hare-board .hare-token-blue .hare-piece-base { fill: #aaa495; }
+.ru-hasenspiel .hare-board .hare-piece-face { fill: var(--hare-gray-piece); stroke: #462e20; }
+.ru-hasenspiel .hare-board .hare-token-blue .hare-piece-face { fill: var(--hare-blue-piece); stroke: #635d50; }
 .ru-hasenspiel .hare-board .hare-piece-highlight { fill: none; stroke-width: 1; opacity: .45; }
 .ru-hasenspiel .hare-board .hare-token path[data-kind] {
   filter: drop-shadow(0 1px 0 #17202b);
@@ -283,36 +284,40 @@
 .ru-hasenspiel .hare-board .hare-target { stroke: #fff4ce; stroke-width: 1.3; }
 
 
-.ru-hasenspiel .hare-rule-diagram .hare-emblem { color: #fff8e8; }
-.ru-hasenspiel .hare-board .hare-emblem { color: #17242d; }
-.ru-hasenspiel .hare-board .hare-token-blue .hare-emblem { color: #fff8e8; }
-.ru-hasenspiel .hare-board .hare-piece-face { stroke: #eef0ee; stroke-width: 1; }
-.ru-hasenspiel .hare-board .hare-token-blue .hare-piece-face { stroke: #a5d4ff; }
+.ru-hasenspiel .hare-token .hare-emblem { color: #ffffff; }
+.ru-hasenspiel .hare-token-blue .hare-emblem { color: #895435; }
+.ru-hasenspiel .hare-board .hare-piece-face { stroke: #462e20; stroke-width: 1; }
+.ru-hasenspiel .hare-board .hare-token-blue .hare-piece-face { stroke: #635d50; }
 
-.hare-intro-scene, .hare-intro-night {
-  position: fixed; inset: 0; z-index: 50; pointer-events: none;
+.hare-intro-scene {
+  position: fixed; inset: 0; z-index: 52; overflow: hidden; background: #080d08;
 }
-.hare-intro-scene { overflow: hidden; background: #141a10; }
-.hare-intro-woods, .hare-intro-moss, .hare-intro-shade { position: absolute; inset: 0; }
 .hare-intro-woods {
-  background: linear-gradient(0deg, #10190fd9, transparent 54%, #28311b26), url("./forest-path.webp") center / cover;
-  transform-origin: 50% 59%;
+  width: 100%; height: 100%; object-fit: cover; object-position: 32% 55%;
+  transform-origin: 12% 6%; opacity: 0;
 }
-.hare-intro-moss {
-  opacity: 0;
-  background: linear-gradient(#11251b20, #11251b20), url("./forest-clearing.webp") center / cover;
+.hare-intro-sun {
+  position: absolute; inset: 0; background: white; opacity: 0;
 }
-.hare-intro-shade { background: radial-gradient(ellipse at 52% 51%, transparent 28%, #0f180f80); }
-.hare-intro-night { z-index: 53; background: #050805; }
-.hare-intro-legs {
-  position: fixed; z-index: 50; pointer-events: none;
-  background: linear-gradient(90deg, #30271c, #5f4a31 10%, #34291b 13%, #58442c 85%, #29231a 94%);
-  clip-path: polygon(0 0, 100% 0, 94% 100%, 89% 100%, 90% 14%, 10% 14%, 11% 100%, 6% 100%);
+.hare-intro-scene[data-ready="true"] {
+  animation: hare-reveal-board 6.5s linear both;
 }
-.ru-hasenspiel .hare-playfield[data-intro] { z-index: 51; pointer-events: none; }
+.hare-intro-scene[data-ready="true"] .hare-intro-woods {
+  animation: hare-toward-sun 5.5s ease-in-out both;
+}
+.hare-intro-scene[data-ready="true"] .hare-intro-sun {
+  animation: hare-whiteout 5.55s ease-in both;
+}
+@keyframes hare-toward-sun {
+  0%, 4% { opacity: 0; }
+  20% { opacity: 1; }
+  to { opacity: 1; object-position: 7% 0%; transform: scale(1.37); filter: brightness(1.85); }
+}
+@keyframes hare-whiteout { 0%, 43% { opacity: 0; } 100% { opacity: 1; } }
+@keyframes hare-reveal-board { 0%, 89% { opacity: 1; } 100% { opacity: 0; } }
 .ru-hasenspiel .hare-intro-skip {
   position: fixed; right: 18px; bottom: max(18px, env(safe-area-inset-bottom)); z-index: 54;
-  background: #202a20ed; border-radius: 24px;
+  background: #3e5531ed; border-radius: 24px;
 }
 .ru-hasenspiel .hare-replay { display: block; margin: 15px auto; }
 .ru-hasenspiel button:disabled, .ru-hasenspiel select:disabled { opacity: .68; cursor: default; }

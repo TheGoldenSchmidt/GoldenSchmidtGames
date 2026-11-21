@@ -1,13 +1,13 @@
 import { useId, useState } from "react";
 import { PieceEmblem } from "./PieceEmblem";
-import { boardHeight, gap, height, shapes, side, triangle, width } from "./boardDrawing";
-import { CENTER, cells, newGame, play, wallFields, type Color, type Game, type Kind, type Level } from "./rules";
+import { boardHeight, gap, height, side, triangle, width } from "./boardDrawing";
+import { CENTER, cells, movesFrom, newGame, play, wallFields, type Color, type Game, type Kind, type Level } from "./rules";
 
 const piece = (id: string, color: Color = "blue", kind: Kind = "rabbit") => ({ id, color, kind });
 const position = (level: Level, board: Game["board"], turn: Color = "blue"): Game =>
   ({ ...newGame(level), board, turn });
 
-type Frame = { option?: string; label: string; game: Game; path: string[]; blocked?: boolean; guide?: "edges" | "center"; captureAt?: string };
+type Frame = { option?: string; label: string; game: Game; path: string[]; blocked?: boolean; guide?: "edges" | "center" | "range"; captureAt?: string };
 const frame = (label: string, game: Game, path: string[], blocked = false): Frame =>
   ({ label, game, path, blocked });
 
@@ -69,7 +69,7 @@ export const examples = {
     ["3:-2", "3:-3", "4:-3", "4:-2", "5:-2"]), captureAt: "4:-2" },
   longHang: frame("Langes Hangeln · über fünf Hasen bis zum freien Feld. Alle fünf bleiben stehen.", longHang,
     ["5:-4", "5:-3", "5:-2", "5:-1", "5:0", "5:1", "5:2"]),
-  resting: frame("Verboten · dieser Hirsch ruht nach drei Feldern. Grau darf ihn nicht überspringen. Blau muss ihn im nächsten eigenen Zug stehen lassen.", {
+  resting: frame("Verboten · dieser Hirsch ruht nach drei Feldern. Braun darf ihn nicht überspringen. Weiß muss ihn im nächsten eigenen Zug stehen lassen.", {
     ...restingDeer, board: { ...restingDeer.board, "4:2": piece("hare", "gray") }
   }, ["4:2", "4:3", "4:4"], true),
   step: [
@@ -108,6 +108,7 @@ export const examples = {
     frame("2. Über den Gegner springen", { ...play(double, "3:-2", "4:-3"), turn: "blue" }, ["4:-3", "4:-2", "5:-2"]),
     frame("Beide Sprünge zählen als ein Zug", play(double, "3:-2", "5:-2"), ["5:-2"]),
   ],
+  deerRange: { ...frame("Der Hirsch zieht gerade in alle acht Richtungen: beliebig weit über freie Felder, höchstens bis vor eine Figur oder bis zum Brettrand. Er darf früher anhalten. Ab drei Feldern muss er im nächsten eigenen Zug ruhen. Während der Ruhe kann ihn niemand überspringen.", deer, ["4:0"]), guide: "range" } satisfies Frame,
   deer: [
     frame("Waagerecht über drei freie Felder", deer, ["4:0", "4:1", "4:2", "4:3"]),
     frame("Der Hirsch ruht und ist vor Sprüngen geschützt", play(deer, "4:0", "4:3"), ["4:3"]),
@@ -117,12 +118,12 @@ export const examples = {
   ],
   wall: [
     frame("Der zweite Hirsch zieht in dieselbe Reihe", wallSetup, ["3:2", "4:3"]),
-    frame("Der Wall entsteht. Grau setzt hier aus", wall, ["4:1"]),
-    frame("Grau darf nach der Betäubung seitwärts herausziehen", { ...wall, frozen: [] }, ["4:1", "4:2"]),
-    frame("Vorwärts bleibt der Wall für Grau gesperrt", { ...wall, frozen: [] }, ["4:1", "3:1"], true),
-    frame("Blau kann frei hindurchziehen", { ...wall, turn: "blue" }, ["4:-2", "5:-2"]),
-    frame("Blau hangelt über einen grauen Wall", wallClimb, ["3:-2", "3:-1", "4:-1", "4:0", "5:0"]),
-    frame("Nur von außen seitlich kann Blau den Hirsch schlagen", position(3, {
+    frame("Der Wall entsteht. Braun setzt hier aus", wall, ["4:1"]),
+    frame("Braun darf nach der Betäubung seitwärts herausziehen", { ...wall, frozen: [] }, ["4:1", "4:2"]),
+    frame("Vorwärts bleibt der Wall für Braun gesperrt", { ...wall, frozen: [] }, ["4:1", "3:1"], true),
+    frame("Weiß kann frei hindurchziehen", { ...wall, turn: "blue" }, ["4:-2", "5:-2"]),
+    frame("Weiß hangelt über einen braunen Wall", wallClimb, ["3:-2", "3:-1", "4:-1", "4:0", "5:0"]),
+    frame("Nur von außen seitlich kann Weiß den Hirsch schlagen", position(3, {
       "4:-2": piece("left", "gray", "deer"), "4:2": piece("right", "gray", "deer"), "4:-3": piece("hare"),
     }), ["4:-3", "4:-2", "4:-1"]),
     frame("Vom Wall aus ist der Sprung über den Hirsch gesperrt", position(3, {
@@ -148,7 +149,8 @@ export function RuleExample({ frames, animate = false }: { frames: Frame[]; anim
   const marker = useId();
   const { game, label, path, blocked, guide, captureAt } = frames[step];
   const guideCells = guide === "center" ? ["5:-2", "5:2", "7:-2", "7:2"] : [];
-  const shown = [...Object.keys(game.board), ...path, ...guideCells].map(id => drawing.get(id)!);
+  const targets = guide === "range" ? movesFrom(game, cells.find(cell => cell.id === path[0])!) : [];
+  const shown = [...Object.keys(game.board), ...path, ...guideCells, ...targets.map(move => move.to)].map(id => drawing.get(id)!);
   const minX = Math.max(-2, Math.min(...shown.map(cell => cell.x)) - side);
   const maxX = Math.min(width + 2, Math.max(...shown.map(cell => cell.x)) + side);
   const minY = Math.max(-2, Math.min(...shown.map(cell => cell.y)) - height * .7);
@@ -180,6 +182,10 @@ export function RuleExample({ frames, animate = false }: { frames: Frame[]; anim
                 style={wall.has(cell.id) ? { fill: "#4b8955" } : undefined} />}
           </g>
         ))}
+        {targets.map(move => {
+          const target = drawing.get(move.to)!;
+          return <circle key={move.to} cx={target.x} cy={target.y} r="4.5" fill="#397443" stroke="#eff5d7" strokeWidth="1.5" />;
+        })}
         {guide === "edges" && <polygon points={route[0].points} fill="none" stroke="#19883b" strokeWidth="5" strokeLinejoin="round" />}
         {guide === "center" && [-2,-1,0,1,2].map(column => {
           const top = drawing.get(`5:${column}`)!;
@@ -202,7 +208,7 @@ export function RuleExample({ frames, animate = false }: { frames: Frame[]; anim
                 <animateMotion key={label} dur="1.4s" fill="freeze"
                   path={route.map((point, i) => `${i ? "L" : "M"}${point.x - cell.x} ${point.y - cell.y}`).join(" ")} />}
             <circle r="11" />
-            {token.kind === "deer" ? <PieceEmblem kind="deer" /> : <path data-kind={token.kind} d={shapes[token.kind]} />}
+            <PieceEmblem kind={token.kind} />
             {(game.frozen.includes(token.id) || game.restingDeer?.includes(token.id)) && <circle className="hare-frozen" r="13" />}
             </g>
           </g>;
