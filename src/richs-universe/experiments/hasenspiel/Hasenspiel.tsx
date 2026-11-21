@@ -1,9 +1,10 @@
-import { useEffect, useId, useState, type CSSProperties } from "react";
+import { useEffect, useId, useMemo, useState, type CSSProperties } from "react";
 import type { ExperimentProps } from "../../experiments";
 import { CENTER, canMove, cells, centerLinks, wallFields, movesFrom, newGame, play, sideLinks, type Cell, type Color, type Kind, type Level } from "./rules";
 import { botLevels, botTurn, type BotLevel } from "./bot";
 import { HasenspielRules } from "./HasenspielRules";
 import { boardHeight, gap, height, shapes, side, triangle, width } from "./boardDrawing";
+import { Clearing3d } from "./Clearing3d";
 import { Victory } from "./Victory";
 import "./hasenspiel.css";
 
@@ -24,6 +25,7 @@ function fieldName(cell: Cell) {
 }
 
 export default function Hasenspiel({ onExit }: ExperimentProps) {
+  const [sceneReady, setSceneReady] = useState(false);
   const [game, setGame] = useState(() => newGame());
   const [botLevel, setBotLevel] = useState<BotLevel>();
   const [firstColor, setFirstColor] = useState<Color>();
@@ -44,7 +46,7 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
   const [destination, setDestination] = useState<Cell>();
   const targets = selected ? movesFrom(game, selected) : [];
   const choices = destination ? targets.filter(move => move.to === destination.id) : [];
-  const wall = wallFields(game.board, game.initialWalls);
+  const wall = useMemo(() => wallFields(game.board, game.initialWalls), [game.board, game.initialWalls]);
   const boardId = useId();
   const bushPattern = `${boardId}-bush-pattern`;
   const boardPaint = Object.fromEntries(Object.keys(boardMaterials)
@@ -111,7 +113,8 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
             Münze werfen
           </button>}
         </div>
-        <div className="hare-playfield">
+        <div className="hare-playfield" data-scene-ready={sceneReady}>
+          <Clearing3d board={game.board} wall={wall} onReady={setSceneReady} />
           <svg className="hare-board" style={boardPaint} viewBox={`-25 -2 ${width + 50} ${boardHeight + 4}`} aria-label="Dreiecksbrett">
             <g className="hare-row-numbers" aria-hidden="true">
               {[0, 1, 2, 3, 4, 5].map(depth => {

@@ -20,7 +20,7 @@ export function HasenspielRules({ level }: { level: Level }) {
       <p><strong>Einen Zug machen.</strong> Tippe zuerst auf deine Figur, dann auf ein markiertes Landefeld.
         Gibt es mehrere Wege dorthin, wähle unter dem Brett einen aus. Zwei Dreiecksfelder sind benachbart,
         wenn sie eine Kante teilen (eine geteilte Linie, eine Ecke reicht nicht) oder durch eine gestrichelte Linie verbunden sind.</p>
-      <p><strong>Hase ziehen.</strong> Ziehe eine Ebene vor auf ein freies Nachbarfeld oder auf die direkt verbundene Lichtung.</p>
+      <p><strong>Hase ziehen.</strong> Ziehe eine Ebene vor auf ein freies Nachbarfeld oder vorwärts auf die direkt verbundene Lichtung.</p>
       <RuleExample frames={level === 1 ? examples.step : examples.step.filter((_, index) => index !== 1)} />
       <p><strong>Hase springen.</strong> Springe vorwärts oder seitwärts über {advanced ? "eine benachbarte Figur" : "einen benachbarten Hasen"}
         auf ein freies, damit verbundenes Feld. In derselben Reihe springst du geradeaus. Rückwärtssprünge sind auch zur oder über die Lichtung verboten. Gegnerische Figuren werden geschlagen,
