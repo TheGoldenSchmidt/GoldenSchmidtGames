@@ -250,3 +250,34 @@
   stroke-width: 2;
   stroke-dasharray: 3 3;
 }
+
+/* Light and depth stay inside the top-down board so the hit areas match the drawing. */
+.ru-hasenspiel .hare-board .hare-cell polygon {
+  fill: var(--hare-gray-field);
+  stroke-linejoin: round;
+}
+.ru-hasenspiel .hare-board .hare-cell polygon[data-side="blue"] { fill: var(--hare-blue-field); }
+.ru-hasenspiel .hare-board .hare-center rect {
+  fill: var(--hare-clearing);
+  fill-opacity: .95;
+}
+.ru-hasenspiel .hare-board .hare-cell[data-target="true"] > polygon,
+.ru-hasenspiel .hare-board .hare-cell[data-target="true"] .hare-center rect {
+  fill: #f4de9a;
+  fill-opacity: 1;
+}
+.ru-hasenspiel .hare-board .hare-cell[data-selected="true"] .hare-center rect,
+.ru-hasenspiel .hare-board .hare-cell:focus-visible .hare-center rect {
+  stroke: #fff4ce;
+  stroke-width: 3;
+}
+.ru-hasenspiel .hare-board .hare-piece-shadow { fill: #101d18; opacity: .55; }
+.ru-hasenspiel .hare-board .hare-piece-base { fill: #292832; stroke: #1a2229; }
+.ru-hasenspiel .hare-board .hare-token-blue .hare-piece-base { fill: #142c48; }
+.ru-hasenspiel .hare-board .hare-piece-face { fill: var(--hare-gray-piece); stroke: #353740; }
+.ru-hasenspiel .hare-board .hare-token-blue .hare-piece-face { fill: var(--hare-blue-piece); stroke: #173f63; }
+.ru-hasenspiel .hare-board .hare-piece-highlight { fill: none; stroke-width: 1; opacity: .45; }
+.ru-hasenspiel .hare-board .hare-token path[data-kind] {
+  filter: drop-shadow(0 1px 0 #17202b);
+}
+.ru-hasenspiel .hare-board .hare-target { stroke: #fff4ce; stroke-width: 1.3; }
