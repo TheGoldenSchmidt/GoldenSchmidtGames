@@ -170,23 +170,24 @@ export function movesFrom(game: Game, from: Cell): Move[] {
   if (game.result || piece?.color !== game.turn || game.frozen.includes(piece.id)
     || game.restingDeer?.includes(piece.id)) return [];
   const wall = wallFields(game.board, game.initialWalls, piece.color === "blue" ? "gray" : "blue");
-  const allowed = (start: Cell, end: Cell) => wall.has(end.id)
+  const rabbit = piece.kind === "rabbit";
+  const directionAllowed = (start: Cell, end: Cell) => !rabbit || forward(piece, start, end) >= 0;
+  const allowed = (start: Cell, end: Cell) => directionAllowed(start, end) && (wall.has(end.id)
     ? wall.has(start.id)
-    : !wall.has(start.id) || forward(piece, start, end) <= 0;
+    : !wall.has(start.id) || forward(piece, start, end) <= 0);
   if (piece.kind === "deer") return deerMoves(game.board, from, allowed);
 
   const wallEnds = new Map(deerWalls(game.board)
     .filter(wall => !game.initialWalls?.includes(wall.id))
     .flatMap(wall => wall.ends.map(id => [id, new Set(wall.between.map(cell => cell.id))] as const)));
   const previous = game.previous[game.turn];
-  const rabbit = piece.kind === "rabbit";
   const moves: Move[] = [];
 
   const jumps = (board: Board, start: Cell) => {
     const result: { to: Cell; middle: Cell; crossed: Piece }[] = [];
     for (const middle of adjacent(start)) {
       const crossed = board[middle.id];
-      if (!crossed || game.restingDeer?.includes(crossed.id) || (rabbit && forward(piece, start, middle) < 0)) continue;
+      if (!crossed || game.restingDeer?.includes(crossed.id)) continue;
       const protectedWall = wallEnds.get(middle.id);
       if (!allowed(start, middle) || wall.has(middle.id)
         || (protectedWall && (protectedWall.has(start.id) || start.row !== middle.row))) continue;
@@ -195,8 +196,7 @@ export function movesFrom(game: Game, from: Cell): Move[] {
 
       for (const to of adjacent(middle)) {
         if (board[to.id]) continue;
-        if (protectedWall ? !protectedWall.has(to.id) : !allowed(middle, to)) continue;
-        if (rabbit && forward(piece, middle, to) < 0) continue;
+        if (protectedWall ? !protectedWall.has(to.id) || !directionAllowed(middle, to) : !allowed(middle, to)) continue;
         if (middle.id === CENTER) {
           if (to.row === start.row || to.x !== start.x) continue;
         } else {

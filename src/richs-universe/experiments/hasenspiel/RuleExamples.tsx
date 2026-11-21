@@ -14,7 +14,6 @@ const rabbit = position(1, { "3:-1": piece("hare") });
 const jump = position(1, { "3:-2": piece("hare"), "3:-1": piece("opponent", "gray") });
 const friendly = position(1, { "3:-2": piece("hare"), "3:-1": piece("friend") });
 const repeat = { ...friendly, previous: { blue: { mover: "hare", crossed: "friend" }, gray: undefined } };
-const centerJump = position(1, { "5:0": piece("hare"), [CENTER]: piece("opponent", "gray") });
 const trio = position(2, {
   [CENTER]: piece("hare"), "7:-1": piece("left", "gray"), "7:0": piece("middle", "gray"), "7:1": piece("right", "gray"),
 });
@@ -52,7 +51,11 @@ export const examples = {
   ],
   crossing: [
     frame("Über die gestrichelte Verbindung ziehen", position(1, { "5:3": piece("hare") }), ["5:3", "7:3"]),
-    frame("Über die Lichtung gerade gegenüber landen", centerJump, ["5:0", CENTER, "7:0"]),
+    ...[-2, -1, 0, 1, 2].map((x, i) => frame(
+      `Lichtung überspringen · Weg ${i + 1} von links`,
+      position(1, { [`5:${x}`]: piece("hare"), [CENTER]: piece("opponent", "gray") }),
+      [`5:${x}`, CENTER, `7:${x}`],
+    )),
     frame("Rückwärts über die Lichtung springen ist verboten",
       position(1, { "7:0": piece("hare"), [CENTER]: piece("opponent", "gray") }), ["7:0", CENTER, "5:0"], true),
   ],
@@ -103,7 +106,7 @@ const drawing = new Map(cells.map(cell => [cell.id, {
   ...cell, ...(cell.id === CENTER ? { x: width / 2, y: boardHeight / 2, points: "" } : triangle(cell)),
 }]));
 
-export function RuleExample({ frames }: { frames: Frame[] }) {
+export function RuleExample({ frames, animate = false }: { frames: Frame[]; animate?: boolean }) {
   const [step, setStep] = useState(0);
   const marker = useId();
   const { game, label, path, blocked } = frames[step];
@@ -112,7 +115,13 @@ export function RuleExample({ frames }: { frames: Frame[] }) {
   const maxX = Math.min(width + 2, Math.max(...shown.map(cell => cell.x)) + side);
   const minY = Math.max(-2, Math.min(...shown.map(cell => cell.y)) - height * .7);
   const maxY = Math.min(boardHeight + 2, Math.max(...shown.map(cell => cell.y)) + height * .7);
-  const route = path.map(id => drawing.get(id)!);
+  const route = path.map((id, index) => {
+    const cell = drawing.get(id)!;
+    if (id === CENTER && index > 0 && index < path.length - 1) {
+      return { ...cell, x: drawing.get(path[index - 1])!.x };
+    }
+    return cell;
+  });
   const end = route.at(-1)!;
   const wall = wallFields(game.board, game.initialWalls);
   const visible = [...drawing.values()].filter(cell => cell.x >= minX - side / 2 && cell.x <= maxX + side / 2
@@ -140,8 +149,13 @@ export function RuleExample({ frames }: { frames: Frame[] }) {
           const token = game.board[cell.id];
           if (!token) return null;
           return <g key={cell.id} className={`hare-token hare-token-${token.color}`} transform={`translate(${cell.x} ${cell.y})`}>
+            <g>
+              {animate && !blocked && cell.id === path[0] && route.length > 1 &&
+                <animateMotion key={label} dur="1.4s" fill="freeze"
+                  path={route.map((point, i) => `${i ? "L" : "M"}${point.x - cell.x} ${point.y - cell.y}`).join(" ")} />}
             <circle r="11" /><path data-kind={token.kind} d={shapes[token.kind]} />
             {(game.frozen.includes(token.id) || game.restingDeer?.includes(token.id)) && <circle className="hare-frozen" r="13" />}
+            </g>
           </g>;
         })}
         {route.length === 1 && <circle className="hare-rule-highlight" cx={end.x} cy={end.y} r="16" />}

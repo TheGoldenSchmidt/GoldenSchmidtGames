@@ -14,13 +14,19 @@ export function HasenspielRules({ level }: { level: Level }) {
       <p><strong>Das Spielbrett.</strong> Zwei gespiegelte Dreiecke treffen an der Lichtung aufeinander.
         Jede Seite hat sechs nummerierte Reihen, vom einzelnen Dreieck in Reihe 1 bis zur breiten Reihe 6.
         Die gestrichelten Linien links und rechts verbinden je drei gegenüberliegende Feldpaare und zählen wie gemeinsame Kanten.
-        Die Lichtung ist auf jeder Seite mit den fünf mittleren Feldern der Reihe 6 verbunden.
-        Wer darüber springt, landet gerade gegenüber.</p>
+        Diese äußeren Wege führen an der Lichtung vorbei.</p>
+      <p><strong>Die Lichtung.</strong> Die fünf mittleren Felder der Reihe 6 haben jeweils eine Verbindung zur Lichtung.
+        Ist sie frei, kannst du von einem verbundenen Feld hineinziehen oder über eine benachbarte Figur auf ihr landen.
+        Stehst du auf der Lichtung, kannst du über eine Figur auf einem der verbundenen Felder auf ein freies Nachbarfeld dieser Figur springen.</p>
+      <p>Ist die Lichtung besetzt, gibt es fünf Sprungwege über sie. Vom linken der fünf Felder landest du links gegenüber,
+        vom zweiten auf dem zweiten, von der Mitte in der Mitte und entsprechend auf den beiden rechten Feldern.
+        Das Zielfeld muss frei sein. Beim Sprung bleibt eine eigene Figur stehen, eine gegnerische wird geschlagen.
+        Für Hasen führt jeder dieser Wege nur in Spielrichtung.{advanced && " Affen dürfen in beide Richtungen springen. Hirsche können nicht springen. Beim Doppelsprung kann die Lichtung Start, Zwischenlandung, Ziel oder übersprungenes Feld sein, sofern beide Teilsprünge erlaubt sind."}</p>
       <RuleExample frames={examples.crossing} />
       <p><strong>Einen Zug machen.</strong> Tippe zuerst auf deine Figur, dann auf ein markiertes Landefeld.
         Gibt es mehrere Wege dorthin, wähle unter dem Brett einen aus. Zwei Dreiecksfelder sind benachbart,
         wenn sie eine Kante teilen (eine geteilte Linie, eine Ecke reicht nicht) oder durch eine gestrichelte Linie verbunden sind.</p>
-      <p><strong>Hase ziehen.</strong> Ziehe eine Ebene vor auf ein freies Nachbarfeld oder vorwärts auf die direkt verbundene Lichtung.</p>
+      <p><strong>Hase ziehen.</strong> Ziehe eine Ebene vor auf ein freies Nachbarfeld oder vorwärts auf die direkt verbundene Lichtung. Vorwärts führt immer von deiner eigenen Reihe 1 weg zur gegnerischen Spitze. Auch jenseits der Lichtung darf ein Hase niemals zurücklaufen.</p>
       <RuleExample frames={level === 1 ? examples.step : examples.step.filter((_, index) => index !== 1)} />
       <p><strong>Hase springen.</strong> Springe vorwärts oder seitwärts über {advanced ? "eine benachbarte Figur" : "einen benachbarten Hasen"}
         auf ein freies, damit verbundenes Feld. In derselben Reihe springst du geradeaus. Rückwärtssprünge sind auch zur oder über die Lichtung verboten. Gegnerische Figuren werden geschlagen,
@@ -42,7 +48,7 @@ export function HasenspielRules({ level }: { level: Level }) {
         <li><strong>Neu in Stufe 3 · Hirschwall.</strong> Stehen nach einem Zug zwei gleichfarbige Hirsche in derselben Reihe
           und liegen <strong>drei bis sechs Felder</strong> zwischen ihnen, entsteht auf diesen Feldern ein grüner Wall.
           Die eigene Farbe kann frei hindurchziehen. Gegnerische Figuren darauf
-          setzen beim nächsten eigenen Zug aus, außer Hirschen. Danach können sie seitlich oder rückwärts herausziehen.
+          setzen beim nächsten eigenen Zug aus, außer Hirschen. Danach dürfen sie sich nach ihren normalen Zugregeln bewegen. Vorwärts ist der Weg aus dem Wall gesperrt. Hasen dürfen auch hier nicht rückwärts ziehen.
           Gegnerische Affen können den Wall beim Hangeln überqueren. Vom Wall aus kann keine Figur über seine Hirsche springen. Hasen und Affen können einen Wallhirsch nur seitlich von außen auf ein freies Feld im Wall überspringen und dabei einen gegnerischen Hirsch schlagen. Der Wall verschwindet, sobald die Hirsche in verschiedenen Reihen stehen oder der Abstand außerhalb dieser Grenzen liegt.<RuleExample frames={examples.wall} /></li>
         <li><strong>Neu in Stufe 3 · Affen.</strong> Affen dürfen in alle Richtungen ziehen und springen, auch rückwärts.
           Beim Hangeln bewegen sie sich vorwärts oder seitwärts über mindestens zwei Hasen. Zwischen ihnen darf höchstens
