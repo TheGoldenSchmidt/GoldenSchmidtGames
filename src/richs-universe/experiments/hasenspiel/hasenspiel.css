@@ -287,3 +287,49 @@
 .ru-hasenspiel .hare-board .hare-token-blue .hare-emblem { color: #fff8e8; }
 .ru-hasenspiel .hare-board .hare-piece-face { stroke: #eef0ee; stroke-width: 1; }
 .ru-hasenspiel .hare-board .hare-token-blue .hare-piece-face { stroke: #a5d4ff; }
+
+.hare-intro-scene, .hare-intro-night {
+  position: fixed; inset: 0; z-index: 50; pointer-events: none;
+}
+.hare-intro-scene { overflow: hidden; background: #141a10; }
+.hare-intro-woods, .hare-intro-moss, .hare-intro-shade { position: absolute; inset: 0; }
+.hare-intro-woods {
+  background: linear-gradient(0deg, #10190fd9, transparent 54%, #28311b26), url("./forest-path.webp") center / cover;
+  transform-origin: 50% 59%;
+}
+.hare-intro-moss {
+  opacity: 0;
+  background: linear-gradient(#11251b20, #11251b20), url("./forest-clearing.webp") center / cover;
+}
+.hare-intro-shade { background: radial-gradient(ellipse at 52% 51%, transparent 28%, #0f180f80); }
+.hare-intro-night { z-index: 53; background: #050805; }
+.hare-intro-legs {
+  position: fixed; z-index: 50; pointer-events: none;
+  background: linear-gradient(90deg, #30271c, #5f4a31 10%, #34291b 13%, #58442c 85%, #29231a 94%);
+  clip-path: polygon(0 0, 100% 0, 94% 100%, 89% 100%, 90% 14%, 10% 14%, 11% 100%, 6% 100%);
+}
+.ru-hasenspiel .hare-playfield[data-intro] { z-index: 51; pointer-events: none; }
+.ru-hasenspiel .hare-intro-skip {
+  position: fixed; right: 18px; bottom: max(18px, env(safe-area-inset-bottom)); z-index: 54;
+  background: #202a20ed; border-radius: 24px;
+}
+.ru-hasenspiel .hare-replay { display: block; margin: 15px auto; }
+.ru-hasenspiel button:disabled, .ru-hasenspiel select:disabled { opacity: .68; cursor: default; }
+.ru-hasenspiel .hare-token-moving { animation: hare-move 400ms ease-in-out both; }
+.ru-hasenspiel .hare-token-moving[data-double="true"] { animation: hare-double 620ms linear both; }
+.ru-hasenspiel .hare-token[data-captured] { animation: hare-capture 150ms 210ms both; }
+.ru-hasenspiel .hare-token[data-captured][data-double="true"] { animation-delay: 430ms; }
+
+@keyframes hare-move {
+  50% { transform: translate(var(--via-x), calc(var(--via-y) - var(--jump-height))); }
+  100% { transform: translate(var(--move-x), var(--move-y)); }
+}
+@keyframes hare-double {
+  25% { transform: translate(calc(var(--via-x) / 2), calc(var(--via-y) / 2 - var(--jump-height))); }
+  50% { transform: translate(var(--via-x), var(--via-y)); }
+  75% { transform: translate(calc((var(--via-x) + var(--move-x)) / 2), calc((var(--via-y) + var(--move-y)) / 2 - var(--jump-height))); }
+  100% { transform: translate(var(--move-x), var(--move-y)); }
+}
+@keyframes hare-capture {
+  to { opacity: 0; }
+}
