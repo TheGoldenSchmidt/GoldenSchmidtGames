@@ -29,9 +29,10 @@ export function MovementIntro({ level }: { level: Level }) {
   if (step === null) return <button type="button" className="hare-replay" onClick={() => setStep(0)}>
     {level === 1 ? "Bewegungen zeigen" : `Neu in Stufe ${level} ansehen`}
   </button>;
+  const lesson = frames[step];
   return <section aria-label={`Bewegungsintro Stufe ${level}`}>
     {level === 3 && <h3>{step === 0 ? "Doppelsprung" : step <= monkeyLessons.length ? "Neu · Der Affe" : "Neu · Der Hirsch"}</h3>}
-    <RuleExample key={step} frames={[frames[step]]} animate={!window.matchMedia("(prefers-reduced-motion: reduce)").matches} />
+    <RuleExample key={step} frames={Array.isArray(lesson) ? lesson : [lesson]} animate={!window.matchMedia("(prefers-reduced-motion: reduce)").matches} />
     <div className="hare-rule-controls">
       <button type="button" disabled={!step} onClick={() => setStep(step - 1)}>Zurück</button>
       <button type="button" onClick={() => setStep(step + 1 < frames.length ? step + 1 : null)}>

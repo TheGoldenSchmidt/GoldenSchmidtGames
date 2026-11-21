@@ -7,7 +7,7 @@ const piece = (id: string, color: Color = "blue", kind: Kind = "rabbit") => ({ i
 const position = (level: Level, board: Game["board"], turn: Color = "blue"): Game =>
   ({ ...newGame(level), board, turn });
 
-type Frame = { label: string; game: Game; path: string[]; blocked?: boolean; guide?: "edges" | "center"; captureAt?: string };
+type Frame = { option?: string; label: string; game: Game; path: string[]; blocked?: boolean; guide?: "edges" | "center"; captureAt?: string };
 const frame = (label: string, game: Game, path: string[], blocked = false): Frame =>
   ({ label, game, path, blocked });
 
@@ -46,12 +46,22 @@ export const examples = {
   victory: frame("So gewinnst du: Bleibt derselbe Hase drei gegnerische Züge in Folge auf der Lichtung, gewinnt seine Farbe. Auch ein gegnerischer Pass zählt.",
     position(1, { [CENTER]: piece("hare") }), [CENTER]),
   centerMap: { ...frame("Fünf Zugänge auf jeder Seite. Über die besetzte Lichtung führen fünf gerade Sprungwege, jeder zum genau gegenüberliegenden Feld.", position(1, {}), [CENTER]), guide: "center" } satisfies Frame,
-  enter: frame("Auf die freie Lichtung springen · über einen eigenen Hasen am Eingang", position(1, {
-    "5:-1": piece("hare"), "5:0": piece("friend"),
-  }), ["5:-1", "5:0", CENTER]),
-  leave: frame("Von der Lichtung abspringen · über einen Hasen auf der Gegenseite", position(1, {
-    [CENTER]: piece("hare"), "7:0": piece("friend"),
-  }), [CENTER, "7:0", "7:1"]),
+  enter: [
+    { ...frame("Aus Reihe 5 über den eigenen Hasen in Reihe 6 auf die freie Lichtung springen.", position(1, {
+      "4:0": piece("hare"), "5:0": piece("friend"),
+    }), ["4:0", "5:0", CENTER]), option: "Aus Reihe 5" },
+    { ...frame("Aus Reihe 6 seitlich über den eigenen Hasen am Eingang auf die freie Lichtung springen.", position(1, {
+      "5:-1": piece("hare"), "5:0": piece("friend"),
+    }), ["5:-1", "5:0", CENTER]), option: "Aus Reihe 6" },
+  ],
+  leave: [
+    { ...frame("Von der Lichtung über den Hasen in der gegnerischen Reihe 6 springen und daneben in Reihe 6 landen.", position(1, {
+      [CENTER]: piece("hare"), "7:0": piece("friend"),
+    }), [CENTER, "7:0", "7:1"]), option: "Nach Reihe 6" },
+    { ...frame("Von der Lichtung über den Hasen in der gegnerischen Reihe 6 springen und dahinter in Reihe 5 landen.", position(1, {
+      [CENTER]: piece("hare"), "7:0": piece("friend"),
+    }), [CENTER, "7:0", "8:0"]), option: "Nach Reihe 5" },
+  ],
   backwardJump: frame("Falsch · der Sprung führt eine Reihe zurück", position(1, {
     "4:-1": piece("hare"), "3:-1": piece("friend"),
   }), ["4:-1", "3:-1", "3:0"], true),
@@ -157,7 +167,7 @@ export function RuleExample({ frames, animate = false }: { frames: Frame[]; anim
   const bridge = route.find((cell, i) => cell.row === 5 && route[i + 1]?.row === 7);
   return (
     <figure className="hare-rule-example">
-      <svg className="hare-rule-diagram" viewBox={`${minX} ${minY} ${maxX - minX} ${maxY - minY}`} aria-hidden="true">
+      <svg key={step} className="hare-rule-diagram" viewBox={`${minX} ${minY} ${maxX - minX} ${maxY - minY}`} aria-hidden="true">
         <defs>
           <marker id={marker} viewBox="0 0 10 10" refX="8" refY="5" markerWidth="3" markerHeight="3" orient="auto">
             <path d="M0 0L10 5L0 10Z" fill="context-stroke" />
@@ -202,9 +212,9 @@ export function RuleExample({ frames, animate = false }: { frames: Frame[]; anim
       </svg>
       <figcaption>
         <span aria-live="polite">{label}</span>
-        {frames.length > 1 && <div className="hare-rule-controls" role="group" aria-label="Beispielschritte">
-          {frames.map(({ label: name }, index) => <button key={name} type="button" aria-pressed={index === step}
-            aria-label={name} onClick={() => setStep(index)}>{index + 1}</button>)}
+        {frames.length > 1 && <div className="hare-rule-controls" role="group" aria-label={frames[0].option ? "Sprungweg wählen" : "Beispielschritte"}>
+          {frames.map(({ label: name, option }, index) => <button key={name} type="button" aria-pressed={index === step}
+            aria-label={option ?? name} onClick={() => setStep(index)}>{option ?? index + 1}</button>)}
         </div>}
       </figcaption>
     </figure>
