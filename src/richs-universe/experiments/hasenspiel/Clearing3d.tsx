@@ -29,18 +29,55 @@ function createScene(canvas: HTMLCanvasElement) {
   const sphere = new T.SphereGeometry(1, 12, 8);
   const disk = new T.CircleGeometry(1, 48);
   geometries.add(sphere).add(disk);
-  const grass = new T.MeshStandardMaterial({ color: "#485d36", roughness: 1 });
-  const earth = new T.MeshStandardMaterial({ color: "#78623b", roughness: 1 });
-  const blue = new T.MeshStandardMaterial({ color: "#758d82", roughness: .95 });
-  const gray = new T.MeshStandardMaterial({ color: "#8b896b", roughness: .95 });
+  const grainCanvas = document.createElement("canvas");
+  grainCanvas.width = grainCanvas.height = 128;
+  const grainContext = grainCanvas.getContext("2d")!;
+  const grainPixels = grainContext.createImageData(128, 128);
+  for (let y = 0; y < 128; y++) {
+    for (let x = 0; x < 128; x++) {
+      const grain = 225 + 12 * Math.sin(x * .48 + 2 * Math.sin(y * .029 + x * .04))
+        + 8 * Math.sin(x * 1.7 + Math.sin(y * .071));
+      const pixel = (y * 128 + x) * 4;
+      grainPixels.data.set([grain, grain, grain, 255], pixel);
+    }
+  }
+  grainContext.putImageData(grainPixels, 0, 0);
+  const grain = new T.CanvasTexture(grainCanvas);
+  grain.colorSpace = T.SRGBColorSpace;
+  grain.wrapS = grain.wrapT = T.RepeatWrapping;
+  const wood = (color: string) => new T.MeshStandardMaterial({ color, map: grain, roughness: .78 });
+  const darkGreen = wood("#365d36");
+  const green = wood("#70a451");
+  const rimWood = wood("#65402d");
+  const edge = wood("#503226");
+  darkGreen.side = green.side = T.DoubleSide;
   const shrub = new T.MeshStandardMaterial({ color: "#35683a", roughness: .87 });
   const shadow = new T.MeshBasicMaterial({ color: "#192619", transparent: true, opacity: .42, depthWrite: false });
 
-  const floor = new T.Mesh(disk, grass);
-  floor.rotation.x = -Math.PI / 2;
-  floor.scale.set(width * .68, boardHeight * .49 * groundScale, 1);
-  floor.position.y = -.7;
-  scene.add(floor);
+  // One wooden base outlines both triangles and the central connecting strip.
+  const border = 8;
+  const boardOutline = new T.Shape();
+  const outline = [
+    [0, -border], [width / 2 + border, 6 * height - 2],
+    [width / 2 + border, 6 * height + gap + 2], [0, boardHeight + border],
+    [-width / 2 - border, 6 * height + gap + 2], [-width / 2 - border, 6 * height - 2],
+  ];
+  outline.forEach(([x, y], index) => {
+    if (index === 0) boardOutline.moveTo(x, -groundY(y));
+    else boardOutline.lineTo(x, -groundY(y));
+  });
+  boardOutline.closePath();
+  const boardDepth = 8;
+  const baseGeometry = new T.ExtrudeGeometry(boardOutline, {
+    depth: boardDepth, bevelEnabled: true, bevelThickness: 1.6, bevelSize: 1.4, bevelSegments: 2, steps: 1,
+  });
+  const baseUV = baseGeometry.getAttribute("uv");
+  for (let i = 0; i < baseUV.count; i++) baseUV.setXY(i, baseUV.getX(i) / 180, baseUV.getY(i) / 300);
+  geometries.add(baseGeometry);
+  const base = new T.Mesh(baseGeometry, [rimWood, edge]);
+  base.rotation.x = -Math.PI / 2;
+  base.position.y = -boardDepth - 1.7;
+  scene.add(base);
 
   for (const cell of cells) {
     if (cell.id === CENTER) continue;
@@ -51,15 +88,17 @@ function createScene(canvas: HTMLCanvasElement) {
     });
     const geometry = new T.BufferGeometry();
     geometry.setAttribute("position", new T.Float32BufferAttribute(coordinates, 3));
+    const uv = coordinates.flatMap((value, index) => index % 3 === 0
+      ? [value / 110, coordinates[index + 2] / 230] : []);
+    geometry.setAttribute("uv", new T.Float32BufferAttribute(uv, 2));
     geometry.setIndex([0, 1, 2]);
     geometry.computeVertexNormals();
     geometries.add(geometry);
-    scene.add(new T.Mesh(geometry, cell.row < 6 ? blue : gray));
+    scene.add(new T.Mesh(geometry, (cell.x + Math.min(cell.row, 12 - cell.row)) % 2 === 0 ? green : darkGreen));
   }
-  blue.side = gray.side = T.DoubleSide;
   const clearingGeometry = new T.PlaneGeometry(side * 2.5, gap * groundScale);
   geometries.add(clearingGeometry);
-  const clearing = new T.Mesh(clearingGeometry, earth);
+  const clearing = new T.Mesh(clearingGeometry, green);
   clearing.rotation.x = -Math.PI / 2;
   clearing.position.z = groundY(6 * height + gap / 2);
   scene.add(clearing);
@@ -117,12 +156,13 @@ function createScene(canvas: HTMLCanvasElement) {
   resize();
   return { update, draw, dispose() {
     observer.disconnect();
-    const materials = new Set([grass, earth, blue, gray, shrub, shadow]);
+    const materials = new Set([darkGreen, green, rimWood, edge, shrub, shadow]);
     for (const model of models.values()) model.traverse(object => {
       if (object instanceof T.Mesh) materials.add(object.material);
     });
     for (const geometry of geometries) geometry.dispose();
     for (const material of materials) material.dispose();
+    grain.dispose();
     renderer.dispose();
   } };
 }

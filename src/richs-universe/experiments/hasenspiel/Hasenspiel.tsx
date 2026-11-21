@@ -10,8 +10,8 @@ import "./hasenspiel.css";
 
 const names = { blue: "Blau", gray: "Grau" };
 const boardMaterials = {
-  "blue-field": ["#c7d9d8", "#8faeb4"],
-  "gray-field": ["#e8ddc5", "#b9ac96"],
+  "blue-field": ["#83ad61", "#608d49"],
+  "gray-field": ["#52774a", "#355538"],
   "clearing": ["#e3c887", "#ae854b"],
   "blue-piece": ["#548fc2", "#123b64"],
   "gray-piece": ["#85868a", "#393a43"],
@@ -173,7 +173,7 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
                         return <line key={link.id} x1={x} x2={x} y1={6 * height} y2={6 * height + gap} />;
                       })}
                     </g>
-                    : <polygon points={shape.points} data-side={cell.row < 6 ? "blue" : "gray"}
+                    : <polygon points={shape.points} data-side={(cell.x + Math.min(cell.row, 12 - cell.row)) % 2 === 0 ? "blue" : "gray"}
                       style={wall.has(cell.id) ? { fill: `url(#${bushPattern})` } : undefined} />}
                   {rabbit && <g className={`hare-token hare-token-${rabbit.color}`} transform={`translate(${shape.x} ${shape.y})`}>
                     <ellipse className="hare-piece-shadow" cy="8" rx="12" ry="5" />

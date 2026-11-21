@@ -6,6 +6,8 @@ type Point = [number, number, number];
 export function animal(kind: Kind, color: Color, geometry: T.SphereGeometry, geometries: Set<T.BufferGeometry>) {
   const model = new T.Group();
   const blue = color === "blue";
+  const surface = kind === "rabbit" ? new T.SphereGeometry(1, 24, 16) : geometry;
+  geometries.add(surface);
   const stone = new T.MeshStandardMaterial({
     color: blue ? "#608ac2" : "#a5a4ac", roughness: .37, metalness: .28,
     emissive: blue ? "#21477d" : "#323645", emissiveIntensity: .18,
@@ -13,7 +15,7 @@ export function animal(kind: Kind, color: Color, geometry: T.SphereGeometry, geo
   const detail = new T.MeshStandardMaterial({ color: blue ? "#233857" : "#41404a", roughness: .6 });
   const accent = new T.MeshStandardMaterial({ color: blue ? "#aec9e8" : "#ddd5c6", roughness: .42 });
   function oval(at: Point, size: Point, material = stone, tilt = 0) {
-    const mesh = new T.Mesh(geometry, material);
+    const mesh = new T.Mesh(surface, material);
     mesh.position.set(...at);
     mesh.scale.set(...size);
     mesh.rotation.z = tilt;
@@ -27,19 +29,51 @@ export function animal(kind: Kind, color: Color, geometry: T.SphereGeometry, geo
   }
 
   if (kind === "rabbit") {
-    oval([0, 7, 0], [5.6, 7, 4.3]);
-    oval([0, 13, 1], [4.5, 4.3, 3.7]);
-    oval([0, 11.7, 4], [2.7, 1.6, 2], accent);
-    oval([0, 12.6, 5.7], [1, .65, .7], detail);
-    oval([0, 4, -4], [2.6, 2.6, 2.4]);
-    for (const sign of [-1, 1]) {
-      oval([sign * 2.8, 18.4, .4], [1.5, 5, 1.2], stone, -sign * .25);
-      oval([sign * 3.05, 18.5, 1.25], [.73, 3.4, .48], accent, -sign * .25);
-      oval([sign * 3.2, 1.4, 2.35], [2.25, 1.4, 2.75]);
-      oval([sign * 3, 8, 3.3], [1.35, 2.8, 1.35], stone, -sign * .55);
-      oval([sign * 2.35, 14, 3.72], [.58, .67, .42], detail);
+    const pedestal = new T.CylinderGeometry(6.95, 7.25, 1.45, 32);
+    geometries.add(pedestal);
+    const base = new T.Mesh(pedestal, stone);
+    base.position.y = .725;
+    model.add(base);
+    oval([0, 1.12, 0], [7.02, .64, 7.02]);
+    oval([0, 7.3, -1.9], [4.95, 5.85, 4.45], stone, -.08);
+    oval([0, 9.85, .65], [3.7, 5.55, 3.65]);
+    // Sculpt the forehead, cheek and sloping muzzle as one continuous surface.
+    const head = new T.SphereGeometry(1, 40, 28);
+    const vertices = head.getAttribute("position");
+    for (let i = 0; i < vertices.count; i++) {
+      const x = vertices.getX(i);
+      const y = vertices.getY(i);
+      const z = vertices.getZ(i);
+      const front = Math.max(0, z);
+      const taper = front * front;
+      const cheek = Math.exp(-((y + .32) ** 2 * 12 + (z - .34) ** 2 * 6));
+      vertices.setXYZ(i,
+        x * (3.64 - 1.72 * taper + .52 * cheek),
+        14.38 + y * (4.15 - 1.85 * taper) - 2.38 * taper,
+        1.57 + 4.36 * z + .65 * taper);
     }
-    oval([0, 7.8, 4.8], [1.45, 3, 1.35], accent, -.78);
+    head.computeVertexNormals();
+    geometries.add(head);
+    model.add(new T.Mesh(head, stone));
+    oval([0, 12.09, 6.53], [.64, .39, .22]);
+    oval([0, 4.9, -5.15], [1.85, 1.85, 1.65]);
+    for (const sign of [-1, 1]) {
+      const earHeight = sign > 0 ? 5.1 : 5.65;
+      const tilt = -sign * .34;
+      oval([sign * 3.12, 20.05, .7], [1.82, earHeight, 1.07], stone, tilt);
+      oval([sign * 3.15, 20.25, 1.48], [1.11, earHeight - .9, .49], accent, tilt);
+      oval([sign * 3.25, 5.35, -1.93], [2.52, 3.81, 3.27]);
+      oval([sign * 1.85, 5.05, 2.95], [1.24, 3.24, 1.15], stone, -sign * .08);
+      oval([sign * 1.9, 2.25, 4.05], [1.45, .9, 1.95]);
+      oval([sign * 3.35, 2.15, -.13], [2.14, .79, 2.3]);
+      const eye = new T.Mesh(surface, stone);
+      eye.position.set(sign * 2.84, 15.08, 3.69);
+      eye.scale.set(.26, .59, 1.04);
+      eye.rotation.x = -.26;
+      eye.rotation.y = sign * .35;
+      model.add(eye);
+      branch([[sign * 3.01, 15.28, 3.02], [sign * 3.08, 15.48, 3.69], [sign * 2.82, 15.22, 4.43]], .14);
+    }
   } else if (kind === "monkey") {
     oval([0, 8, -.75], [3.9, 3.3, 6.5]);
     oval([0, 10, 5.6], [3.1, 3.25, 3.1]);
