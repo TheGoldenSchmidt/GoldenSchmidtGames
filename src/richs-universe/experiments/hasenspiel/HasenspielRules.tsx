@@ -8,8 +8,8 @@ export function HasenspielRules({ level }: { level: Level }) {
       <summary>Regeln für Stufe {level}</summary>
       <p><strong>Das Spielprinzip.</strong> Ihr spielt 1 gegen 1. {advanced
         ? <><strong>Neu in Stufe 3:</strong> Jede Seite hat 12 Hasen, 2 Hirsche und 2 Affen.</>
-        : "Beide Seiten haben je 16 Hasen."} Ein Münzwurf lost aus, wer Blau und wer Grau spielt.
-        Blau beginnt, danach zieht ihr abwechselnd. Wer mit demselben Hasen drei gegnerische Züge
+        : "Beide Seiten haben je 16 Hasen."} Ein Münzwurf lost aus, wer Weiß und wer Braun spielt.
+        Weiß beginnt, danach zieht ihr abwechselnd. Wer mit demselben Hasen drei gegnerische Züge
         in Folge auf der Lichtung bleibt, gewinnt. Ein gegnerischer Pass zählt mit.{advanced && " Affen und Hirsche können die Lichtung besetzen, zählen aber nicht für den Sieg."}</p>
       <p><strong>Das Spielbrett.</strong> Zwei gespiegelte Dreiecke treffen an der Lichtung aufeinander.
         Jede Seite hat sechs nummerierte Reihen, vom einzelnen Dreieck in Reihe 1 bis zur breiten Reihe 6.

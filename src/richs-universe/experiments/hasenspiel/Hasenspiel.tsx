@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useId, useMemo, useState, type CSSProperties } from "react";
 import type { ExperimentProps } from "../../experiments";
 import { CENTER, canMove, cells, centerLinks, wallFields, movesFrom, newGame, play, sideLinks, type Cell, type Color, type Kind, type Level, type Game, type Move } from "./rules";
 import { botLevels, botTurn, type BotLevel } from "./bot";
@@ -10,20 +10,20 @@ import { ForestIntro } from "./ForestIntro";
 import { Victory } from "./Victory";
 import "./hasenspiel.css";
 
-const names = { blue: "Blau", gray: "Grau" };
+const names = { blue: "Weiß", gray: "Braun" };
 const boardMaterials = {
-  "blue-field": ["#c7d9d8", "#8faeb4"],
-  "gray-field": ["#e8ddc5", "#b9ac96"],
-  "clearing": ["#e3c887", "#ae854b"],
-  "blue-piece": ["#2b72b9", "#17477d"],
-  "gray-piece": ["#d1d4d8", "#929ba5"],
+  "blue-field": ["#b1c58b", "#819d68"],
+  "gray-field": ["#e0e3ae", "#b4c786"],
+  "clearing": ["#edd58b", "#bf9e55"],
+  "blue-piece": ["#fffef8", "#e2ded2"],
+  "gray-piece": ["#b27d55", "#96603f"],
   "bush": ["#84aa63", "#235238"],
 } as const;
 
 const levels: Level[] = [1, 2, 3];
 const species: Record<Kind, string> = { rabbit: "Hase", deer: "Hirsch", monkey: "Affe" };
 function fieldName(cell: Cell) {
-  return cell.id === CENTER ? "Lichtung" : `${cell.row < 6 ? "Blaue" : "Graue"} Seite, Reihe ${6 - Math.abs(cell.row - 6)}, Feld ${cell.x + 7 - Math.abs(cell.row - 6)}`;
+  return cell.id === CENTER ? "Lichtung" : `${cell.row < 6 ? "Weiße" : "Braune"} Seite, Reihe ${6 - Math.abs(cell.row - 6)}, Feld ${cell.x + 7 - Math.abs(cell.row - 6)}`;
 }
 
 const boardPoint = (cell: Cell) => cell.id === CENTER
@@ -45,7 +45,6 @@ function motionStyle(from: Cell, move: Move): CSSProperties {
 
 export default function Hasenspiel({ onExit }: ExperimentProps) {
   const [intro, setIntro] = useState(() => !window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-  const field = useRef<HTMLDivElement>(null);
   const closeIntro = useCallback(() => setIntro(false), []);
   const [levelChosen, setLevelChosen] = useState(false);
   const [motion, setMotion] = useState<Motion>();
@@ -160,7 +159,7 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
             {levelChosen ? "Münze werfen" : "Zuerst eine Stufe wählen"}
           </button>}
         </div>
-        <div className="hare-playfield" ref={field} data-intro={intro || undefined}>
+        <div className="hare-playfield">
           <svg className="hare-board" style={boardPaint} viewBox={`-25 -2 ${width + 50} ${boardHeight + 4}`} aria-label="Dreiecksbrett">
             <g className="hare-row-numbers" aria-hidden="true">
               {[0, 1, 2, 3, 4, 5].map(depth => {
@@ -262,7 +261,7 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
         <HasenspielRules level={game.level} />
         <button className="hare-replay" type="button" onClick={() => setIntro(true)}>Waldauftakt wiederholen</button>
       </div>
-      {intro && <ForestIntro field={field} onDone={closeIntro} />}
+      {intro && <ForestIntro onDone={closeIntro} />}
     </main>
   );
 }

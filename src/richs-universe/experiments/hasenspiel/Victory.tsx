@@ -2,7 +2,7 @@ import { useEffect, useState, type CSSProperties } from "react";
 
 const duration = 2200;
 const leaves = [6, 14, 21, 30, 35, 43, 51, 57, 64, 70, 78, 82, 90, 96];
-const colors = ["#e7af50", "#ce7746", "#8aac66", "#f2cb70"];
+const colors = ["#edd58b", "#b27d55", "#819d68", "#b4c786"];
 
 export function Victory({ title }: { title: string }) {
   const [revealed, setRevealed] = useState(false);
