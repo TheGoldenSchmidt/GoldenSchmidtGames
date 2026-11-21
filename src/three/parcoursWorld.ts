@@ -115,7 +115,7 @@ export function createParcoursWorld(host: HTMLElement, read: () => MatchWorldFra
     return { w, rotor, arrows };
   });
   // Rising goo.
-  const goo = c.goo ? new T.Mesh(new T.PlaneGeometry(40, 120), new T.MeshStandardMaterial({ color: COLOR.goo, emissive: COLOR.goo, emissiveIntensity: .45, transparent: true, opacity: .82, roughness: .3 })) : undefined;
+  const goo = c.goo ? new T.Mesh(new T.PlaneGeometry(40, end + 40), new T.MeshStandardMaterial({ color: COLOR.goo, emissive: COLOR.goo, emissiveIntensity: .45, transparent: true, opacity: .82, roughness: .3 })) : undefined;
   if (goo) { goo.rotation.x = -Math.PI / 2; goo.position.z = -end / 2; world.add(goo); }
   // Floor of the studio far below.
   const deep = kit.box(world, 0x141a4d, 0, c.killY + 1, -end / 2, 80, .2, end + 60); deep.castShadow = false;

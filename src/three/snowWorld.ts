@@ -1,5 +1,5 @@
 import * as T from "three";
-import { SB, SNOW_TREES, SNOW_WALLS, type SnowGame, type Snowballer } from "../../shared/matches/snowball";
+import { SB, SNOW_TREES, SNOW_WALLS, throwTarget, type SnowGame, type Snowballer } from "../../shared/matches/snowball";
 import { followCamera, headingOf, takeCameraTurn, type ChaseLocal, type MatchWorld, type MatchWorldFrame } from "../matches/client";
 import { ballArc } from "../matches/games/snowball";
 import { ChaseCamera, Debris, fittedFigure, fitTiltedCamera, Impact } from "./matchScene";
@@ -23,7 +23,7 @@ export function createSnowWorld(host: HTMLElement, read: () => MatchWorldFrame, 
   kit.scene.add(world);
   kit.scene.background = new T.Color(COLOR.sky); kit.scene.fog = new T.Fog(COLOR.sky, 14, 34);
   kit.camera.fov = 56; kit.camera.near = .05; kit.camera.updateProjectionMatrix();
-  const chaseCam = new ChaseCamera(kit, 3.4, 3.1, 2.2, .5), target = new T.Vector3();
+  const chaseCam = new ChaseCamera(kit, 4.6, 4.2, 3, .5), target = new T.Vector3();
 
   // Snowfield with soft drifts, a low snow bank around the arena.
   const ground = new T.Mesh(new T.PlaneGeometry(SB.size + 30, SB.size + 30), new T.MeshStandardMaterial({ color: COLOR.ground, roughness: .95 }));
@@ -52,6 +52,10 @@ export function createSnowWorld(host: HTMLElement, read: () => MatchWorldFrame, 
   // Aim guide for the own throw: dotted line on the snow up to the range or the first wall.
   const guide = new T.InstancedMesh(new T.CircleGeometry(.08, 10), new T.MeshBasicMaterial({ color: COLOR.aim, transparent: true, opacity: .55, depthWrite: false }), 24);
   guide.frustumCulled = false; guide.count = 0; world.add(guide);
+  // Lock-on: a pulsing ring with four ticks under the opponent the own throw would go to.
+  const lock = new T.Group(); lock.visible = false; world.add(lock);
+  const lockRing = kit.mesh(lock, new T.TorusGeometry(.62, .05, 6, 32), COLOR.own, 0, .05, 0); lockRing.rotation.x = Math.PI / 2; lockRing.castShadow = false;
+  for (let i = 0; i < 4; i++) { const tick = kit.box(lock, COLOR.own, Math.cos(i * Math.PI / 2) * .82, .05, Math.sin(i * Math.PI / 2) * .82, .22, .04, .07); tick.rotation.y = -i * Math.PI / 2; tick.castShadow = false; }
 
   const players = new Map<string, Player>();
   const playerFor = (id: string, style: number, selected: string | undefined, viewer: string): Player => {
@@ -79,7 +83,7 @@ export function createSnowWorld(host: HTMLElement, read: () => MatchWorldFrame, 
   const pose = (me: Snowballer, before: Snowballer | undefined, alpha: number) => before && Math.hypot(before.x - me.x, before.y - me.y) < 2 ? [before.x + (me.x - before.x) * alpha, before.y + (me.y - before.y) * alpha] as const : [me.x, me.y] as const;
 
   const animate = (time: number) => {
-    const f = read(), s = f.cur, g = s.game as SnowGame, prev = f.prev.game as SnowGame, reduced = f.reduced, dt = Math.min(.05, (time - lastFrame) / 1000);
+    const f = read(), s = f.cur, g = s.game as SnowGame, prev = f.prev.game as SnowGame, reduced = f.reduced, dt = Math.max(0, Math.min(.05, (time - lastFrame) / 1000));
     lastFrame = time;
     const local = f.local as ChaseLocal, mine = g.players[f.viewer];
     const chase = !!mine && mine.outAt === undefined;
@@ -150,10 +154,22 @@ export function createSnowWorld(host: HTMLElement, read: () => MatchWorldFrame, 
     }
     ballMesh.count = n; shadowMesh.count = n; ballMesh.instanceMatrix.needsUpdate = true; shadowMesh.instanceMatrix.needsUpdate = true;
 
-    // Own aim guide: dots in the throw direction up to the range (direction only, flat like the rules).
+    // Lock-on: the opponent a throw would go to now (aimed: near the aim).
+    const ready = mine && mine.outAt === undefined && mine.balls > 0 && !s.done;
+    // Not aiming: what a tap would hit, the nearest opponent in view of the camera.
+    const aimLen = Math.hypot(f.input.ax, f.input.ay);
+    const locked = !ready ? undefined : aiming ? throwTarget(g, mine, f.input.ax / aimLen, f.input.ay / aimLen)
+      : chase ? throwTarget(g, mine, Math.sin(chaseCam.yaw), -Math.cos(chaseCam.yaw), SB.tapCone) : throwTarget(g, mine);
+    lock.visible = !!locked;
+    if (locked) {
+      const [lx, ly] = pose(locked, prev.players?.[locked.id], f.alpha);
+      lock.position.set(wx(lx), 0, wz(ly)); lock.rotation.y = reduced ? 0 : time / 600; lock.scale.setScalar(reduced ? 1 : 1 + Math.sin(time / 160) * .06);
+    }
+    host.dataset.lock = locked?.id ?? "";
+    // Own aim guide: dots in the throw direction up to the range (direction only, flat like the rules); towards the locked opponent.
     let dots = 0;
     if (chase && mine && aiming && mine.balls > 0 && !s.done) {
-      const a = Math.atan2(f.input.ay, f.input.ax), [mx, my] = pose(mine, prev.players?.[f.viewer], f.alpha);
+      const [mx, my] = pose(mine, prev.players?.[f.viewer], f.alpha), a = locked ? Math.atan2(locked.y - mine.y, locked.x - mine.x) : Math.atan2(f.input.ay, f.input.ax);
       for (let d = .8; d < SB.range && dots < 24; d += .55) {
         const px = mx + Math.cos(a) * d, py = my + Math.sin(a) * d;
         if (px < 0 || py < 0 || px > SB.size || py > SB.size || SNOW_WALLS.some(r => px > r.x0 && px < r.x1 && py > r.y0 && py < r.y1) || SNOW_TREES.some(t => Math.hypot(px - t.x, py - t.y) < t.r)) break;

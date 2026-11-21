@@ -194,6 +194,25 @@ for (const id of ALL) {
   assert.equal(matchStandings(s).at(-1)!.id, "p1");
 }
 
+// Eigenständige Läufe mit Länge: Glibber steigt gegen Ende schneller, Schachbrett-Klappen wechseln sich ab, Bots brauchen deutlich länger und kommen trotzdem an.
+{
+  const goo = course("glibberflut");
+  assert.ok(gooAt(goo, 40000) - gooAt(goo, 30000) > gooAt(goo, 15000) - gooAt(goo, 5000) + .5, "Glibber beschleunigt");
+  const flaps = course("fallklappen"), checker = flaps.boxes.filter(b => b.blink && b.x1 - b.x0 > 1.8 && (b.blink.phase === 0 || b.blink.phase === .5));
+  assert.ok(checker.length >= 20, "Schachbrettfeld");
+  for (let t = 0; t < 6000; t += 100) for (const a of checker) for (const b of checker) {
+    const side = Math.abs(a.z0 - b.z0) < .1 && Math.abs(a.x0 - b.x0 - 2) < .1, front = Math.abs(a.x0 - b.x0) < .1 && Math.abs(a.z0 - b.z0 - 2) < .1;
+    if (side || front) assert.ok(!(blinkOpen(a, t) && blinkOpen(b, t)), "Nachbarn nie gleichzeitig offen");
+  }
+  for (const [id, length] of [["fallklappen", 70], ["windkanal", 80], ["glibberflut", 110]] as const) {
+    assert.ok(course(id).finishZ >= length, `${id}: mindestens ${length} m`);
+    let s = make(id, 4, 7);
+    for (let t = 50, n = 0; !s.done && t < 125000; t += 50) { for (const p of s.players) setMatchControl(s, p.id, botMatchInput(s, p.id), ++n, t); advanceMatch(s, t); }
+    const times = Object.values(s.game.racers).flatMap(r => r.finishAt === undefined ? [] : [r.finishAt]);
+    assert.ok(times.length >= 2 && Math.min(...times) > 17000, `${id}: Bots kommen an, aber nicht im Schnelldurchlauf (${times})`);
+  }
+}
+
 // Ziel: Reihenfolge zählt, 20 s Zielschluss nach der ersten Ankunft; Aufgeben.
 {
   const s = make("kreiselkurs", 3), c = course("kreiselkurs");

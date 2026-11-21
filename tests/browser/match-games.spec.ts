@@ -871,7 +871,22 @@ test("Neon Racer – Kippen: im Hochformat gedrehtes Querformat, Kippen lenkt, o
   } finally { session.close(); }
 });
 
-for (const motion of ["no-preference", "reduce"] as const) test(`Schneeballschlacht 3D (${motion}): Zielen zeigt die Wurflinie, Loslassen wirft, Formen füllt nach`, async ({ page }, testInfo) => {
+test("Schneeballschlacht-Übung: Kamera startet hinter der Figur mit Blick zur Mitte, Gegner in Sicht wird markiert", async ({ page }, testInfo) => {
+  test.setTimeout(90000);
+  const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "snowball" });
+  try {
+    await page.getByRole("button", { name: "Erst kurz üben", exact: true }).tap();
+    const world = page.getByRole("dialog", { name: "Übung: Schneeballschlacht" }).locator(".match-world");
+    await expect(world).toHaveAttribute("data-webgl", "ready", { timeout: 20000 });
+    // Start in the corner, facing the centre: the camera looks the same way (not at the arena wall).
+    await expect.poll(async () => Number(await world.getAttribute("data-yaw"))).toBeCloseTo(Math.atan2(1, -1), 1); // headingOf(fx, fy) for the facing (1, 1)
+    await page.screenshot({ path: testInfo.outputPath("snow-practice-start.png") });
+    await expect.poll(async () => await world.getAttribute("data-lock") ?? "", { timeout: 60000, intervals: [100] }).not.toBe("");
+    await page.screenshot({ path: testInfo.outputPath("snow-practice-lock.png") });
+  } finally { session.close(); }
+});
+
+for (const motion of ["no-preference", "reduce"] as const) test(`Schneeballschlacht 3D (${motion}): Zielen zeigt die Wurflinie, Loslassen wirft, Antippen formt und wirft`, async ({ page }, testInfo) => {
   await page.emulateMedia({ reducedMotion: motion });
   const errors: string[] = []; page.on("pageerror", e => errors.push(e.message));
   const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "snowball" });
@@ -894,12 +909,14 @@ for (const motion of ["no-preference", "reduce"] as const) test(`Schneeballschla
     await page.mouse.up();
     await expect.poll(async () => (await me()).balls).toBe(0);
     await expect(page.locator(".tank-aim-hint")).toContainText("formen");
-    // Formen: stillhalten und den Knopf gedrückt halten.
-    const form = (await page.getByRole("button", { name: "Formen", exact: true }).boundingBox())!;
-    await page.mouse.move(form.x + form.width / 2, form.y + form.height / 2); await page.mouse.down();
-    await expect.poll(async () => (await me()).balls, { timeout: 4000 }).toBe(1);
-    await page.mouse.up();
+    // Formen: einmal antippen und stillstehen – füllt bis zu zwei Bälle ohne Halten.
+    await page.getByRole("button", { name: "Formen", exact: true }).tap();
+    await expect(page.getByRole("button", { name: "Formt …", exact: true })).toBeVisible();
+    await expect.poll(async () => (await me()).balls, { timeout: 6000 }).toBe(2);
     await page.screenshot({ path: testInfo.outputPath(`snow-formed-${motion}.png`) });
+    // Kurz antippen wirft ohne Ziehen (auf den Nächsten in Sicht, sonst in Blickrichtung).
+    await page.getByRole("group", { name: "Zielen und werfen" }).tap();
+    await expect.poll(async () => (await me()).balls).toBe(1);
     expect(Number(await world.getAttribute("data-draw-calls") ?? 0)).toBeLessThan(400);
     expect(errors).toEqual([]);
   } finally { session.close(); }

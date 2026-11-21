@@ -346,10 +346,10 @@ const GOALS: Record<CourseId, { icon: string; action: string; extra: string }> =
   tuerenlotto: { icon: "▥", action: "Welche Tür geht auf?", extra: "Vier Reihen mit je sechs Türen: Nur manche brechen auf, die anderen sind massiv. Hinter manchen offenen Türen wartet ein Gang mit massivem Ausgang (Sackgasse) oder eine Falltür. Dazwischen Schieber, ein Drehbalken und ein Graben." },
   kreiselkurs: { icon: "✣", action: "Über und unter Balken", extra: "Drehende Balken in allen Varianten: über niedrige springen, unter hohen ducken, am Kreuz beides. Dazu wandernde Inseln, zwei flinke Wippen und am Ende ein Rührwerk aus schnellen Kurzbalken. Wer getroffen wird, fliegt nach vorn und außen weg." },
   wippenwerk: { icon: "⚖", action: "Balance und Kanten", extra: "Wippen neigen sich unter Gewicht, rollende Walzen musst du überspringen, zum Schluss eine Wand zum Festhalten und Hochziehen." },
-  glibberflut: { icon: "♒", action: "Nach oben, schnell!", extra: "Langer Aufstieg über Treppen, Förderbänder gegen die Laufrichtung, drei Kanten, rollende Walzen und einen schmalen Steg, während von unten Glibber steigt. Wer erwischt wird, scheidet aus." },
+  glibberflut: { icon: "♒", action: "Nach oben, schnell!", extra: "Langer Aufstieg über Treppen, Förderbänder gegen die Laufrichtung, fünf Kanten, rollende Walzen, schmale Stege und Fallklappen auf dem Dach, während von unten Glibber steigt – gegen Ende immer schneller. Wer erwischt wird, scheidet aus." },
   geisterpfad: { icon: "◌", action: "Finde den Pfad", extra: "Nur ein unsichtbarer Pfad aus Platten trägt; was einmal betreten wurde, bleibt für alle sichtbar." },
-  fallklappen: { icon: "▦", action: "Achte aufs Warnlicht", extra: "Zwei Felder aus Klappen über dem Abgrund: Jede Klappe öffnet sich in ihrem eigenen Takt, kurz vorher glüht sie orange." },
-  windkanal: { icon: "≋", action: "Gegen den Wind", extra: "Schmale Stege, Seitenwind, der die Richtung wechselt, Trittsteine im Dauerwind und zum Schluss Gegenwind auf der Rampe." },
+  fallklappen: { icon: "▦", action: "Achte aufs Warnlicht", extra: "Vier Klappenfelder über dem Abgrund, jedes schwerer: erst jede Klappe im eigenen Takt, dann schneller, dann ein Schachbrett, auf dem Nachbarn sich abwechseln, zuletzt ein schmaler Steg aus flinken Klappen mit Lücken. Kurz vor dem Öffnen glüht eine Klappe orange." },
+  windkanal: { icon: "≋", action: "Gegen den Wind", extra: "Schmale Stege im wechselnden Seitenwind, Trittsteine im Dauerwind, eine Böenbrücke, wandernde Inseln im Gegenwind und zum Schluss eine schmale Rampe mit Gegenwind und Seitenböen." },
   kletterwand: { icon: "⌸", action: "Halt dich fest", extra: "Vier Stufen, jede zu hoch zum Springen: Spring an die Kante und drück den Stick zur Wand (oder halte Festhalten), dann kletterst du hoch. Die Griffblöcke verschwinden zwischendurch – wähle einen, der bleibt." },
   standhaft: { icon: "♛", action: "Bleib stehen", extra: "Finale auf Klappen unter zwei Drehbalken: Erst öffnet sich der äußere Ring, später auch die Mitte." }
 };
@@ -512,9 +512,17 @@ function parcoursBot(s: MatchState<ParcoursGame>, c: Course, id: string) {
   // Stay on the box underfoot (narrow walkways), then aim for the next one ahead.
   const under = r.grounded && r.ground >= 0 ? c.boxes[r.ground] : undefined;
   if (under && under.x1 - under.x0 < 9) tx = Math.max(under.x0 + .6, Math.min(under.x1 - .6, tx));
-  const ahead = c.boxes.filter(b => b.z0 >= r.z - .1 && b.z0 < r.z + 3 && b.y1 <= r.y + .4 && b.y1 >= r.y - .6 && b.look !== "wall" && b.door === undefined);
+  // In the air the bot keeps aiming at boxes at the height it jumped from (not at what it flies over).
+  const base = r.grounded ? r.y : Math.min(r.y, r.standY ?? r.y);
+  const ahead = c.boxes.filter(b => b.z0 >= r.z - .1 && b.z0 < r.z + 3 && b.y1 <= base + .4 && b.y1 >= base - .6 && b.look !== "wall" && b.door === undefined);
   ahead.sort((a, b) => a.z0 - b.z0 || Math.abs((a.x0 + a.x1) / 2 - r.x) - Math.abs((b.x0 + b.x1) / 2 - r.x));
   if (ahead.length && !ahead.some(b => tx >= b.x0 + .3 && tx <= b.x1 - .3)) { const b = ahead[0]; tx = (b.x0 + b.x1) / 2; }
+  // Moving island ahead across a gap: wait at the edge until it will be in front, then aim where it will be.
+  const island = ahead.find(b => b.move && b.move.axis === "x" && b.z0 > r.z);
+  if (island && r.grounded && island.z0 - r.z < 2.6) {
+    const soon = boxAt(island, t + 500), lead = (soon.x0 + soon.x1) / 2;
+    if (r.x > soon.x0 + .5 && r.x < soon.x1 - .5) tx = lead; else { tx = r.x; mz = 0; }
+  }
   // Holds: the block of the next level that is there and stays.
   const holds = c.boxes.filter(b => b.look === "hold" && b.z0 > r.z - .2 && b.z0 - r.z < 3 && b.y1 > r.y + .5);
   if (holds.length) { const ok = holds.filter(b => solid(b, g, t) && solid(b, g, t + 1500) && !blinkWarn(b, t)); const pick = (ok.length ? ok : holds).sort((a, b) => Math.abs((a.x0 + a.x1) / 2 - r.x) - Math.abs((b.x0 + b.x1) / 2 - r.x))[0]; tx = (pick.x0 + pick.x1) / 2; }

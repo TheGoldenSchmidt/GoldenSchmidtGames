@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { advanceMatch, botMatchInput, createMatch, matchStandings, removeMatchPlayer, setMatchControl } from "../shared/matches/framework";
-import { SB, SNOW_TREES, SNOW_WALLS, type SnowGame } from "../shared/matches/snowball";
+import { SB, SNOW_TREES, SNOW_WALLS, throwTarget, type SnowGame } from "../shared/matches/snowball";
 import { NEUTRAL_MATCH_INPUT, type MatchInput, type MatchState } from "../shared/matches/types";
 import { createPartyGame, partyMiniResults, tickParty } from "../shared/party";
 import { PartyBotDriver } from "../shared/partyBots";
@@ -108,6 +108,34 @@ const LANE = 8.3;
   assert.equal(cover.game.players.p1.hits, 0, "Mauer schützt");
 }
 
+// Einfachere Bedienung: Antippen formt bis zu zwei Bälle im Stand (Laufen pausiert), Wurf rastet auf Gegner nahe der Zielrichtung ein,
+// Antippen ohne Zielen wirft auf den Nächsten in Sicht, laufende Ziele werden vorgehalten.
+{
+  const tapForm = make(); put(tapForm, "p0", 2, LANE); put(tapForm, "p1", 20, 20); tapForm.game.players.p0.balls = 0;
+  const pressB = (s: SS) => { const p = s.players[0], own = seqs.get(s) ?? new Map<string, number>(); seqs.set(s, own); const n = (own.get("p0") ?? 0) + 1; own.set("p0", n); setMatchControl(s, "p0", { ...NEUTRAL_MATCH_INPUT, ca: p.usedA, cb: p.usedB + 1, cn: p.usedN }, n, s.time); };
+  pressB(tapForm); advanceMatch(tapForm, tapForm.time + 50);
+  assert.equal(tapForm.game.players.p0.forming, true, "Antippen startet das Formen");
+  run(tapForm, SB.formMs / 2, () => send(tapForm, "p0", { x: 1 }));
+  assert.equal(tapForm.game.players.p0.balls, 0, "Laufen pausiert");
+  run(tapForm, SB.formMs * 2 + 200, () => send(tapForm, "p0"));
+  assert.equal(tapForm.game.players.p0.balls, SB.maxBalls, "Im Stand ohne Halten bis zu zwei Bälle");
+  assert.equal(tapForm.game.players.p0.forming, false, "Danach hört es auf");
+  const shot = (p1: [number, number], aim: Partial<MatchInput>, p1Input: Partial<MatchInput> = {}) => {
+    const s = make(3); put(s, "p0", 2, LANE); put(s, "p1", ...p1); put(s, "p2", 20, 20);
+    s.game.players.p0.balls = 1; s.game.players.p0.fx = 0; s.game.players.p0.fy = 1;
+    send(s, "p1", p1Input); advanceMatch(s, s.time + 50);
+    send(s, "p1", p1Input); send(s, "p0", aim, true); advanceMatch(s, s.time + 50);
+    run(s, 900, () => { send(s, "p0"); send(s, "p1", p1Input); });
+    return s.game.players.p1.hits;
+  };
+  assert.equal(shot([7, LANE + 1.2], { ax: 1, ay: 0 }), 1, "Zielhilfe: knapp daneben gezielt trifft trotzdem");
+  assert.equal(shot([7, LANE + 3], { ax: 1, ay: 0 }), 0, "Weit daneben bleibt daneben");
+  assert.equal(shot([7, LANE], {}), 1, "Antippen ohne Zielen: Wurf auf den Nächsten in Sicht, nicht in Blickrichtung");
+  assert.equal(shot([9, LANE - 1.8], { ax: 1, ay: -.25 }, { y: 1 }), 1, "Laufendes Ziel wird vorgehalten");
+  const g = make(3).game; put({ game: g } as SS, "p0", 2, LANE);
+  assert.equal(throwTarget(g, g.players.p0, 1, 0)?.id, undefined, "Kein Gegner in Reichweite und Sicht: keine Markierung");
+}
+
 // Zeitablauf: weniger Treffer kassiert = besser; Aufgeben.
 {
   const s = make(3); s.game.players.p0.hits = 2; s.game.players.p1.hits = 1;
@@ -133,4 +161,4 @@ for (const count of [2, 4, 6]) {
   assert.deepEqual(a.game, b.game, "Neustart aus JSON setzt exakt fort");
   assert.ok(Object.values(a.game.players).some(p => p.dealt > 0), "Bots treffen");
 }
-console.log("Schneeballschlacht erfolgreich: Pool, Startplätze, Laufen und 10 % Verlangsamung je Treffer, Formen (Stillstand, Abbruch, höchstens zwei), Schneehaufen, Werfen nur mit Ball, Treffer mit Schutzzeit, Schneemann nach drei Treffern, Mauerschutz, Zeitablauf, Aufgeben, Bots und JSON-Neustart.");
+console.log("Schneeballschlacht erfolgreich: Pool, Startplätze, Laufen und 10 % Verlangsamung je Treffer, Formen (Stillstand, Abbruch, höchstens zwei, Antippen statt Halten), Zielhilfe mit Vorhalt, Antippen wirft auf den Nächsten, Schneehaufen, Werfen nur mit Ball, Treffer mit Schutzzeit, Schneemann nach drei Treffern, Mauerschutz, Zeitablauf, Aufgeben, Bots und JSON-Neustart.");

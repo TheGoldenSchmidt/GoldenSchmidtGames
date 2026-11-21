@@ -75,18 +75,28 @@ for (const n of [2, 4]) assert.ok(miniPool(n, false).includes("pong"));
   s.game.balls = [ball({ x: paddle.x + half + NP.ball * 1.15, y: 5, vy: 8 })];
   run(s, 400, { p0: 0 });
   assert.ok(s.game.balls.length === 1 && s.game.balls[0].vy < 0, "Kantentreffer");
-  // Steiler Ball neben dem Schläger: Finger kommt eine Laufzeit zu spät, der Ball wird noch gerettet.
-  const late = make(2, 5);
-  late.game.serveAt = Infinity; late.game.nextPower = Infinity;
-  const angle = NP.maxAngle, speed = 12;
-  late.game.balls = [ball({ x: -.5, y: 4.5, vx: Math.sin(angle) * speed, vy: Math.cos(angle) * speed, speed })];
-  let crossedAt = -1;
-  while (late.time < 2000 && late.game.balls.length && crossedAt < 0) { run(late, 50, { p0: 0 }); if (late.game.balls[0]?.late) crossedAt = late.time; }
-  assert.ok(crossedAt > 0 && late.game.balls[0].late, "Ball verpasst den Schläger zunächst");
-  const target = late.game.balls[0].late!.x / (late.game.paddles[0].max - late.game.paddles[0].min) * 2;
-  run(late, 100, { p0: target });
-  assert.deepEqual(late.game.score, [0, 0], "Späte Rettung");
-  assert.ok(late.game.balls[0].vy < 0 && late.game.balls[0].lastTeam === 0);
+  // Steiler Ball knapp neben dem Schläger: Der Finger war fast dort, seine Eingabe kommt eine halbe Laufzeit zu spät – der Ball wird noch gerettet.
+  const angle = NP.maxAngle, speed = 12, steep = () => ball({ x: -.5, y: 4.5, vx: Math.sin(angle) * speed, vy: Math.cos(angle) * speed, speed });
+  const lateTry = (start: number) => {
+    const m = make(2, 5); m.game.serveAt = Infinity; m.game.nextPower = Infinity;
+    const range = m.game.paddles[0].max - m.game.paddles[0].min;
+    run(m, 200, { p0: start / range * 2 }); m.game.balls = [steep()];
+    let crossed = false;
+    while (m.time < 3000 && m.game.balls.length && !crossed && m.game.score[1] === 0) { run(m, 50, { p0: start / range * 2 }); crossed = !!m.game.balls[0]?.late || m.game.balls[0]?.y > 6.8; }
+    const passed = m.game.balls[0] && structuredClone(m.game.balls[0]);
+    // Now the finger arrives at the crossing point.
+    run(m, 100, { p0: 3.17 / range * 2 });
+    return { m, passed };
+  };
+  const near = lateTry(1.5);
+  assert.ok(near.passed?.late && near.passed.late.ids.includes("p0"), "Ball verpasst den Schläger knapp");
+  assert.deepEqual(near.m.game.score, [0, 0], "Späte Rettung");
+  assert.ok(near.m.game.balls[0].vy < 0 && near.m.game.balls[0].lastTeam === 0);
+  // Weit daneben: auch ein schneller Finger rettet nachträglich nichts mehr.
+  const far = lateTry(0);
+  assert.equal(far.passed?.late, undefined, "Weit daneben: kein spätes Fenster");
+  run(far.m, 600, { p0: 3.17 / (far.m.game.paddles[0].max - far.m.game.paddles[0].min) * 2 });
+  assert.deepEqual(far.m.game.score, [0, 1], "Weit daneben ist ein Tor");
   // Ohne Bewegung oder nach Ablauf des Fensters zählt das Tor.
   const miss = make(2, 5);
   miss.game.serveAt = Infinity; miss.game.nextPower = Infinity;

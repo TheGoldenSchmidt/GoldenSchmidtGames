@@ -22,10 +22,11 @@ Match-Framework, Touch-Steuerung, Bots/Übung, Party-/Wettbewerbsanbindung und b
 | Handy-Hosting | `nearby.spec.ts` mit Match-Spielen in WebRTC-fähiger Umgebung prüfen. Frühere Cloud-Grenzen sind kein aktueller Laufbeleg. CI nur auf ausdrücklichen Wunsch. |
 | Tower Tumble | Hohe Türme, Pfeilsteuerung und Leistung auf Handy-Host/Render Free messen. Bots nur zum Üben. |
 | Kamera/Balance | Klettern, Balkentreffer, Sprung/Hechten, Lava-Etagen/Schubser, kleine Figuren, Light-Trails-Lenkung, Quick-Draw-Fairness und Funklatenz beurteilen. |
-| Bots | Insbesondere Hook Wars, Chaos Run und Windkanal einfach; keine hohe Spielstärke zugesichert. |
+| Bots | Insbesondere Hook Wars und Chaos Run einfach; im Kreiselkurs bleibt gelegentlich ein Bot am Rührwerk hängen. Keine hohe Spielstärke zugesichert. |
 | Arrow Masters | Ego-Perspektive offen, Spezialpfeile vorhanden. |
 | Neon Racer | Kippsteuerung auf Android und iPhone (Vorzeichen, Ruhelage, Querformat-Layout, Freigabe) prüfen; Streckenlänge, Item-Balance und Lenkradgefühl beurteilen. Nur Canvas, keine 3D-Variante. |
-| Schneeballschlacht | Wurfgefühl, Reichweite, Bot-Stärke und 3D-Leistung mit sechs Figuren auf echten Handys prüfen. |
+| Schneeballschlacht | Zielhilfe (±22°, Antippen ±66° im Kamerabild) und Antippen-Formen auf echten Handys beurteilen; Reichweite, Bot-Stärke und 3D-Leistung mit sechs Figuren prüfen. |
+| Parcours-Länge | Verlängerte Fallklappen, Windkanal und Glibberflut (Dauer, Glibbertempo) mit Menschen beurteilen; Bots sind kein Maßstab für die Schwierigkeit. |
 | Weitere Läufe | Ideen: Teamstaffel, Rutschbahn, wechselndes Labyrinth, weitere Finals. Nicht implementiert. |
 
 ## Prüfungen

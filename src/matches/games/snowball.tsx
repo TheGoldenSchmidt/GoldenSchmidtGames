@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { SB, SNOW_TREES, SNOW_WALLS, type SnowGame } from "../../../shared/matches/snowball";
+import { SB, SNOW_TREES, SNOW_WALLS, throwTarget, type SnowGame } from "../../../shared/matches/snowball";
 import { ActionButton, AimPad, CameraSwipe, Stick } from "../controls";
 import { chaseAim, chaseStick, lerp, playerColor, type ChaseLocal, type MatchClient, type MatchControlsProps, type MatchFrame } from "../client";
 
@@ -35,6 +35,10 @@ function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
     for (let i = 0; i < SB.hitsOut; i++) { ctx.fillStyle = i < me.hits ? "#57a6e4" : "#24133f44"; ctx.fillRect(X(x) - 9 + i * 7, Y(y) - SB.radius * scale - 9, 5, 4); }
     for (let i = 0; i < me.balls; i++) { ctx.fillStyle = "#ffffff"; ctx.strokeStyle = "#24133f"; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(X(x) + SB.radius * scale + 4, Y(y) - 4 + i * 8, 3.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
   }
+  // Lock-on ring under the opponent the own throw would go to.
+  const mine = g.players[f.viewer], aim = Math.hypot(f.input.ax, f.input.ay);
+  const locked = mine && mine.outAt === undefined && mine.balls > 0 && !s.done ? throwTarget(g, mine, aim > .2 ? f.input.ax / aim : undefined, aim > .2 ? f.input.ay / aim : undefined) : undefined;
+  if (locked) { ctx.strokeStyle = "#ffe44e"; ctx.lineWidth = 3; ctx.setLineDash([5, 4]); ctx.beginPath(); ctx.arc(X(locked.x), Y(locked.y), SB.radius * scale * 1.7, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]); }
   for (const b of g.balls) {
     const before = prev.balls?.find(q => q.id === b.id), x = before ? lerp(before.x, b.x, f.alpha) : b.x, y = before ? lerp(before.y, b.y, f.alpha) : b.y;
     ctx.fillStyle = "#24306b44"; ctx.beginPath(); ctx.arc(X(x), Y(y), SB.ballRadius * scale, 0, Math.PI * 2); ctx.fill();
@@ -54,19 +58,25 @@ function SnowControls({ io, view, viewer, active, world }: MatchControlsProps) {
       onAim={(x, y) => { if (!off) aim(x, y); }}
       onRelease={(x, y) => {
         if (off) return;
-        if (world) chaseAim(io, x, y, false); else io.set({ ax: x, ay: y });
+        if (world && Math.hypot(x, y) < .2 && local.camYaw !== undefined && me) {
+          // Tap: at the nearest opponent the camera shows (the marked one), else straight ahead.
+          const fx = Math.sin(local.camYaw), fy = -Math.cos(local.camYaw), pick = throwTarget(g, me, fx, fy, SB.tapCone);
+          const dx = pick ? pick.x - me.x : fx, dy = pick ? pick.y - me.y : fy, n = Math.hypot(dx, dy) || 1;
+          io.set({ ax: dx / n, ay: dy / n });
+        } else if (world) chaseAim(io, x, y, false); else io.set({ ax: x, ay: y });
         io.press("a");
         // Keep the aim until the throw packet has surely left (packets are spaced), then stop aiming.
         local.aimX = local.aimY = 0;
         window.clearTimeout(clear.current); clear.current = window.setTimeout(() => io.set({ ax: 0, ay: 0 }), 150);
       }}>
-      <span className="tank-aim-hint" aria-hidden="true">{me && me.balls > 0 ? `Ziehen · loslassen = Wurf (${me.balls})` : "Kein Schneeball – formen!"}</span>
+      <span className="tank-aim-hint" aria-hidden="true">{me && me.balls > 0 ? `Tippen = Wurf · ziehen = zielen (${me.balls})` : "Kein Schneeball – formen!"}</span>
     </AimPad></div>
     <Stick disabled={off} onMove={(x, y) => world ? chaseStick(io, x, y) : io.set({ x, y }, true)} />
     <div className="snow-form">
-      <ActionButton icon="❄" label="Formen" tone="cyan" disabled={off || (me?.balls ?? 0) >= SB.maxBalls}
+      {/* One tap: forms balls whenever standing still, up to two; running pauses it, a throw stops it. */}
+      <ActionButton icon="❄" label={me?.forming ? "Formt …" : "Formen"} tone="cyan" disabled={off || (me?.balls ?? 0) >= SB.maxBalls}
         charge={me ? (me.balls >= SB.maxBalls ? 1 : me.form / SB.formMs) : 0}
-        onPress={() => io.set({ hb: true }, true)} onRelease={() => io.set({ hb: false }, true)} />
+        onPress={() => io.press("b")} />
     </div>
   </>;
 }
