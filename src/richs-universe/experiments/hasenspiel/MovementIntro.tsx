@@ -7,6 +7,7 @@ const monkeyLessons = [...examples.monkey.slice(0, 5), examples.longHang];
 const lessons = {
   1: [
     examples.edges,
+    examples.victory,
     { ...examples.step[0], label: "Richtig · beim Ziehen muss der Hase eine Ebene vor. Hier zieht Blau von Reihe 4 in Reihe 5." },
     { ...examples.step[1], label: "Falsch · ein einfacher Schritt zur Seite bleibt in derselben Ebene." },
     { ...examples.step[2], label: "Falsch · ein Hase darf nicht zurück zu seiner eigenen Reihe 1 ziehen." },

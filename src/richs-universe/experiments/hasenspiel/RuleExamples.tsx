@@ -1,4 +1,5 @@
 import { useId, useState } from "react";
+import { PieceEmblem } from "./PieceEmblem";
 import { boardHeight, gap, height, shapes, side, triangle, width } from "./boardDrawing";
 import { CENTER, cells, newGame, play, wallFields, type Color, type Game, type Kind, type Level } from "./rules";
 
@@ -42,6 +43,8 @@ const longHang = position(3, {
 
 export const examples = {
   edges: { ...frame("Diese drei grünen Kanten verbinden das Feld mit seinen Nachbarn. Eine gemeinsame Ecke reicht nicht.", rabbit, ["3:-1"]), guide: "edges" } satisfies Frame,
+  victory: frame("So gewinnst du: Bleibt derselbe Hase drei gegnerische Züge in Folge auf der Lichtung, gewinnt seine Farbe. Auch ein gegnerischer Pass zählt.",
+    position(1, { [CENTER]: piece("hare") }), [CENTER]),
   centerMap: { ...frame("Fünf Zugänge auf jeder Seite. Über die besetzte Lichtung führen fünf gerade Sprungwege, jeder zum genau gegenüberliegenden Feld.", position(1, {}), [CENTER]), guide: "center" } satisfies Frame,
   enter: frame("Auf die freie Lichtung springen · über einen eigenen Hasen am Eingang", position(1, {
     "5:-1": piece("hare"), "5:0": piece("friend"),
@@ -188,7 +191,8 @@ export function RuleExample({ frames, animate = false }: { frames: Frame[]; anim
               {animate && !blocked && cell.id === path[0] && route.length > 1 &&
                 <animateMotion key={label} dur="1.4s" fill="freeze"
                   path={route.map((point, i) => `${i ? "L" : "M"}${point.x - cell.x} ${point.y - cell.y}`).join(" ")} />}
-            <circle r="11" /><path data-kind={token.kind} d={shapes[token.kind]} />
+            <circle r="11" />
+            {token.kind === "deer" ? <PieceEmblem kind="deer" /> : <path data-kind={token.kind} d={shapes[token.kind]} />}
             {(game.frozen.includes(token.id) || game.restingDeer?.includes(token.id)) && <circle className="hare-frozen" r="13" />}
             </g>
           </g>;
