@@ -6,7 +6,7 @@ const piece = (id: string, color: Color = "blue", kind: Kind = "rabbit") => ({ i
 const position = (level: Level, board: Game["board"], turn: Color = "blue"): Game =>
   ({ ...newGame(level), board, turn });
 
-type Frame = { label: string; game: Game; path: string[]; blocked?: boolean };
+type Frame = { label: string; game: Game; path: string[]; blocked?: boolean; guide?: "edges" | "center"; captureAt?: string };
 const frame = (label: string, game: Game, path: string[], blocked = false): Frame =>
   ({ label, game, path, blocked });
 
@@ -19,6 +19,7 @@ const trio = position(2, {
 });
 const double = position(3, { "3:-2": piece("hare"), "3:-3": piece("friend"), "4:-2": piece("opponent", "gray") });
 const deer = position(3, { "4:0": piece("deer", "blue", "deer"), "4:-2": piece("obstacle", "gray") });
+const restingDeer = play(deer, "4:0", "4:3");
 const wallSetup = position(3, {
   "4:-4": piece("left", "blue", "deer"), "3:2": piece("right", "blue", "deer"),
   "4:-2": piece("friend"), "4:1": piece("enemy", "gray", "monkey"),
@@ -34,11 +35,34 @@ const climbing = position(3, {
 });
 const monkey = position(3, { "4:0": piece("monkey", "blue", "monkey") });
 
+const longHang = position(3, {
+  "5:-4": piece("monkey", "blue", "monkey"),
+  ...Object.fromEntries([-3, -2, -1, 0, 1].map(x => [`5:${x}`, piece(`hare${x}`)])),
+});
+
 export const examples = {
+  edges: { ...frame("Diese drei grünen Kanten verbinden das Feld mit seinen Nachbarn. Eine gemeinsame Ecke reicht nicht.", rabbit, ["3:-1"]), guide: "edges" } satisfies Frame,
+  centerMap: { ...frame("Fünf Zugänge auf jeder Seite. Über die besetzte Lichtung führen fünf gerade Sprungwege, jeder zum genau gegenüberliegenden Feld.", position(1, {}), [CENTER]), guide: "center" } satisfies Frame,
+  enter: frame("Auf die freie Lichtung springen · über einen eigenen Hasen am Eingang", position(1, {
+    "5:-1": piece("hare"), "5:0": piece("friend"),
+  }), ["5:-1", "5:0", CENTER]),
+  leave: frame("Von der Lichtung abspringen · über einen Hasen auf der Gegenseite", position(1, {
+    [CENTER]: piece("hare"), "7:0": piece("friend"),
+  }), [CENTER, "7:0", "7:1"]),
+  backwardJump: frame("Falsch · der Sprung führt eine Reihe zurück", position(1, {
+    "4:-1": piece("hare"), "3:-1": piece("friend"),
+  }), ["4:-1", "3:-1", "3:0"], true),
+  fullDouble: { ...frame("Ein Zug mit zwei Sprüngen. Zuerst über die eigene Figur auf ein freies Feld, von dort über den Gegner. Nur der Gegner wird geschlagen.", double,
+    ["3:-2", "3:-3", "4:-3", "4:-2", "5:-2"]), captureAt: "4:-2" },
+  longHang: frame("Langes Hangeln · über fünf Hasen bis zum freien Feld. Alle fünf bleiben stehen.", longHang,
+    ["5:-4", "5:-3", "5:-2", "5:-1", "5:0", "5:1", "5:2"]),
+  resting: frame("Verboten · dieser Hirsch ruht nach drei Feldern. Grau darf ihn nicht überspringen. Blau muss ihn im nächsten eigenen Zug stehen lassen.", {
+    ...restingDeer, board: { ...restingDeer.board, "4:2": piece("hare", "gray") }
+  }, ["4:2", "4:3", "4:4"], true),
   step: [
     frame("Eine Ebene vor", rabbit, ["3:-1", "4:-1"]),
     frame("Seitwärts in Stufe 1 verboten", rabbit, ["3:-1", "3:0"], true),
-    frame("Rückwärts verboten", rabbit, ["3:-1", "2:-1"], true),
+    frame("Rückwärts verboten", position(1, { "4:-1": piece("hare") }), ["4:-1", "3:-1"], true),
     frame("Zwei Ebenen auf einmal verboten", rabbit, ["3:-1", "5:-1"], true),
   ],
   jump: [
@@ -109,8 +133,9 @@ const drawing = new Map(cells.map(cell => [cell.id, {
 export function RuleExample({ frames, animate = false }: { frames: Frame[]; animate?: boolean }) {
   const [step, setStep] = useState(0);
   const marker = useId();
-  const { game, label, path, blocked } = frames[step];
-  const shown = [...Object.keys(game.board), ...path].map(id => drawing.get(id)!);
+  const { game, label, path, blocked, guide, captureAt } = frames[step];
+  const guideCells = guide === "center" ? ["5:-2", "5:2", "7:-2", "7:2"] : [];
+  const shown = [...Object.keys(game.board), ...path, ...guideCells].map(id => drawing.get(id)!);
   const minX = Math.max(-2, Math.min(...shown.map(cell => cell.x)) - side);
   const maxX = Math.min(width + 2, Math.max(...shown.map(cell => cell.x)) + side);
   const minY = Math.max(-2, Math.min(...shown.map(cell => cell.y)) - height * .7);
@@ -142,6 +167,15 @@ export function RuleExample({ frames, animate = false }: { frames: Frame[]; anim
                 style={wall.has(cell.id) ? { fill: "#4b8955" } : undefined} />}
           </g>
         ))}
+        {guide === "edges" && <polygon points={route[0].points} fill="none" stroke="#19883b" strokeWidth="5" strokeLinejoin="round" />}
+        {guide === "center" && [-2,-1,0,1,2].map(column => {
+          const top = drawing.get(`5:${column}`)!;
+          const bottom = drawing.get(`7:${column}`)!;
+          return <g key={column} stroke="#21733e" strokeWidth="2.5">
+            <line x1={top.x} x2={bottom.x} y1={top.y} y2={bottom.y} strokeDasharray="4 2" />
+            <circle cx={top.x} cy={top.y} r="3" /><circle cx={bottom.x} cy={bottom.y} r="3" />
+          </g>;
+        })}
         {bridge && <line className="hare-rule-bridge" x1={bridge.x} x2={bridge.x} y1={6 * height} y2={6 * height + gap} />}
         <polyline className="hare-rule-route" data-blocked={blocked} points={route.map(cell => `${cell.x},${cell.y}`).join(" ")}
           markerEnd={blocked || route.length === 1 ? undefined : `url(#${marker})`} />
@@ -150,6 +184,7 @@ export function RuleExample({ frames, animate = false }: { frames: Frame[]; anim
           if (!token) return null;
           return <g key={cell.id} className={`hare-token hare-token-${token.color}`} transform={`translate(${cell.x} ${cell.y})`}>
             <g>
+              {animate && captureAt === cell.id && <set attributeName="opacity" to="0" begin="1.2s" fill="freeze" />}
               {animate && !blocked && cell.id === path[0] && route.length > 1 &&
                 <animateMotion key={label} dur="1.4s" fill="freeze"
                   path={route.map((point, i) => `${i ? "L" : "M"}${point.x - cell.x} ${point.y - cell.y}`).join(" ")} />}
@@ -158,7 +193,7 @@ export function RuleExample({ frames, animate = false }: { frames: Frame[]; anim
             </g>
           </g>;
         })}
-        {route.length === 1 && <circle className="hare-rule-highlight" cx={end.x} cy={end.y} r="16" />}
+        {route.length === 1 && !guide && <circle className="hare-rule-highlight" cx={end.x} cy={end.y} r="16" />}
         {blocked && <text className="hare-rule-cross" x={end.x} y={end.y}>×</text>}
       </svg>
       <figcaption>
