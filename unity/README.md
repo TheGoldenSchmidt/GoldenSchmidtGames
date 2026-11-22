@@ -30,7 +30,7 @@ Nicht Teil von Räumen, Zufallspool oder Offline-Cache; keine Online-Partien. Fi
 | `Assets/GSG/Shaders` | `GSG/Toon`, `GSG/Outline`, `GSG/Glow`, `GSG/Sky`, `GSG/Particle` |
 | `Assets/WebGLTemplates/GSG` | Seite ohne Inline-Skript (CSP), Ladebalken, Pixeldichte ≤ 2 |
 
-Menü **GSG → 1 Alles einrichten** baut Materialien, Figuren-Prefabs, beide Szenen und die WebGL-Einstellungen reproduzierbar neu. Builds: Plattform WebGL, je Szene ein eigener Build nach `public/unity/<id>/` (Gzip mit Entpack-Rückfall, Dateinamen mit Inhalts-Hash).
+Menü **GSG → 1 Alles einrichten** baut Materialien, Figuren-Prefabs, beide Szenen und die WebGL-Einstellungen reproduzierbar neu. Builds: Plattform WebGL, je Szene ein eigener Build zuerst nach `Builds/<id>/` (nicht eingecheckt), dann nach `public/unity/<id>/` kopieren – Unitys inkrementeller WebGL-Build räumt sonst den vorherigen Ausgabeordner ab. Gzip mit Entpack-Rückfall, Dateinamen mit Inhalts-Hash. `?debug=1` an der Unity-Adresse protokolliert jeden Finger in der Browser-Konsole.
 
 Mit Unity CLI (Lizenz Unity Personal):
 
@@ -40,7 +40,7 @@ unity open unity/GoldenSchmidtUnity
 
 ## Auslieferung
 
-Der Server erlaubt **nur unter `/unity/`** WebAssembly (`'wasm-unsafe-eval'`), `blob:`-Skripte und das Einbetten im eigenen App-Rahmen (`frame-ancestors 'self'`, `X-Frame-Options: SAMEORIGIN`); die App selbst bleibt unverändert streng. `Build/`-Dateien sind ein Jahr cachebar. Der Service Worker nimmt `unity/**` nicht in den Offline-Cache und leitet Navigationen dorthin nicht auf die App um. Erster Start lädt je Spiel ca. 14 MB (Engine-Code ≈ 8,7 MB ist in beiden Builds identisch), danach liegt es im Browser-Cache.
+Der Server erlaubt **nur unter `/unity/`** WebAssembly (`'wasm-unsafe-eval'`), `blob:`-Skripte und das Einbetten im eigenen App-Rahmen (`frame-ancestors 'self'`, `X-Frame-Options: SAMEORIGIN`); die App selbst bleibt unverändert streng. `Build/`-Dateien sind ein Jahr cachebar. Der Service Worker nimmt `unity/**` nicht in den Offline-Cache und leitet Navigationen dorthin nicht auf die App um. Erster Start lädt je Spiel ca. 14 MB, danach liegt es im Browser-Cache. Der Engine-Code (≈ 8,7 MB) ist in beiden Builds byte-gleich und liegt im Repository nur einmal; im Browser wird er je Spiel geladen, weil die Pfade getrennt sind.
 
 ## Geprüft
 
@@ -51,6 +51,7 @@ Der Server erlaubt **nur unter `/unity/`** WebAssembly (`'wasm-unsafe-eval'`), `
 
 - **Auf echten Handys** Bildrate, Ladezeit, Akku/Wärme und Touch-Gefühl beurteilen (Software-GPU im Container sagt nichts über Leistung). Danach Schatten, MSAA oder Renderauflösung anpassen.
 - Bewertung Unity vs. Web gemeinsam festhalten; erst danach über Online-Mehrspieler (würde eigene Netzwerkschicht oder Anbindung an `roomCore` brauchen) entscheiden.
+- Stand der Hindernisse: Web-Parcours vor #40. Dessen Feinschliff (getimtes Festhalten, Lücken länger als Sprung + Hechten, Serpentinen-Glibberflut, Ventilatoren mit Anlauf) ist im Unity-Level noch nicht nachgezogen.
 - Kein Offline-Betrieb und keine Online-Räume für die Unity-Tests.
 - Personal-Lizenz zeigt beim Start das „Made with Unity“-Logo.
 - Builds erfordern Unity Editor + Lizenz; CI baut sie nicht. Nach Änderungen im Unity-Projekt Builds neu erzeugen und mit einchecken.
