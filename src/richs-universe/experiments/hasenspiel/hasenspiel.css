@@ -384,3 +384,10 @@
 .hare-confirm h2 { margin: 0; font-family: Georgia, serif; }
 .hare-confirm div { display: flex; justify-content: center; gap: .75rem; }
 .hare-confirm button { min-width: 5rem; }
+
+.ru-hasenspiel .hare-route-help { display: block; text-align: center; margin: 4px 0; }
+.ru-hasenspiel .hare-route-number { font: bold 8px system-ui; text-anchor: middle; fill: #24251f; }
+.ru-hasenspiel .hare-route-key { display: inline-grid; place-items: center; min-width: 1.5em; border-radius: 50%; color: #24251f; }
+.ru-hasenspiel .hare-cell, .ru-hasenspiel .hare-choices button { user-select: none; -webkit-touch-callout: none; }
+
+.ru-hasenspiel .hare-route-legend { display: flex; justify-content: center; flex-wrap: wrap; gap: 4px 10px; font-size: .8rem; }

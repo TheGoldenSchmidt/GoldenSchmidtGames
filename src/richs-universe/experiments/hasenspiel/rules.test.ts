@@ -1,9 +1,26 @@
 import assert from "node:assert/strict";
+import { routeFields } from "./MoveRoutes";
 import { botLevels, botTurn } from "./bot";
 import { CENTER, cells, wallFields, movesFrom, newGame, nextPositions, play, type Color, type Game, type Kind } from "./rules";
 
 const piece = (id: string, color: Color = "blue", kind: Kind = "rabbit") => ({ id, color, kind });
 const moves = (game: Game, id: string) => movesFrom(game, cells.find(cell => cell.id === id)!);
+
+// Right-hand crossing in the photographed position: route 2 ends where route 3 lands first.
+{
+  const game = newGame(3);
+  game.turn = "gray";
+  game.board = {};
+  for (const [id,color,kind] of [
+    ["7:4","gray","rabbit"], ["5:4","gray","rabbit"], ["5:5","gray","monkey"],
+    ["5:2","blue","rabbit"], ["7:2","blue","rabbit"], ["5:1","blue","rabbit"],
+    ["4:4","gray","monkey"]
+  ] as const) game.board[id] = piece(id,color,kind);
+  const routes = moves(game,"7:4");
+  assert.deepEqual(routes.map(move => move.to), ["7:3","5:3","4:2"]);
+  assert.deepEqual(routeFields(routes).get("5:3"), [1,2]);
+  assert.equal(routes[2].capture,"5:2");
+}
 
 for (const level of [1, 2, 3] as const) {
   const game = newGame(level);

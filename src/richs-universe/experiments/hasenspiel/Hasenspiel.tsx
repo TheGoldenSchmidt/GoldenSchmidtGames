@@ -9,6 +9,7 @@ import { PieceEmblem } from "./PieceEmblem";
 import { ForestIntro } from "./ForestIntro";
 import { MatchHistory, readHistory, type FinishedMatch } from "./MatchHistory";
 import { Victory } from "./Victory";
+import { RouteArrow, routeColor, routeFields, useRouteHold } from "./MoveRoutes";
 import "./hasenspiel.css";
 
 const names = { blue: "Weiß", gray: "Braun" };
@@ -112,6 +113,8 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
   const [selected, setSelected] = useState<Cell>();
   const [destination, setDestination] = useState<Cell>();
   const targets = selected ? movesFrom(game, selected) : [];
+  const fields = routeFields(targets);
+  const hold = useRouteHold();
   const choices = destination ? targets.filter(move => move.to === destination.id) : [];
   const wall = useMemo(() => wallFields(game.board, game.initialWalls), [game.board, game.initialWalls]);
   const boardId = useId();
@@ -167,6 +170,13 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
           {levelChosen && <strong>Stufe {game.level}{firstColor && ` · ${status}`}</strong>}
           {firstColor && <span>{firstPlayer}: {names[firstColor]} · {secondPlayer}: {names[secondColor]}</span>}
         </div>
+        {targets.length > 0 && targets.length <= 5 && <div className="hare-route-legend">
+          {targets.map((move,i) => <span key={i}><b className="hare-route-key" style={{background:routeColor(i)}}>{i+1}</b>{" "}
+            {move.via ? "Doppelsprung" : move.friendly || move.capture ? "Sprung"
+              : move.trail?.length && !move.distance ? "Hangeln" : selected?.row === cells.find(cell => cell.id === move.to)?.row ? "Seitwärtszug" : "Zug"}
+          </span>)}
+        </div>}
+        {targets.length > 0 && <small className="hare-route-help">Ziel antippen zum Ziehen · Gedrückt halten für den Weg</small>}
         <div className="hare-playfield">
           {coin && <section className="hare-panel hare-toss" role="status">
             <strong>Münzwurf</strong>
@@ -201,9 +211,10 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
           {choices.map((move, index) => {
             const capture = cells.find(cell => cell.id === move.capture);
             const ally = cells.find(cell => cell.id === move.friendly);
-            return <button type="button" key={index} onClick={() => takeMove(destination, index)}>
+            return <button type="button" key={index} {...hold.handlers(targets.indexOf(move), () => takeMove(destination, index))}>
+              <b className="hare-route-key" style={{ background: routeColor(targets.indexOf(move)) }}>{targets.indexOf(move) + 1}</b>{" "}
               {ally ? `Über eigene Figur auf ${fieldName(ally)}` : null}
-              {capture ? `${ally ? " · " : ""}Figur auf ${fieldName(capture)} schlagen` : ally ? null : "Direkt ziehen"}
+              {capture ? `${ally ? " · " : ""}Figur auf ${fieldName(capture)} schlagen` : ally ? null : move.trail?.length && !move.distance ? "Hangeln" : "Direkt ziehen"}
             </button>;
           })}
           <button type="button" onClick={() => setDestination(undefined)}>Abbrechen</button>
@@ -223,6 +234,11 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
               })}
             </g>
             <defs>
+              {[...fields].filter(([, indices]) => indices.length > 1).map(([id, indices]) =>
+                <linearGradient key={id} id={`${boardId}-route-${id}`}>
+                  {indices.flatMap((index, n) => [n, n + 1].map((edge,k) =>
+                    <stop key={n+"-"+k} offset={edge / indices.length} stopColor={routeColor(index)} />))}
+                </linearGradient>)}
               {Object.entries(boardMaterials).map(([name, [light, dark]]) => (
                 <linearGradient key={name} id={`${boardId}-${name}`} x1="12%" y1="0%" x2="80%" y2="100%">
                   <stop stopColor={light} />
@@ -248,13 +264,17 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
               const rabbit = game.board[cell.id];
               const target = targets.find(move => move.to === cell.id);
               const active = !!firstColor && !game.result && !botThinking && !motion && (rabbit?.color === game.turn || !!target);
+              const indices = fields.get(cell.id) ?? [];
+              const ends = indices.filter(i => targets[i].to === cell.id);
+              const fill = indices.length > 1 ? `url(#${boardId}-route-${cell.id})`
+                : indices.length ? routeColor(indices[0]) : undefined;
               const resting = rabbit && game.restingDeer?.includes(rabbit.id);
               const frozen = rabbit && game.frozen.includes(rabbit.id);
               return (
                 <g key={cell.id} className="hare-cell" data-target={!!target} data-selected={selected === cell} data-wall={wall.has(cell.id)}
                   role={active ? "button" : undefined} tabIndex={active ? 0 : undefined}
                   aria-label={active ? `${fieldName(cell)}${rabbit ? `, ${species[rabbit.kind]} ${names[rabbit.color]}${resting ? ", ruht" : frozen ? ", betäubt" : ""}` : ""}` : undefined}
-                  onClick={() => select(cell)}
+                  {...hold.handlers(ends[0] ?? -1, () => select(cell))}
                   onKeyDown={event => {
                     if (active && (event.key === "Enter" || event.key === " ")) {
                       event.preventDefault();
@@ -263,14 +283,14 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
                   }}>
                   {isCenter
                     ? <g className="hare-center">
-                      <rect x={width / 2 - side * 1.25} y={6 * height} width={side * 2.5} height={gap} rx="4" />
+                      <rect style={{fill}} x={width / 2 - side * 1.25} y={6 * height} width={side * 2.5} height={gap} rx="4" />
                       {centerLinks.map(link => {
                         const x = width / 2 + link.x * side / 2;
                         return <line key={link.id} x1={x} x2={x} y1={6 * height} y2={6 * height + gap} />;
                       })}
                     </g>
                     : <polygon points={shape.points} data-side={cell.row < 6 ? "blue" : "gray"}
-                      style={wall.has(cell.id) ? { fill: `url(#${bushPattern})` } : undefined} />}
+                      style={{fill: fill ?? (wall.has(cell.id) ? `url(#${bushPattern})` : undefined)}} />}
                   {rabbit && motion?.from !== cell && <g data-captured={motion?.move.capture === cell.id || undefined} data-double={!!motion?.move.via} className={`hare-token hare-token-${rabbit.color}`} transform={`translate(${shape.x} ${shape.y})`}>
                     <ellipse className="hare-piece-shadow" cy="7" rx="12" ry="7" />
                     <circle className="hare-piece-base" cy="2.5" r="12" />
@@ -278,10 +298,16 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
                     <PieceEmblem kind={rabbit.kind} />
                     {(frozen || resting) && <circle className="hare-frozen" r="13.5" />}
                   </g>}
-                  {target && <circle className="hare-target" cx={shape.x + (rabbit ? 9 : 0)} cy={shape.y} r={rabbit ? 3 : 4} />}
+                  {target && <g pointerEvents="none" transform={`translate(${shape.x} ${shape.y})`}>
+                    <circle r="6.5" fill={routeColor(ends[0])} stroke="#343329" strokeWidth="1"/>
+                    <text className="hare-route-number" y="2.8">{ends[0]+1}</text>
+                    {ends.length > 1 && <text className="hare-route-number" x="8" y="-3">+</text>}
+                  </g>}
                 </g>
               );
             })}
+            {selected && hold.preview !== undefined && targets[hold.preview] &&
+              <RouteArrow from={selected.id} move={targets[hold.preview]} index={hold.preview} marker={boardId+"-arrow"} />}
             {motion && (() => {
               const piece = game.board[motion.from.id]!;
               const start = boardPoint(motion.from);

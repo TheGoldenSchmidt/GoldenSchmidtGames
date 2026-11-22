@@ -5,7 +5,7 @@ export type Kind = "rabbit" | "deer" | "monkey";
 type Piece = { id: string; color: Color; kind: Kind };
 type Board = Partial<Record<string, Piece>>;
 type Pair = { mover: string; crossed: string };
-export type Move = { to: string; distance?: number; via?: string; friendly?: string; capture?: string };
+export type Move = { to: string; distance?: number; trail?: string[]; via?: string; friendly?: string; capture?: string };
 
 export const CENTER = "center";
 export const cells: Cell[] = Array.from({ length: 13 }, (_, row) => {
@@ -107,6 +107,7 @@ function deerMoves(board: Board, from: Cell, allowed: (start: Cell, end: Cell) =
 
   function follow(start: Cell, x: number, rowStep: number, xStep: number, distance: number) {
     let current = start;
+    const trail = start === from ? [] : [start.id];
     for (;;) {
       let row = current.row + rowStep;
       x += xStep;
@@ -116,8 +117,9 @@ function deerMoves(board: Board, from: Cell, allowed: (start: Cell, end: Cell) =
       if ((current.id === CENTER || next.id === CENTER) && !adjacent(current).includes(next)) return;
       distance++;
       if ((targets.get(next.id)?.distance ?? Infinity) > distance) {
-        targets.set(next.id, { to: next.id, distance });
+        targets.set(next.id, { to: next.id, distance, trail: [...trail] });
       }
+      trail.push(next.id);
       current = next;
     }
   }
@@ -141,28 +143,31 @@ function deerMoves(board: Board, from: Cell, allowed: (start: Cell, end: Cell) =
 }
 
 function hangingMoves(board: Board, from: Cell, piece: Piece): Move[] {
-  const targets = new Set<string>();
+  const targets = new Map<string, Move>();
   for (const lateral of [-1, 1]) {
     const visited = new Set<string>();
+    const trail: string[] = [];
     function follow(current: Cell, crossed: number, usedGap: boolean) {
       const state = `${current.id}/${crossed}/${usedGap}`;
       if (visited.has(state)) return;
       visited.add(state);
+      if (current !== from) trail.push(current.id);
       for (const to of adjacent(current)) {
         const direction = forward(piece, current, to);
         if (direction < 0 || (direction === 0 && Math.sign(to.x - current.x) !== lateral)) continue;
         const next = board[to.id];
         if (next?.kind === "rabbit") follow(to, Math.min(crossed + 1, 2), usedGap);
         if (next || (current !== from && !board[current.id])) continue;
-        if (crossed >= 2) targets.add(to.id);
+        if (crossed >= 2 && !targets.has(to.id)) targets.set(to.id, { to: to.id, trail: [...trail] });
         if (crossed && !usedGap && adjacent(to).some(cell => board[cell.id]?.kind === "rabbit")) {
           follow(to, crossed, true);
         }
       }
+      if (current !== from) trail.pop();
     }
     follow(from, 0, false);
   }
-  return [...targets].map(to => ({ to }));
+  return [...targets.values()];
 }
 
 export function movesFrom(game: Game, from: Cell): Move[] {
