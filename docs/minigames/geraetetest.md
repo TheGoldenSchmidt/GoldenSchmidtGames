@@ -28,7 +28,7 @@ Android und iPhone, möglichst älteres Gerät; sechs für Volllast. Je relevant
 | Neon Racer | Lenkrad und Pedale mit zwei Daumen, Item-Knopf, Lesbarkeit bei voller Fahrt; Kippen: gedrehtes Querformat in der installierten App, Safe Areas, Freigabe (iOS), Lenkrichtung, „Lenkrad ausrichten“, Pfeil-Rückfall |
 | Vollbild | HUD lesbar und nicht über wichtigen Spielteilen, Menü „⋯“ (Aufgeben/Übung), Notch/Home-Leiste, Verbindungshinweis |
 | Tower Survival / Schneeballschlacht | Survival-Tempo gegen Ende; Schneeball: Startkamera Richtung Mitte, Zielring, Antippen-Wurf, Antippen-Formen, 3D-Leistung mit sechs Figuren |
-| Fallklappen / Windkanal / Glibberflut | Dauer und Schwierigkeit der verlängerten Läufe, Glibber gegen Ende |
+| Fallklappen / Windkanal / Glibberflut | Dauer und Schwierigkeit der verlängerten Läufe, Glibber gegen Ende; Serpentinen: Kamera an den Ecken, Kanten mit getimtem Festhalten; Wind: Streifen und Vorwarnung erkennbar |
 | Parcours | Laufzeiten, Aktionen, Balkentreffer, Klettern/Wippen/Flut, Klappenwarnung/Wind/Standhaft |
 | Übrige | FPS/Ruckler, kleine Figuren, Quick-Draw-Fairness, Light-Trails-Lenkung |
 | Alle 3D-Szenen | Laden, Erwärmung über mehrere Runden, beide Bewegungseinstellungen |

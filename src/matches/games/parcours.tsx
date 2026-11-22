@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { PC, shownRacer, type ParcoursGame } from "../../../shared/matches/parcours";
-import { blinkOpen, blinkWarn, boxAt, course, gooAt, sweeperAngle, type Look } from "../../../shared/matches/parcoursCourses";
+import { blinkOpen, blinkWarn, boxAt, course, courseLength, gooAt, sweeperAngle, windState, type Look } from "../../../shared/matches/parcoursCourses";
 import { ActionButton, CameraSwipe, Stick } from "../controls";
 import { chaseStick, lerp, playerColor, type MatchClient, type MatchControlsProps, type MatchFrame } from "../client";
 
@@ -10,8 +10,10 @@ const LOOK_FILL: Record<Look, string> = { floor: "#ffd166", wall: "#6544e8", doo
 function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
   // Obstacles at the moment of the interpolated racers (same as the 3D world).
   const s = f.cur, g = s.game as ParcoursGame, prev = f.prev.game as ParcoursGame, c = course(g.course), { w, h } = f, t = f.prev.time + (s.time - f.prev.time) * f.alpha;
-  const me = g.racers[f.viewer] ?? Object.values(g.racers)[0], scale = w / (c.practice?12.5:c.width + 2.5), camZ = me ? me.z : 0;
-  const X = (x: number) => w / 2 + (x-(c.practice?me?.x??0:0)) * scale, Y = (z: number) => h * .7 - (z - camZ) * scale;
+  // Practice and winding courses: a window around the own racer, otherwise the full width.
+  const near = c.practice || !!c.route;
+  const me = g.racers[f.viewer] ?? Object.values(g.racers)[0], scale = w / (near?12.5:c.width + 2.5), camZ = me ? me.z : 0;
+  const X = (x: number) => w / 2 + (x-(near?me?.x??0:0)) * scale, Y = (z: number) => h * .7 - (z - camZ) * scale;
   ctx.fillStyle = "#1d2466"; ctx.fillRect(0, 0, w, h);
   // Lower boxes first, so walls and doors cover the floor.
   const boxes = c.boxes.map((b, i) => ({ b, i, bb: boxAt(b, t) })).sort((p, q) => p.bb.y1 - q.bb.y1);
@@ -24,11 +26,26 @@ function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
     ctx.fillRect(X(bb.x0), Y(bb.z1), (bb.x1 - bb.x0) * scale, (bb.z1 - bb.z0) * scale);
     if (b.y1 - (b.y0 + (b.look === "floor" || b.look === "finish" || b.look === "belt" ? 1 : 0)) > 1) { ctx.strokeStyle = "#24133f"; ctx.lineWidth = 2; ctx.strokeRect(X(bb.x0), Y(bb.z1), (bb.x1 - bb.x0) * scale, (bb.z1 - bb.z0) * scale); }
   }
-  for (let k = 0; k < (c.practice?0:c.width); k++) { ctx.fillStyle = k % 2 ? "#fff9ed" : "#24133f"; ctx.fillRect(X(-c.width / 2 + k), Y(c.finishZ) - 4, scale, 8); }
+  for (let k = 0; k < (c.practice?0:c.width); k++) { ctx.fillStyle = k % 2 ? "#fff9ed" : "#24133f"; ctx.fillRect(X((c.finishX ?? 0) - c.width / 2 + k), Y(c.finishZ) - 4, scale, 8); }
   for (const sw of c.sweepers) {
     const a = sweeperAngle(sw, t), dx = Math.cos(a) * sw.length, dz = Math.sin(a) * sw.length;
     ctx.strokeStyle = sw.y1 <= .8 ? "#ff5f8f" : "#ffe44e"; ctx.lineWidth = Math.max(4, scale * .35); ctx.setLineDash(sw.y1 <= .8 ? [] : [8, 6]);
     ctx.beginPath(); ctx.moveTo(X(sw.x - dx), Y(sw.z - dz)); ctx.lineTo(X(sw.x + dx), Y(sw.z + dz)); ctx.stroke(); ctx.setLineDash([]);
+  }
+  // Wind: chevrons across the zone in its direction, orange while it blows, dashed just before.
+  for (const wz of c.winds) {
+    const { on, warn } = windState(wz, t);
+    if (!on && !warn) continue;
+    const along = Math.abs(wz.vx) > Math.abs(wz.vz), sign = Math.sign(along ? wz.vx : wz.vz) || 1, drift = on && !f.reduced ? (t / 400) % 1 : 0;
+    ctx.strokeStyle = on ? "#ff6a1fcc" : "#ff6a1f66"; ctx.lineWidth = 3; ctx.setLineDash(on ? [] : [4, 4]);
+    for (let a = 0; a < 6; a++) for (let b = 0; b < 3; b++) {
+      const u = (a + drift) / 6, v = (b + .5) / 3, cx = along ? wz.x0 + u * (wz.x1 - wz.x0) : Math.max(-5, wz.x0) + v * (Math.min(5, wz.x1) - Math.max(-5, wz.x0)), cz = along ? wz.z0 + v * (wz.z1 - wz.z0) : wz.z0 + u * (wz.z1 - wz.z0), d = .35;
+      ctx.beginPath();
+      if (along) { ctx.moveTo(X(cx - sign * d), Y(cz + d)); ctx.lineTo(X(cx), Y(cz)); ctx.lineTo(X(cx - sign * d), Y(cz - d)); }
+      else { ctx.moveTo(X(cx - d), Y(cz - sign * d)); ctx.lineTo(X(cx), Y(cz)); ctx.lineTo(X(cx + d), Y(cz - sign * d)); }
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
   }
   if (c.goo && me && gooAt(c, t) > me.y - 3) { ctx.fillStyle = "#8dff5a55"; ctx.fillRect(0, 0, w, h); }
   for (const p of s.players) {
@@ -91,7 +108,7 @@ export const parcoursClient: MatchClient = {
     const place = g.order.indexOf(viewer);
     if (c.elimination) return me.pose === "out" ? `Raus – du schaust zu · noch ${left} s` : `Du stehst noch · ${Object.values(g.racers).filter(r => r.pose !== "out").length} stehen · noch ${left} s`;
     if (me.pose === "out") return `Raus – du schaust zu · noch ${left} s`;
-    return place >= 0 ? `Im Ziel als ${place + 1}. · du schaust zu · noch ${left} s` : `${Math.round(me.best)} von ${c.finishZ} m · ${g.firstFinish !== undefined ? "Zielschluss in" : "noch"} ${left} s`;
+    return place >= 0 ? `Im Ziel als ${place + 1}. · du schaust zu · noch ${left} s` : `${Math.round(me.best)} von ${Math.round(courseLength(c))} m · ${g.firstFinish !== undefined ? "Zielschluss in" : "noch"} ${left} s`;
   },
   sound(event, viewer) {
     const mine = event.ids[0] === viewer;

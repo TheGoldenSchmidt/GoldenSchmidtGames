@@ -1,4 +1,5 @@
-import { blinkOpen, blinkWarn, boxAt, course, COURSE_IDS, gooAt, sweeperAngle, windAt, type Box, type Course, type CourseId } from "./parcoursCourses";
+import { blinkOpen, blinkWarn, boxAt, course, COURSE_IDS, courseLength, gooAt, progressOf, routeAt, routeStretch, sweeperAngle, windAt, type Box, type Course, type CourseId } from "./parcoursCourses";
+import { turnBox, turnFace, turnPoint, turnSweeper, turnWind, type Quarter } from "./parcoursFrame";
 import { emit, hash, inputOfPlayer, presence, rank, shuffled, randomInt, type MatchModule, type MatchPlayer, type MatchState } from "./types";
 
 /**
@@ -17,6 +18,12 @@ export const PC = {
   gravity: 26, jump: 9, coyote: 120, buffer: 160, step: .32,
   dive: 9.6, diveUp: 4.2, airDiveUp: 2.6, proneMs: 450,
   hangMin: .9, hangMax: 2.15, hangReach: .45, hangDrop: 1.55, hangMaxMs: 4000,
+  /**
+   * A ledge is only caught by a fresh press of "Festhalten" at the right moment:
+   * the press may come at most this long (ms) before the edge is in reach. Holding
+   * the button down from before, or only pushing the stick into the wall, catches nothing.
+   */
+  grabWindow: 320,
   grabRange: 1.05, tether: 1.1, grabSlow: .45, grabSelf: .6, grabMs: 2000, grabCooldown: 1500,
   knock: 8.5, knockUp: 4.5, stunMs: 650, hitGuard: 800,
   /** Contact distance between a spinning bar's centre line and a racer (bar half thickness + slim body). */
@@ -56,6 +63,8 @@ export interface Racer {
   checkpoint: number; best: number; falls: number; respawnAt: number; hitUntil: number;
   /** Height of the last ground stood on (pushing into a wall only grabs edges above it). */
   standY?: number;
+  /** "Festhalten" held at the last step, and when it was last pressed (for catching ledges, see `PC.grabWindow`). */
+  haDown?: boolean; grabPressAt?: number;
   /** First and latest moment of the current contact with a moving bar (see `PC.barGrace`). */
   barTouch?: number; barLast?: number;
   finishAt?: number; outAt?: number;
@@ -95,6 +104,12 @@ export function solid(b: Box, g: ParcoursGame, t: number) {
 
 function respawn(c: Course, r: Racer, slot: number, t: number) {
   const cp = c.checkpoints[r.checkpoint];
+  if (c.route) {
+    // Winding course: side by side across the way, facing along it.
+    const st = routeStretch(c, routeAt(c, cp.x ?? 0, cp.z).index), [ox, oz] = turnPoint(-1.5 + (slot % 6) * .6, 0, st.quarter);
+    Object.assign(r, { x: (cp.x ?? 0) + ox, y: cp.y + .05, z: cp.z + oz, face: turnFace(0, st.quarter), vx: 0, vy: 0, vz: 0, pose: "run", grounded: false, ground: -1, duck: false, hang: undefined, grab: undefined, respawnAt: 0, airDive: false, until: 0, lastGround: t });
+    return;
+  }
   // Side by side within three metres, so every checkpoint platform holds all six; finals start on a circle.
   const a = .5 + (slot % 6) * Math.PI / 3, x = c.elimination ? Math.cos(a) * 3.5 : (cp.x ?? 0) -1.5 + (slot % 6) * .6, z = c.elimination ? cp.z + Math.sin(a) * 3.5 : cp.z;
   Object.assign(r, { x, y: cp.y + .05, z, face: c.elimination ? Math.atan2(-x, cp.z - z) : 0, vx: 0, vy: 0, vz: 0, pose: "run", grounded: false, ground: -1, duck: false, hang: undefined, grab: undefined, respawnAt: 0, airDive: false, until: 0, lastGround: t });
@@ -105,6 +120,8 @@ function moveRacer(s: MatchState<ParcoursGame>, c: Course, p: MatchPlayer, r: Ra
   if (r.pose === "done" || r.pose === "out") return;
   if (r.respawnAt) { if (t >= r.respawnAt) respawn(c, r, slot, t); else return; }
   const input = inputOfPlayer(s, p), mx = input.x, mz = -input.y, mag = Math.min(1, Math.hypot(mx, mz)), grabHeld = input.ha;
+  if (grabHeld && !r.haDown) r.grabPressAt = t;
+  r.haDown = grabHeld;
 
   // Pulling up: first up the wall, then onto the top – a short movement, not a jump.
   if (r.pose === "climb" && r.hang) {
@@ -167,6 +184,7 @@ function moveRacer(s: MatchState<ParcoursGame>, c: Course, p: MatchPlayer, r: Ra
     const b = c.boxes[r.ground];
     if (b.move) { const a = boxAt(b, t - h * 1000), n = boxAt(b, t); r.x += n.x0 - a.x0; r.y += n.y1 - a.y1; r.z += n.z0 - a.z0; }
     if (b.belt) r.z += b.belt * h;
+    if (b.beltX) r.x += b.beltX * h;
     if (b.seesaw !== undefined) r.vx += Math.sin(g.tilt[b.seesaw]) * PC.gravity * PC.tiltSlide * h;
   }
   // Wind drifts racers (a bit more in the air).
@@ -240,11 +258,10 @@ function moveRacer(s: MatchState<ParcoursGame>, c: Course, p: MatchPlayer, r: Ra
     else if (r.pose === "air") r.pose = "run";
   } else if (r.pose === "run") r.pose = "air";
 
-  // Holding on to a ledge: falling past a wall whose edge is within reach, holding on or pushing into the wall.
-  if (!r.grounded && r.vy <= .5 && (r.pose === "air" || r.pose === "dive")) {
+  // Catching a ledge: falling past a wall whose edge is within reach, with "Festhalten" pressed just now (not held from before).
+  if (!r.grounded && r.vy <= .5 && (r.pose === "air" || r.pose === "dive") && grabHeld && t - (r.grabPressAt ?? -1e9) <= PC.grabWindow) {
     const ledge = ledgeFor(c, g, r, t, wall);
-    const up = ledge && boxAt(c.boxes[ledge.box], t).y1 > (r.standY ?? r.y) + PC.step + .3;
-    if (ledge && (grabHeld || (up && mx * -ledge.nx + mz * -ledge.nz > .5))) { Object.assign(r, { pose: "hang", hang: { ...ledge, since: t }, vx: 0, vy: 0, vz: 0, airDive: false }); emit(s, "grab", "Festgehalten!", [r.id]); }
+    if (ledge) { Object.assign(r, { pose: "hang", hang: { ...ledge, since: t }, vx: 0, vy: 0, vz: 0, airDive: false }); emit(s, "grab", "Festgehalten!", [r.id]); }
   }
 }
 
@@ -340,17 +357,17 @@ function startGame(s: MatchState<ParcoursGame>, id: CourseId): ParcoursGame {
 }
 
 const FINAL_INSTRUCTION = "Stick zum Laufen (oben = von der Kamera weg), Springen über den niedrigen Balken, Ducken unter dem hohen, Hechten und Festhalten wie im Parcours. Wer fällt, scheidet aus. Wer zuletzt steht, gewinnt; nach 90 Sekunden gewinnen alle, die noch stehen.";
-const INSTRUCTION = "Lauf selbst durch den Parcours: Stick zum Laufen und Lenken (oben = von der Kamera weg). Springen über Lücken und niedrige Balken, Hechten für einen weiten Satz nach vorn, Festhalten (halten) an anderen, um sie zu bremsen, Ducken (halten) unter hohen Balken durch. An hohe Kanten springst du und drückst den Stick zur Wand: Du hältst dich fest und kletterst hoch. Wer fällt, startet am letzten Kontrollpunkt. Die Reihenfolge im Ziel entscheidet, sonst der Fortschritt.";
+const INSTRUCTION = "Lauf selbst durch den Parcours: Stick zum Laufen und Lenken (oben = von der Kamera weg). Springen über Lücken und niedrige Balken, Hechten für einen weiten Satz nach vorn, Festhalten (halten) an anderen, um sie zu bremsen, Ducken (halten) unter hohen Balken durch. An hohe Kanten springst du und drückst „Festhalten“ genau dann, wenn du an der Kante vorbeifällst – zu früh gedrückt oder schon gehalten fängt nichts. Dann Stick zur Wand oder Springen: Du ziehst dich hoch. Wer fällt, startet am letzten Kontrollpunkt. Die Reihenfolge im Ziel entscheidet, sonst der Fortschritt.";
 const GOALS: Record<CourseId, { icon: string; action: string; extra: string }> = {
   proberaum:{icon:"⌸",action:"Frei ausprobieren",extra:"Alle Hindernisse auf einer Übungsinsel."},
   tuerenlotto: { icon: "▥", action: "Welche Tür geht auf?", extra: "Vier Reihen mit je sechs Türen: Nur manche brechen auf, die anderen sind massiv. Hinter manchen offenen Türen wartet ein Gang mit massivem Ausgang (Sackgasse) oder eine Falltür. Dazwischen Schieber, ein Drehbalken und ein Graben." },
   kreiselkurs: { icon: "✣", action: "Über und unter Balken", extra: "Drehende Balken in allen Varianten: über niedrige springen, unter hohen ducken, am Kreuz beides. Dazu wandernde Inseln, zwei flinke Wippen und am Ende ein Rührwerk aus schnellen Kurzbalken. Wer getroffen wird, fliegt nach vorn und außen weg." },
   wippenwerk: { icon: "⚖", action: "Balance und Kanten", extra: "Wippen neigen sich unter Gewicht, rollende Walzen musst du überspringen, zum Schluss eine Wand zum Festhalten und Hochziehen." },
-  glibberflut: { icon: "♒", action: "Nach oben, schnell!", extra: "Langer Aufstieg über Treppen, Förderbänder gegen die Laufrichtung, fünf Kanten, rollende Walzen, schmale Stege und Fallklappen auf dem Dach, während von unten Glibber steigt – gegen Ende immer schneller. Wer erwischt wird, scheidet aus." },
+  glibberflut: { icon: "♒", action: "Nach oben, schnell!", extra: "Serpentinen-Aufstieg in sieben Abschnitten hin und her: Förderbänder gegen die Laufrichtung mit Walzen, Schieber, Drehbalken, wandernde Inseln, Fallklappen, ein schmaler Steg, Wippen und fünf Kanten zum Festhalten – während von unten Glibber steigt, gegen Ende schneller. Die Kamera dreht an den Ecken mit. Wer stürzt oder erwischt wird, scheidet aus." },
   geisterpfad: { icon: "◌", action: "Finde den Pfad", extra: "Nur ein unsichtbarer Pfad aus Platten trägt; was einmal betreten wurde, bleibt für alle sichtbar." },
   fallklappen: { icon: "▦", action: "Achte aufs Warnlicht", extra: "Vier Klappenfelder über dem Abgrund, jedes schwerer: erst jede Klappe im eigenen Takt, dann schneller, dann ein Schachbrett, auf dem Nachbarn sich abwechseln, zuletzt ein schmaler Steg aus flinken Klappen mit Lücken. Kurz vor dem Öffnen glüht eine Klappe orange." },
   windkanal: { icon: "≋", action: "Gegen den Wind", extra: "Schmale Stege im wechselnden Seitenwind, Trittsteine im Dauerwind, eine Böenbrücke, wandernde Inseln im Gegenwind und zum Schluss eine schmale Rampe mit Gegenwind und Seitenböen." },
-  kletterwand: { icon: "⌸", action: "Halt dich fest", extra: "Vier Stufen, jede zu hoch zum Springen: Spring an die Kante und drück den Stick zur Wand (oder halte Festhalten), dann kletterst du hoch. Die Griffblöcke verschwinden zwischendurch – wähle einen, der bleibt." },
+  kletterwand: { icon: "⌸", action: "Halt dich fest", extra: "Vier Stufen, jede zu hoch zum Springen: Spring an die Kante, drück im richtigen Moment „Festhalten“ und zieh dich mit dem Stick zur Wand hoch. Die Griffblöcke verschwinden zwischendurch – wähle einen, der bleibt." },
   standhaft: { icon: "♛", action: "Bleib stehen", extra: "Finale auf Klappen unter zwei Drehbalken: Erst öffnet sich der äußere Ring, später auch die Mitte." }
 };
 
@@ -416,10 +433,12 @@ export function parcoursModule(id: CourseId): MatchModule<ParcoursGame> {
         if (c.practice && !r.respawnAt && c.goo && r.y < gooAt(c,t)-.1) { r.falls++; r.respawnAt=t+PC.respawnMs; r.pose="air"; emit(s,"fall","Zurück zur Station",[r.id]); continue; }
         if (!c.practice && c.goo && r.y < gooAt(c, t) - .1) { r.pose = "out"; r.outAt = t; r.respawnAt = 0; emit(s, "out", "Vom Glibber erwischt!", [r.id]); continue; }
         if (r.respawnAt) continue;
-        if (r.grounded && !c.practice) while (r.checkpoint + 1 < c.checkpoints.length && r.z >= c.checkpoints[r.checkpoint + 1].z) r.checkpoint++;
-        r.best = Math.max(r.best, Math.min(c.finishZ, r.z));
+        const at = progressOf(c, r.x, r.z), length = courseLength(c);
+        if (r.grounded && !c.practice) while (r.checkpoint + 1 < c.checkpoints.length && at >= progressOf(c, c.checkpoints[r.checkpoint + 1].x ?? 0, c.checkpoints[r.checkpoint + 1].z)) r.checkpoint++;
+        // Winding courses count progress only on the ground: in the air above the gap a racer may be nearer to another stretch.
+        if (r.grounded || !c.route) r.best = Math.max(r.best, Math.min(length, at));
         if (!c.practice && r.z >= c.finishZ && r.y >= c.finishY - .5) {
-          Object.assign(r, { pose: "done", finishAt: t, vx: 0, vy: 0, vz: 0, grab: undefined, best: c.finishZ });
+          Object.assign(r, { pose: "done", finishAt: t, vx: 0, vy: 0, vz: 0, grab: undefined, best: length });
           g.order.push(r.id); g.firstFinish ??= t;
           emit(s, "finish", g.order.length === 1 ? "Erste im Ziel!" : `Im Ziel – Platz ${g.order.length}!`, [r.id]);
         }
@@ -459,12 +478,39 @@ export function parcoursModule(id: CourseId): MatchModule<ParcoursGame> {
     },
     finish(s) { s.done = true; },
     view(s) { delete s.game.secretDoors; delete s.game.secretTiles; },
-    bot(s, botId) { return parcoursBot(s, c, botId); }
+    bot(s, botId) { return c.route ? routeBot(s, c, botId) : parcoursBot(s, c, botId); }
   };
 }
 
+/** The course seen from a stretch of a winding course: turned so that the stretch runs along +z (cached per turn). */
+const views = new WeakMap<Course, Map<Quarter, Course>>();
+function viewFrom(c: Course, back: Quarter) {
+  let map = views.get(c); if (!map) { map = new Map(); views.set(c, map); }
+  let v = map.get(back);
+  if (!v) { v = { ...c, boxes: c.boxes.map(b => turnBox(b, back)), sweepers: c.sweepers.map(sw => turnSweeper(sw, back)), winds: c.winds.map(w => turnWind(w, back)), doorRows: [], laneRows: [], tileRows: [], route: undefined }; map.set(back, v); }
+  return v;
+}
+/**
+ * Bots on a winding course: the stretch ahead (looking a little past corners)
+ * turned to run along +z, the straight-course bot there, its stick turned back.
+ */
+function routeBot(s: MatchState<ParcoursGame>, c: Course, id: string) {
+  const r = s.game.racers[id];
+  if (!r) return {};
+  // On a corner pad (within half a pad of the corner) the next stretch already counts; the best progress so far keeps it from flipping back.
+  const at = Math.max(routeAt(c, r.x, r.z).along, r.best);
+  let index = 0; while (!routeStretch(c, index).last && at >= routeStretch(c, index + 1).from - 3.2) index++;
+  const st = routeStretch(c, index);
+  if (!st.quarter) return parcoursBot(s, c, id, st.ax);
+  const back = ((4 - st.quarter) % 4) as Quarter, [x, z] = turnPoint(r.x, r.z, back), [vx, vz] = turnPoint(r.vx, r.vz, back), [centre] = turnPoint(st.ax, st.az, back);
+  const local: Racer = { ...r, x, z, vx, vz, face: turnFace(r.face, back) };
+  const out = parcoursBot({ ...s, game: { ...s.game, racers: { ...s.game.racers, [id]: local } } }, viewFrom(c, back), id, centre);
+  const [wx, wz] = turnPoint(out.x ?? 0, -(out.y ?? 0), st.quarter);
+  return { ...out, x: wx, y: -wz };
+}
+
 /** Bots: run forward, pick doors, tiles and holds, avoid opening trapdoors, lean into wind, jump gaps and low bars, duck high bars, climb ledges. */
-function parcoursBot(s: MatchState<ParcoursGame>, c: Course, id: string) {
+function parcoursBot(s: MatchState<ParcoursGame>, c: Course, id: string, centre = 0) {
   const g = s.game, r = g.racers[id], t = s.time;
   if (!r || r.pose === "done" || r.pose === "out" || r.respawnAt) return {};
   const salt = hash(`${id}:${Math.floor(t / 1600)}`);
@@ -473,7 +519,7 @@ function parcoursBot(s: MatchState<ParcoursGame>, c: Course, id: string) {
     const bb = boxAt(b, t);
     return x >= bb.x0 + .15 && x <= bb.x1 - .15 && z >= bb.z0 && z <= bb.z1 && bb.y1 <= r.y + .4 && bb.y1 >= r.y - 1.2 && solid(b, g, t) && solid(b, g, t + soon) && !blinkWarn(b, t);
   });
-  let tx = Math.max(-3.5, Math.min(3.5, ((hash(id) % 7) - 3) * .9)), mz = 1;
+  let tx = centre + Math.max(-3.5, Math.min(3.5, ((hash(id) % 7) - 3) * .9)), mz = 1;
   if (c.elimination) {
     // Final: head for the safest plate near the middle; stay put while it holds.
     let best = { x: r.x, z: r.z, score: -Infinity };
@@ -508,15 +554,25 @@ function parcoursBot(s: MatchState<ParcoursGame>, c: Course, id: string) {
   const tiles = c.tileRows.find(tr => tr.z + 1.8 > r.z + .2 && tr.z - r.z < 2.5);
   if (tiles) { const safe = tiles.tiles.find(i => g.tiles[i] === "1"), maybe = tiles.tiles.filter(i => g.tiles[i] !== "2"); const pick = safe ?? maybe[salt % Math.max(1, maybe.length)] ?? tiles.tiles[2]; tx = -3.6 + 1.8 * tiles.tiles.indexOf(pick); }
   // Seesaws and narrow walkways: stay on the boxes ahead.
-  if (c.boxes.some(b => b.seesaw !== undefined && r.z > b.z0 - 1 && r.z < b.z1)) tx = 0;
+  if (c.boxes.some(b => b.seesaw !== undefined && r.z > b.z0 - 1 && r.z < b.z1)) tx = centre;
   // Stay on the box underfoot (narrow walkways), then aim for the next one ahead.
-  const under = r.grounded && r.ground >= 0 ? c.boxes[r.ground] : undefined;
+  // The box underfoot where it is now (moving islands carry the bot along).
+  const under = r.grounded && r.ground >= 0 ? boxAt(c.boxes[r.ground], t) : undefined;
   if (under && under.x1 - under.x0 < 9) tx = Math.max(under.x0 + .6, Math.min(under.x1 - .6, tx));
   // In the air the bot keeps aiming at boxes at the height it jumped from (not at what it flies over).
   const base = r.grounded ? r.y : Math.min(r.y, r.standY ?? r.y);
   const ahead = c.boxes.filter(b => b.z0 >= r.z - .1 && b.z0 < r.z + 3 && b.y1 <= base + .4 && b.y1 >= base - .6 && b.look !== "wall" && b.door === undefined);
   ahead.sort((a, b) => a.z0 - b.z0 || Math.abs((a.x0 + a.x1) / 2 - r.x) - Math.abs((b.x0 + b.x1) / 2 - r.x));
   if (ahead.length && !ahead.some(b => tx >= b.x0 + .3 && tx <= b.x1 - .3)) { const b = ahead[0]; tx = (b.x0 + b.x1) / 2; }
+  // Next box beside the current line (stepping stones): line up sideways first, then go for the jump.
+  const offset = ahead.find(b => b.z0 > r.z + .2 && !b.move && !!under && b.z0 - under.z1 > .3);
+  if (offset && r.grounded && under && (r.x < offset.x0 + .25 || r.x > offset.x1 - .25)) {
+    // Towards the side of the own box nearest to the next one, without stepping off it.
+    const near = Math.max(under.x0 + .45, Math.min(under.x1 - .45, (offset.x0 + offset.x1) / 2));
+    if (Math.abs(r.x - near) > .15) { tx = near; mz = Math.min(mz, .3); }
+  }
+  // Short stepping box ahead: run only as fast as a jump needs to land on its middle (a full-speed jump flies over it).
+  if (offset && r.grounded && offset.z1 - offset.z0 < 3 && offset.z0 - r.z < 2.2) mz = Math.min(mz, Math.max(.3, ((offset.z0 + offset.z1) / 2 - r.z) / .69 / (PC.run * .8)));
   // Moving island ahead across a gap: wait at the edge until it will be in front, then aim where it will be.
   const island = ahead.find(b => b.move && b.move.axis === "x" && b.z0 > r.z);
   if (island && r.grounded && island.z0 - r.z < 2.6) {
@@ -543,7 +599,9 @@ function parcoursBot(s: MatchState<ParcoursGame>, c: Course, id: string) {
   if (wall && boxAt(wall, t).y1 - r.y > .5) jump = r.grounded;
   // Rollers close by: hop over them.
   if (c.boxes.some(b => b.look === "roller" && (() => { const bb = boxAt(b, t + 200); return r.z + 1.3 > bb.z0 && r.z < bb.z1 + .2 && r.x + 1 > bb.x0 && r.x - 1 < bb.x1; })())) jump = r.grounded;
-  return { x: dx, y: -fz, pressA: jump && !sweepers.duck, hb: sweepers.duck, ha: !!wall || r.pose === "hang" || holds.length > 0 };
+  // Festhalten: pressed only once an edge is in reach while falling (a fresh press catches it), kept while hanging.
+  const catchable = !r.grounded && r.vy <= .5 && (r.pose === "air" || r.pose === "dive") && !!ledgeFor(c, g, r, t, { box: -1, nx: 0, nz: 0 });
+  return { x: dx, y: -fz, pressA: jump && !sweepers.duck, hb: sweepers.duck, ha: r.pose === "hang" || r.pose === "climb" || catchable };
 }
 
 /** Spinning bars that will reach the racer shortly: jump over low ones, duck under high ones. */

@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { advanceMatch, botMatchInput, createMatch, matchStandings, publicMatch, removeMatchPlayer, setMatchControl, type MatchId } from "../shared/matches/framework";
 import { PC, shownRacer, type ParcoursGame, type Racer } from "../shared/matches/parcours";
-import { BLINK_WARN, blinkOpen, blinkWarn, course, COURSE_IDS, FINAL_IDS, gooAt, RETIRED_COURSE_IDS, sweeperAngle, windAt, type CourseId } from "../shared/matches/parcoursCourses";
+import { BLINK_WARN, blinkOpen, blinkWarn, course, courseLength, COURSE_IDS, FINAL_IDS, gooAt, progressOf, RETIRED_COURSE_IDS, routeFace, routeStretch, sweeperAngle, windAt, type Box, type CourseId } from "../shared/matches/parcoursCourses";
+import { turnBox, turnPoint } from "../shared/matches/parcoursFrame";
 import { NEUTRAL_MATCH_INPUT, type MatchInput, type MatchState } from "../shared/matches/types";
 import * as T from "three";
 import { courseToWorld, sweeperYaw } from "../src/three/parcoursPose";
@@ -110,29 +111,40 @@ for (const id of ALL) {
   }
 }
 
-// Festhalten: an zu hoher Kante hängen und hochklettern (Festhalten oder Stick zur Wand); sonst kommt man nicht hoch.
+// Festhalten an Kanten: nur ein frischer Druck auf „Festhalten“ im richtigen Moment fängt die Kante; dann hochklettern (Springen oder Stick zur Wand).
 {
   const s = make("wippenwerk"); park(s); const r = s.game.racers.p0, c = course("wippenwerk"), wall = c.boxes.find(b => b.look === "ledge")!;
+  /** Presses "Festhalten" once the racer falls past the edge, keeps it while hanging. */
+  const timed = () => r.pose === "hang" || r.pose === "climb" || (!r.grounded && r.vy <= .5);
   put(r, 0, 0, wall.z0 - .4);
   run(s, 1500, () => send(s, "p0", {}, r.grounded ? "a" : undefined));
   assert.ok(r.z < wall.z0 && r.y < 1, "Zu hoch zum Springen");
-  // Springen und den Stick zur Wand drücken: festhalten, dann klettern (dauert einen Moment, kein Sprung nach oben).
+  // Anspringen und den Stick zur Wand drücken reicht nicht mehr.
   put(r, 0, 0, wall.z0 - .8); send(s, "p0", forward, "a");
-  let hung = false, climbed = false, maxY = 0;
-  run(s, 1800, () => { hung ||= r.pose === "hang"; climbed ||= r.pose === "climb"; if (r.pose === "climb") maxY = Math.max(maxY, r.y); send(s, "p0", forward); });
-  assert.ok(hung || climbed, "Hält sich an der Kante"); assert.ok(climbed, "Klettert hoch");
-  assert.ok(r.grounded && Math.abs(r.y - wall.y1) < .01 && r.z > wall.z0, "Oben angekommen");
-  assert.ok(maxY <= wall.y1 + .03, "Kein Hochspringen über die Kante");
-  // Mit Festhalten hängen bleiben, mit dem Stick zur Wand hochklettern.
-  put(r, 0, 0, wall.z0 - .8); send(s, "p0", { ha: true }, "a");
-  run(s, 800, () => send(s, "p0", { ha: true }));
+  let hung = false; run(s, 1200, () => { hung ||= r.pose === "hang"; send(s, "p0", forward); });
+  assert.ok(!hung && r.y < 1, "Kein automatisches Festhalten durch Anspringen");
+  // Festhalten schon vor dem Sprung gedrückt und gehalten: fängt ebenfalls nichts.
+  put(r, 0, 0, wall.z0 - .8); run(s, 200, () => send(s, "p0", { ha: true })); send(s, "p0", { ha: true }, "a");
+  hung = false; run(s, 1200, () => { hung ||= r.pose === "hang"; send(s, "p0", { ...forward, ha: true }); });
+  assert.ok(!hung && r.y < 1, "Dauerhaft gehalten fängt keine Kante");
+  // Im richtigen Moment gedrückt: hängen, dann mit dem Stick zur Wand hochklettern (kein Sprung über die Kante).
+  run(s, 300, () => send(s, "p0"));
+  put(r, 0, 0, wall.z0 - .8); send(s, "p0", {}, "a");
+  run(s, 800, () => send(s, "p0", { ha: timed() }));
   assert.equal(r.pose, "hang", "Hängt an der Kante");
-  run(s, 100, () => send(s, "p0", { ...forward, ha: true }));
-  assert.equal(r.pose, "climb", "Klettern beginnt");
-  run(s, PC.climbMs + 100, () => send(s, "p0", { ...forward, ha: true }));
-  assert.ok(r.grounded && Math.abs(r.y - wall.y1) < .01 && r.z > wall.z0, "Hochgezogen");
+  let climbed = false, maxY = 0;
+  run(s, PC.climbMs + 300, () => { climbed ||= r.pose === "climb"; if (r.pose === "climb") maxY = Math.max(maxY, r.y); send(s, "p0", { ...forward, ha: true }); });
+  assert.ok(climbed && r.grounded && Math.abs(r.y - wall.y1) < .01 && r.z > wall.z0, "Hochgezogen");
+  assert.ok(maxY <= wall.y1 + .03, "Kein Hochspringen über die Kante");
+  // Zu früh gedrückt (am Boden, kurz vor dem Sprung) und dann gehalten: das Fenster ist vorbei, kein Halt.
+  run(s, 300, () => send(s, "p0"));
+  put(r, 0, 0, wall.z0 - .8); send(s, "p0", { ha: true }); advanceMatch(s, s.time + 50);
+  run(s, PC.grabWindow + 100, () => send(s, "p0", { ha: true })); send(s, "p0", { ha: true }, "a");
+  hung = false; run(s, 1000, () => { hung ||= r.pose === "hang"; send(s, "p0", { ha: true }); });
+  assert.ok(!hung, "Zu früh gedrückt");
   // Loslassen lässt fallen.
-  put(r, 0, 0, wall.z0 - .8); send(s, "p0", { ha: true }, "a"); run(s, 800, () => send(s, "p0", { ha: true }));
+  run(s, 300, () => send(s, "p0"));
+  put(r, 0, 0, wall.z0 - .8); send(s, "p0", {}, "a"); run(s, 800, () => send(s, "p0", { ha: timed() }));
   assert.equal(r.pose, "hang"); run(s, 300, () => send(s, "p0"));
   assert.notEqual(r.pose, "hang", "Loslassen = fallen");
 }
@@ -204,12 +216,76 @@ for (const id of ALL) {
     const side = Math.abs(a.z0 - b.z0) < .1 && Math.abs(a.x0 - b.x0 - 2) < .1, front = Math.abs(a.x0 - b.x0) < .1 && Math.abs(a.z0 - b.z0 - 2) < .1;
     if (side || front) assert.ok(!(blinkOpen(a, t) && blinkOpen(b, t)), "Nachbarn nie gleichzeitig offen");
   }
-  for (const [id, length] of [["fallklappen", 70], ["windkanal", 80], ["glibberflut", 110]] as const) {
-    assert.ok(course(id).finishZ >= length, `${id}: mindestens ${length} m`);
+  for (const [id, length] of [["fallklappen", 70], ["windkanal", 80], ["glibberflut", 140]] as const) {
+    assert.ok(courseLength(course(id)) >= length, `${id}: mindestens ${length} m`);
     let s = make(id, 4, 7);
     for (let t = 50, n = 0; !s.done && t < 125000; t += 50) { for (const p of s.players) setMatchControl(s, p.id, botMatchInput(s, p.id), ++n, t); advanceMatch(s, t); }
     const times = Object.values(s.game.racers).flatMap(r => r.finishAt === undefined ? [] : [r.finishAt]);
-    assert.ok(times.length >= 2 && Math.min(...times) > 17000, `${id}: Bots kommen an, aber nicht im Schnelldurchlauf (${times})`);
+    // Glibberflut: every fall ends in the goo, so fewer bots reach the top (bots are no measure of the difficulty).
+    assert.ok(times.length >= (id === "glibberflut" ? 1 : 2) && Math.min(...times) > 17000, `${id}: Bots kommen an, aber nicht im Schnelldurchlauf (${times})`);
+  }
+}
+
+// Serpentinen (Glibberflut): Fortschritt entlang des Wegs, nur am Boden; Kontrollpunkte an den Ecken, Wiedereinstieg mit Blick in die nächste Richtung;
+// Förderbänder quer; die eigene Kamera folgt dem Weg (routeFace).
+{
+  const c = course("glibberflut");
+  assert.ok(c.route && courseLength(c) > 140, "Gewundener Weg");
+  assert.ok(progressOf(c, 10, 16) > progressOf(c, 0, 10) && progressOf(c, 0, 29) > progressOf(c, 17, 22), "Fortschritt folgt dem Weg, nicht z");
+  assert.ok(Math.abs(routeFace(c, 8, 16) - Math.PI / 2) < 1e-9 && Math.abs(routeFace(c, 0, 29) + Math.PI / 2) < 1e-9, "Richtung je Abschnitt");
+  const s = make("glibberflut"); (s.game as ParcoursGame); const r = s.game.racers.p0; put(s.game.racers.p1, 0, 0, 1);
+  // Mitten in der Luft über der Lücke zählt kein Fortschritt (dort liegt man womöglich näher an einem späteren Abschnitt).
+  put(r, -3, 4, 35.5, { grounded: false, pose: "air" }); const best = r.best; advanceMatch(s, s.time + 50);
+  assert.equal(r.best, best, "In der Luft kein Fortschritt");
+  // Auf dem zweiten Eckpodest: Kontrollpunkt erreicht; nach einem Sturz Wiedereinstieg dort mit Blick nach Norden.
+  put(r, 17, 4.2, 16); advanceMatch(s, s.time + 50);
+  assert.equal(r.checkpoint, 2, "Kontrollpunkt an der Ecke");
+  put(r, 17, -20, 16, { grounded: false, pose: "air" }); run(s, PC.respawnMs + 200, () => send(s, "p0"));
+  assert.ok(Math.abs(r.z - 16) < .1 && Math.abs(r.x - 17) < 2 && Math.abs(r.face) < 1e-9, `Wiedereinstieg an der Ecke, Blick in die nächste Richtung (${r.x}, ${r.z}, ${r.face})`);
+  // Förderbänder laufen auch quer: das Band im Ost-Abschnitt schiebt nach Westen zurück.
+  const sideways = c.boxes.find(b => b.beltX)!;
+  assert.ok(sideways && sideways.beltX! < 0 && sideways.belt === undefined, "Gedrehtes Band läuft entlang x");
+  put(r, (sideways.x0 + sideways.x1) / 2, sideways.y1, (sideways.z0 + sideways.z1) / 2); const x = r.x; run(s, 400, () => send(s, "p0"));
+  assert.ok(r.x < x - .7, `Querband schiebt zurück (${x - r.x})`);
+}
+
+// Hindernisse sind länger als Sprung + Hechten: Jede Strecke über dem Abgrund mit Klappen, Platten, Wippen, Inseln oder Trittsteinen
+// lässt sich nicht in einem Satz überspringen (Reichweite mit der Engine gemessen, plus Körper, Absprung knapp hinter der Kante und 2 m Rest).
+{
+  let reach = 0;
+  for (let diveAfter = 0; diveAfter <= 700; diveAfter += 25) {
+    // Wippenwerk start: a floor edge at z 6.4, beside the seesaws (x 4) only void.
+    const s = make("wippenwerk"); park(s, "p1"); put(s.game.racers.p1, -4.4, 0, 0); const r = s.game.racers.p0; put(r, 4, 0, 0);
+    run(s, 600, () => send(s, "p0", forward));
+    while (r.z < 6.4 - PC.radius) run(s, 50, () => send(s, "p0", forward));
+    const from = r.z; send(s, "p0", forward, "a"); const jumped = s.time; let dove = false, land = from;
+    for (let i = 0; i < 60; i++) {
+      const tap = !dove && s.time - jumped >= diveAfter ? "b" : undefined; if (tap) dove = true;
+      send(s, "p0", forward, tap); advanceMatch(s, s.time + 50);
+      if (r.y < 0 && r.vy < 0) { land = r.z; break; }
+    }
+    reach = Math.max(reach, land - from);
+  }
+  assert.ok(reach > 6 && reach < 9, `Reichweite Sprung + Hechten ${reach}`);
+  const need = reach + PC.radius * 2 + PC.run * PC.coyote / 1000 + 2;
+  const safe = (b: Box) => !b.move && !b.blink && b.tile === undefined && b.seesaw === undefined && b.door === undefined && !["wall", "pusher", "roller", "hold"].includes(b.look) && b.x1 - b.x0 >= 2.4;
+  // Straight courses along z; winding ones stretch by stretch, each turned to run along +z.
+  const pieces = (id: CourseId) => {
+    const c = course(id);
+    if (!c.route) return [{ name: id, boxes: c.boxes }];
+    return c.route.slice(1).map((_, i) => {
+      const st = routeStretch(c, i), back = (4 - st.quarter) % 4, [lx, lz] = turnPoint(st.ax, st.az, back);
+      return { name: `${id} Abschnitt ${i + 1}`, boxes: c.boxes.map(b => turnBox(b, back)).filter(b => b.x1 > lx - 4 && b.x0 < lx + 4 && b.z1 > lz - .5 && b.z0 < lz + st.length + .5) };
+    });
+  };
+  for (const id of [...COURSE_IDS, ...RETIRED_COURSE_IDS]) for (const piece of pieces(id)) {
+    const spans: [number, number][] = [];
+    for (const b of piece.boxes.filter(safe).sort((a, q) => a.z0 - q.z0)) { const last = spans.at(-1); if (last && b.z0 <= last[1] + .05) last[1] = Math.max(last[1], b.z1); else spans.push([b.z0, b.z1]); }
+    for (let i = 1; i < spans.length; i++) {
+      const a = spans[i - 1][1], b = spans[i][0];
+      const parts = piece.boxes.filter(x => x.z0 < b && x.z1 > a && !safe(x) && x.look !== "wall" && x.look !== "hold" && x.door === undefined && x.tile === undefined || (x.z0 < b && x.z1 > a && x.look === "tile"));
+      if (parts.length) assert.ok(b - a >= need, `${piece.name}: Hindernis ${a.toFixed(1)}–${b.toFixed(1)} m (${(b - a).toFixed(1)} m) ist mit Sprung + Hechten zu überspringen (nötig ${need.toFixed(1)} m)`);
+    }
   }
 }
 
@@ -242,16 +318,16 @@ for (const id of ALL) {
   assert.ok(f.boxes.every(b => !blinkOpen(b, 11000)), "Finale: erst nach 12 s öffnet sich etwas");
 }
 
-// Kanten über Sprunghöhe: Springen allein bringt nicht hoch (auch nicht an der Kletterwand), zur Wand drücken schon.
+// Kanten über Sprunghöhe: Springen allein bringt nicht hoch (auch nicht an der Kletterwand), getimtes Festhalten schon.
 {
   const s = make("kletterwand"); park(s); const r = s.game.racers.p0, hold = course("kletterwand").boxes.find(b => b.look === "hold" && b.y1 < 2)!;
   put(r, (hold.x0 + hold.x1) / 2, 0, hold.z0 - .4);
-  run(s, 1500, () => send(s, "p0", {}, r.grounded ? "a" : undefined));
+  run(s, 1500, () => send(s, "p0", forward, r.grounded ? "a" : undefined));
   assert.ok(r.y < 1, `Ohne Festhalten nicht hoch (${r.y})`);
   // A moment in which the hold stays for the whole climb.
   let t = 0; while ([0, 500, 1000, 1500, 2000].some(d => blinkOpen(hold, t + d))) t += 50;
   s.time = t; put(r, (hold.x0 + hold.x1) / 2, 0, hold.z0 - .6); send(s, "p0", forward, "a");
-  run(s, 1800, () => send(s, "p0", forward));
+  run(s, 1800, () => send(s, "p0", { ...forward, ha: r.pose === "hang" || r.pose === "climb" || (!r.grounded && r.vy <= .5) }));
   assert.ok(r.grounded && Math.abs(r.y - hold.y1) < .02, `Hochgeklettert (${r.y})`);
 }
 

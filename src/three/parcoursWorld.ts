@@ -1,7 +1,8 @@
 import { PRACTICE_STATIONS } from "../../shared/matches/proberaumCourse";
 import { PRACTICE_LOOPS, PRACTICE_SHOTS } from "../matches/practiceAnimations";
 import * as T from "three";
-import { blinkOpen, blinkWarn, boxAt, course, gooAt, sweeperAngle, type Box, type Look } from "../../shared/matches/parcoursCourses";
+import { blinkOpen, blinkWarn, boxAt, course, gooAt, routeAt, routeFace, routeStretch, sweeperAngle, windState, type Box, type Look } from "../../shared/matches/parcoursCourses";
+import { turnPoint } from "../../shared/matches/parcoursFrame";
 import { PC, shownRacer, type ParcoursGame } from "../../shared/matches/parcours";
 import { followCamera, takeCameraTurn, type ChaseLocal, type MatchWorld, type MatchWorldFrame } from "../matches/client";
 import { ChaseCamera, Debris, frameBox, Impact } from "./matchScene";
@@ -60,19 +61,26 @@ export function createParcoursWorld(host: HTMLElement, read: () => MatchWorldFra
     list.forEach((b, i) => { dummy.position.copy(W((b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2, (b.z0 + b.z1) / 2)); dummy.scale.set(b.x1 - b.x0, b.y1 - b.y0, b.z1 - b.z0); dummy.updateMatrix(); mesh.setMatrixAt(i, dummy.matrix); });
     mesh.castShadow = look !== "floor" && look !== "finish"; mesh.receiveShadow = true; world.add(mesh);
     // Belts: bright stripes that run with the belt.
-    if (look === "belt") for (const b of list) for (let z = b.z0 + .4; z < b.z1; z += 1.2) stripes.push({ b, mesh: kit.box(world, COLOR.stripe, (b.x0 + b.x1) / 2, b.y1 + .01, -z, b.x1 - b.x0 - .2, .02, .25) });
+    if (look === "belt") for (const b of list) {
+      if (b.beltX) for (let x = b.x0 + .4; x < b.x1; x += 1.2) stripes.push({ b, mesh: kit.box(world, COLOR.stripe, x, b.y1 + .01, -(b.z0 + b.z1) / 2, .25, .02, b.z1 - b.z0 - .2) });
+      else for (let z = b.z0 + .4; z < b.z1; z += 1.2) stripes.push({ b, mesh: kit.box(world, COLOR.stripe, (b.x0 + b.x1) / 2, b.y1 + .01, -z, b.x1 - b.x0 - .2, .02, .25) });
+    }
   }
   // Chequered finish line and a gate.
   // Finals have no finish line; the course length follows the boxes.
   const end = Math.max(...c.boxes.map(b => b.z1));
   if (!c.elimination && !c.practice) {
-    const half = c.width / 2;
-    for (let k = 0; k < c.width; k++) kit.box(world, k % 2 ? COLOR.finish : COLOR.ink, -half + .5 + k, c.finishY + .02, -c.finishZ, 1, .02, .5);
-    for (const side of [-1, 1]) kit.box(world, COLOR.post, side * (half + .2), c.finishY + 1.6, -c.finishZ, .3, 3.2, .3);
-    kit.box(world, COLOR.door, 0, c.finishY + 3.3, -c.finishZ, c.width + .7, .4, .4);
+    const half = c.width / 2, fx = c.finishX ?? 0;
+    for (let k = 0; k < c.width; k++) kit.box(world, k % 2 ? COLOR.finish : COLOR.ink, fx - half + .5 + k, c.finishY + .02, -c.finishZ, 1, .02, .5);
+    for (const side of [-1, 1]) kit.box(world, COLOR.post, fx + side * (half + .2), c.finishY + 1.6, -c.finishZ, .3, 3.2, .3);
+    kit.box(world, COLOR.door, fx, c.finishY + 3.3, -c.finishZ, c.width + .7, .4, .4);
   }
   // Checkpoint flags along the left edge.
-  for (const cp of (c.practice?[]:c.checkpoints.slice(1))) { kit.cylinder(world, COLOR.post, -c.width / 2 - .3, cp.y + 1, -cp.z, .05, 2); kit.box(world, COLOR.flag, -c.width / 2, cp.y + 1.8, -cp.z, .55, .35, .03); }
+  // Checkpoint flags at the left of the way (winding courses: beside the checkpoint across the way).
+  for (const cp of (c.practice?[]:c.checkpoints.slice(1))) {
+    const st = c.route ? routeStretch(c, routeAt(c, cp.x ?? 0, cp.z).index) : undefined, [ox, oz] = st ? turnPoint(-3.3, 0, st.quarter) : [-c.width / 2, 0], px = (cp.x ?? 0) + ox, pz = cp.z + oz;
+    kit.cylinder(world, COLOR.post, px - .3, cp.y + 1, -pz, .05, 2); kit.box(world, COLOR.flag, px, cp.y + 1.8, -pz, .55, .35, .03);
+  }
 
   const meshFor = (b: Box) => { const m = kit.box(world, LOOK_COLOR[b.look], 0, 0, 0, b.x1 - b.x0, b.y1 - b.y0, b.z1 - b.z0); m.castShadow = true; m.receiveShadow = true; return m; };
   c.boxes.forEach(b => {
@@ -96,15 +104,18 @@ export function createParcoursWorld(host: HTMLElement, read: () => MatchWorldFra
     kit.cylinder(world, COLOR.post, sw.x, sw.y1 / 2 + .3, -sw.z, .25, sw.y1 + .6);
     return { sw, pivot };
   });
-  // Wind: fans on the side the wind comes from, arrows on the floor that light up while it blows.
+  // Wind: fans on the side the wind comes from (spinning up before a gust, glowing ring), arrows on the floor,
+  // and streaks of air that fly through the zone in the wind's direction and speed while it blows.
   const fans = c.winds.map(w => {
     const along = Math.abs(w.vx) > Math.abs(w.vz), group = new T.Group(), y = Math.max(w.y0, 0) + 1.2;
     const x = along ? (w.vx > 0 ? (c.practice?w.x0-.6:-5.6) : (c.practice?w.x1+.6:5.6)) : (w.x0 + w.x1) / 2, z = along ? (w.z0 + w.z1) / 2 : (w.vz < 0 ? w.z1 + .6 : w.z0 - .6);
     group.position.copy(W(x, y + (along ? 0 : 1.2), z)); world.add(group);
     const rotor = new T.Group(); group.add(rotor);
-    const ring = kit.mesh(group, new T.TorusGeometry(1, .08, 8, 28), COLOR.post, 0, 0, 0);
-    for (let k = 0; k < 4; k++) { const blade = kit.box(rotor, COLOR.wind, 0, 0, 0, .18, 1.7, .05); blade.rotation.z = k * Math.PI / 4; }
-    if (along) { group.rotation.y = Math.PI / 2; } void ring;
+    const ring = kit.mesh(group, new T.TorusGeometry(1, .1, 8, 28), COLOR.wind, 0, 0, 0);
+    (ring.material as T.MeshStandardMaterial) = (ring.material as T.MeshStandardMaterial).clone();
+    kit.mesh(group, new T.CylinderGeometry(.22, .22, .3, 12), COLOR.post, 0, 0, 0).rotation.x = Math.PI / 2;
+    for (let k = 0; k < 4; k++) { const blade = kit.box(rotor, COLOR.wind, 0, 0, 0, .22, 1.75, .05); blade.rotation.z = k * Math.PI / 4; }
+    if (along) { group.rotation.y = Math.PI / 2; }
     const arrows = Array.from({ length: 3 }, (_, k) => {
       const ax = along ? (w.x0 + w.x1) / 2 + (k - 1) * 2.4 : (k - 1) * 1.2, az = along ? (w.z0 + w.z1) / 2 + (k - 1) * 1.6 : (w.z0 + w.z1) / 2 + (k - 1) * 2;
       const arrow = kit.cone(world, COLOR.wind, ax, (along ? 0 : y - 1.2) + .05, -az, .3, .6);
@@ -112,8 +123,17 @@ export function createParcoursWorld(host: HTMLElement, read: () => MatchWorldFra
       (arrow.material as T.MeshStandardMaterial) = (arrow.material as T.MeshStandardMaterial).clone();
       return arrow;
     });
-    return { w, rotor, arrows };
+    return { w, rotor, ring, arrows, spin: 0 };
   });
+  // Air streaks: thin white dashes, a few per zone, flying with the wind (instanced, one draw call).
+  const streakFor = c.winds.flatMap((w, wi) => {
+    const span = Math.abs(w.vx) > Math.abs(w.vz) ? w.x1 - w.x0 : w.z1 - w.z0, across = Math.abs(w.vx) > Math.abs(w.vz) ? w.z1 - w.z0 : w.x1 - w.x0;
+    const n = Math.max(5, Math.min(22, Math.round(span * across / 4)));
+    return Array.from({ length: n }, (_, k) => ({ wi, k, n, seed: ((k * 7919 + wi * 104729) % 1000) / 1000 }));
+  });
+  const streaks = new T.InstancedMesh(new T.BoxGeometry(1, 1, 1), new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: .75, depthWrite: false }), Math.max(1, streakFor.length));
+  streaks.count = 0; streaks.frustumCulled = false; streaks.castShadow = false; world.add(streaks);
+  const windLevel = c.winds.map(() => 0);
   // Rising goo.
   const goo = c.goo ? new T.Mesh(new T.PlaneGeometry(40, end + 40), new T.MeshStandardMaterial({ color: COLOR.goo, emissive: COLOR.goo, emissiveIntensity: .45, transparent: true, opacity: .82, roughness: .3 })) : undefined;
   if (goo) { goo.rotation.x = -Math.PI / 2; goo.position.z = -end / 2; world.add(goo); }
@@ -159,15 +179,43 @@ export function createParcoursWorld(host: HTMLElement, read: () => MatchWorldFra
       const pulse = reduced ? 1 : .55 + .45 * Math.abs(Math.sin(time / 90));
       (mesh.material as T.MeshStandardMaterial).color.copy(base).lerp(warnColor, warn > 0 ? Math.min(1, .35 + warn * .65) * pulse : 0);
     }
-    for (const { w, rotor, arrows } of fans) {
-      const on = ((t / w.period + w.phase) % 1) < w.on;
-      if (on && !reduced) rotor.rotation.z += dt * 14;
-      for (const arrow of arrows) { const m = arrow.material as T.MeshStandardMaterial; m.color.setHex(on ? COLOR.warn : COLOR.wind); m.emissive.setHex(on ? 0x662200 : 0); }
+    fans.forEach((fan, wi) => {
+      const { w, rotor, ring, arrows } = fan, { on, warn } = windState(w, t);
+      // The fan spins up during the warning and runs down after the gust (a little inertia); its ring glows orange while it blows.
+      const target = on ? 16 : warn * 7;
+      fan.spin += (target - fan.spin) * Math.min(1, dt * (target > fan.spin ? 6 : 2.5));
+      if (!reduced) rotor.rotation.z += dt * fan.spin;
+      const blink = warn > 0 && !reduced ? (Math.floor(time / 140) % 2 ? 1 : .35) : 1;
+      const rm = ring.material as T.MeshStandardMaterial; rm.color.setHex(on ? COLOR.warn : warn > 0 ? COLOR.warn : COLOR.wind); rm.emissive.setHex(on ? 0x883300 : warn > 0 ? 0x441a00 : 0); rm.emissiveIntensity = on ? 1 : blink;
+      for (const arrow of arrows) { const m = arrow.material as T.MeshStandardMaterial; m.color.setHex(on || warn > 0 ? COLOR.warn : COLOR.wind); m.emissive.setHex(on ? 0x662200 : warn > 0 ? 0x331100 : 0); m.emissiveIntensity = on ? 1 : blink; }
+      // Streak strength eases in and out with the wind (none with reduced motion: the ring and arrows show it).
+      windLevel[wi] += ((on ? 1 : warn * .25) - windLevel[wi]) * Math.min(1, dt * 5);
+    });
+    let streakCount = 0;
+    if (!reduced) for (const st of streakFor) {
+      const w = c.winds[st.wi], level = windLevel[st.wi];
+      if (level < .03) continue;
+      const along = Math.abs(w.vx) > Math.abs(w.vz), strength = Math.hypot(w.vx, w.vz), len = along ? w.x1 - w.x0 : w.z1 - w.z0;
+      // Each streak crosses the zone at about twice the drift speed, from the side the wind comes from.
+      const k = ((time / 1000) * strength * 2 / len + st.seed) % 1, across = ((st.k + .5) / st.n + st.seed * .37) % 1;
+      const sign = along ? Math.sign(w.vx) : Math.sign(w.vz), pos = sign > 0 ? k : 1 - k;
+      const y = Math.max(w.y0, -.5) + .3 + ((st.seed * 3.1) % 1) * Math.min(2.2, w.y1 - Math.max(w.y0, -.5));
+      const x = along ? w.x0 + pos * len : w.x0 + across * (w.x1 - w.x0), z = along ? w.z0 + across * (w.z1 - w.z0) : w.z0 + pos * len;
+      // Fade at both ends of the zone by shrinking.
+      const edge = Math.min(1, Math.min(k, 1 - k) * 6) * level, long = (.9 + strength * .3) * edge, thick = .08 * edge;
+      dummy.position.copy(W(x, y, z)); dummy.rotation.set(0, 0, 0);
+      dummy.scale.set(along ? long : thick, thick, along ? thick : long);
+      dummy.updateMatrix(); streaks.setMatrixAt(streakCount++, dummy.matrix);
     }
+    streaks.count = streakCount; streaks.instanceMatrix.needsUpdate = true;
+    host.dataset.windStreaks = String(streakCount);
     for (const [i, pivot] of seesaws) { const before = prev.tilt?.[i] ?? 0, now = g.tilt[i] ?? 0; pivot.rotation.z = -(before + (now - before) * f.alpha); }
     if (goo) goo.position.y = Math.max(c.killY + 1.2, gooAt(c, t));
     // Belt stripes run with the belt (static with reduced motion).
-    if (!reduced) for (const { mesh, b } of stripes) { const len = b.z1 - b.z0, along = -mesh.position.z - b.z0 + (b.belt ?? 0) * dt; mesh.position.z = -(b.z0 + ((along % len) + len) % len); }
+    if (!reduced) for (const { mesh, b } of stripes) {
+      if (b.beltX) { const len = b.x1 - b.x0, along = mesh.position.x - b.x0 + b.beltX * dt; mesh.position.x = b.x0 + ((along % len) + len) % len; }
+      else { const len = b.z1 - b.z0, along = -mesh.position.z - b.z0 + (b.belt ?? 0) * dt; mesh.position.z = -(b.z0 + ((along % len) + len) % len); }
+    }
     // Doors that broke burst; tiles show what is known.
     if (g.doors !== doorState) {
       [...g.doors].forEach((d, i) => {
@@ -264,7 +312,9 @@ export function createParcoursWorld(host: HTMLElement, read: () => MatchWorldFra
       const moving = !ownCam && Math.hypot(mine.vx, mine.vz) > 1 && (mine.pose === "run" || mine.pose === "air");
       if (ownCam) takeCameraTurn(local, d => chaseCam.turn(d));
       chaseCam.tune(f.local as ChaseLocal);
-      chaseCam.update(target, moving || fresh ? mine.face : undefined, dt, reduced, 1.4);
+      // Winding courses: the own camera turns along the way (a little ahead, so it swings round before a corner).
+      const wayFace = c.route && ownCam && mine.pose !== "done" ? routeFace(c, mine.x, mine.z, 2.5) : undefined;
+      chaseCam.update(target, wayFace ?? (moving || fresh ? mine.face : undefined), dt, reduced, wayFace !== undefined ? 2.2 : 1.4);
       fresh = false;
       if (ownCam) followCamera(local, f.input, chaseCam.yaw);
       host.dataset.yaw = chaseCam.yaw.toFixed(3);

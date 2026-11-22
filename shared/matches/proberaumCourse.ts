@@ -2,7 +2,7 @@ import type { Box, Course, Look } from "./parcoursCourses";
 
 export const PRACTICE_STATIONS = [
   {name:"Freifläche", x:0,z:1, hint:"Laufen, wenden, hechten. An der Übungsfigur Festhalten gedrückt halten."},
-  {name:"Kletterstufen", x:-10,z:5, hint:"Zur Kante springen, Festhalten halten und mit dem Stick nach vorn hochziehen."},
+  {name:"Kletterstufen", x:-10,z:5, hint:"Zur Kante springen, beim Vorbeifallen Festhalten drücken (nicht vorher) und mit dem Stick nach vorn hochziehen."},
   {name:"Sprungkacheln", x:10,z:5, hint:"Einzelne Kacheln treffen. Springen und Hechten auch in der Luft kombinieren."},
   {name:"Drehbalken", x:-10,z:18, hint:"Über Rosa springen, unter Gelb ducken. Treffer werfen dich zurück."},
   {name:"Wippe & Fahrt", x:10,z:18, hint:"Gewicht auf der Wippe verlagern, dann auf die Fahrplattform springen."},
