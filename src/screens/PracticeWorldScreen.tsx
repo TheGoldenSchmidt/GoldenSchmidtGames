@@ -65,7 +65,7 @@ export function PracticeWorldScreen({characterId,onExit}:{characterId?:Character
         <label className="practice-character">Deine Figur<select value={character} onChange={e=>setCharacter(e.target.value as CharacterId)}>{RIGGED_CHARACTERS.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
         <h3>Animationen ansehen</h3><p>Vorschau ohne Bewegung. Zum Testen der Physik die Aktionstasten benutzen.</p>
         {mode==="flat"?<p>Die Animationsvorschau benötigt 3D.</p>:<div className="practice-animation-list">{PRACTICE_LOOPS.map((a,i)=><button key={a.clip} onClick={()=>{local.current.practiceLoop=i;setPreview(a.name);setPanel(undefined);}}>{a.name}</button>)}{PRACTICE_SHOTS.map((a,i)=><button key={a.clip} onClick={()=>{local.current.practiceLoop=0;local.current.practiceShot=i;local.current.practiceShotSeq=(local.current.practiceShotSeq??0)+1;setPreview(a.name);setPanel(undefined);}}>{a.name}</button>)}</div>}
-        <details><summary>Messwerte</summary><p>{Math.hypot(racer.vx,racer.vz).toFixed(1)} m/s · Höhe {racer.y.toFixed(2)} m · {racer.falls} Stürze</p><p>Stick: laufen · freie Fläche ziehen: Kamera drehen. Festhalten und Ducken gedrückt halten.</p></details>
+        <details><summary>Messwerte</summary><p>{Math.hypot(racer.vx,racer.vz).toFixed(1)} m/s · Höhe {racer.y.toFixed(2)} m · {racer.falls} Stürze</p><p>Stick: laufen · freie Fläche ziehen: Kamera drehen. Ducken gedrückt halten; Festhalten an Kanten genau beim Vorbeifallen drücken.</p></details>
         <button className="button button--secondary" onClick={reset}>Raum zurücksetzen</button>
       </>}
     </PartyPanel>}
