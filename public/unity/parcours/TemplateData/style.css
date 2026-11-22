@@ -1,0 +1,62 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #1d2466;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#unity-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  background: #1d2466;
+  outline: none;
+}
+
+#gsg-loading {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px;
+  background: #1d2466;
+  color: #fff9ed;
+  font-family: "Trebuchet MS", system-ui, sans-serif;
+  text-align: center;
+  transition: opacity 0.4s ease;
+}
+
+#gsg-loading.is-done { opacity: 0; pointer-events: none; }
+/* `display: flex` above would otherwise override the hidden attribute and block every touch. */
+#gsg-loading[hidden] { display: none; }
+
+.gsg-loading__title { margin: 0; font-size: 22px; font-weight: 800; }
+
+.gsg-loading__bar {
+  width: min(280px, 80vw);
+  height: 14px;
+  border-radius: 7px;
+  background: rgba(255, 249, 237, 0.18);
+  border: 2px solid #fff9ed;
+  overflow: hidden;
+}
+
+#gsg-loading-fill { width: 0%; height: 100%; background: #ffe44e; transition: width 0.2s ease; }
+
+.gsg-loading__hint { margin: 0; max-width: 320px; font-size: 14px; line-height: 1.4; opacity: 0.85; }
+
+#gsg-loading.is-error .gsg-loading__hint { color: #ffd0a6; opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  #gsg-loading, #gsg-loading-fill { transition: none; }
+}

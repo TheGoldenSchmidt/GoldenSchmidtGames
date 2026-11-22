@@ -1,6 +1,7 @@
 import {CHARACTERS,isRiggedCharacter} from "../shared/characters";
 import assert from "node:assert/strict";
 import { createSpielraumServer } from "../server/index";
+import { UNITY_GAMES } from "../src/unityGames";
 
 const server = createSpielraumServer();
 const port = await server.listen(0);
@@ -58,7 +59,33 @@ try {
   }
   assert.equal(health.status, 200);
   assert.equal((await health.json() as { ok?: boolean }).ok, true);
-  console.log(`Produktionsprüfung erfolgreich: HTML, Manifest, Service Worker, 3D-Module im PWA-Cache und Health-Check auf Port ${port}`);
+
+  // The app itself stays strict: no WebAssembly compilation, no blob scripts, no framing.
+  const appPolicy = page.headers.get("content-security-policy") ?? "";
+  assert.match(appPolicy, /script-src 'self';/);
+  assert.match(appPolicy, /frame-ancestors 'none'/);
+  assert.equal(page.headers.get("x-frame-options"), "DENY");
+  // Unity test games: separate builds, relaxed policy only below /unity/, never in the offline cache.
+  assert.ok(!/["']unity\//.test(workerSource), "Unity-Builds gehören nicht in den PWA-Cache");
+  assert.match(workerSource, /unity/, "Navigationen nach /unity/ dürfen nicht auf die App umgeleitet werden");
+  for (const game of UNITY_GAMES) {
+    const entry = await fetch(`${origin}/unity/${game.id}/index.html`);
+    assert.equal(entry.status, 200, `${game.name}: Unity-Seite wird ausgeliefert`);
+    const policy = entry.headers.get("content-security-policy") ?? "";
+    assert.match(policy, /script-src 'self' blob: 'wasm-unsafe-eval'/, `${game.name}: WebAssembly erlaubt`);
+    assert.match(policy, /frame-ancestors 'self'/, `${game.name}: nur im eigenen App-Rahmen`);
+    assert.equal(entry.headers.get("x-frame-options"), "SAMEORIGIN");
+    const unityHtml = await entry.text();
+    assert.ok(!/<script(?![^>]*\bsrc=)[^>]*>/.test(unityHtml), `${game.name}: kein Inline-Skript (CSP)`);
+    const files = [...unityHtml.matchAll(/data-(?:loader|data|framework|code)="(Build\/[^"]+)"/g)].map(match => match[1]);
+    assert.equal(files.length, 4, `${game.name}: Loader, Daten, Framework und Code verlinkt`);
+    for (const file of [...files, "TemplateData/boot.js"]) {
+      const response = await fetch(`${origin}/unity/${game.id}/${file}`, { method: "HEAD" });
+      assert.equal(response.status, 200, `${game.name}: ${file} vorhanden`);
+      if (file.startsWith("Build/")) assert.match(response.headers.get("cache-control") ?? "", /immutable/, `${game.name}: ${file} mit Inhalts-Hash dauerhaft cachebar`);
+    }
+  }
+  console.log(`Produktionsprüfung erfolgreich: HTML, Manifest, Service Worker, 3D-Module im PWA-Cache, Unity-Tests und Health-Check auf Port ${port}`);
 } finally {
   await server.close();
 }

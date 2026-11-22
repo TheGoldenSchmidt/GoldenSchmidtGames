@@ -1,0 +1,42 @@
+/* Unity test games: the build fills the screen, the app adds only the way back (top right,
+   where the Unity HUD leaves room). */
+.unity-game {
+  position: fixed;
+  inset: 0;
+  background: #1d2466;
+  overflow: hidden;
+  touch-action: none;
+}
+
+.unity-game__frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
+.unity-game__exit {
+  position: absolute;
+  top: max(10px, env(safe-area-inset-top));
+  right: max(10px, env(safe-area-inset-right));
+  width: 48px;
+  height: 48px;
+  border-radius: 24px;
+  border: 3px solid #24133f;
+  border-bottom-width: 6px;
+  background: #7c7092;
+  color: #fff9ed;
+  font: 28px/1 var(--iw-font-display, sans-serif);
+  display: grid;
+  place-items: center;
+  padding: 0 0 2px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.unity-game__exit:active {
+  border-bottom-width: 3px;
+  transform: translateY(3px);
+}

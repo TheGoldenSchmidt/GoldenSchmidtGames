@@ -47,7 +47,10 @@ export default defineConfig({
       workbox: {
         // Fonts and the rendered start screen layers are part of the offline app shell.
         globPatterns: ["**/*.{js,css,html,woff2,webp,wav}"],
+        // Unity test builds (≈14 MB each) load only on demand and never become part of the app shell.
+        globIgnores: ["unity/**"],
         navigateFallback: "/index.html",
+        navigateFallbackDenylist: [/^\/unity\//],
         skipWaiting: false,
         clientsClaim: true
       }

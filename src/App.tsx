@@ -22,10 +22,12 @@ import { RichsUniverseScreen } from "./richs-universe/RichsUniverseScreen";
 import { playMenuClick, setSoundEnabled } from "./matches/sfx";
 import { GameIntro } from "./components/GameIntro";
 import type {CharacterId} from "../shared/characters";
+import type { UnityGameId } from "./unityGames";
 
 const PracticeWorldScreen=lazy(()=>import("./screens/PracticeWorldScreen").then(m=>({default:m.PracticeWorldScreen})));
+const UnityGameScreen=lazy(()=>import("./screens/UnityGameScreen").then(m=>({default:m.UnityGameScreen})));
 
-type View = "practice-world" | "home" | "local-setup" | "online-entry" | "host" | "join" | "test" | "room" | "game-local" | "game-online" | "richs-universe";
+type View = "practice-world" | "unity" | "home" | "local-setup" | "online-entry" | "host" | "join" | "test" | "room" | "game-local" | "game-online" | "richs-universe";
 
 export default function App() {
   const [profile, setProfile] = useState<GuestProfile>(() => loadProfile());
@@ -49,6 +51,7 @@ export default function App() {
   const [localCharacters,setLocalCharacters]=useState<CharacterId[]>([]);
   const [localGameId, setLocalGameId] = useState<GameId>("qwixx");
   const [testGameId, setTestGameId] = useState<GameId>("party");
+  const [unityGame, setUnityGame] = useState<UnityGameId>("parcours");
   const [localDurakCheatMode, setLocalDurakCheatMode] = useState(false);
   const [playIntro, setPlayIntro] = useState(false);
   const [resumeError,setResumeError]=useState("");
@@ -329,9 +332,11 @@ export default function App() {
         />
       )}
       {view === "practice-world" && canDevelop(account?.role) && <Suspense fallback={<p role="status">Proberaum wird geladen …</p>}><PracticeWorldScreen characterId={profile.characterId} onExit={()=>setView("local-setup")}/></Suspense>}
+      {view === "unity" && <Suspense fallback={<p role="status">Unity-Test wird geladen …</p>}><UnityGameScreen game={unityGame} characterId={profile.characterId} onExit={()=>setView("local-setup")}/></Suspense>}
       {view === "local-setup" && (
         <LocalSetupScreen
           onPractice={canDevelop(account?.role) ? openPractice : undefined}
+          onUnity={id => { setUnityGame(id); setView("unity"); }}
           onTest={gameId => { setTestGameId(gameId); setView("test"); }}
           onBack={() => setView("home")}
           onStart={(gameId, names, options) => {

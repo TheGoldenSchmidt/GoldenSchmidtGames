@@ -11,6 +11,7 @@ Installierbare Smartphone-PWA für eine Freundesrunde: lokale Tischspiele, Brett
 | Freies Minispiel | Passendes Minispiel direkt wählen |
 | Schlag den GoldenSchmidt | Wettbewerb mit einmaligen verdeckten Einsätzen |
 | Proberaum | Lokale Übungsinsel für Entwickler und Admins; Verbindung zum Öffnen erforderlich |
+| Unity-Tests | Parcours-Probelevel und Floor is Lava als getrennte Unity-WebGL-Builds unter „Frei ausprobieren“; allein/gegen Bots, Internet beim ersten Start ([Unity-Tests](unity/README.md)) |
 | Rich’s Universe | Eigener Bereich für lokale Experimente |
 
 Vorher eine Figur wählen. Modi/Spielerzahlen: [Spielekatalog](shared/games.ts), einzelne Minispiele: [Minispielkatalog](shared/minigameCatalog.ts). Binokel ist angekündigt, noch nicht spielbar.
@@ -50,6 +51,7 @@ Die [Regeln für Zusammenarbeit und Auslieferung](AGENTS.md#zusammenarbeit-und-a
 
 - [Designregeln](designregeln.md), [Betrieb und CI-Auslieferung](DEPLOYMENT.md)
 - [Spielregeln und Modi](docs/island-party-rules.md), [Brettdarstellung](docs/inselparty-3d.md)
+- Unity-Probe: [Unity-Tests](unity/README.md)
 - Minispiele: [Regelbasis](docs/minigames/spezifikation.md), [Technik/Abweichungen](docs/minigames/konzept.md), [offene Arbeit](docs/minigames/backlog.md), [Gerätetest](docs/minigames/geraetetest.md)
 - Figuren: [Freigabe](docs/approved-character-design.md), [klassische Modelle/Bots](docs/party-characters-and-testing.md), [Skelettfiguren](docs/minigames/figuren-rigged.md)
 - Ansichten: [Intros](docs/game-intros.md), [Qwixx](docs/qwixx-cup.md), [Kribbeln](docs/kribbeln-visuals.md), [Grafikwerkzeuge](docs/startscreen-render.md)
