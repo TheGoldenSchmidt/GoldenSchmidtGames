@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { PC, shownRacer, type ParcoursGame } from "../../../shared/matches/parcours";
-import { blinkOpen, blinkWarn, boxAt, course, courseLength, gooAt, sweeperAngle, type Look } from "../../../shared/matches/parcoursCourses";
+import { blinkOpen, blinkWarn, boxAt, course, courseLength, gooAt, sweeperAngle, windState, type Look } from "../../../shared/matches/parcoursCourses";
 import { ActionButton, CameraSwipe, Stick } from "../controls";
 import { chaseStick, lerp, playerColor, type MatchClient, type MatchControlsProps, type MatchFrame } from "../client";
 
@@ -31,6 +31,21 @@ function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
     const a = sweeperAngle(sw, t), dx = Math.cos(a) * sw.length, dz = Math.sin(a) * sw.length;
     ctx.strokeStyle = sw.y1 <= .8 ? "#ff5f8f" : "#ffe44e"; ctx.lineWidth = Math.max(4, scale * .35); ctx.setLineDash(sw.y1 <= .8 ? [] : [8, 6]);
     ctx.beginPath(); ctx.moveTo(X(sw.x - dx), Y(sw.z - dz)); ctx.lineTo(X(sw.x + dx), Y(sw.z + dz)); ctx.stroke(); ctx.setLineDash([]);
+  }
+  // Wind: chevrons across the zone in its direction, orange while it blows, dashed just before.
+  for (const wz of c.winds) {
+    const { on, warn } = windState(wz, t);
+    if (!on && !warn) continue;
+    const along = Math.abs(wz.vx) > Math.abs(wz.vz), sign = Math.sign(along ? wz.vx : wz.vz) || 1, drift = on && !f.reduced ? (t / 400) % 1 : 0;
+    ctx.strokeStyle = on ? "#ff6a1fcc" : "#ff6a1f66"; ctx.lineWidth = 3; ctx.setLineDash(on ? [] : [4, 4]);
+    for (let a = 0; a < 6; a++) for (let b = 0; b < 3; b++) {
+      const u = (a + drift) / 6, v = (b + .5) / 3, cx = along ? wz.x0 + u * (wz.x1 - wz.x0) : Math.max(-5, wz.x0) + v * (Math.min(5, wz.x1) - Math.max(-5, wz.x0)), cz = along ? wz.z0 + v * (wz.z1 - wz.z0) : wz.z0 + u * (wz.z1 - wz.z0), d = .35;
+      ctx.beginPath();
+      if (along) { ctx.moveTo(X(cx - sign * d), Y(cz + d)); ctx.lineTo(X(cx), Y(cz)); ctx.lineTo(X(cx - sign * d), Y(cz - d)); }
+      else { ctx.moveTo(X(cx - d), Y(cz - sign * d)); ctx.lineTo(X(cx), Y(cz)); ctx.lineTo(X(cx + d), Y(cz - sign * d)); }
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
   }
   if (c.goo && me && gooAt(c, t) > me.y - 3) { ctx.fillStyle = "#8dff5a55"; ctx.fillRect(0, 0, w, h); }
   for (const p of s.players) {

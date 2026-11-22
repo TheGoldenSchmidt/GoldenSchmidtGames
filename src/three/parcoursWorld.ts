@@ -1,7 +1,7 @@
 import { PRACTICE_STATIONS } from "../../shared/matches/proberaumCourse";
 import { PRACTICE_LOOPS, PRACTICE_SHOTS } from "../matches/practiceAnimations";
 import * as T from "three";
-import { blinkOpen, blinkWarn, boxAt, course, gooAt, routeAt, routeFace, routeStretch, sweeperAngle, type Box, type Look } from "../../shared/matches/parcoursCourses";
+import { blinkOpen, blinkWarn, boxAt, course, gooAt, routeAt, routeFace, routeStretch, sweeperAngle, windState, type Box, type Look } from "../../shared/matches/parcoursCourses";
 import { turnPoint } from "../../shared/matches/parcoursFrame";
 import { PC, shownRacer, type ParcoursGame } from "../../shared/matches/parcours";
 import { followCamera, takeCameraTurn, type ChaseLocal, type MatchWorld, type MatchWorldFrame } from "../matches/client";
@@ -104,15 +104,18 @@ export function createParcoursWorld(host: HTMLElement, read: () => MatchWorldFra
     kit.cylinder(world, COLOR.post, sw.x, sw.y1 / 2 + .3, -sw.z, .25, sw.y1 + .6);
     return { sw, pivot };
   });
-  // Wind: fans on the side the wind comes from, arrows on the floor that light up while it blows.
+  // Wind: fans on the side the wind comes from (spinning up before a gust, glowing ring), arrows on the floor,
+  // and streaks of air that fly through the zone in the wind's direction and speed while it blows.
   const fans = c.winds.map(w => {
     const along = Math.abs(w.vx) > Math.abs(w.vz), group = new T.Group(), y = Math.max(w.y0, 0) + 1.2;
     const x = along ? (w.vx > 0 ? (c.practice?w.x0-.6:-5.6) : (c.practice?w.x1+.6:5.6)) : (w.x0 + w.x1) / 2, z = along ? (w.z0 + w.z1) / 2 : (w.vz < 0 ? w.z1 + .6 : w.z0 - .6);
     group.position.copy(W(x, y + (along ? 0 : 1.2), z)); world.add(group);
     const rotor = new T.Group(); group.add(rotor);
-    const ring = kit.mesh(group, new T.TorusGeometry(1, .08, 8, 28), COLOR.post, 0, 0, 0);
-    for (let k = 0; k < 4; k++) { const blade = kit.box(rotor, COLOR.wind, 0, 0, 0, .18, 1.7, .05); blade.rotation.z = k * Math.PI / 4; }
-    if (along) { group.rotation.y = Math.PI / 2; } void ring;
+    const ring = kit.mesh(group, new T.TorusGeometry(1, .1, 8, 28), COLOR.wind, 0, 0, 0);
+    (ring.material as T.MeshStandardMaterial) = (ring.material as T.MeshStandardMaterial).clone();
+    kit.mesh(group, new T.CylinderGeometry(.22, .22, .3, 12), COLOR.post, 0, 0, 0).rotation.x = Math.PI / 2;
+    for (let k = 0; k < 4; k++) { const blade = kit.box(rotor, COLOR.wind, 0, 0, 0, .22, 1.75, .05); blade.rotation.z = k * Math.PI / 4; }
+    if (along) { group.rotation.y = Math.PI / 2; }
     const arrows = Array.from({ length: 3 }, (_, k) => {
       const ax = along ? (w.x0 + w.x1) / 2 + (k - 1) * 2.4 : (k - 1) * 1.2, az = along ? (w.z0 + w.z1) / 2 + (k - 1) * 1.6 : (w.z0 + w.z1) / 2 + (k - 1) * 2;
       const arrow = kit.cone(world, COLOR.wind, ax, (along ? 0 : y - 1.2) + .05, -az, .3, .6);
@@ -120,8 +123,17 @@ export function createParcoursWorld(host: HTMLElement, read: () => MatchWorldFra
       (arrow.material as T.MeshStandardMaterial) = (arrow.material as T.MeshStandardMaterial).clone();
       return arrow;
     });
-    return { w, rotor, arrows };
+    return { w, rotor, ring, arrows, spin: 0 };
   });
+  // Air streaks: thin white dashes, a few per zone, flying with the wind (instanced, one draw call).
+  const streakFor = c.winds.flatMap((w, wi) => {
+    const span = Math.abs(w.vx) > Math.abs(w.vz) ? w.x1 - w.x0 : w.z1 - w.z0, across = Math.abs(w.vx) > Math.abs(w.vz) ? w.z1 - w.z0 : w.x1 - w.x0;
+    const n = Math.max(5, Math.min(22, Math.round(span * across / 4)));
+    return Array.from({ length: n }, (_, k) => ({ wi, k, n, seed: ((k * 7919 + wi * 104729) % 1000) / 1000 }));
+  });
+  const streaks = new T.InstancedMesh(new T.BoxGeometry(1, 1, 1), new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: .75, depthWrite: false }), Math.max(1, streakFor.length));
+  streaks.count = 0; streaks.frustumCulled = false; streaks.castShadow = false; world.add(streaks);
+  const windLevel = c.winds.map(() => 0);
   // Rising goo.
   const goo = c.goo ? new T.Mesh(new T.PlaneGeometry(40, end + 40), new T.MeshStandardMaterial({ color: COLOR.goo, emissive: COLOR.goo, emissiveIntensity: .45, transparent: true, opacity: .82, roughness: .3 })) : undefined;
   if (goo) { goo.rotation.x = -Math.PI / 2; goo.position.z = -end / 2; world.add(goo); }
@@ -167,11 +179,36 @@ export function createParcoursWorld(host: HTMLElement, read: () => MatchWorldFra
       const pulse = reduced ? 1 : .55 + .45 * Math.abs(Math.sin(time / 90));
       (mesh.material as T.MeshStandardMaterial).color.copy(base).lerp(warnColor, warn > 0 ? Math.min(1, .35 + warn * .65) * pulse : 0);
     }
-    for (const { w, rotor, arrows } of fans) {
-      const on = ((t / w.period + w.phase) % 1) < w.on;
-      if (on && !reduced) rotor.rotation.z += dt * 14;
-      for (const arrow of arrows) { const m = arrow.material as T.MeshStandardMaterial; m.color.setHex(on ? COLOR.warn : COLOR.wind); m.emissive.setHex(on ? 0x662200 : 0); }
+    fans.forEach((fan, wi) => {
+      const { w, rotor, ring, arrows } = fan, { on, warn } = windState(w, t);
+      // The fan spins up during the warning and runs down after the gust (a little inertia); its ring glows orange while it blows.
+      const target = on ? 16 : warn * 7;
+      fan.spin += (target - fan.spin) * Math.min(1, dt * (target > fan.spin ? 6 : 2.5));
+      if (!reduced) rotor.rotation.z += dt * fan.spin;
+      const blink = warn > 0 && !reduced ? (Math.floor(time / 140) % 2 ? 1 : .35) : 1;
+      const rm = ring.material as T.MeshStandardMaterial; rm.color.setHex(on ? COLOR.warn : warn > 0 ? COLOR.warn : COLOR.wind); rm.emissive.setHex(on ? 0x883300 : warn > 0 ? 0x441a00 : 0); rm.emissiveIntensity = on ? 1 : blink;
+      for (const arrow of arrows) { const m = arrow.material as T.MeshStandardMaterial; m.color.setHex(on || warn > 0 ? COLOR.warn : COLOR.wind); m.emissive.setHex(on ? 0x662200 : warn > 0 ? 0x331100 : 0); m.emissiveIntensity = on ? 1 : blink; }
+      // Streak strength eases in and out with the wind (none with reduced motion: the ring and arrows show it).
+      windLevel[wi] += ((on ? 1 : warn * .25) - windLevel[wi]) * Math.min(1, dt * 5);
+    });
+    let streakCount = 0;
+    if (!reduced) for (const st of streakFor) {
+      const w = c.winds[st.wi], level = windLevel[st.wi];
+      if (level < .03) continue;
+      const along = Math.abs(w.vx) > Math.abs(w.vz), strength = Math.hypot(w.vx, w.vz), len = along ? w.x1 - w.x0 : w.z1 - w.z0;
+      // Each streak crosses the zone at about twice the drift speed, from the side the wind comes from.
+      const k = ((time / 1000) * strength * 2 / len + st.seed) % 1, across = ((st.k + .5) / st.n + st.seed * .37) % 1;
+      const sign = along ? Math.sign(w.vx) : Math.sign(w.vz), pos = sign > 0 ? k : 1 - k;
+      const y = Math.max(w.y0, -.5) + .3 + ((st.seed * 3.1) % 1) * Math.min(2.2, w.y1 - Math.max(w.y0, -.5));
+      const x = along ? w.x0 + pos * len : w.x0 + across * (w.x1 - w.x0), z = along ? w.z0 + across * (w.z1 - w.z0) : w.z0 + pos * len;
+      // Fade at both ends of the zone by shrinking.
+      const edge = Math.min(1, Math.min(k, 1 - k) * 6) * level, long = (.9 + strength * .3) * edge, thick = .08 * edge;
+      dummy.position.copy(W(x, y, z)); dummy.rotation.set(0, 0, 0);
+      dummy.scale.set(along ? long : thick, thick, along ? thick : long);
+      dummy.updateMatrix(); streaks.setMatrixAt(streakCount++, dummy.matrix);
     }
+    streaks.count = streakCount; streaks.instanceMatrix.needsUpdate = true;
+    host.dataset.windStreaks = String(streakCount);
     for (const [i, pivot] of seesaws) { const before = prev.tilt?.[i] ?? 0, now = g.tilt[i] ?? 0; pivot.rotation.z = -(before + (now - before) * f.alpha); }
     if (goo) goo.position.y = Math.max(c.killY + 1.2, gooAt(c, t));
     // Belt stripes run with the belt (static with reduced motion).

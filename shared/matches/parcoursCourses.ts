@@ -391,6 +391,14 @@ export function blinkWarn(b: Pick<Box, "blink">, t: number) {
   const until = next - t;
   return until <= BLINK_WARN ? 1 - until / BLINK_WARN : 0;
 }
+/** Wind zone state at `t`: blowing, or about to start (warning 0…1 rising during the last `WIND_WARN` ms). */
+export const WIND_WARN = 800;
+export function windState(w: Wind, t: number) {
+  const pos = ((t / w.period + w.phase) % 1 + 1) % 1, on = pos < w.on;
+  if (on || w.on >= 1) return { on: true, warn: 0 };
+  const until = (1 - pos) * w.period;
+  return { on: false, warn: until <= WIND_WARN ? 1 - until / WIND_WARN : 0 };
+}
 /** Wind drift (m/s) at a point and time. */
 export function windAt(c: Pick<Course, "winds">, x: number, y: number, z: number, t: number) {
   let vx = 0, vz = 0;

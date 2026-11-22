@@ -26,7 +26,9 @@ Match-Framework, Touch-Steuerung, Bots/Übung, Party-/Wettbewerbsanbindung und b
 | Arrow Masters | Ego-Perspektive offen, Spezialpfeile vorhanden. |
 | Neon Racer | Kippsteuerung auf Android und iPhone (Vorzeichen, Ruhelage, Querformat-Layout, Freigabe) prüfen; Streckenlänge, Item-Balance und Lenkradgefühl beurteilen. Nur Canvas, keine 3D-Variante. |
 | Schneeballschlacht | Zielhilfe (±22°, Antippen ±66° im Kamerabild) und Antippen-Formen auf echten Handys beurteilen; Reichweite, Bot-Stärke und 3D-Leistung mit sechs Figuren prüfen. |
-| Parcours-Länge | Verlängerte Fallklappen, Windkanal und Glibberflut (Dauer, Glibbertempo) mit Menschen beurteilen; Bots sind kein Maßstab für die Schwierigkeit. |
+| Parcours-Länge | Verlängerte Fallklappen, Windkanal und Serpentinen-Glibberflut (Dauer, Glibbertempo, Kamera an Ecken) mit Menschen beurteilen; Bots sind kein Maßstab für die Schwierigkeit. |
+| Kanten | Zeitfenster fürs Festhalten (320 ms) mit Funklatenz auf echten Handys prüfen. |
+| Wind-Ideen | Nicht umgesetzt: Figur lehnt sich gegen den Wind, Windgeräusch je Böe, Böen-Zeitleiste im HUD, flatternde Fahnen an den Stegen. |
 | Weitere Läufe | Ideen: Teamstaffel, Rutschbahn, wechselndes Labyrinth, weitere Finals. Nicht implementiert. |
 
 ## Prüfungen
