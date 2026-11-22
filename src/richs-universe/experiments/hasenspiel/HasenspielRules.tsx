@@ -24,7 +24,7 @@ export function HasenspielRules({ level }: { level: Level }) {
         Für Hasen führt jeder dieser Wege nur in Spielrichtung.{advanced && " Affen dürfen in beide Richtungen springen. Hirsche können nicht springen. Beim Doppelsprung kann die Lichtung Start, Zwischenlandung, Ziel oder übersprungenes Feld sein, sofern beide Teilsprünge erlaubt sind."}</p>
       <RuleExample frames={examples.crossing} />
       <p><strong>Einen Zug machen.</strong> Tippe zuerst auf deine Figur, dann auf ein markiertes Landefeld.
-        Gibt es mehrere Wege dorthin, wähle unter dem Brett einen aus. Zwei Dreiecksfelder sind benachbart,
+        Gibt es mehrere Wege dorthin, wähle oben auf dem Brett einen aus. Zwei Dreiecksfelder sind benachbart,
         wenn sie eine Kante teilen (eine geteilte Linie, eine Ecke reicht nicht) oder durch eine gestrichelte Linie verbunden sind.</p>
       <p><strong>Hase ziehen.</strong> Ziehe eine Ebene vor auf ein freies Nachbarfeld oder vorwärts auf die direkt verbundene Lichtung. Vorwärts führt immer von deiner eigenen Reihe 1 weg zur gegnerischen Spitze. Auch jenseits der Lichtung darf ein Hase niemals zurücklaufen.</p>
       <RuleExample frames={level === 1 ? examples.step : examples.step.filter((_, index) => index !== 1)} />
@@ -54,6 +54,7 @@ export function HasenspielRules({ level }: { level: Level }) {
           Beim Hangeln bewegen sie sich vorwärts oder seitwärts über mindestens zwei Hasen. Zwischen ihnen darf höchstens
           ein Feld frei sein. Der Affe landet auf einem freien Feld und schlägt beim Hangeln keine Figur.<RuleExample frames={examples.monkey} /></li>
       </ul>}
+      <p><strong>Unentschieden.</strong> Kann auf beiden Seiten kein Hase mehr die Lichtung erreichen, endet die Partie sofort unentschieden. Das gilt zum Beispiel, wenn alle übrigen Hasen schon an ihr vorbeigezogen sind.</p>
       <p><strong>Passen.</strong> Wer keinen erlaubten Zug hat, muss passen.
         Passen beide direkt nacheinander ohne Hasen auf der Lichtung, endet die Partie unentschieden.
         {advanced && " Solange noch eine Betäubung oder Hirschruhe aktiv ist, zählen Pässe dafür nicht."}</p>

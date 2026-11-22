@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useMemo, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { ExperimentProps } from "../../experiments";
 import { CENTER, canMove, cells, centerLinks, wallFields, movesFrom, newGame, play, sideLinks, type Cell, type Color, type Kind, type Level, type Game, type Move } from "./rules";
 import { botLevels, botTurn, type BotLevel } from "./bot";
@@ -7,6 +7,7 @@ import { HasenspielRules } from "./HasenspielRules";
 import { boardHeight, gap, height, side, triangle, width } from "./boardDrawing";
 import { PieceEmblem } from "./PieceEmblem";
 import { ForestIntro } from "./ForestIntro";
+import { MatchHistory, readHistory, type FinishedMatch } from "./MatchHistory";
 import { Victory } from "./Victory";
 import "./hasenspiel.css";
 
@@ -51,21 +52,47 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
   const [game, setGame] = useState(() => newGame());
   const [botLevel, setBotLevel] = useState<BotLevel>();
   const [firstColor, setFirstColor] = useState<Color>();
+  const [coin, setCoin] = useState<Color>();
+  const [confirmation, setConfirmation] = useState<"exit" | "new">();
+  const dialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    if (confirmation) dialog.current?.showModal();
+    else dialog.current?.close();
+  }, [confirmation]);
+
+  useEffect(() => {
+    if (!coin || confirmation) return;
+    const timer = window.setTimeout(() => {
+      setFirstColor(coin);
+      setCoin(undefined);
+    }, window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 750 : 1850);
+    return () => window.clearTimeout(timer);
+  }, [coin, confirmation]);
   const secondColor = firstColor === "blue" ? "gray" : "blue";
   const botThinking = !!botLevel && !!firstColor && !game.result && game.turn === secondColor;
   const firstPlayer = botLevel ? "Du" : "Person 1";
   const secondPlayer = botLevel ? "Bot" : "Person 2";
+  const [history, setHistory] = useState(readHistory);
+  const [matchId, setMatchId] = useState("");
   useEffect(() => {
-    if (!motion) return;
+    if (!game.result || !firstColor || !matchId) return;
+    const outcome = game.result === "draw" ? "draw" : game.result === firstColor ? "first" : "second";
+    const match: FinishedMatch = { id: matchId, level: game.level, bot: botLevel, outcome, firstColor };
+    setHistory(previous => previous.some(entry => entry.id === matchId) ? previous : [match, ...previous]);
+    try { localStorage.setItem("lichtung.score." + matchId, JSON.stringify(match)); } catch { /* Keep session scores in memory. */ }
+  }, [game.result, game.level, botLevel, firstColor, matchId]);
+
+  useEffect(() => {
+    if (!motion || confirmation) return;
     const timer = window.setTimeout(() => {
       setGame(motion.next);
       setMotion(undefined);
     }, motion.move.via ? 620 : 400);
     return () => window.clearTimeout(timer);
-  }, [motion]);
+  }, [motion, confirmation]);
 
   useEffect(() => {
-    if (!botLevel || !botThinking || motion) return;
+    if (!botLevel || !botThinking || motion || confirmation) return;
     const timer = window.setTimeout(() => {
       const next = botTurn(game, botLevel);
       const from = cells.find(cell => game.board[cell.id]?.color === game.turn && !next.board[cell.id]);
@@ -80,7 +107,7 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
       }
     }, 400);
     return () => window.clearTimeout(timer);
-  }, [botLevel, botThinking, game, motion]);
+  }, [botLevel, botThinking, game, motion, confirmation]);
 
   const [selected, setSelected] = useState<Cell>();
   const [destination, setDestination] = useState<Cell>();
@@ -100,6 +127,7 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
     : botThinking ? "Der Bot ist am Zug" : `${names[game.turn]} ist am Zug`;
 
   function reset(level: Level) {
+    setCoin(undefined);
     setMotion(undefined);
     setGame(newGame(level));
     setFirstColor(undefined);
@@ -119,7 +147,7 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
   }
 
   function select(cell: Cell) {
-    if (!firstColor || game.result || botThinking || motion) return;
+    if (destination || !firstColor || game.result || botThinking || motion) return;
     setDestination(undefined);
     const count = targets.filter(move => move.to === cell.id).length;
     if (count > 1) setDestination(cell);
@@ -131,35 +159,58 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
     <main className="ru-hasenspiel">
       <div className="hare-page" inert={intro}>
         <header className="hare-header">
-          <button type="button" onClick={onExit}>Zurück</button>
+          <button type="button" onClick={() => setConfirmation("exit")}>Zurück</button>
           <h1>Die Lichtung</h1>
-          <button type="button" onClick={() => { reset(game.level); setLevelChosen(false); }}>Neues Spiel</button>
+          <button type="button" onClick={() => setConfirmation("new")}>Neues Spiel</button>
         </header>
-        <label className="hare-mode">
-          Gegner
-          <select disabled={!!firstColor} value={botLevel ?? ""} onChange={event => {
-            setBotLevel(botLevels.find(level => level === event.target.value));
-            reset(game.level);
-          }}>
-            <option value="">Zweite Person</option>
-            {botLevels.map(level => <option key={level} value={level}>Bot · {level}</option>)}
-          </select>
-        </label>
-        <div className="hare-levels" role="group" aria-label="Schwierigkeitsstufe">
-          {levels.map(level => <button key={level} type="button" aria-pressed={levelChosen && game.level === level} disabled={!!firstColor}
-            onClick={() => { reset(level); setLevelChosen(true); }}>Stufe {level}</button>)}
-        </div>
-        {levelChosen && !firstColor && <MovementIntro level={game.level} key={game.level} />}
         <div className="hare-status" aria-live="polite">
-          {firstColor ? <>
-            <span>Münzwurf · {firstPlayer}: {names[firstColor]} · {secondPlayer}: {names[secondColor]}</span>
-            <strong>{status}</strong>
-            <span>{center?.kind === "rabbit" ? `${names[center.color]} hält die Lichtung · ${game.held}/3` : "Lichtung mit einem Hasen drei gegnerische Züge halten"}</span>
-          </> : <button type="button" disabled={!levelChosen} onClick={() => setFirstColor(Math.random() < .5 ? "blue" : "gray")}>
-            {levelChosen ? "Münze werfen" : "Zuerst eine Stufe wählen"}
-          </button>}
+          {levelChosen && <strong>Stufe {game.level}{firstColor && ` · ${status}`}</strong>}
+          {firstColor && <span>{firstPlayer}: {names[firstColor]} · {secondPlayer}: {names[secondColor]}</span>}
         </div>
         <div className="hare-playfield">
+          {coin && <section className="hare-panel hare-toss" role="status">
+            <strong>Münzwurf</strong>
+            <div className="hare-throw" aria-hidden="true"><div className="hare-coin" data-brown={coin === "gray"}>
+              <span>W</span><span>B</span>
+            </div></div>
+          </section>}
+          {!firstColor && !coin && <section className="hare-panel" aria-label="Partie einrichten">
+            <strong>Partie einrichten</strong>
+            <label className="hare-mode">
+              Gegner
+              <select disabled={!!firstColor} value={botLevel ?? ""} onChange={event => {
+                setBotLevel(botLevels.find(level => level === event.target.value));
+                reset(game.level);
+              }}>
+                <option value="">Zweite Person</option>
+                {botLevels.map(level => <option key={level} value={level}>Bot · {level}</option>)}
+              </select>
+            </label>
+            <div className="hare-levels" role="group" aria-label="Schwierigkeitsstufe">
+              {levels.map(level => <button key={level} type="button" aria-pressed={levelChosen && game.level === level} disabled={!!firstColor}
+                onClick={() => { reset(level); setLevelChosen(true); }}>Stufe {level}</button>)}
+            </div>
+            {levelChosen && !firstColor && <MovementIntro level={game.level} key={game.level} />}
+            <button type="button" disabled={!levelChosen} onClick={() => {
+              setMatchId(`${Date.now()}-${Math.random().toString(36).slice(2)}`);
+              setCoin(Math.random() < .5 ? "blue" : "gray");
+            }}>{levelChosen ? "Münze werfen" : "Zuerst eine Stufe wählen"}</button>
+          </section>}
+        {destination && <section className="hare-panel hare-choices" aria-label="Sprung auswählen">
+          <strong>Mehrere Züge führen auf dieses Feld</strong>
+          {choices.map((move, index) => {
+            const capture = cells.find(cell => cell.id === move.capture);
+            const ally = cells.find(cell => cell.id === move.friendly);
+            return <button type="button" key={index} onClick={() => takeMove(destination, index)}>
+              {ally ? `Über eigene Figur auf ${fieldName(ally)}` : null}
+              {capture ? `${ally ? " · " : ""}Figur auf ${fieldName(capture)} schlagen` : ally ? null : "Direkt ziehen"}
+            </button>;
+          })}
+          <button type="button" onClick={() => setDestination(undefined)}>Abbrechen</button>
+        </section>}
+          {firstColor && center?.kind === "rabbit" && <aside className="hare-hold" data-lower={center.color === "blue"} role="status">
+            {names[center.color]} hält<br />die Lichtung<br /><b>{game.held}/3</b>
+          </aside>}
           <svg className="hare-board" style={boardPaint} viewBox={`-25 -2 ${width + 50} ${boardHeight + 4}`} aria-label="Dreiecksbrett">
             <g className="hare-row-numbers" aria-hidden="true">
               {[0, 1, 2, 3, 4, 5].map(depth => {
@@ -244,23 +295,25 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
               </g>;
             })()}
           </svg>
+          {game.result === "draw" && <div className="hare-announcement" role="status"><strong>Unentschieden</strong></div>}
           {winner && <Victory title={`${winner} gewinnt`} />}
         </div>
-        {destination && <section className="hare-choices" aria-label="Sprung auswählen">
-          <strong>Mehrere Züge führen auf dieses Feld</strong>
-          {choices.map((move, index) => {
-            const capture = cells.find(cell => cell.id === move.capture);
-            const ally = cells.find(cell => cell.id === move.friendly);
-            return <button type="button" key={index} onClick={() => takeMove(destination, index)}>
-              {ally ? `Über eigene Figur auf ${fieldName(ally)}` : null}
-              {capture ? `${ally ? " · " : ""}Figur auf ${fieldName(capture)} schlagen` : ally ? null : "Direkt ziehen"}
-            </button>;
-          })}
-        </section>}
         {firstColor && !game.result && !botThinking && !motion && !canMove(game) && <button type="button" onClick={() => { setGame(play(game)); setSelected(undefined); setDestination(undefined); }}>Kein Zug möglich · Passen</button>}
+        <MatchHistory history={history} />
         <HasenspielRules level={game.level} />
         <button className="hare-replay" type="button" onClick={() => setIntro(true)}>Waldauftakt wiederholen</button>
       </div>
+      <dialog ref={dialog} className="hare-confirm" aria-labelledby="hare-confirm-title"
+        onCancel={event => { event.preventDefault(); setConfirmation(undefined); }}>
+        <h2 id="hare-confirm-title">Bist du dir sicher?</h2>
+        <p>{confirmation === "exit" ? "Möchtest du die Lichtung verlassen?" : "Möchtest du ein neues Spiel beginnen?"}</p>
+        <div><button type="button" onClick={() => {
+          setConfirmation(undefined);
+          if (confirmation === "exit") onExit();
+          else { reset(game.level); setLevelChosen(false); }
+        }}>Ja</button>
+        <button type="button" autoFocus onClick={() => setConfirmation(undefined)}>Nein</button></div>
+      </dialog>
       {intro && <ForestIntro onDone={closeIntro} />}
     </main>
   );

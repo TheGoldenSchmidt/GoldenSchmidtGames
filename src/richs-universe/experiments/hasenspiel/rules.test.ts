@@ -81,6 +81,7 @@ const initialDeer = newGame(3);
 assert.equal(wallFields(initialDeer.board, initialDeer.initialWalls).size, 0);
 
 const runner: Game = { ...newGame(3), board: {
+  "8:0": piece("reserve", "gray"),
   "4:0": piece("runner", "blue", "deer"),
   "4:-2": piece("obstacle", "gray"), "4:4": piece("jumper", "gray", "monkey")
 } };
@@ -212,7 +213,7 @@ for (const kind of ["rabbit", "monkey", "deer"] as const) {
   } };
   const next = play(hold);
   assert.equal(next.held, kind === "rabbit" ? 3 : 0);
-  assert.equal(next.result, kind === "rabbit" ? "blue" : undefined);
+  assert.equal(next.result, kind === "rabbit" ? "blue" : "draw");
 }
 
 for (const kind of ["rabbit", "monkey"] as const) {
@@ -225,5 +226,8 @@ for (const kind of ["rabbit", "monkey"] as const) {
   assert.ok(!moves(front, "5:-2").some(move => move.capture === "4:-2"));
   assert.ok(!moves({ ...flank, restingDeer: ["left"] }, "4:-3").some(move => move.capture === "4:-2"));
 }
+
+assert.equal(play({ ...newGame(3), board: { "7:0": piece("white"), "4:0": piece("brown", "gray"), "3:1": piece("deer", "blue", "deer") } }, "3:1", "3:2").result, "draw");
+assert.equal(play({ ...newGame(1), board: { "3:-1": piece("lone") } }, "3:-1", "4:-1").result, "draw");
 
 console.log("Hasenspiel: Stufen 1–3 geprüft");
