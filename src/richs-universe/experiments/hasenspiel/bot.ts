@@ -2,6 +2,11 @@ import { CENTER, cells, nextPositions, type Color, type Game } from "./rules";
 
 export const botLevels = ["Leicht", "Mittel", "Schwer"] as const;
 export type BotLevel = typeof botLevels[number];
+export const botNames: Record<BotLevel, string> = {
+  Leicht: "Patrick Star",
+  Mittel: "Spongebob Schwammkopf",
+  Schwer: "Der Dreckige Dan",
+};
 
 const win = 100_000;
 const beamWidth = 8;

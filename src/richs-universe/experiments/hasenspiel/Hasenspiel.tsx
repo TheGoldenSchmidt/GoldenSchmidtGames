@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { ExperimentProps } from "../../experiments";
 import { CENTER, canMove, cells, centerLinks, wallFields, movesFrom, newGame, play, sideLinks, type Cell, type Color, type Kind, type Level, type Game, type Move } from "./rules";
-import { botLevels, botTurn, type BotLevel } from "./bot";
+import { botLevels, botNames, botTurn, type BotLevel } from "./bot";
 import { MovementIntro } from "./MovementIntro";
 import { HasenspielRules } from "./HasenspielRules";
 import { boardHeight, gap, height, side, triangle, width } from "./boardDrawing";
@@ -71,7 +71,7 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
   const secondColor = firstColor === "blue" ? "gray" : "blue";
   const botThinking = !!botLevel && !!firstColor && !game.result && game.turn === secondColor;
   const firstPlayer = botLevel ? "Du" : "Person 1";
-  const secondPlayer = botLevel ? "Bot" : "Person 2";
+  const secondPlayer = botLevel ? botNames[botLevel] : "Person 2";
   const [history, setHistory] = useState(readHistory);
   const [matchId, setMatchId] = useState("");
   useEffect(() => {
@@ -120,11 +120,11 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
     .map(name => [`--hare-${name}`, `url(#${boardId}-${name})`])) as CSSProperties;
   const center = game.board[CENTER];
   const winner = game.result && game.result !== "draw"
-    ? botLevel && game.result === secondColor ? "Bot" : names[game.result]
+    ? botLevel && game.result === secondColor ? secondPlayer : names[game.result]
     : undefined;
   const status = game.result === "draw" ? "Unentschieden" : winner
     ? "Partie beendet"
-    : botThinking ? "Der Bot ist am Zug" : `${names[game.turn]} ist am Zug`;
+    : botThinking ? `${secondPlayer} ist am Zug` : `${names[game.turn]} ist am Zug`;
 
   function reset(level: Level) {
     setCoin(undefined);
@@ -183,7 +183,7 @@ export default function Hasenspiel({ onExit }: ExperimentProps) {
                 reset(game.level);
               }}>
                 <option value="">Zweite Person</option>
-                {botLevels.map(level => <option key={level} value={level}>Bot · {level}</option>)}
+                {botLevels.map(level => <option key={level} value={level}>{botNames[level]} · {level}</option>)}
               </select>
             </label>
             <div className="hare-levels" role="group" aria-label="Schwierigkeitsstufe">
