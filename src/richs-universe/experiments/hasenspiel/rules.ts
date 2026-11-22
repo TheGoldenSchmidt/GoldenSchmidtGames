@@ -259,6 +259,54 @@ export function nextPositions(game: Game): Game[] {
   return positions.length ? positions : [applyMove(game)];
 }
 
+// Track possible future helper locations as well as the rabbit's own steps.
+// Treat temporary obstacles as movable so they cannot cause a premature draw.
+function canStillReachClearing(board: Board, level: Level): boolean {
+  if (board[CENTER]?.kind === "rabbit") return true;
+  const entries = Object.entries(board).flatMap(([id, piece]) =>
+    piece ? [{ piece, start: cellsById.get(id)! }] : []);
+  if (!entries.some(({piece, start}) => piece.kind === "rabbit" && forward(piece, start, cellsById.get(CENTER)!) > 0)) return false;
+  if (entries.some(({piece}) => piece.kind !== "rabbit")) return true;
+  const owners = new Map<string, Set<number>>();
+  const reachable = entries.map(({start}, index) => {
+    owners.set(start.id, new Set([index]));
+    return new Set([start]);
+  });
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const [index, {piece}] of entries.entries()) {
+      const seen = reachable[index];
+      for (const start of seen) {
+        for (const middle of adjacent(start)) {
+          const dir = forward(piece, start, middle);
+          if (dir < 0) continue;
+          const next: Cell[] = [];
+          if (dir > 0 || (level >= 2 && Math.abs(middle.x) < Math.abs(start.x))) next.push(middle);
+          const helpers = owners.get(middle.id);
+          if (helpers && (helpers.size > 1 || !helpers.has(index))) {
+            for (const end of adjacent(middle)) {
+              if (forward(piece, middle, end) < 0 || end === start) continue;
+              if (middle.id === CENTER && (end.row === start.row || end.x !== start.x)) continue;
+              if (start.row === middle.row && middle.row === end.row && end.x - middle.x !== middle.x - start.x) continue;
+              next.push(end);
+            }
+          }
+          for (const end of next) {
+            if (end.id === CENTER) return true;
+            if (seen.has(end)) continue;
+            seen.add(end);
+            if (!owners.has(end.id)) owners.set(end.id, new Set());
+            owners.get(end.id)!.add(index);
+            changed = true;
+          }
+        }
+      }
+    }
+  }
+  return false;
+}
+
 function applyMove(game: Game, from?: Cell, move?: Move): Game {
   const board = { ...game.board };
   const previous = { ...game.previous, [game.turn]: undefined };
@@ -281,7 +329,8 @@ function applyMove(game: Game, from?: Cell, move?: Move): Game {
   // A skipped turn under a temporary effect does not count toward a stalemate.
   const temporaryBlock = game.frozen.length || game.restingDeer?.length;
   const passes = move || temporaryBlock ? 0 : game.passes + 1;
-  const result = held >= 3 ? occupant?.color : passes >= 2 && occupant?.kind !== "rabbit" ? "draw" : undefined;
+  const contender = canStillReachClearing(board, game.level);
+  const result = !contender ? "draw" : held >= 3 ? occupant?.color : passes >= 2 && occupant?.kind !== "rabbit" ? "draw" : undefined;
   const turn = game.turn === "blue" ? "gray" : "blue";
   const oldWalls = new Set(deerWalls(game.board).map(wall => wall.id));
   const frozen = new Set(game.frozen.filter(id =>
