@@ -1,7 +1,8 @@
 import { PRACTICE_STATIONS } from "../../shared/matches/proberaumCourse";
 import { PRACTICE_LOOPS, PRACTICE_SHOTS } from "../matches/practiceAnimations";
 import * as T from "three";
-import { blinkOpen, blinkWarn, boxAt, course, gooAt, sweeperAngle, type Box, type Look } from "../../shared/matches/parcoursCourses";
+import { blinkOpen, blinkWarn, boxAt, course, gooAt, routeAt, routeFace, routeStretch, sweeperAngle, type Box, type Look } from "../../shared/matches/parcoursCourses";
+import { turnPoint } from "../../shared/matches/parcoursFrame";
 import { PC, shownRacer, type ParcoursGame } from "../../shared/matches/parcours";
 import { followCamera, takeCameraTurn, type ChaseLocal, type MatchWorld, type MatchWorldFrame } from "../matches/client";
 import { ChaseCamera, Debris, frameBox, Impact } from "./matchScene";
@@ -60,19 +61,26 @@ export function createParcoursWorld(host: HTMLElement, read: () => MatchWorldFra
     list.forEach((b, i) => { dummy.position.copy(W((b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2, (b.z0 + b.z1) / 2)); dummy.scale.set(b.x1 - b.x0, b.y1 - b.y0, b.z1 - b.z0); dummy.updateMatrix(); mesh.setMatrixAt(i, dummy.matrix); });
     mesh.castShadow = look !== "floor" && look !== "finish"; mesh.receiveShadow = true; world.add(mesh);
     // Belts: bright stripes that run with the belt.
-    if (look === "belt") for (const b of list) for (let z = b.z0 + .4; z < b.z1; z += 1.2) stripes.push({ b, mesh: kit.box(world, COLOR.stripe, (b.x0 + b.x1) / 2, b.y1 + .01, -z, b.x1 - b.x0 - .2, .02, .25) });
+    if (look === "belt") for (const b of list) {
+      if (b.beltX) for (let x = b.x0 + .4; x < b.x1; x += 1.2) stripes.push({ b, mesh: kit.box(world, COLOR.stripe, x, b.y1 + .01, -(b.z0 + b.z1) / 2, .25, .02, b.z1 - b.z0 - .2) });
+      else for (let z = b.z0 + .4; z < b.z1; z += 1.2) stripes.push({ b, mesh: kit.box(world, COLOR.stripe, (b.x0 + b.x1) / 2, b.y1 + .01, -z, b.x1 - b.x0 - .2, .02, .25) });
+    }
   }
   // Chequered finish line and a gate.
   // Finals have no finish line; the course length follows the boxes.
   const end = Math.max(...c.boxes.map(b => b.z1));
   if (!c.elimination && !c.practice) {
-    const half = c.width / 2;
-    for (let k = 0; k < c.width; k++) kit.box(world, k % 2 ? COLOR.finish : COLOR.ink, -half + .5 + k, c.finishY + .02, -c.finishZ, 1, .02, .5);
-    for (const side of [-1, 1]) kit.box(world, COLOR.post, side * (half + .2), c.finishY + 1.6, -c.finishZ, .3, 3.2, .3);
-    kit.box(world, COLOR.door, 0, c.finishY + 3.3, -c.finishZ, c.width + .7, .4, .4);
+    const half = c.width / 2, fx = c.finishX ?? 0;
+    for (let k = 0; k < c.width; k++) kit.box(world, k % 2 ? COLOR.finish : COLOR.ink, fx - half + .5 + k, c.finishY + .02, -c.finishZ, 1, .02, .5);
+    for (const side of [-1, 1]) kit.box(world, COLOR.post, fx + side * (half + .2), c.finishY + 1.6, -c.finishZ, .3, 3.2, .3);
+    kit.box(world, COLOR.door, fx, c.finishY + 3.3, -c.finishZ, c.width + .7, .4, .4);
   }
   // Checkpoint flags along the left edge.
-  for (const cp of (c.practice?[]:c.checkpoints.slice(1))) { kit.cylinder(world, COLOR.post, -c.width / 2 - .3, cp.y + 1, -cp.z, .05, 2); kit.box(world, COLOR.flag, -c.width / 2, cp.y + 1.8, -cp.z, .55, .35, .03); }
+  // Checkpoint flags at the left of the way (winding courses: beside the checkpoint across the way).
+  for (const cp of (c.practice?[]:c.checkpoints.slice(1))) {
+    const st = c.route ? routeStretch(c, routeAt(c, cp.x ?? 0, cp.z).index) : undefined, [ox, oz] = st ? turnPoint(-3.3, 0, st.quarter) : [-c.width / 2, 0], px = (cp.x ?? 0) + ox, pz = cp.z + oz;
+    kit.cylinder(world, COLOR.post, px - .3, cp.y + 1, -pz, .05, 2); kit.box(world, COLOR.flag, px, cp.y + 1.8, -pz, .55, .35, .03);
+  }
 
   const meshFor = (b: Box) => { const m = kit.box(world, LOOK_COLOR[b.look], 0, 0, 0, b.x1 - b.x0, b.y1 - b.y0, b.z1 - b.z0); m.castShadow = true; m.receiveShadow = true; return m; };
   c.boxes.forEach(b => {
@@ -167,7 +175,10 @@ export function createParcoursWorld(host: HTMLElement, read: () => MatchWorldFra
     for (const [i, pivot] of seesaws) { const before = prev.tilt?.[i] ?? 0, now = g.tilt[i] ?? 0; pivot.rotation.z = -(before + (now - before) * f.alpha); }
     if (goo) goo.position.y = Math.max(c.killY + 1.2, gooAt(c, t));
     // Belt stripes run with the belt (static with reduced motion).
-    if (!reduced) for (const { mesh, b } of stripes) { const len = b.z1 - b.z0, along = -mesh.position.z - b.z0 + (b.belt ?? 0) * dt; mesh.position.z = -(b.z0 + ((along % len) + len) % len); }
+    if (!reduced) for (const { mesh, b } of stripes) {
+      if (b.beltX) { const len = b.x1 - b.x0, along = mesh.position.x - b.x0 + b.beltX * dt; mesh.position.x = b.x0 + ((along % len) + len) % len; }
+      else { const len = b.z1 - b.z0, along = -mesh.position.z - b.z0 + (b.belt ?? 0) * dt; mesh.position.z = -(b.z0 + ((along % len) + len) % len); }
+    }
     // Doors that broke burst; tiles show what is known.
     if (g.doors !== doorState) {
       [...g.doors].forEach((d, i) => {
@@ -264,7 +275,9 @@ export function createParcoursWorld(host: HTMLElement, read: () => MatchWorldFra
       const moving = !ownCam && Math.hypot(mine.vx, mine.vz) > 1 && (mine.pose === "run" || mine.pose === "air");
       if (ownCam) takeCameraTurn(local, d => chaseCam.turn(d));
       chaseCam.tune(f.local as ChaseLocal);
-      chaseCam.update(target, moving || fresh ? mine.face : undefined, dt, reduced, 1.4);
+      // Winding courses: the own camera turns along the way (a little ahead, so it swings round before a corner).
+      const wayFace = c.route && ownCam && mine.pose !== "done" ? routeFace(c, mine.x, mine.z, 2.5) : undefined;
+      chaseCam.update(target, wayFace ?? (moving || fresh ? mine.face : undefined), dt, reduced, wayFace !== undefined ? 2.2 : 1.4);
       fresh = false;
       if (ownCam) followCamera(local, f.input, chaseCam.yaw);
       host.dataset.yaw = chaseCam.yaw.toFixed(3);

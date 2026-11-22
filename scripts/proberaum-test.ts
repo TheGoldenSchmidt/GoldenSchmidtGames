@@ -22,7 +22,7 @@ for(let i=0;i<PRACTICE_STATIONS.length;i++){
 {
  const s=createProberaum();visitStation(s,1);const r=s.game.racers.practice;
  let jumps=0,top=0;
- for(let i=0;i<50;i++){if(r.grounded&&r.z>6.2)jumps++;stepProberaum(s,{...input(),y:-1,ha:true,ca:jumps});top=Math.max(top,r.y);}
+ for(let i=0;i<50;i++){if(r.grounded&&r.z>6.2)jumps++;stepProberaum(s,{...input(),y:-1,ha:r.pose==="hang"||(!r.grounded&&r.vy<=.5),ca:jumps});top=Math.max(top,r.y);}
  assert.ok(s.events.some(e=>e.kind==="climb"),"Hochziehen ausgelöst");
  assert.ok(top>=1.85,"Kletterstufe mit Originalphysik hochgezogen");
 }
