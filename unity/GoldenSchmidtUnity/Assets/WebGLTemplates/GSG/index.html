@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>{{{ PRODUCT_NAME }}}</title>
+    <link rel="stylesheet" href="TemplateData/style.css">
+  </head>
+  <body>
+    <canvas id="unity-canvas" tabindex="-1" aria-label="Unity-Spielfläche"></canvas>
+    <div id="gsg-loading" role="status" aria-live="polite">
+      <p class="gsg-loading__title">Unity wird geladen …</p>
+      <div class="gsg-loading__bar"><div id="gsg-loading-fill"></div></div>
+      <p id="gsg-loading-hint" class="gsg-loading__hint">Beim ersten Mal dauert es etwas, danach liegt das Spiel im Browser-Speicher.</p>
+    </div>
+    <!-- No inline script: the app's CSP only allows scripts from its own origin. -->
+    <script id="gsg-boot" src="TemplateData/boot.js"
+      data-loader="Build/{{{ LOADER_FILENAME }}}"
+      data-data="Build/{{{ DATA_FILENAME }}}"
+      data-framework="Build/{{{ FRAMEWORK_FILENAME }}}"
+      data-code="Build/{{{ CODE_FILENAME }}}"
+      data-company="{{{ COMPANY_NAME }}}"
+      data-product="{{{ PRODUCT_NAME }}}"
+      data-version="{{{ PRODUCT_VERSION }}}"></script>
+  </body>
+</html>

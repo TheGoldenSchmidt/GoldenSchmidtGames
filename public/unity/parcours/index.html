@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>GSG Unity-Test</title>
+    <link rel="stylesheet" href="TemplateData/style.css">
+  </head>
+  <body>
+    <canvas id="unity-canvas" tabindex="-1" aria-label="Unity-Spielfläche"></canvas>
+    <div id="gsg-loading" role="status" aria-live="polite">
+      <p class="gsg-loading__title">Unity wird geladen …</p>
+      <div class="gsg-loading__bar"><div id="gsg-loading-fill"></div></div>
+      <p id="gsg-loading-hint" class="gsg-loading__hint">Beim ersten Mal dauert es etwas, danach liegt das Spiel im Browser-Speicher.</p>
+    </div>
+    <!-- No inline script: the app's CSP only allows scripts from its own origin. -->
+    <script id="gsg-boot" src="TemplateData/boot.js"
+      data-loader="Build/724e4243b56545380d24ddf02a72a952.loader.js"
+      data-data="Build/5a56dc392c8584bd7101cb8e225b03f8.data.unityweb"
+      data-framework="Build/522241cd48b6dc074e700b60a7f94971.framework.js.unityweb"
+      data-code="Build/321ac8b85108e29d874002b662bbe544.wasm.unityweb"
+      data-company="GoldenSchmidtGames"
+      data-product="GSG Unity-Test"
+      data-version="0.1.0"></script>
+  </body>
+</html>

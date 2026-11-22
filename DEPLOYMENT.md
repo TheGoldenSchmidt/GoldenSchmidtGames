@@ -43,6 +43,8 @@ docker run --rm -p 3000:3000 -e PORT=3000 -v gsg-spielstaende:/app/.gsg-data gol
 
 Statisches Hosting unterstützt lokale Spiele und Handy-Räume; Serverräume brauchen einen erreichbaren Socket.IO-Server.
 
+Unity-Tests (`public/unity/<id>/`, [Unity-Tests](unity/README.md)): Der Node-Server setzt nur für `/unity/` eine gelockerte CSP (`'wasm-unsafe-eval'`, `blob:`, `frame-ancestors 'self'`, `X-Frame-Options: SAMEORIGIN`) und cacht `Build/`-Dateien dauerhaft. Andere Hoster brauchen dieselben Header, sonst starten die Builds nicht. Die Builds werden mit Unity erzeugt und eingecheckt; Docker/Render bauen sie nicht.
+
 ## Render und optional Turso
 
 Der Blueprint startet einen einzelnen Docker-Service im Free-Tarif ohne Datenbank-Zugangsdaten. Beide Hostingarten funktionieren. Auf [Render Free ist lokaler Speicher flüchtig](https://render.com/docs/free): Neustart, Einschlafen oder Deployment können Node-Partien löschen. Handy-Spielstände sind davon unabhängig.

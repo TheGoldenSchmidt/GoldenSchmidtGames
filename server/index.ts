@@ -13,10 +13,15 @@ export function createSpielraumServer(store = new RoomStore({ url: ":memory:" })
   const app = express();
   app.set("trust proxy", 1);
   app.use((request, response, next) => {
-    response.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ws: wss:; font-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'");
+    // Unity test builds (public/unity/) need WebAssembly compilation and blob: scripts and run
+    // inside the app's own frame; only these paths get that, the app itself stays strict.
+    const unity = request.path.startsWith("/unity/");
+    response.setHeader("Content-Security-Policy", unity
+      ? "default-src 'self'; script-src 'self' blob: 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' blob: data:; font-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'self'"
+      : "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ws: wss:; font-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'");
     response.setHeader("Referrer-Policy", "same-origin");
     response.setHeader("X-Content-Type-Options", "nosniff");
-    response.setHeader("X-Frame-Options", "DENY");
+    response.setHeader("X-Frame-Options", unity ? "SAMEORIGIN" : "DENY");
     response.setHeader("X-Robots-Tag", "noindex, nofollow");
     if (request.secure) response.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
     next();
@@ -70,7 +75,8 @@ if (existsSync(distDirectory)) {
     setHeaders(response, filePath) {
       if (filePath.endsWith("sw.js") || filePath.endsWith("manifest.webmanifest") || filePath.endsWith("index.html")) {
         response.setHeader("Cache-Control", "no-cache");
-      } else if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+      } else if (filePath.includes(`${path.sep}assets${path.sep}`) || (filePath.includes(`${path.sep}unity${path.sep}`) && filePath.includes(`${path.sep}Build${path.sep}`))) {
+        // Vite assets and Unity build files carry content hashes in their names.
         response.setHeader("Cache-Control", "public, max-age=31536000, immutable");
       }
     }

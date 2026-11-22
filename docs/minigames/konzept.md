@@ -180,6 +180,10 @@ Frühere Node-/Chromium-Messungen sind historische Vergleichswerte, keine Gerät
 
 `PracticeWorldScreen` ist ein eigener, verzögert geladener Einstieg aus der lokalen Spielauswahl. Er nutzt die bestehenden Touch-Steuerelemente, `parcoursWorld` und dessen 2D-Ersatzdarstellung. Geöffnete Werkzeuge, Pause und Animationsvorschau halten die Simulation an; beim App-Wechsel werden Eingaben neutralisiert. Die Vorschau nutzt die tatsächlichen Animationsclips der Parcoursfiguren und verändert keine Physik. Es werden keine Räume angelegt und keine Online-Spielstände geändert.
 
+## Unity-Tests
+
+Getrennt von den Match-Minispielen: Parcours-Probelevel und Floor is Lava als eigenständige Unity-WebGL-Builds im App-Rahmen (`src/unityGames.ts`, `UnityGameScreen`). Sie übernehmen Werte und Regeln aus `parcours.ts`/`parcoursCourses.ts` bzw. `floorIsLava.ts`, laufen aber lokal mit Unity-Physik ohne `roomCore`, Authorität oder Online-Räume. Aufbau, Prüfungen und offene Punkte: [Unity-Tests](../../unity/README.md).
+
 ## 3D-Darstellung und Parcours
 
 `MatchClient.world`/`MatchStage` wählen WebGL oder Canvas; `preloadMatchWorld` lädt im Intro. Gemeinsame Kameras/Größen/Effekte: `src/three/matchScene.ts`. Fehler/Kontextverlust führt ohne Raumverlust zur Canvas. HUD, Countdown, Eingaben und Ergebnis bleiben gemeinsam; reduzierte Bewegung entfernt nur Dekoration.

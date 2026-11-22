@@ -10,6 +10,7 @@ Match-Framework, Touch-Steuerung, Bots/Übung, Party-/Wettbewerbsanbindung und b
 - Neu (Nov. 2026): Tower Tumble – Survival, Neon Racer (Hochformat, Lenkrad/Pedale), Neon Racer – Kippen (Querformat, Bewegungssteuerung), Schneeballschlacht (3D). Regeln/Entscheidungen im [Konzept](konzept.md#dokumentierte-abweichungen).
 - Erste Generation: 14 klassische Arenen, Hook Wars, Chaos Run und Wippenwerk; weiter direkt wählbar.
 - Proberaum: lokale Übungsinsel mit neun Stationen, Pause/Reset, Figurenwahl und Animationsvorschau; kein Minispiel-/Pool-Eintrag.
+- Unity-Tests (Nov. 2026): Parcours-Probelevel (15 Stationen, alle Hindernisarten) und Floor is Lava gegen Bots als getrennte Unity-WebGL-Builds unter „Frei ausprobieren“; kein Pool-/Raumeintrag. [Unity-Tests](../../unity/README.md).
 - 3D-Match-Szenen mit Canvas-Rückfall. Figurenpipeline: [Skelettfiguren](figuren-rigged.md).
 
 **Implementiert ist keine Abnahme auf echten Handys.**
@@ -19,6 +20,7 @@ Match-Framework, Touch-Steuerung, Bots/Übung, Party-/Wettbewerbsanbindung und b
 | Thema | Nächster Schritt |
 | --- | --- |
 | Echte Geräte | Android/iPhone, möglichst älteres Gerät, Node und Handy-Host bis sechs Geräte nach [Gerätetest](geraetetest.md) prüfen. |
+| Unity-Vergleich | Beide Unity-Tests auf echten Handys gegen die Web-Fassungen spielen (Bildrate, Ladezeit, Wärme, Steuergefühl), Ergebnis festhalten und über Fortsetzung entscheiden. |
 | Handy-Hosting | `nearby.spec.ts` mit Match-Spielen in WebRTC-fähiger Umgebung prüfen. Frühere Cloud-Grenzen sind kein aktueller Laufbeleg. CI nur auf ausdrücklichen Wunsch. |
 | Tower Tumble | Hohe Türme, Pfeilsteuerung und Leistung auf Handy-Host/Render Free messen. Bots nur zum Üben. |
 | Kamera/Balance | Klettern, Balkentreffer, Sprung/Hechten, Lava-Etagen/Schubser, kleine Figuren, Light-Trails-Lenkung, Quick-Draw-Fairness und Funklatenz beurteilen. |
