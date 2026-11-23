@@ -48,7 +48,8 @@ namespace GSG
         readonly Dictionary<VisualElement, Action> taps = new();
         readonly Dictionary<string, VisualElement> actions = new();
         readonly Dictionary<string, Label> chips = new();
-        VisualElement zone, stickBase, stickKnob, actionBox, top, hint, toastBox, fade, overlayLayer;
+        readonly Dictionary<string, (VisualElement chip, VisualElement dot, Label text)> players = new();
+        VisualElement zone, stickBase, stickKnob, actionBox, top, strip, hint, toastBox, fade, overlayLayer;
         Label hintTitle, hintText, toast;
         Coroutine toastRoutine, fadeRoutine;
         Font title, text;
@@ -108,6 +109,8 @@ namespace GSG
             actionBox.pickingMode = PickingMode.Ignore;
             top = Add(Root, new VisualElement(), "gsg-top");
             top.pickingMode = PickingMode.Ignore;
+            strip = Add(Root, new VisualElement(), "gsg-strip");
+            strip.pickingMode = PickingMode.Ignore;
             hint = Add(Root, new VisualElement(), "gsg-hint", "is-hidden");
             hint.pickingMode = PickingMode.Ignore;
             var box = Add(hint, new VisualElement(), "gsg-hint__box");
@@ -179,7 +182,25 @@ namespace GSG
             actionBox.EnableInClassList("is-hidden", !visible);
         }
 
-        public void SetTopVisible(bool visible) => top.EnableInClassList("is-hidden", !visible);
+        public void SetTopVisible(bool visible) { top.EnableInClassList("is-hidden", !visible); strip.EnableInClassList("is-hidden", !visible); }
+
+        /// <summary>A player chip in the strip under the top row: colour dot, text; active = gold border, dim = out.</summary>
+        public void SetPlayer(string id, Color color, string value, bool active, bool dim)
+        {
+            if (!players.TryGetValue(id, out var p))
+            {
+                var chip = Add(strip, new VisualElement(), "gsg-player");
+                chip.pickingMode = PickingMode.Ignore;
+                var dot = Add(chip, new VisualElement(), "gsg-player__dot");
+                dot.pickingMode = PickingMode.Ignore;
+                p = (chip, dot, Text(chip, "", "gsg-player__text"));
+                players[id] = p;
+            }
+            p.dot.style.backgroundColor = color;
+            if (p.text.text != value) p.text.text = value;
+            p.chip.EnableInClassList("is-active", active);
+            p.chip.EnableInClassList("is-dim", dim);
+        }
 
         /// <summary>Cooldown overlay: 1 = just used, 0 = ready.</summary>
         public void SetCooldown(string id, float remaining)

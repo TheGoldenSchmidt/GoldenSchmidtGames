@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { UNITY_GAMES } from "../../src/unityGames";
 
-// Unity test games: separate WebGL builds in the app's own frame, open to everyone.
+// Unity test games: one shared WebGL build in the app's own frame (?spiel= picks the game), open to everyone.
 for (const game of UNITY_GAMES) test(`Unity-Test ${game.name}: Eintrag, Start im App-Rahmen unter der CSP, Rückkehr`, async ({ page }, info) => {
   test.skip(info.project.name !== "phone", "Nur Smartphone");
   test.setTimeout(180000);
@@ -15,7 +15,7 @@ for (const game of UNITY_GAMES) test(`Unity-Test ${game.name}: Eintrag, Start im
   await expect(entry).toBeVisible();
   await entry.tap();
   const frame = page.locator("iframe.unity-game__frame");
-  await expect(frame).toHaveAttribute("src", new RegExp(`^/unity/${game.id}/index\\.html`));
+  await expect(frame).toHaveAttribute("src", new RegExp(`^/unity/spiele/index\\.html\\?spiel=${game.id}(&|$)`));
   const unity = page.frameLocator("iframe.unity-game__frame");
   await expect(unity.getByText(/Unity wird geladen/)).toBeAttached();
   const handle = await frame.elementHandle();

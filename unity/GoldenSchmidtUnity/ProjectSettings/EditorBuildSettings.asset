@@ -6,6 +6,9 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/GSG/Scenes/Start.unity
+    guid: c6512d6be70796e4c838d495e2db3901
+  - enabled: 1
     path: Assets/GSG/Scenes/ParcoursProbe.unity
     guid: 82a48c9ebbaf3ab8c95c5298d38784ac
   - enabled: 1
@@ -13,6 +16,12 @@ EditorBuildSettings:
     guid: 0c7d883ff1553a607b8bf00946139175
   - enabled: 1
     path: Assets/GSG/Scenes/RollItUp.unity
-    guid: 00000000000000000000000000000000
+    guid: f0f86a0269598f228803ebdfd2fe5673
+  - enabled: 1
+    path: Assets/GSG/Scenes/SumoSmash.unity
+    guid: b73de4b7db8f47f38960c99edac30d8b
+  - enabled: 1
+    path: Assets/GSG/Scenes/BumperMayhem.unity
+    guid: 48010d6b114cebeb4880cab92a0e75d2
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}

@@ -1,6 +1,7 @@
 import { activePartyPlayer, ITEMS, ITEM_IDS, type Item, type PartyAction, type PartyGame } from "../shared/party";
 import { boardDistances, boardPathTo, boardRoute, FIELD_LABELS, fieldName, hasFullSet, JAYSPOT, partyBoard, partyPaths, stationAt, STATIONS } from "../shared/partyBoard";
 import { FIELD_HELP } from "./lib/partyFieldVisuals";
+import { unityGameUrl } from "./unityGames";
 
 /**
  * Bridge between the Roll It Up! rules (shared/party.ts, unchanged) and the Unity board
@@ -8,7 +9,7 @@ import { FIELD_HELP } from "./lib/partyFieldVisuals";
  * state into a flat snapshot that Unity's JsonUtility can read (no maps, no optional nesting)
  * and checks the actions coming back before they reach the room authority.
  */
-export const UNITY_ROLL_IT_UP_URL = "/unity/rollitup/index.html";
+export const UNITY_ROLL_IT_UP_URL = unityGameUrl("rollitup", undefined, false);
 
 export interface UnityRollField { id: number; x: number; z: number; type: string; next: number[]; station: string; price: number; name: string; help: string }
 export interface UnityRollItem { id: Item; name: string; icon: string; description: string; price: number; affordable: boolean }

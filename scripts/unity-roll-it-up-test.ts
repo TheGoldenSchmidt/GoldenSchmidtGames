@@ -74,3 +74,15 @@ assert.deepEqual(unityRollAction(shop, shopper.id, { type: "shop", item: "" }), 
 assert.deepEqual(unityRollAction(shop, shopper.id, { type: "shop", item: "sprint", replace: 1 }), { type: "shop", item: "sprint", replace: 1 });
 
 console.log("Unity-Brücke Roll It Up! erfolgreich: Brett, Zustand, Bewegung, Gabelung, Shop und Aktionsprüfung");
+
+// Shared Unity build: every app entry (and the Roll It Up! board) has a scene in the start switch.
+{
+  const { readFileSync } = await import("node:fs");
+  const { UNITY_GAMES, unityGameUrl } = await import("../src/unityGames");
+  const switchSource = readFileSync(new URL("../unity/GoldenSchmidtUnity/Assets/GSG/Scripts/Runtime/Common/GameSwitch.cs", import.meta.url), "utf8");
+  const ids = [...UNITY_GAMES.map(game => game.id as string), "rollitup"];
+  assert.equal(new Set(ids).size, ids.length, "Unity-IDs eindeutig");
+  for (const id of ids) assert.match(switchSource, new RegExp(`\\{ "${id}", "[A-Za-z]+" \\}`), `${id}: Szene in GameSwitch`);
+  assert.equal(unityGameUrl("sumo", "rig_lena", true), "/unity/spiele/index.html?spiel=sumo&figur=rig_lena&ruhig=1");
+  console.log(`Unity-Spielliste erfolgreich: ${ids.length} Einträge mit Szene im gemeinsamen Build`);
+}
