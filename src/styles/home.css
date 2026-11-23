@@ -24,6 +24,7 @@ body:has(.expedition-home) { padding: 0; }
 .expedition-status { border-radius: 99px; font-size: .76rem; gap: 8px; padding: 6px 12px; }
 .expedition-status i { height: 8px; width: 8px; border-radius: 50%; background: #b897a1; }
 .expedition-status i[data-online="true"] { background: #69efbb; box-shadow: 0 0 9px #46d89e; }
+.expedition-version { padding-left: 8px; border-left: 1px solid #b79c758a; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .menu-icon { width: 24px; height: 24px; display: block; flex-shrink: 0; }
 .menu-sound { display: grid; place-content: center; width: 44px; border-radius: 50%; }
 .menu-sound svg { width: 18px; height: 18px; }

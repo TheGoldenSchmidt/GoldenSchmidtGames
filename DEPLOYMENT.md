@@ -12,6 +12,8 @@ Deployments starten den Node-Prozess neu, können Wiederverbindungen/Cold Starts
 
 Installierte Apps übernehmen heruntergeladene Updates erst nach Bestätigung im Startmenü. Socket-/Zustandsänderungen abwärtskompatibel halten oder vor dem nächsten Spielabend alle Geräte aktualisieren. Laufende Spiele werden nicht automatisch neu geladen.
 
+Live-Version: Admins und Entwickler sehen im Startmenü neben „Online“ den PR, der gerade live ist (z. B. „PR #48“). Der Server liest ihn einmal pro Start aus dem Commit-Titel auf `main`. Auf Render kommt der Titel über `RENDER_GIT_COMMIT` und die öffentliche GitHub-API, da der Docker-Build kein `.git` enthält; lokal kommt er aus `git log`. Ohne Antwort zeigt das Menü den kurzen Commit. `/api/health` liefert beides unter `build`. Ein installiertes Gerät mit noch nicht übernommenem Update zeigt also die Serverversion, nicht die eigene.
+
 Eine separate Testumgebung ist noch nicht im Hosting eingerichtet. Einrichtung und Ablauf: [Zwischenstände testen](#zwischenstände-testen-ohne-main).
 
 Rücknahme: voriges Deployment im Render-Dashboard wiederherstellen oder einen `git revert` als PR nach `main` bringen. Kein Force-Push. Bei geändertem Speicherformat zuvor Rückwärtskompatibilität prüfen.

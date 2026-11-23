@@ -21,6 +21,8 @@ let introShown = false;
 interface HomeProps {
   profile: GuestProfile;
   signedIn?: boolean;
+  /** Admins and developers see which merged pull request the server runs. */
+  showVersion?: boolean;
   online: boolean;
   onProfile: () => void;
   onLocal: () => void;
@@ -32,8 +34,9 @@ interface HomeProps {
   resumeError?: string;
 }
 
-export function HomeScreen({profile, signedIn, online, onProfile, onLocal, onOnline, onUniverse, onResumeHost, onResumeOnline, resumeGameName = "Inselparty", resumeError}: HomeProps) {
+export function HomeScreen({profile, signedIn, showVersion, online, onProfile, onLocal, onOnline, onUniverse, onResumeHost, onResumeOnline, resumeGameName = "Inselparty", resumeError}: HomeProps) {
   const name = displayName(profile);
+  const version = useBuildVersion(showVersion && online);
   const hero = useRef<HTMLHeadingElement>(null);
   const [intro, setIntro] = useState<"loading" | "playing" | "complete">(() => introShown ? "complete" : "loading");
   useEffect(() => {
@@ -50,7 +53,7 @@ export function HomeScreen({profile, signedIn, online, onProfile, onLocal, onOnl
   }, [intro]);
   return <main className="home expedition-home" data-intro={intro}>
     <div className="expedition-bar">
-      <span className="expedition-status"><i data-online={online} />{online ? "Online" : "Offline"}</span>
+      <span className="expedition-status"><i data-online={online} />{online ? "Online" : "Offline"}{showVersion && version && <span className="expedition-version">{version}</span>}</span>
       <div className="expedition-account"><MenuSound/><button className="expedition-profile" onClick={onProfile} aria-label={`${signedIn ? "Konto" : "Gastprofil"}: ${name}`}>
         <span aria-hidden="true">{name.slice(0,1).toUpperCase()}</span><b>{name}</b>
       </button></div>
@@ -104,4 +107,18 @@ function ResumeButton({children, disabled, onClick}: {children: ReactNode; disab
       <span>{children}</span>
     </span>
   </button>;
+}
+
+/** "PR #48" for the merged pull request the server runs; the short commit if GitHub did not answer. */
+function useBuildVersion(active?: boolean) {
+  const [version, setVersion] = useState<string>();
+  useEffect(() => {
+    if (!active) return;
+    let current = true;
+    void fetch("/api/health").then(response => response.json() as Promise<{ build?: { pr?: number; commit?: string } }>)
+      .then(({ build }) => { if (current) setVersion(build?.pr ? `PR #${build.pr}` : build?.commit); })
+      .catch(() => { /* The version is a hint for developers; the menu works without it. */ });
+    return () => { current = false; };
+  }, [active]);
+  return version;
 }

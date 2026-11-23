@@ -102,3 +102,20 @@ test("Eine verspätete Gastabfrage hebt eine neue Anmeldung nicht auf", async ({
   await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   await expect(page.getByRole("button", { name: /^Konto:/ })).toBeVisible();
 });
+
+test("Live-Version nur für Admins und Entwickler im Startmenü", async ({ page, browser }, info) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const guest = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, reducedMotion: "reduce" });
+  try {
+    const guestPage = await guest.newPage();
+    await guestPage.goto("/");
+    await expect(guestPage.getByRole("button", { name: /^Gastprofil:/ })).toBeVisible();
+    await expect(guestPage.locator(".expedition-version")).toHaveCount(0);
+  } finally { await guest.close(); }
+  await loginTestOwner(page.request);
+  await page.goto("/");
+  // Lokal und in CI kommt die Nummer aus git; ohne PR-Titel bleibt der kurze Commit.
+  await expect(page.locator(".expedition-status .expedition-version")).toHaveText(/^(PR #\d+|[0-9a-f]{7,})$/);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: info.outputPath("version-390.png") });
+});

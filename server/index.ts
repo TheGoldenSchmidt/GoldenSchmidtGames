@@ -9,6 +9,7 @@ import path from "node:path";
 import { Server } from "socket.io";
 import { accountRoutes, sessionCookie } from "./accountRoutes";
 import { hashToken } from "./accountStore";
+import { buildVersion, type BuildVersion } from "./version";
 export function createSpielraumServer(store = new RoomStore({ url: ":memory:" })) {
   const app = express();
   app.set("trust proxy", 1);
@@ -64,8 +65,11 @@ export function createSpielraumServer(store = new RoomStore({ url: ":memory:" })
   }, store);
   io.use((_socket, next) => next(core.available ? undefined : new Error("Spielstände werden geladen.")));
 
+  // Resolved once per start; the health check never waits for GitHub.
+  let build: BuildVersion = {};
+  void buildVersion().then(result => { build = result; });
 app.get("/api/health", (_request, response) => {
-  response.status(core.available ? 200 : 503).json({ ok: core.available, version: "0.1.0", rooms: core.count });
+  response.status(core.available ? 200 : 503).json({ ok: core.available, version: "0.1.0", rooms: core.count, build });
 });
 
 const distDirectory = path.resolve(process.cwd(), "dist");
