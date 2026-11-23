@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { applyPwaUpdate, checkPwaUpdate } from "../lib/pwaUpdate";
+import { applyPwaUpdate, checkPwaUpdate, type PwaUpdateProgress } from "../lib/pwaUpdate";
 
 type Status = "idle" | "checking" | "ready" | "applying" | "current" | "error" | "unsupported";
+const progressMessage: Record<PwaUpdateProgress, string> = {
+  checking: "Die App sucht nach einer neuen Version …",
+  server: "Die App prüft, ob der Spielserver antwortet …",
+  retrying: "Die App versucht das Update erneut …"
+};
 
 export function AppUpdate() {
   const [status, setStatus] = useState<Status>("idle");
@@ -9,11 +14,12 @@ export function AppUpdate() {
   const [note, setNote] = useState(false);
   const registration = useRef<Promise<ServiceWorkerRegistration> | undefined>(undefined);
 
-  // The result floats briefly above the tool row and then hides again; it never takes layout space.
+  // The note floats above the tool row without taking layout space.
   useEffect(() => {
+    if (status === "checking") { setNote(true); return; }
     if (!["ready", "current", "error"].includes(status)) { setNote(false); return; }
     setNote(true);
-    const timer = setTimeout(() => setNote(false), 5000);
+    const timer = setTimeout(() => setNote(false), status === "error" ? 12000 : 5000);
     return () => clearTimeout(timer);
   }, [status, message]);
 
@@ -32,32 +38,48 @@ export function AppUpdate() {
     let active = true;
     let cleanup = () => {};
     getRegistration().then(reg => {
-      const inspect = () => { if (active && reg.active && reg.waiting) setStatus("ready"); };
+      if (!active) return;
+      let worker: ServiceWorker | null;
+      const inspect = () => {
+        if (reg.active && reg.waiting) {
+          setStatus(current => current === "checking" || current === "applying" ? current : "ready");
+        }
+      };
       const found = () => {
-        const worker = reg.installing;
+        worker?.removeEventListener("statechange", inspect);
+        worker = reg.installing;
         worker?.addEventListener("statechange", inspect);
-        cleanup = () => { reg.removeEventListener("updatefound", found); worker?.removeEventListener("statechange", inspect); };
       };
       reg.addEventListener("updatefound", found);
-      cleanup = () => reg.removeEventListener("updatefound", found);
+      cleanup = () => { reg.removeEventListener("updatefound", found); worker?.removeEventListener("statechange", inspect); };
       found(); inspect();
-    }).catch(() => { if (active) { setStatus("error"); setMessage("Update-Prüfung derzeit nicht verfügbar. Bitte mit Internetverbindung erneut versuchen."); } });
+    }).catch(error => {
+      if (active) console.warn("App-Update: Initialisierung fehlgeschlagen.", error);
+    });
     return () => { active = false; cleanup(); };
   }, []);
 
   async function check() {
     if (!navigator.onLine) { setStatus("error"); setMessage("Zum Prüfen auf Updates ist eine Internetverbindung nötig."); return; }
-    setStatus("checking"); setMessage("");
+    setStatus("checking");
     try {
-      const ready = await checkPwaUpdate(await getRegistration());
+      const ready = await checkPwaUpdate(getRegistration, progress => setMessage(progressMessage[progress]));
       setStatus(ready ? "ready" : "current");
-    } catch (error) { setStatus("error"); setMessage(error instanceof Error ? error.message : "Update-Prüfung fehlgeschlagen."); }
+    } catch (error) {
+      console.warn("App-Update: Wiederholung fehlgeschlagen.", error);
+      setStatus("error");
+      setMessage(error instanceof Error ? error.message : "Die Update-Prüfung ist fehlgeschlagen. Bitte erneut prüfen.");
+    }
   }
 
   async function apply() {
     setStatus("applying"); setMessage("");
     try { await applyPwaUpdate(await getRegistration(), navigator.serviceWorker); window.location.reload(); }
-    catch (error) { setStatus("error"); setMessage(error instanceof Error ? error.message : "Aktualisierung fehlgeschlagen."); }
+    catch (error) {
+      console.warn("App-Update: Aktivierung fehlgeschlagen.", error);
+      setStatus("error");
+      setMessage(error instanceof Error ? error.message : "Das Update konnte nicht gestartet werden. Bitte erneut prüfen.");
+    }
   }
 
   return <aside className="app-update" aria-label="App aktualisieren" data-status={status} data-note={note}>
