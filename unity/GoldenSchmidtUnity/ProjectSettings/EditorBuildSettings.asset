@@ -32,5 +32,14 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/GSG/Scenes/TowerTumble.unity
     guid: 958aad369dca133ab8033aaa22fc0308
+  - enabled: 1
+    path: Assets/GSG/Scenes/TowerSurvival.unity
+    guid: 2833180e06614801cb09d041adeac015
+  - enabled: 1
+    path: Assets/GSG/Scenes/Tuerenlotto.unity
+    guid: f7b31078b63f5dfaeb9d9a73ba3b58bb
+  - enabled: 1
+    path: Assets/GSG/Scenes/Kreiselkurs.unity
+    guid: 2bbd269502868f0b2be6c1ad570d8dbf
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}

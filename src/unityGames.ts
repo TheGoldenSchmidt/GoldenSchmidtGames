@@ -13,7 +13,10 @@ export const UNITY_GAMES = [
   { id: "bumpercars", name: "Bumper Mayhem", text: "Autoscooter auf der Neonfläche mit Turbo und Item-Kisten, gebaut in Unity.", note: `Gegen Bots · ${NOTE}` },
   { id: "bombs", name: "Bomb Arena", text: "Bomben, Kettenreaktionen und Extras in der Bombenfabrik, gebaut in Unity.", note: `Gegen Bots · ${NOTE}` },
   { id: "snowball", name: "Schneeballschlacht", text: "Formen, werfen, Deckung suchen in der Winterarena, gebaut in Unity.", note: `Gegen Bots · ${NOTE}` },
-  { id: "tower", name: "Tower Tumble", text: "Turmrennen mit echter Unity-Physik: Steine kippen, rutschen, stürzen.", note: `Gegen Bots · ${NOTE}` }
+  { id: "tower", name: "Tower Tumble", text: "Turmrennen mit echter Unity-Physik: Steine kippen, rutschen, stürzen.", note: `Gegen Bots · ${NOTE}` },
+  { id: "towersurvival", name: "Tower Tumble – Survival", text: "Bauen ohne Ziellinie, immer schneller: drei verlorene Steine und du bist raus.", note: `Gegen Bots · ${NOTE}` },
+  { id: "tuerenlotto", name: "Türenlotto", text: "Parcours-Lauf: echte und falsche Türen, Gassen mit Sackgassen und Falltüren.", note: `Gegen Bots · ${NOTE}` },
+  { id: "kreiselkurs", name: "Kreiselkurs", text: "Parcours-Lauf: Drehbalken, fahrende Inseln, Wippen und das Rührwerk.", note: `Gegen Bots · ${NOTE}` }
 ] as const;
 
 export type UnityGameId = typeof UNITY_GAMES[number]["id"];

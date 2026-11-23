@@ -14,6 +14,8 @@ namespace GSG.Parcours
     public static class ParcoursLevel
     {
         static Transform root;
+        /// <summary>Parent of everything the helpers build (the course builder sets its own).</summary>
+        internal static Transform Root { get => root; set => root = value; }
         static readonly Dictionary<string, Material> cache = new();
 
         public static readonly (string name, string hint)[] Stations =
@@ -42,13 +44,13 @@ namespace GSG.Parcours
             public Transform start;
         }
 
-        static Material Mat(string name)
+        internal static Material Mat(string name)
         {
             if (!cache.TryGetValue(name, out var m) || !m) cache[name] = m = Resources.Load<Material>("GSG/Materials/" + name);
             return m;
         }
 
-        static GameObject Box(string name, float x0, float x1, float y0, float y1, float z0, float z1, string material, Transform parent = null, bool collider = true)
+        internal static GameObject Box(string name, float x0, float x1, float y0, float y1, float z0, float z1, string material, Transform parent = null, bool collider = true)
         {
             var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
             go.name = name;
@@ -60,9 +62,9 @@ namespace GSG.Parcours
             return go;
         }
 
-        static GameObject Floor(float z0, float z1, float y = 0f, float x0 = -5f, float x1 = 5f, string material = "Floor") => Box("Boden", x0, x1, y - 1f, y, z0, z1, material);
+        internal static GameObject Floor(float z0, float z1, float y = 0f, float x0 = -5f, float x1 = 5f, string material = "Floor") => Box("Boden", x0, x1, y - 1f, y, z0, z1, material);
 
-        static GameObject Cylinder(string name, Vector3 at, float radius, float length, Vector3 axis, string material, Transform parent = null, bool collider = true)
+        internal static GameObject Cylinder(string name, Vector3 at, float radius, float length, Vector3 axis, string material, Transform parent = null, bool collider = true)
         {
             var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             go.name = name;
@@ -76,7 +78,7 @@ namespace GSG.Parcours
         }
 
         /// <summary>Invisible ramp collider whose top runs from (za, ya) to (zb, yb).</summary>
-        static void Ramp(float x0, float x1, float za, float ya, float zb, float yb)
+        internal static void Ramp(float x0, float x1, float za, float ya, float zb, float yb)
         {
             var go = new GameObject("Rampe");
             go.transform.SetParent(root, false);
@@ -89,7 +91,7 @@ namespace GSG.Parcours
         }
 
         /// <summary>Stairs from height `from` to `to` between z0 and z1 (0.3 m steps, walked up on a ramp collider).</summary>
-        static void Stairs(float z0, float z1, float from, float to, float x0 = -5f, float x1 = 5f)
+        internal static void Stairs(float z0, float z1, float from, float to, float x0 = -5f, float x1 = 5f)
         {
             int steps = Mathf.Max(1, Mathf.CeilToInt(Mathf.Abs(to - from) / 0.3f));
             float depth = (z1 - z0) / steps;
@@ -102,7 +104,7 @@ namespace GSG.Parcours
             else Ramp(x0, x1, z0 + depth * 0.5f, from, z1 + depth * 0.5f, to);
         }
 
-        static BreakDoor[] DoorWall(float z, int count, float x0, float x1, float y, bool lintel = true)
+        internal static BreakDoor[] DoorWall(float z, int count, float x0, float x1, float y, bool lintel = true)
         {
             float pitch = (x1 - x0) / count, post = 0.4f;
             var doors = new BreakDoor[count];
@@ -121,7 +123,7 @@ namespace GSG.Parcours
             return doors;
         }
 
-        static void Bar(float x, float z, float baseY, float y0, float y1, float halfLength, float speed, float phase)
+        internal static void Bar(float x, float z, float baseY, float y0, float y1, float halfLength, float speed, float phase)
         {
             var pivot = new GameObject("Drehbalken");
             pivot.transform.SetParent(root, false);
@@ -142,7 +144,7 @@ namespace GSG.Parcours
             Cylinder("Mast", new Vector3(0f, (y1 + 0.3f) / 2f, 0f), 0.22f, y1 + 0.3f, Vector3.up, "Wall", pivot.transform);
         }
 
-        static Checkpoint Check(int index, float z, float y, float halfWidth = 6f)
+        internal static Checkpoint Check(int index, float z, float y, float halfWidth = 6f)
         {
             var go = new GameObject("Kontrollpunkt " + (index + 1));
             go.transform.SetParent(root, false);
@@ -401,7 +403,7 @@ namespace GSG.Parcours
         }
 
         /// <summary>Gameshow surroundings: a deep floor far below, striped towers and floating balloons.</summary>
-        static void Decor()
+        internal static void Decor()
         {
             var deco = new GameObject("Kulisse").transform;
             deco.SetParent(root, false);

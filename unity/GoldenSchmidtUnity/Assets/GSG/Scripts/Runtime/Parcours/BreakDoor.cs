@@ -11,6 +11,9 @@ namespace GSG.Parcours
     {
         public bool real;
         bool done;
+        /// <summary>Someone ran into it; <see cref="Open"/> = it burst (a real door).</summary>
+        public bool Tried => done;
+        public bool Open => done && real;
         Renderer look;
 
         void Awake() { look = GetComponent<Renderer>(); }
@@ -24,6 +27,7 @@ namespace GSG.Parcours
             if (v.magnitude < 1.2f && !runner.IsDiving) return;
             done = true;
             if (real) StartCoroutine(Burst(runner));
+            else if (runner.bot) { look.material.SetColor("_BaseColor", Palette.DoorSolid); StartCoroutine(Wobble()); runner.Bounce(-runner.Heading * 3.5f); }
             else
             {
                 look.material.SetColor("_BaseColor", Palette.DoorSolid);
@@ -37,9 +41,8 @@ namespace GSG.Parcours
         IEnumerator Burst(ParcoursRunner runner)
         {
             GetComponent<Collider>().enabled = false;
-            Sfx.Play("break");
-            Fx.Shake(0.5f);
-            Fx.HitStop(0.06f);
+            Sfx.Play("break", runner.bot ? 0.45f : 1f);
+            if (!runner.bot) { Fx.Shake(0.5f); Fx.HitStop(0.06f); }
             var b = look.bounds;
             Fx.Shards(b.center, Palette.Door, 18);
             Fx.Sparks(b.center, Palette.Accent, 8);

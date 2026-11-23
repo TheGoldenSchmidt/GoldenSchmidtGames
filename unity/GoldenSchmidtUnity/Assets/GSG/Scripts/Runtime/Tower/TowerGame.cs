@@ -93,8 +93,8 @@ namespace GSG.Tower
 
         protected override string GameName => survival ? "Tower Tumble – Survival" : "Tower Tumble";
         protected override string Intro => survival
-            ? "Alle bauen gleichzeitig mit denselben Steinen. ⇦ ⇨ schieben (halten: weiter), ⟳ dreht, ⇩ halten lässt schnell fallen. Sobald ein Stein aufsetzt, gilt echte Physik. Fällt dein dritter Stein vom Turm, bist du raus; die Steine werden immer schneller."
-            : "Alle bauen gleichzeitig mit denselben Steinen. ⇦ ⇨ schieben den Stein (halten: weiter), ⟳ dreht, ⇩ halten lässt ihn schnell fallen. Sobald ein Stein aufsetzt, gilt echte Physik: Steine kippen, rutschen und stürzen ab. Wer zuerst 2 Sekunden über der Ziellinie steht, gewinnt.";
+            ? "Alle bauen gleichzeitig mit denselben Steinen. „Links“/„Rechts“ schieben (halten: weiter), „Drehen“ dreht, „Fallen“ halten lässt schnell fallen. Sobald ein Stein aufsetzt, gilt echte Physik. Fällt dein dritter Stein vom Turm, bist du raus; die Steine werden immer schneller."
+            : "Alle bauen gleichzeitig mit denselben Steinen. „Links“/„Rechts“ schieben den Stein (halten: weiter), „Drehen“ dreht, „Fallen“ halten lässt ihn schnell fallen. Sobald ein Stein aufsetzt, gilt echte Physik: Steine kippen, rutschen und stürzen ab. Wer zuerst 2 Sekunden über der Ziellinie steht, gewinnt.";
         protected override string ResultText => survival ? "Wer zuletzt noch baut, gewinnt; nach drei Minuten der höchste Turm." : "Nach zwei Minuten entscheidet die Höhe.";
         protected override bool ControlsVisible => towers.Count > 0 && !towers[0].Out && !done;
 

@@ -11,7 +11,7 @@ Installierbare Smartphone-PWA für eine Freundesrunde: lokale Tischspiele, Brett
 | Freies Minispiel | Passendes Minispiel direkt wählen |
 | Schlag den GoldenSchmidt | Wettbewerb mit einmaligen verdeckten Einsätzen |
 | Proberaum | Lokale Übungsinsel für Entwickler und Admins; Verbindung zum Öffnen erforderlich |
-| Unity-Fassungen | Parcours-Probelevel, Floor is Lava, Sumo Smash, Bumper Mayhem, Bomb Arena, Schneeballschlacht und Tower Tumble in einem gemeinsamen Unity-WebGL-Build unter „Frei ausprobieren“; allein/gegen Bots, Internet beim ersten Start ([Unity-Minispiele](UnityGames.md)) |
+| Unity-Fassungen | Parcours-Probelevel, Floor is Lava, Sumo Smash, Bumper Mayhem, Bomb Arena, Schneeballschlacht, Tower Tumble (+ Survival), Türenlotto und Kreiselkurs in einem gemeinsamen Unity-WebGL-Build unter „Frei ausprobieren“; allein/gegen Bots, Internet beim ersten Start ([Unity-Minispiele](UnityGames.md)) |
 | Rich’s Universe | Eigener Bereich für lokale Experimente |
 
 Vorher eine Figur wählen. Modi/Spielerzahlen: [Spielekatalog](shared/games.ts), einzelne Minispiele: [Minispielkatalog](shared/minigameCatalog.ts). Binokel ist angekündigt, noch nicht spielbar.
