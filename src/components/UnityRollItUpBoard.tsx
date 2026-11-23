@@ -23,7 +23,7 @@ export function UnityRollItUpBoard({ game, viewer, now, busy, connected, error, 
   const latest = useRef({ game, send, onPanel });
   latest.current = { game, send, onPanel };
   const reduced = useMemo(() => typeof window !== "undefined" && (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false), []);
-  const src = `${UNITY_ROLL_IT_UP_URL}${reduced ? "?ruhig=1" : ""}`;
+  const src = `${UNITY_ROLL_IT_UP_URL}${reduced ? "&ruhig=1" : ""}`;
 
   const post = (payload: unknown) => frame.current?.contentWindow?.postMessage({ source: "gsg-app", payload }, window.location.origin);
   const snapshot = () => unityRollState(latest.current.game, viewer, { serverNow: now, busy, connected, error, reduced });

@@ -4,16 +4,42 @@ Verbindlich für alle Arbeiten an Unity-Minispielen und am Unity-Brett von Roll 
 
 ## Zweck und Stand
 
-Probe, ob Unity ein besseres Spielerlebnis liefert als die Three.js-/Canvas-Spiele der App. Jedes Unity-Spiel ist ein **eigenständiges Minispiel mit eigenem WebGL-Build**, in der App unter **Lokal spielen → Frei ausprobieren** für alle sichtbar (`src/unityGames.ts`). Sie laufen lokal auf einem Handy: keine Räume, kein Zufallspool, kein Offline-Cache.
+Alle Minispiele, die nicht zur ersten Generation gehören (`NEW_MATCH_IDS` in `shared/minigameCatalog.ts`), werden schrittweise als Unity-Fassung umgesetzt. Jedes Unity-Spiel ist ein **eigenständiges Minispiel** in **einem gemeinsamen WebGL-Build** (`public/unity/spiele/`, `?spiel=<id>` wählt die Szene), in der App vorerst nur unter **Lokal spielen → Frei ausprobieren** für alle sichtbar (`src/unityGames.ts`). Sie laufen lokal auf einem Handy gegen Bots: keine Räume, kein Zufallspool, kein Offline-Cache. Die Web-Fassungen bleiben unverändert im Spiel.
 
 | Spiel | Inhalt | Build |
 | --- | --- | --- |
-| Parcours-Probelevel (`parcours`) | 15 Stationen mit allen Hindernisarten der Online-Parcours (`parcoursCourses.ts`): Stufen/Lücke, Türenwand (2 von 5 echt), Schieber, Drehbalken unten/oben/Kreuz, Fahrinseln, Wippen, Förderband mit Walzen, Kletterkante, Geisterpfad, Fallklappen mit Vorwarnung, Windsteg, Wechselgriffe, Glibbergrube, Türgänge (weiter/Sackgasse/Falltür/zu), Ziel. Allein, mit Kontrollpunkten, Zeit, Stürzen und Bestzeit. | `public/unity/parcours/` |
-| Floor is Lava (`lava`) | Regeln aus `shared/matches/floorIsLava.ts`: 3 Etagen à 9 × 13 Platten, Bröseln nach 0,8 s, Runenplatten kehren nach 2,5 s zurück, Rand stürzt bei 16 s und 23 s ein, Springen/Hechten/Schubsen mit Abklingzeiten, +1 je früher gefallene Person, +3 für Überlebende, drei Durchgänge und Stechrunde. Du gegen drei Bots (Bot-Logik portiert). | `public/unity/lava/` |
+| Parcours-Probelevel (`parcours`) | 15 Stationen mit allen Hindernisarten der Online-Parcours (`parcoursCourses.ts`): Stufen/Lücke, Türenwand (2 von 5 echt), Schieber, Drehbalken unten/oben/Kreuz, Fahrinseln, Wippen, Förderband mit Walzen, Kletterkante, Geisterpfad, Fallklappen mit Vorwarnung, Windsteg, Wechselgriffe, Glibbergrube, Türgänge (weiter/Sackgasse/Falltür/zu), Ziel. Allein, mit Kontrollpunkten, Zeit, Stürzen und Bestzeit. | Szene `ParcoursProbe` |
+| Floor is Lava (`lava`) | Regeln aus `shared/matches/floorIsLava.ts`: 3 Etagen à 9 × 13 Platten, Bröseln nach 0,8 s, Runenplatten kehren nach 2,5 s zurück, Rand stürzt bei 16 s und 23 s ein, Springen/Hechten/Schubsen mit Abklingzeiten, +1 je früher gefallene Person, +3 für Überlebende, drei Durchgänge und Stechrunde. Du gegen drei Bots (Bot-Logik portiert). | Szene `FloorIsLava` |
+| Sumo Smash (`sumo`) | Regeln aus `ringCore.ts` + `sumoSmash.ts` in 50-ms-Schritten (C#-Port `Ring/RingSim.cs`): Stoß mit Rückstoß, 3 Leben, Ring-Out +2, Ring schrumpft ab 40 s, Entscheid nach 75 s, Sudden Death. Podest über einem See mit Torii; Stürze ins Wasser. | Szene `SumoSmash` |
+| Bumper Mayhem (`bumpercars`) | Gleicher Ringkern + `bumperMayhem.ts`: Lenken/Turbo, Schleudern, Item-Kisten (Riesenauto, Ölfleck, Schockwelle), drehende Pfosten, Fläche schrumpft ab 45 s. Neonfläche mit Riesenrad. | Szene `BumperMayhem` |
+| Bomb Arena (`bombs`) | Port von `bombArena.ts` (`Bombs/BombSim.cs`): 11 × 15 Felder, 2-s-Zünder, Kreuzflammen mit Ketten, Kisten mit Extras (Reichweite, Bombe, Tempo, Kick), Spirale ab 25 s, 2 Leben, K.o. +2, Durchgangssieg +3, zwei Durchgänge, Sudden Death. | Szene `BombArena` |
+| Schneeballschlacht (`snowball`) | Port von `snowball.ts` (`Snow/SnowSim.cs`): Formen/Schneehaufen, höchstens zwei Bälle, Wurf rastet auf den nächsten Gegner im Bild ein (Vorhalt), −10 % Tempo je Treffer, Schneemann nach drei. Verfolgerkamera, Wischen dreht. Zielen per Ziehen gibt es noch nicht, nur den Tipp-Wurf. | Szene `Schneeballschlacht` |
+| Tower Tumble (`tower`) | Turmrennen aus `towerTumble.ts` (Steinfolge, Steuerung, Ziellinie 16, 2 s halten, 120 s, Bot-Planer); die Physik ist **Unity-PhysX in der Turmebene** statt `physics2d.ts` (Reibung 0,9, Schwerkraft 18). Survival ist im Code vorbereitet (`survival`), aber noch nicht eingetragen. | Szene `TowerTumble` |
 
-Dazu kommt **Roll It Up! (Unity)** (`rollitup`, `public/unity/rollitup/`): die Bauschale als Unity-Brett. Nur für Admin/Entwicklung sichtbar (`canDevelop`) unter **Frei ausprobieren**; startet eine Testpartie mit Bots am lokalen Tisch. Regeln, Bots, Items, Inventar/Menü und die Minispiele zwischen den Runden bleiben unverändert in der App (`shared/party.ts` über die Raumautorität); Unity zeichnet nur Schale, Felder, Stationen, Figuren, Würfel und die Brett-Entscheidungen.
+Dazu kommt **Roll It Up! (Unity)** (`rollitup`, Szene `RollItUp`): die Bauschale als Unity-Brett. Nur für Admin/Entwicklung sichtbar (`canDevelop`) unter **Frei ausprobieren**; startet eine Testpartie mit Bots am lokalen Tisch. Regeln, Bots, Items, Inventar/Menü und die Minispiele zwischen den Runden bleiben unverändert in der App (`shared/party.ts` über die Raumautorität); Unity zeichnet nur Schale, Felder, Stationen, Figuren, Würfel und die Brett-Entscheidungen.
 
 Was Unity hier anders macht: echte Physik (Wippen mit Gelenk, Türsplitter als Rigidbodies, Platten fallen wirklich durch Löcher), eine Toon-Shaderfamilie für das ganze Bild mit Echtzeitschatten, HDR-Bloom, Nebel und Partikeln, Kameraschütteln und Hit-Stop, zur Laufzeit synthetisierte Geräusche und Musik, UI-Toolkit-HUD mit Mehrfinger-Touch.
+
+### Reihenfolge der Umstellung
+
+Begründung: zuerst Spiele, die am meisten von 3D/Physik gewinnen und eine gemeinsame Basis legen; flache Reaktions- und Draufsichtspiele zuletzt. Nach den ersten fünf gab es eine Rückmeldungsrunde.
+
+| # | Spiel | Stand |
+| --- | --- | --- |
+| 1 | Sumo Smash | umgesetzt (Nov. 2026) |
+| 2 | Bumper Mayhem | umgesetzt (Nov. 2026) |
+| 3 | Bomb Arena | umgesetzt (Nov. 2026) |
+| 4 | Schneeballschlacht | umgesetzt (Nov. 2026) |
+| 5 | Tower Tumble | umgesetzt (Nov. 2026) |
+| 6 | Tower Tumble – Survival | offen (Code vorbereitet) |
+| 7–13 | Parcours-Läufe Türenlotto, Kreiselkurs, Geisterpfad, Fallklappen, Windkanal, Kletterwand, Glibberflut | offen (Hindernisse aus dem Probelevel) |
+| 14 | Standhaft | offen |
+| 15 | Arrow Masters | offen |
+| 16–17 | Neon Racer, Neon Racer – Kippen | offen |
+| 18–19 | Tank Trouble, Turmsicht | offen |
+| 20–22 | Light Trails, Neon Pong, Quick Draw | offen |
+
+Floor is Lava ist bereits umgesetzt; Wippenwerk, Hook Wars, Chaos Run und die klassischen Arenen gehören zur ersten Generation und werden nicht umgestellt.
 
 ## Regeln
 
@@ -32,7 +58,8 @@ Was Unity hier anders macht: echte Physik (Wippen mit Gelenk, Türsplitter als R
 
 | Ort | Inhalt |
 | --- | --- |
-| `Assets/GSG/Scripts/Runtime/Common` | `Palette`, `Hud` (UI Toolkit + Touch), `CameraRig` (Cinemachine), `Figure`, `Sfx` (Synthese), `Fx` (Partikel, Shake, Hit-Stop), `SceneLook`, `AppLink` (URL-Parameter) |
+| `Assets/GSG/Scripts/Runtime/Common` | `Palette`, `Hud` (UI Toolkit + Touch, Spielerleiste, Tasten links), `CameraRig` (Cinemachine), `Figure`, `Sfx` (Synthese), `Fx` (Partikel, Shake, Hit-Stop), `SceneLook`, `AppLink` (URL-Parameter), `GameSwitch` (Startszene, `?spiel=`), `MatchGame` + `Seat` (Spielhülle: Titel, Countdown, Pause, Endtafel, Spieler gegen Bots), `Kit` (Toon-Materialien, Grundkörper, erzeugte Meshes mit neutraler UV) |
+| `Assets/GSG/Scripts/Runtime/Ring`, `Bombs`, `Snow`, `Tower` | Regel-Ports (`RingSim`, `BombSim`, `SnowSim`) und Spiele (`RingGame` für Sumo/Bumper, `BombGame`, `SnowGame`, `TowerGame`) |
 | `Assets/GSG/Scripts/Runtime/Parcours` | `ParcoursRunner`, Hindernisse (je Datei ein MonoBehaviour), `ParcoursLevel` (Aufbau aller Stationen), `ParcoursGame` (Ablauf) |
 | `Assets/GSG/Scripts/Runtime/Lava` | `LavaTile`, `LavaRunner`, `LavaGame` (Regeln, Bots, Ablauf) |
 | `Assets/GSG/Scripts/Runtime/RollItUp` | `RollModels` (Spiegel von `src/unityRollItUp.ts`), `RollBridge` (Nachrichten), `RollWorld` (Bauschale nach `src/three/rollingTray.ts`), `RollUi` (Kopfzeile, Spielerliste, Entscheidungskarte, Beschriftungen), `RollGame` (Figuren, Würfel, Kamera, Feldinfo per Tipp) |
@@ -42,16 +69,16 @@ Was Unity hier anders macht: echte Physik (Wippen mit Gelenk, Türsplitter als R
 | `Assets/GSG/Resources/GSG` | Materialien, Figuren-Prefabs, Schriften, HUD-Stylesheets (`Hud.uss`, `Roll.uss`), Panel-Einstellungen, `RollDemo.json` (vorbereitete Brettzustände für Editor und `?demo=1`) |
 | `Assets/WebGLTemplates/GSG` | Startseite ohne Inline-Skript (CSP), Ladebalken, Pixeldichte ≤ 2 |
 
-Menü **GSG → 1 Alles einrichten** (oder `GSGSetup.All()`) baut Materialien, Figuren, alle drei Szenen und die WebGL-Einstellungen reproduzierbar neu. Einzelschritte: Menü GSG 2–8.
+Menü **GSG → 1 Alles einrichten** (oder `GSGSetup.All()`) baut Materialien, Figuren, alle Szenen und die WebGL-Einstellungen reproduzierbar neu. Einzelschritte: Menü GSG 2–10 (9 = Startszene, 10 = Szenen der Match-Spiele aus `MatchScenes`).
 
 Eigene Meshes (Drehkörper, Hügel, Steine) brauchen UV-Koordinaten: `GSG/Toon` zeichnet die Comic-Kante dort, wo die UV 0 oder 1 erreicht – ohne UV wird die ganze Fläche schwarz. `RollWorld` setzt deshalb eine neutrale UV.
 
 ## Neues Unity-Minispiel anlegen
 
-1. Laufzeitcode in `Assets/GSG/Scripts/Runtime/<Spiel>/`, gemeinsame Bausteine aus `Common` wiederverwenden (HUD, Kamera, Figur, Klänge, Effekte, Palette). Ein MonoBehaviour pro Datei, Dateiname = Klassenname (sonst kann der Player-Build abstürzen).
-2. Szene in `GSGSetup` als eigene Methode bauen (wie `BuildParcoursScene`/`BuildLavaScene`) und in `EditorBuildSettings` aufnehmen.
-3. Shell wie bei den bestehenden Spielen: Titel über der laufenden Szene, Pause (Weiter, Neustart, Ton/Musik), Endtafel mit Ergebnis und „Nochmal“.
-4. Eintrag in `src/unityGames.ts` (`id` = Ordner unter `public/unity/`). Playwright- und Produktionsprüfung durchlaufen alle Einträge automatisch.
+1. Regeln aus `shared/matches/<spiel>.ts` als C#-Port übernehmen (gleiche Konstanten, Zeit in ms, 50-ms-Schritte, Bots), nur wo Unity klar gewinnt eigene Physik (z. B. Tower Tumble). Laufzeitcode in `Assets/GSG/Scripts/Runtime/<Spiel>/`. Ein MonoBehaviour pro Datei, Dateiname = Klassenname (sonst kann der Player-Build abstürzen).
+2. Das Spiel erbt von `MatchGame` (Titel, Countdown, Pause, Endtafel, `Seat.Roster`) und baut seine Welt mit `Kit`.
+3. Szene in `GSGSetup.MatchScenes` und `BuildMatchScenes` eintragen; `Project()` nimmt sie in die Build-Einstellungen. Eintrag in `GameSwitch.Scenes` (`id` → Szenenname).
+4. Eintrag in `src/unityGames.ts`. `npm run test:rules` prüft, dass jede ID eine Szene in `GameSwitch` hat; die Browserprüfung startet jeden Eintrag.
 5. Build erzeugen (unten), [Prüfungen](#prüfungen) ausführen, diese Datei und betroffene Doku nachführen.
 
 ## Arbeitsumgebung (Cloud-Sitzung)
@@ -72,25 +99,25 @@ Eigene Meshes (Drehkörper, Hügel, Steine) brauchen UV-Koordinaten: `GSG/Toon` 
 
 1. Plattform einmal auf WebGL umstellen: `unity command build.target switch -- --target WebGL --confirm true`.
 2. Vor jedem Build warten, bis der Editor bereit ist (kein Kompilieren, keine Domain-Reload) – sonst „Error building Player because scripts are compiling“ oder „No Pipeline instance found“.
-3. **Jedes Spiel in einen eigenen Ordner unter `unity/GoldenSchmidtUnity/Builds/<id>/` bauen, danach nach `public/unity/<id>/` kopieren.** Unitys inkrementeller WebGL-Build räumt sonst den Ausgabeordner des vorherigen Builds ab.
+3. **Ein gemeinsamer Build mit allen Szenen der Build-Einstellungen, Startszene zuerst**, nach `unity/GoldenSchmidtUnity/Builds/spiele/`, danach nach `public/unity/spiele/` kopieren (vorher den alten Ordner löschen).
 
    ```bash
-   unity command build run --project-path <Pfad> -- --target WebGL --output-path <Pfad>/Builds/parcours --scenes '["Assets/GSG/Scenes/ParcoursProbe.unity"]' --confirm true
-   unity command build status --project-path <Pfad>   # bis status completed und buildId passt
+   unity command build run --project-path <Pfad> -- --target WebGL --output-path <Pfad>/Builds/spiele --scenes '["Assets/GSG/Scenes/Start.unity", "…alle weiteren aus EditorBuildSettings…"]' --confirm true
+   unity command build status --project-path <Pfad>   # bis "status: completed" und die buildId passt
    ```
 
 4. Die Builds mit dem Quellstand einchecken. CI und Render bauen sie nicht.
 5. Einstellungen (setzt `GSGSetup.Project()`): Gzip mit Entpack-Rückfall, Dateinamen mit Inhalts-Hash, Datencache, keine Ausnahmen, IL2CPP „Optimize Size“, WebGL-Codeoptimierung „Disk Size with LTO“, Managed Stripping „High“, Engine-Code-Stripping, kein Splash-Bildschirm, Qualitätsstufe „Mobile“ mit HDR und Schatten.
 6. `RollDemo.json` nach Änderungen an `src/unityRollItUp.ts` neu erzeugen (Felder müssen zu `RollModels.cs` passen); die Brücke selbst prüft `npm run test:rules` (`scripts/unity-roll-it-up-test.ts`).
 
-Auslieferung: Der Server erlaubt **nur unter `/unity/`** WebAssembly (`'wasm-unsafe-eval'`), `blob:`-Skripte und das Einbetten im eigenen App-Rahmen (`frame-ancestors 'self'`, `X-Frame-Options: SAMEORIGIN`); die App selbst bleibt streng. `Build/`-Dateien sind ein Jahr cachebar. `.unityweb`-Dateien gehen mit `Content-Encoding: gzip` (und `application/wasm` für den Code) hinaus: Der Browser entpackt selbst und übersetzt WebAssembly schon während des Downloads. Der Service Worker nimmt `unity/**` nicht in den Offline-Cache und leitet Navigationen nach `/unity/` nicht auf die App um. Andere Hoster brauchen dieselben Header ([Deployment](DEPLOYMENT.md#node-starten)). Erster Start lädt je Spiel ca. 11,5 MB (vorher 13,7 MB). Durch das Stripping je Szene ist der Engine-Code (≈ 7,1 MB) nicht mehr byte-gleich: Jeder Neubau eines Spiels legt dessen Build neu im Repository ab, deshalb nur bei echten Änderungen neu bauen. Startzeit bis spielbereit (Chromium-Emulation, 4× gedrosselte CPU, 30 Mbit/s, 40 ms): Parcours 8,4 s → 6,4–7,1 s, Floor is Lava 7,4 s → 6,2–6,4 s, Bauschale 6 s. Die Bauschale lädt verdeckt schon während des Auftakt-Minispiels.
+Auslieferung: Der Server erlaubt **nur unter `/unity/`** WebAssembly (`'wasm-unsafe-eval'`), `blob:`-Skripte und das Einbetten im eigenen App-Rahmen (`frame-ancestors 'self'`, `X-Frame-Options: SAMEORIGIN`); die App selbst bleibt streng. `Build/`-Dateien sind ein Jahr cachebar. `.unityweb`-Dateien gehen mit `Content-Encoding: gzip` (und `application/wasm` für den Code) hinaus: Der Browser entpackt selbst und übersetzt WebAssembly schon während des Downloads. Der Service Worker nimmt `unity/**` nicht in den Offline-Cache und leitet Navigationen nach `/unity/` nicht auf die App um. Andere Hoster brauchen dieselben Header ([Deployment](DEPLOYMENT.md#node-starten)). Der erste Start lädt ca. 12 MB für alle Spiele zusammen (Engine-Code ≈ 7,2 MB, Daten ≈ 4,4 MB; neue Szenen sind klein, weil ihre Welt zur Laufzeit entsteht); weitere Spiele kommen danach aus dem Browser-Cache. Jeder Neubau legt den ganzen Build neu im Repository ab, deshalb Spiele gesammelt bauen und nicht für Kleinigkeiten. Startzeit bis spielbereit (Chromium-Emulation, 4× gedrosselte CPU, 30 Mbit/s, 40 ms): Parcours 8,4 s → 6,4–7,1 s, Floor is Lava 7,4 s → 6,2–6,4 s, Bauschale 6 s. Die Bauschale lädt verdeckt schon während des Auftakt-Minispiels.
 
 ## Prüfungen
 
 | Schritt | Prüfung |
 | --- | --- |
 | Unity-Code | `unity recompile` ohne Fehler; Editor-Play-Mode mit `GSGPlaytest.Start("all")` (Parcours) bzw. Durchlauf mit Wertung (Floor is Lava); Aufnahmen hochkant prüfen |
-| Build | alle betroffenen Builds erzeugt und nach `public/unity/<id>/` kopiert |
+| Build | gemeinsamer Build erzeugt und nach `public/unity/spiele/` kopiert |
 | App | `npm run build`, `npm run test:production` (Header, Content-Encoding, Dateien, PWA-Ausschluss), dann `npm run test:browser -- tests/browser/unity-games.spec.ts` |
 | Roll It Up! (Unity) | `npm run test:rules` (Brücke), Editor-Vorschau mit `RollDemo.json` (`DemoAdvance()` schaltet Zustände weiter), dann `npm run test:browser -- tests/browser/unity-roll-it-up.spec.ts` (Einstieg nur mit Entwicklerkonto, Brett lädt, Würfeln per Touch im Build) |
 | Touch | Start-Tipp, Stick und Aktionstaste im WebGL-Build per Chromium-Touch (CDP `Input.dispatchTouchEvent`); `?debug=1` protokolliert jeden Finger in der Browser-Konsole |

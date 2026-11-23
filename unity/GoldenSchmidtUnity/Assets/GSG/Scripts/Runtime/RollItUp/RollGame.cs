@@ -297,9 +297,9 @@ namespace GSG.RollItUp
 
         Transform MakeDie()
         {
-            var die = RollWorld.Box(null, Palette.Paper, Vector3.zero, Vector3.one, 1.6f).transform;
+            var die = Kit.Box(null, Palette.Paper, Vector3.zero, Vector3.one, 1.6f).transform;
             die.name = "Würfel";
-            var ink = RollWorld.Toon(Palette.Ink, 0f, 0f);
+            var ink = Kit.Toon(Palette.Ink, 0f, 0f);
             for (int v = 1; v <= 6; v++)
             {
                 var n = Faces[v];

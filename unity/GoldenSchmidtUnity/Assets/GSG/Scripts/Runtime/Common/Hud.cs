@@ -30,7 +30,7 @@ namespace GSG
         public bool InputEnabled = true;
 
         public enum Tone { Gold, Pink, Cyan, Stone }
-        public enum Icon { Jump, Dive, Duck, Grab, Shove, Pause, Play }
+        public enum Icon { Jump, Dive, Duck, Grab, Shove, Pause, Play, Left, Right, Turn }
 
         class Finger
         {
@@ -48,7 +48,8 @@ namespace GSG
         readonly Dictionary<VisualElement, Action> taps = new();
         readonly Dictionary<string, VisualElement> actions = new();
         readonly Dictionary<string, Label> chips = new();
-        VisualElement zone, stickBase, stickKnob, actionBox, top, hint, toastBox, fade, overlayLayer;
+        readonly Dictionary<string, (VisualElement chip, VisualElement dot, Label text)> players = new();
+        VisualElement zone, stickBase, stickKnob, actionBox, leftBox, top, strip, hint, toastBox, fade, overlayLayer;
         Label hintTitle, hintText, toast;
         Coroutine toastRoutine, fadeRoutine;
         Font title, text;
@@ -106,8 +107,12 @@ namespace GSG
             stickBase.pickingMode = PickingMode.Ignore; stickKnob.pickingMode = PickingMode.Ignore;
             actionBox = Add(Root, new VisualElement { name = "actions" }, "gsg-actions");
             actionBox.pickingMode = PickingMode.Ignore;
+            leftBox = Add(Root, new VisualElement { name = "actions-left" }, "gsg-actions", "gsg-actions--left");
+            leftBox.pickingMode = PickingMode.Ignore;
             top = Add(Root, new VisualElement(), "gsg-top");
             top.pickingMode = PickingMode.Ignore;
+            strip = Add(Root, new VisualElement(), "gsg-strip");
+            strip.pickingMode = PickingMode.Ignore;
             hint = Add(Root, new VisualElement(), "gsg-hint", "is-hidden");
             hint.pickingMode = PickingMode.Ignore;
             var box = Add(hint, new VisualElement(), "gsg-hint__box");
@@ -127,9 +132,10 @@ namespace GSG
 
         // ---- building blocks ---------------------------------------------------------------
 
-        public void AddAction(string id, Icon icon, string label, Tone tone)
+        /// <summary>An action button in the lower right, or with <paramref name="left"/> in the lower left (games without a stick).</summary>
+        public void AddAction(string id, Icon icon, string label, Tone tone, bool left = false)
         {
-            var b = Add(actionBox, new VisualElement { name = "btn-" + id }, "gsg-action", "gsg-action--" + tone.ToString().ToLowerInvariant());
+            var b = Add(left ? leftBox : actionBox, new VisualElement { name = "btn-" + id }, "gsg-action", "gsg-action--" + tone.ToString().ToLowerInvariant());
             var cool = Add(b, new VisualElement(), "gsg-action__cool");
             cool.pickingMode = PickingMode.Ignore;
             var glyph = Add(b, new VisualElement(), "gsg-action__icon");
@@ -177,9 +183,33 @@ namespace GSG
             zone.EnableInClassList("is-hidden", !visible);
             stickBase.EnableInClassList("is-hidden", !visible);
             actionBox.EnableInClassList("is-hidden", !visible);
+            leftBox.EnableInClassList("is-hidden", !visible);
+            if (!stickUsed) { zone.EnableInClassList("is-hidden", true); stickBase.EnableInClassList("is-hidden", true); }
         }
 
-        public void SetTopVisible(bool visible) => top.EnableInClassList("is-hidden", !visible);
+        bool stickUsed = true;
+        /// <summary>Games steered only with buttons hide the stick and its touch zone for good.</summary>
+        public void UseStick(bool on) { stickUsed = on; zone.EnableInClassList("is-hidden", !on); stickBase.EnableInClassList("is-hidden", !on); }
+
+        public void SetTopVisible(bool visible) { top.EnableInClassList("is-hidden", !visible); strip.EnableInClassList("is-hidden", !visible); }
+
+        /// <summary>A player chip in the strip under the top row: colour dot, text; active = gold border, dim = out.</summary>
+        public void SetPlayer(string id, Color color, string value, bool active, bool dim)
+        {
+            if (!players.TryGetValue(id, out var p))
+            {
+                var chip = Add(strip, new VisualElement(), "gsg-player");
+                chip.pickingMode = PickingMode.Ignore;
+                var dot = Add(chip, new VisualElement(), "gsg-player__dot");
+                dot.pickingMode = PickingMode.Ignore;
+                p = (chip, dot, Text(chip, "", "gsg-player__text"));
+                players[id] = p;
+            }
+            p.dot.style.backgroundColor = color;
+            if (p.text.text != value) p.text.text = value;
+            p.chip.EnableInClassList("is-active", active);
+            p.chip.EnableInClassList("is-dim", dim);
+        }
 
         /// <summary>Cooldown overlay: 1 = just used, 0 = ready.</summary>
         public void SetCooldown(string id, float remaining)
@@ -470,6 +500,18 @@ namespace GSG
                 case Icon.Pause:
                     p.BeginPath(); p.MoveTo(P(0.3f, 0.12f)); p.LineTo(P(0.3f, 0.88f)); p.Stroke();
                     p.BeginPath(); p.MoveTo(P(0.7f, 0.12f)); p.LineTo(P(0.7f, 0.88f)); p.Stroke(); break;
+                case Icon.Left:
+                    Arrow(P(0.85f, 0.5f), P(0.15f, 0.5f), h * 0.34f); break;
+                case Icon.Right:
+                    Arrow(P(0.15f, 0.5f), P(0.85f, 0.5f), h * 0.34f); break;
+                case Icon.Turn:
+                {
+                    var mid = P(0.5f, 0.55f); float R = Mathf.Min(w, h) * 0.36f;
+                    p.BeginPath(); p.Arc(mid, R, -60f, 200f); p.Stroke();
+                    var tip = mid + new Vector2(Mathf.Cos(-60f * Mathf.Deg2Rad), Mathf.Sin(-60f * Mathf.Deg2Rad)) * R;
+                    p.BeginPath(); p.MoveTo(tip + new Vector2(-R * 0.55f, -R * 0.1f)); p.LineTo(tip); p.LineTo(tip + new Vector2(R * 0.05f, R * 0.55f)); p.Stroke();
+                    break;
+                }
                 case Icon.Play:
                     p.BeginPath(); p.MoveTo(P(0.25f, 0.1f)); p.LineTo(P(0.85f, 0.5f)); p.LineTo(P(0.25f, 0.9f)); p.ClosePath(); p.Fill(); break;
             }

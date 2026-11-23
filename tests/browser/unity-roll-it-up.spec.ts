@@ -29,7 +29,7 @@ test("Roll It Up! (Unity): nur für Admin/Entwicklung, Unity-Brett lädt und nim
 
   // The Unity board loads (hidden) during the opening minigame and stays loaded afterwards.
   const board = page.locator(".unity-roll");
-  await expect(board.locator("iframe")).toHaveAttribute("src", /^\/unity\/rollitup\/index\.html/);
+  await expect(board.locator("iframe")).toHaveAttribute("src", /^\/unity\/spiele\/index\.html\?spiel=rollitup/);
   await page.locator(".party-mini-intro").getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
   const attempt = minigameMenu(page);
   await expect(attempt).toBeVisible();

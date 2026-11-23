@@ -25,6 +25,10 @@ namespace GSG.EditorTools
         public const string ParcoursScene = Root + "/Scenes/ParcoursProbe.unity";
         public const string LavaScene = Root + "/Scenes/FloorIsLava.unity";
         public const string RollScene = Root + "/Scenes/RollItUp.unity";
+        public const string StartScene = Root + "/Scenes/Start.unity";
+        static string GameScene(string name) => $"{Root}/Scenes/{name}.unity";
+        /// <summary>Match games built by <see cref="BuildMatchScenes"/> (scene name = GameSwitch entry).</summary>
+        static readonly string[] MatchScenes = { "SumoSmash", "BumperMayhem", "BombArena", "Schneeballschlacht", "TowerTumble" };
 
         [MenuItem("GSG/1 Alles einrichten")]
         public static void All()
@@ -36,6 +40,9 @@ namespace GSG.EditorTools
             BuildParcoursScene();
             BuildLavaScene();
             BuildRollItUpScene();
+            BuildStartScene();
+            BuildMatchScenes();
+            Project();
             AssetDatabase.SaveAssets();
             Debug.Log("[GSG] Einrichtung fertig.");
         }
@@ -124,6 +131,9 @@ namespace GSG.EditorTools
             var roll = Asset("RollSky", "GSG/Sky");
             roll.SetColor("_Top", Palette.Hex("#4a47a6")); roll.SetColor("_Horizon", Palette.Hex("#d9b8ee"));
             roll.SetColor("_Bottom", Palette.Hex("#7f9be8")); roll.SetColor("_SunColor", Palette.Sun); roll.SetFloat("_SunSize", 18f);
+            var night = Asset("NightSky", "GSG/Sky");
+            night.SetColor("_Top", Palette.Hex("#0d0b2e")); night.SetColor("_Horizon", Palette.Hex("#5a3a9a"));
+            night.SetColor("_Bottom", Palette.Hex("#140f3a")); night.SetColor("_SunColor", Palette.Hex("#ff86c8")); night.SetFloat("_SunSize", 6f);
             var temple = Asset("TempleSky", "GSG/Sky");
             temple.SetColor("_Top", new Color(0.09f, 0.03f, 0.04f)); temple.SetColor("_Horizon", new Color(0.55f, 0.16f, 0.07f));
             temple.SetColor("_Bottom", new Color(0.3f, 0.06f, 0.02f)); temple.SetColor("_SunColor", Palette.LavaGlow); temple.SetFloat("_SunSize", 6f);
@@ -323,7 +333,9 @@ namespace GSG.EditorTools
                 SetPrivate(urp, "m_MainLightShadowsSupported", true);
                 SetPrivate(urp, "m_SoftShadowsSupported", true);
             }
-            EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ParcoursScene, true), new EditorBuildSettingsScene(LavaScene, true), new EditorBuildSettingsScene(RollScene, true) };
+            // One shared WebGL build: the start scene (index 0) loads the game named in ?spiel=.
+            EditorBuildSettings.scenes = new[] { StartScene, ParcoursScene, LavaScene, RollScene }.Concat(MatchScenes.Select(GameScene))
+                .Where(File.Exists).Select(path => new EditorBuildSettingsScene(path, true)).ToArray();
             AssetDatabase.SaveAssets();
         }
 
@@ -441,6 +453,58 @@ namespace GSG.EditorTools
             var gameType = System.Type.GetType("GSG.RollItUp.RollGame, GSG.Runtime");
             if (gameType != null) new GameObject("Spiel").AddComponent(gameType);
             EditorSceneManager.SaveScene(scene, RollScene);
+        }
+
+        [MenuItem("GSG/9 Startszene")]
+        public static void BuildStartScene()
+        {
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            var camGo = new GameObject("Main Camera") { tag = "MainCamera" };
+            var cam = camGo.AddComponent<Camera>();
+            cam.clearFlags = CameraClearFlags.SolidColor; cam.backgroundColor = Palette.Night;
+            camGo.AddComponent<AudioListener>();
+            new GameObject("Spielwahl").AddComponent<GameSwitch>();
+            EditorSceneManager.SaveScene(scene, StartScene);
+        }
+
+        [MenuItem("GSG/10 Szenen der Match-Spiele")]
+        public static void BuildMatchScenes()
+        {
+            foreach (var name in MatchScenes)
+            {
+                var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+                switch (name)
+                {
+                    case "SumoSmash":
+                        Frame("Sky", Palette.Sun, 1.25f, new Vector3(45f, -40f, 0f), new Color(0.56f, 0.55f, 0.88f), new Color(0.8f, 0.64f, 0.74f), new Color(0.23f, 0.17f, 0.31f),
+                            new Color(0.62f, 0.45f, 0.66f), 40f, 140f, 0.4f, false, "Sumo");
+                        new GameObject("Spiel").AddComponent<GSG.Ring.RingGame>().bumper = false;
+                        break;
+                    case "BumperMayhem":
+                        Frame("NightSky", new Color(0.85f, 0.8f, 1f), 1.05f, new Vector3(55f, -30f, 0f), new Color(0.45f, 0.42f, 0.85f), new Color(0.55f, 0.4f, 0.7f), new Color(0.2f, 0.12f, 0.3f),
+                            new Color(0.12f, 0.08f, 0.3f), 30f, 90f, 0.9f, false, "Bumper");
+                        new GameObject("Spiel").AddComponent<GSG.Ring.RingGame>().bumper = true;
+                        break;
+                    case "BombArena":
+                        Frame("Sky", new Color(1f, 0.92f, 0.85f), 1.15f, new Vector3(60f, -25f, 0f), new Color(0.5f, 0.5f, 0.85f), new Color(0.72f, 0.6f, 0.75f), new Color(0.2f, 0.16f, 0.3f),
+                            new Color(0.35f, 0.3f, 0.6f), 40f, 120f, 0.7f, false, "Bomben");
+                        new GameObject("Spiel").AddComponent<GSG.Bombs.BombGame>();
+                        break;
+                    case "Schneeballschlacht":
+                        Frame("RollSky", new Color(1f, 0.95f, 0.9f), 1.15f, new Vector3(40f, -50f, 0f), new Color(0.7f, 0.75f, 0.98f), new Color(0.86f, 0.86f, 0.96f), new Color(0.55f, 0.6f, 0.75f),
+                            new Color(0.82f, 0.85f, 0.97f), 25f, 70f, 0.3f, false, "Schnee");
+                        new GameObject("Spiel").AddComponent<GSG.Snow.SnowGame>();
+                        break;
+                    case "TowerTumble":
+                        var towerType = System.Type.GetType("GSG.Tower.TowerGame, GSG.Runtime");
+                        if (towerType == null) continue;
+                        Frame("Sky", Palette.Sun, 1.2f, new Vector3(35f, -30f, 0f), new Color(0.56f, 0.55f, 0.88f), new Color(0.8f, 0.64f, 0.74f), new Color(0.23f, 0.17f, 0.31f),
+                            new Color(0.62f, 0.45f, 0.66f), 60f, 200f, 0.4f, false, "Turm");
+                        new GameObject("Spiel").AddComponent(towerType);
+                        break;
+                }
+                EditorSceneManager.SaveScene(scene, GameScene(name));
+            }
         }
 
         /// <summary>Static batching for everything that never moves (no rigid body or behaviour on it or above it).</summary>

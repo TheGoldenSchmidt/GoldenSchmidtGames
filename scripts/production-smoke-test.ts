@@ -1,8 +1,7 @@
 import {CHARACTERS,isRiggedCharacter} from "../shared/characters";
 import assert from "node:assert/strict";
 import { createSpielraumServer } from "../server/index";
-import { UNITY_GAMES } from "../src/unityGames";
-import { UNITY_ROLL_IT_UP_URL } from "../src/unityRollItUp";
+import { UNITY_BUILD, UNITY_GAMES } from "../src/unityGames";
 
 const server = createSpielraumServer();
 const port = await server.listen(0);
@@ -69,27 +68,25 @@ try {
   // Unity test games: separate builds, relaxed policy only below /unity/, never in the offline cache.
   assert.ok(!/["']unity\//.test(workerSource), "Unity-Builds gehören nicht in den PWA-Cache");
   assert.match(workerSource, /unity/, "Navigationen nach /unity/ dürfen nicht auf die App umgeleitet werden");
-  // The Roll It Up! board (developer test) is a third build in the same folder rules.
-  const builds = [...UNITY_GAMES.map(game => ({ id: game.id as string, name: game.name as string })), { id: UNITY_ROLL_IT_UP_URL.split("/")[2], name: "Roll It Up! (Unity-Brett)" }];
-  for (const game of builds) {
-    const entry = await fetch(`${origin}/unity/${game.id}/index.html`);
-    assert.equal(entry.status, 200, `${game.name}: Unity-Seite wird ausgeliefert`);
-    const policy = entry.headers.get("content-security-policy") ?? "";
-    assert.match(policy, /script-src 'self' blob: 'wasm-unsafe-eval'/, `${game.name}: WebAssembly erlaubt`);
-    assert.match(policy, /frame-ancestors 'self'/, `${game.name}: nur im eigenen App-Rahmen`);
-    assert.equal(entry.headers.get("x-frame-options"), "SAMEORIGIN");
-    const unityHtml = await entry.text();
-    assert.ok(!/<script(?![^>]*\bsrc=)[^>]*>/.test(unityHtml), `${game.name}: kein Inline-Skript (CSP)`);
-    const files = [...unityHtml.matchAll(/data-(?:loader|data|framework|code)="(Build\/[^"]+)"/g)].map(match => match[1]);
-    assert.equal(files.length, 4, `${game.name}: Loader, Daten, Framework und Code verlinkt`);
-    for (const file of [...files, "TemplateData/boot.js"]) {
-      const response = await fetch(`${origin}/unity/${game.id}/${file}`, { method: "HEAD" });
-      assert.equal(response.status, 200, `${game.name}: ${file} vorhanden`);
-      if (file.startsWith("Build/")) assert.match(response.headers.get("cache-control") ?? "", /immutable/, `${game.name}: ${file} mit Inhalts-Hash dauerhaft cachebar`);
-      // gzip files are unpacked by the browser itself; WebAssembly compiles while it streams in.
-      if (file.endsWith(".unityweb")) assert.equal(response.headers.get("content-encoding"), "gzip", `${game.name}: ${file} mit Content-Encoding gzip`);
-      if (file.endsWith(".wasm.unityweb")) assert.equal(response.headers.get("content-type"), "application/wasm", `${game.name}: ${file} als WebAssembly`);
-    }
+  // One shared Unity build for all Unity games and the Roll It Up! board; ?spiel= picks the game.
+  const entry = await fetch(`${origin}${UNITY_BUILD}?spiel=${UNITY_GAMES[0].id}`);
+  assert.equal(entry.status, 200, "Unity-Seite wird ausgeliefert");
+  const policy = entry.headers.get("content-security-policy") ?? "";
+  assert.match(policy, /script-src 'self' blob: 'wasm-unsafe-eval'/, "Unity: WebAssembly erlaubt");
+  assert.match(policy, /frame-ancestors 'self'/, "Unity: nur im eigenen App-Rahmen");
+  assert.equal(entry.headers.get("x-frame-options"), "SAMEORIGIN");
+  const unityHtml = await entry.text();
+  assert.ok(!/<script(?![^>]*\bsrc=)[^>]*>/.test(unityHtml), "Unity: kein Inline-Skript (CSP)");
+  const files = [...unityHtml.matchAll(/data-(?:loader|data|framework|code)="(Build\/[^"]+)"/g)].map(match => match[1]);
+  assert.equal(files.length, 4, "Unity: Loader, Daten, Framework und Code verlinkt");
+  const folder = UNITY_BUILD.slice(0, UNITY_BUILD.lastIndexOf("/") + 1);
+  for (const file of [...files, "TemplateData/boot.js"]) {
+    const response = await fetch(`${origin}${folder}${file}`, { method: "HEAD" });
+    assert.equal(response.status, 200, `Unity: ${file} vorhanden`);
+    if (file.startsWith("Build/")) assert.match(response.headers.get("cache-control") ?? "", /immutable/, `Unity: ${file} mit Inhalts-Hash dauerhaft cachebar`);
+    // gzip files are unpacked by the browser itself; WebAssembly compiles while it streams in.
+    if (file.endsWith(".unityweb")) assert.equal(response.headers.get("content-encoding"), "gzip", `Unity: ${file} mit Content-Encoding gzip`);
+    if (file.endsWith(".wasm.unityweb")) assert.equal(response.headers.get("content-type"), "application/wasm", `Unity: ${file} als WebAssembly`);
   }
   console.log(`Produktionsprüfung erfolgreich: HTML, Manifest, Service Worker, 3D-Module im PWA-Cache, Unity-Tests und Health-Check auf Port ${port}`);
 } finally {

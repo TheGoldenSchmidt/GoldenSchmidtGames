@@ -1,32 +1,29 @@
 /**
- * Unity test games: separate WebGL builds of the Unity project in `unity/GoldenSchmidtUnity`,
- * served from `public/unity/<id>/`. They run alone on one phone (parcours solo, Floor is Lava
- * against bots), outside rooms, the random pool and the offline cache.
+ * Unity test games: one shared WebGL build of the Unity project in `unity/GoldenSchmidtUnity`,
+ * served from `public/unity/spiele/`; `?spiel=<id>` picks the game (engine and shared assets
+ * load once and stay cached). They run alone on one phone against bots, outside rooms, the
+ * random pool and the offline cache, and are listed only under "Frei ausprobieren".
  */
+export const UNITY_BUILD = "/unity/spiele/index.html";
+const NOTE = "erster Start lädt ca. 12 MB, danach aus dem Cache";
 export const UNITY_GAMES = [
-  {
-    id: "parcours",
-    name: "Parcours-Probelevel",
-    text: "15 Stationen mit allen Hindernisarten, gebaut in Unity.",
-    note: "Allein · erster Start lädt ca. 12 MB"
-  },
-  {
-    id: "lava",
-    name: "Floor is Lava",
-    text: "Drei Etagen über der Lava gegen drei Bots, gebaut in Unity.",
-    note: "Gegen Bots · erster Start lädt ca. 12 MB"
-  }
+  { id: "parcours", name: "Parcours-Probelevel", text: "15 Stationen mit allen Hindernisarten, gebaut in Unity.", note: `Allein · ${NOTE}` },
+  { id: "lava", name: "Floor is Lava", text: "Drei Etagen über der Lava gegen drei Bots, gebaut in Unity.", note: `Gegen Bots · ${NOTE}` },
+  { id: "sumo", name: "Sumo Smash", text: "Schubs die anderen vom Podest über dem See, gebaut in Unity.", note: `Gegen Bots · ${NOTE}` },
+  { id: "bumpercars", name: "Bumper Mayhem", text: "Autoscooter auf der Neonfläche mit Turbo und Item-Kisten, gebaut in Unity.", note: `Gegen Bots · ${NOTE}` },
+  { id: "bombs", name: "Bomb Arena", text: "Bomben, Kettenreaktionen und Extras in der Bombenfabrik, gebaut in Unity.", note: `Gegen Bots · ${NOTE}` },
+  { id: "snowball", name: "Schneeballschlacht", text: "Formen, werfen, Deckung suchen in der Winterarena, gebaut in Unity.", note: `Gegen Bots · ${NOTE}` },
+  { id: "tower", name: "Tower Tumble", text: "Turmrennen mit echter Unity-Physik: Steine kippen, rutschen, stürzen.", note: `Gegen Bots · ${NOTE}` }
 ] as const;
 
 export type UnityGameId = typeof UNITY_GAMES[number]["id"];
 
 export const isUnityGame = (id: unknown): id is UnityGameId => UNITY_GAMES.some(game => game.id === id);
 
-/** Address of a build, with the chosen figure and the motion preference handed over to Unity. */
-export function unityGameUrl(id: UnityGameId, characterId: string | undefined, reducedMotion: boolean) {
-  const query = new URLSearchParams();
+/** Address of a game in the shared build, with the chosen figure and the motion preference handed over to Unity. */
+export function unityGameUrl(id: string, characterId: string | undefined, reducedMotion: boolean) {
+  const query = new URLSearchParams({ spiel: id });
   if (characterId) query.set("figur", characterId);
   if (reducedMotion) query.set("ruhig", "1");
-  const search = query.toString();
-  return `/unity/${id}/index.html${search ? `?${search}` : ""}`;
+  return `${UNITY_BUILD}?${query.toString()}`;
 }
