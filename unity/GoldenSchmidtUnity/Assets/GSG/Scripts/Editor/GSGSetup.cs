@@ -28,7 +28,7 @@ namespace GSG.EditorTools
         public const string StartScene = Root + "/Scenes/Start.unity";
         static string GameScene(string name) => $"{Root}/Scenes/{name}.unity";
         /// <summary>Match games built by <see cref="BuildMatchScenes"/> (scene name = GameSwitch entry).</summary>
-        static readonly string[] MatchScenes = { "SumoSmash", "BumperMayhem" };
+        static readonly string[] MatchScenes = { "SumoSmash", "BumperMayhem", "BombArena", "Schneeballschlacht", "TowerTumble" };
 
         [MenuItem("GSG/1 Alles einrichten")]
         public static void All()
@@ -484,6 +484,23 @@ namespace GSG.EditorTools
                         Frame("NightSky", new Color(0.85f, 0.8f, 1f), 1.05f, new Vector3(55f, -30f, 0f), new Color(0.45f, 0.42f, 0.85f), new Color(0.55f, 0.4f, 0.7f), new Color(0.2f, 0.12f, 0.3f),
                             new Color(0.12f, 0.08f, 0.3f), 30f, 90f, 0.9f, false, "Bumper");
                         new GameObject("Spiel").AddComponent<GSG.Ring.RingGame>().bumper = true;
+                        break;
+                    case "BombArena":
+                        Frame("Sky", new Color(1f, 0.92f, 0.85f), 1.15f, new Vector3(60f, -25f, 0f), new Color(0.5f, 0.5f, 0.85f), new Color(0.72f, 0.6f, 0.75f), new Color(0.2f, 0.16f, 0.3f),
+                            new Color(0.35f, 0.3f, 0.6f), 40f, 120f, 0.7f, false, "Bomben");
+                        new GameObject("Spiel").AddComponent<GSG.Bombs.BombGame>();
+                        break;
+                    case "Schneeballschlacht":
+                        Frame("RollSky", new Color(1f, 0.95f, 0.9f), 1.15f, new Vector3(40f, -50f, 0f), new Color(0.7f, 0.75f, 0.98f), new Color(0.86f, 0.86f, 0.96f), new Color(0.55f, 0.6f, 0.75f),
+                            new Color(0.82f, 0.85f, 0.97f), 25f, 70f, 0.3f, false, "Schnee");
+                        new GameObject("Spiel").AddComponent<GSG.Snow.SnowGame>();
+                        break;
+                    case "TowerTumble":
+                        var towerType = System.Type.GetType("GSG.Tower.TowerGame, GSG.Runtime");
+                        if (towerType == null) continue;
+                        Frame("Sky", Palette.Sun, 1.2f, new Vector3(35f, -30f, 0f), new Color(0.56f, 0.55f, 0.88f), new Color(0.8f, 0.64f, 0.74f), new Color(0.23f, 0.17f, 0.31f),
+                            new Color(0.62f, 0.45f, 0.66f), 60f, 200f, 0.4f, false, "Turm");
+                        new GameObject("Spiel").AddComponent(towerType);
                         break;
                 }
                 EditorSceneManager.SaveScene(scene, GameScene(name));

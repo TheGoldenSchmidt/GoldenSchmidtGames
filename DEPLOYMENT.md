@@ -43,7 +43,7 @@ docker run --rm -p 3000:3000 -e PORT=3000 -v gsg-spielstaende:/app/.gsg-data gol
 
 Statisches Hosting unterstützt lokale Spiele und Handy-Räume; Serverräume brauchen einen erreichbaren Socket.IO-Server.
 
-Unity-Tests (`public/unity/<id>/`, [Unity-Minispiele](UnityGames.md)): Der Node-Server setzt nur für `/unity/` eine gelockerte CSP (`'wasm-unsafe-eval'`, `blob:`, `frame-ancestors 'self'`, `X-Frame-Options: SAMEORIGIN`) und cacht `Build/`-Dateien dauerhaft. Andere Hoster brauchen dieselben Header, sonst starten die Builds nicht. Die Builds werden mit Unity erzeugt und eingecheckt; Docker/Render bauen sie nicht.
+Unity-Spiele (ein gemeinsamer Build in `public/unity/spiele/`, [Unity-Minispiele](UnityGames.md)): Der Node-Server setzt nur für `/unity/` eine gelockerte CSP (`'wasm-unsafe-eval'`, `blob:`, `frame-ancestors 'self'`, `X-Frame-Options: SAMEORIGIN`), liefert `.unityweb` mit `Content-Encoding: gzip` (Code als `application/wasm`) und cacht `Build/`-Dateien dauerhaft. Andere Hoster brauchen dieselben Header, sonst starten die Builds nicht. Die Builds werden mit Unity erzeugt und eingecheckt; Docker/Render bauen sie nicht.
 
 ## Render und optional Turso
 

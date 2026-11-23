@@ -46,6 +46,12 @@
     width: 210px;
 }
 
+.gsg-actions--left {
+    left: 14px;
+    right: auto;
+    justify-content: flex-start;
+}
+
 .gsg-action {
     width: 92px;
     height: 92px;

@@ -132,8 +132,7 @@ namespace GSG.Snow
                 var c = World((w.x0 + w.x1) / 2f, (w.y0 + w.y1) / 2f, 0.6f);
                 var b = Box(world, Palette.Paper, c, new Vector3(w.x1 - w.x0, 1.2f, w.y1 - w.y0), 1.3f);
                 b.GetComponent<Renderer>().sharedMaterial = wallMat;
-                Prim(PrimitiveType.Capsule, world, Palette.Paper, c + Vector3.up * 0.62f, new Vector3(Mathf.Min(w.x1 - w.x0, w.y1 - w.y0) * 1.05f, 0.12f, Mathf.Max(w.x1 - w.x0, w.y1 - w.y0) * 0.52f), 0f)
-                    .transform.localRotation = Quaternion.Euler(90f, (w.x1 - w.x0) > (w.y1 - w.y0) ? 90f : 0f, 0f);
+                Box(world, Palette.Paper, c + Vector3.up * 0.63f, new Vector3(w.x1 - w.x0 + 0.12f, 0.08f, w.y1 - w.y0 + 0.12f), 0f);
             }
             var cone = Cone(7);
             foreach (var t in SnowSim.Trees)

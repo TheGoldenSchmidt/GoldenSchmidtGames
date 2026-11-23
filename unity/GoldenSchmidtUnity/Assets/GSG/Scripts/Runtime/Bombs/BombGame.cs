@@ -212,9 +212,9 @@ namespace GSG.Bombs
                     if (e.a == 0) { hud.Toast("Getroffen!", Palette.Warn, 0.8f); Sfx.Play("hit"); Fx.HitStop(0.06f); }
                     break;
                 case "out":
-                    var v = views[e.a];
-                    v.deadT = 0f;
-                    v.figure.Loop("death", 0.1f);
+                    var view = views[e.a];
+                    view.deadT = 0f;
+                    view.figure.Loop("death", 0.1f);
                     Sfx.Play("lose", e.a == 0 ? 0.9f : 0.4f);
                     if (e.a == 0) hud.Toast("K.o.!", Palette.Warn, 1f);
                     else if (e.b == 0) { hud.Toast("K.o.! +2", Palette.Accent, 0.9f); Sfx.Play("chime"); }
