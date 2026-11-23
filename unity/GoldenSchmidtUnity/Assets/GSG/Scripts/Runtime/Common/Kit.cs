@@ -49,7 +49,8 @@ namespace GSG
         public static GameObject Prim(PrimitiveType type, Transform parent, Color color, Vector3 pos, Vector3 scale, float edge = 1.3f, bool collider = false)
         {
             var go = GameObject.CreatePrimitive(type);
-            if (!collider) Object.Destroy(go.GetComponent<Collider>());
+            // Immediately: a 2D collider cannot be added while the 3D one still exists.
+            if (!collider) Object.DestroyImmediate(go.GetComponent<Collider>());
             go.transform.SetParent(parent, false);
             go.transform.localPosition = pos;
             go.transform.localScale = scale;

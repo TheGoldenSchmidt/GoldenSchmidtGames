@@ -24,7 +24,7 @@ namespace GSG.Ring
             public Vector3 prev, cur;
             public bool wasOut, falling, splashed;
             public Vector3 fallFrom, fallVel;
-            public float fallT, dropT = 1f, yaw, size = 1f;
+            public float fallT, dropT = 1f, yaw, size = 1f, punch;
             public GameObject shield;
             public Renderer spark;
         }
@@ -260,6 +260,7 @@ namespace GSG.Ring
                     else { Sfx.Play("whoosh", mine ? 0.9f : 0.4f); A.figure.Shot("dash", 0.32f, 0.05f, 1.4f); Fx.Dust(A.root.position, Palette.Paper, 5); }
                     break;
                 case "strike":
+                    A.punch = 1f; B.punch = 0.7f;
                     var at = (A.root.position + B.root.position) / 2f + Vector3.up * 0.8f;
                     Sfx.Play("hit", mine ? 1f : 0.6f);
                     Fx.Sparks(at, Palette.Accent, mine ? 16 : 10);
@@ -269,6 +270,15 @@ namespace GSG.Ring
                     break;
                 case "bump":
                     Sfx.Play("thud", 0.5f, 1.2f);
+                    break;
+                case "bounce":
+                    // Every contact answers: a springy wobble, a few sparks and a thud by impact.
+                    float k = Mathf.Clamp01(e.v / 4f);
+                    foreach (var v in new[] { A, B }) v.punch = Mathf.Max(v.punch, 0.35f + k * 0.65f);
+                    Sfx.Play("thud", (mine ? 0.7f : 0.35f) * (0.5f + k), 1.35f - k * 0.4f);
+                    if (bumper) Fx.Sparks((A.root.position + B.root.position) / 2f + Vector3.up * 0.4f, Palette.Seesaw, 3 + (int)(k * 8));
+                    else { A.figure.Squash(); B.figure.Squash(); }
+                    if (mine && k > 0.5f) Fx.Shake(0.15f * k);
                     break;
                 case "out":
                     StartFall(A);
@@ -357,7 +367,10 @@ namespace GSG.Ring
                 v.root.rotation = Quaternion.Euler(0f, v.yaw, 0f);
                 float target = bumper && BumperRules.Big(f, now) ? BumperRules.MegaScale : 1f;
                 v.size = Mathf.Lerp(v.size, target, 1f - Mathf.Exp(-8f * dt));
-                v.model.localScale = Vector3.one * v.size;
+                // Bounce wobble: squash and stretch that rings out (cars only; figures squash themselves).
+                v.punch = Mathf.Max(0f, v.punch - dt * 3f);
+                float wobble = bumper && !Fx.Reduced ? Mathf.Sin(Time.time * 38f) * v.punch * 0.22f : 0f;
+                v.model.localScale = new Vector3(v.size * (1f + wobble), v.size * (1f - wobble), v.size * (1f + wobble));
                 bool shielded = now < f.shieldUntil;
                 v.shield.SetActive(shielded && Mathf.Repeat(Time.time * 6f, 1f) > 0.3f);
                 var vel = new Vector3(f.vx, 0f, f.vy);

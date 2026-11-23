@@ -14,7 +14,7 @@ Alle Minispiele, die nicht zur ersten Generation gehören (`NEW_MATCH_IDS` in `s
 | Bumper Mayhem (`bumpercars`) | Gleicher Ringkern + `bumperMayhem.ts`: Lenken/Turbo, Schleudern, Item-Kisten (Riesenauto, Ölfleck, Schockwelle), drehende Pfosten, Fläche schrumpft ab 45 s. Neonfläche mit Riesenrad. | Szene `BumperMayhem` |
 | Bomb Arena (`bombs`) | Port von `bombArena.ts` (`Bombs/BombSim.cs`): 11 × 15 Felder, 2-s-Zünder, Kreuzflammen mit Ketten, Kisten mit Extras (Reichweite, Bombe, Tempo, Kick), Spirale ab 25 s, 2 Leben, K.o. +2, Durchgangssieg +3, zwei Durchgänge, Sudden Death. | Szene `BombArena` |
 | Schneeballschlacht (`snowball`) | Port von `snowball.ts` (`Snow/SnowSim.cs`): Formen/Schneehaufen, höchstens zwei Bälle, Wurf rastet auf den nächsten Gegner im Bild ein (Vorhalt), −10 % Tempo je Treffer, Schneemann nach drei. Verfolgerkamera, Wischen dreht. Zielen per Ziehen gibt es noch nicht, nur den Tipp-Wurf. | Szene `Schneeballschlacht` |
-| Tower Tumble (`tower`) | Turmrennen aus `towerTumble.ts` (Steinfolge, Steuerung, Ziellinie 16, 2 s halten, 120 s, Bot-Planer); die Physik ist **Unity-PhysX in der Turmebene** statt `physics2d.ts` (Reibung 0,9, Schwerkraft 18). Survival ist im Code vorbereitet (`survival`), aber noch nicht eingetragen. | Szene `TowerTumble` |
+| Tower Tumble (`tower`) | Turmrennen aus `towerTumble.ts` (Steinfolge, Steuerung, Ziellinie 16, 2 s halten, 120 s, Bot-Planer); die Physik ist **Unitys 2D-Physik (Box2D)** statt `physics2d.ts` (Reibung 0,9, Schwerkraft 18), die Steine werden als 3D-Würfel gezeichnet. Survival ist im Code vorbereitet (`survival`), aber noch nicht eingetragen. | Szene `TowerTumble` |
 
 Dazu kommt **Roll It Up! (Unity)** (`rollitup`, Szene `RollItUp`): die Bauschale als Unity-Brett. Nur für Admin/Entwicklung sichtbar (`canDevelop`) unter **Frei ausprobieren**; startet eine Testpartie mit Bots am lokalen Tisch. Regeln, Bots, Items, Inventar/Menü und die Minispiele zwischen den Runden bleiben unverändert in der App (`shared/party.ts` über die Raumautorität); Unity zeichnet nur Schale, Felder, Stationen, Figuren, Würfel und die Brett-Entscheidungen.
 
@@ -40,6 +40,17 @@ Begründung: zuerst Spiele, die am meisten von 3D/Physik gewinnen und eine gemei
 | 20–22 | Light Trails, Neon Pong, Quick Draw | offen |
 
 Floor is Lava ist bereits umgesetzt; Wippenwerk, Hook Wars, Chaos Run und die klassischen Arenen gehören zur ersten Generation und werden nicht umgestellt.
+
+### Abweichungen nach Rückmeldung (Nov. 2026)
+
+Nur in den Unity-Fassungen; die Web-Fassungen bleiben unverändert, bis über eine Übernahme entschieden ist.
+
+| Spiel | Rückmeldung | Änderung |
+| --- | --- | --- |
+| Tower Tumble | Steine springen umher und fallen herunter | Unity-2D-Physik (Box2D, 60 Hz, 12/6 Iterationen) statt PhysX; Steine setzen 2 cm über dem Kontakt auf statt minimal überlappend, Aufsetztempo höchstens 4 m/s. Die Darstellung bleibt 3D. |
+| Sumo Smash | Nach einem Treffer rettet man sich mit einem Stoß | Kein Stoß, solange man nach einem Treffer rutscht (`CanAct`; gilt auch für den Turbo in Bumper Mayhem) |
+| Bumper Mayhem | Langweilig, jede Kollision soll abprallen | Gummi-Elastizität 0,95 statt 0,5; jeder Kontakt stößt beide Autos um mindestens 2,6 m/s auseinander (0,6 × Annäherung); harte Treffer stärker (1,3 × statt 0,9 ×, höchstens 14), der Rammer prallt zurück; Wackeln, Funken und Ton je nach Stärke |
+| Schneeballschlacht | Man trifft zu einfach | Der eigene Wurf rastet nur noch bis ±11° um die Blickrichtung ein (vorher ±66°) und hält laufende Gegner nicht mehr vor; Bots unverändert |
 
 ## Regeln
 

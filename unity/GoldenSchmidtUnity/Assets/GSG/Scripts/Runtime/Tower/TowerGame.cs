@@ -9,8 +9,8 @@ namespace GSG.Tower
     /// Tower Tumble in Unity: the race of shared/matches/towerTumble.ts (TW) – everyone builds at
     /// once on an own narrow pedestal with the same sequence of four-cell pieces; the falling piece
     /// is steered in half-cell steps, turned and dropped fast; once it touches the tower it becomes a
-    /// rigid body. Here the physics is Unity's (PhysX in the tower plane) instead of the app's
-    /// physics2d. First tower that stays above the finish line for 2 s wins, after 2 minutes the
+    /// rigid body. Here the physics is Unity's 2D physics (Box2D, built for stable stacking) instead
+    /// of the app's physics2d; the stones are still drawn as 3D cubes. First tower that stays above the finish line for 2 s wins, after 2 minutes the
     /// height decides. With <see cref="survival"/>: no finish line, three lost stones and you are out.
     /// </summary>
     public class TowerGame : MatchGame
@@ -67,7 +67,7 @@ namespace GSG.Tower
         }
 
         class Piece { public int n, r; public string k; public float x, y, tx; public Transform view; }
-        class Body { public string k; public int r; public Rigidbody rb; public Transform t; }
+        class Body { public string k; public int r; public Rigidbody2D rb; public Transform t; }
 
         class TowerState
         {
@@ -86,7 +86,7 @@ namespace GSG.Tower
         readonly List<TowerState> towers = new();
         readonly List<string> sequence = new();
         System.Random rng;
-        PhysicsMaterial grip;
+        PhysicsMaterial2D grip;
         float time;
         bool done;
         int winner = -1;
@@ -100,9 +100,12 @@ namespace GSG.Tower
 
         protected override void Setup()
         {
-            Physics.gravity = new Vector3(0f, -Gravity, 0f);
-            Physics.defaultSolverIterations = 12;
-            grip = new PhysicsMaterial("Stein") { dynamicFriction = Friction, staticFriction = Friction, frictionCombine = PhysicsMaterialCombine.Average, bounciness = 0f, bounceCombine = PhysicsMaterialCombine.Minimum };
+            // Feedback: PhysX made placed stones jump. Box2D (Unity 2D physics) stacks calmly.
+            Physics2D.gravity = new Vector2(0f, -Gravity);
+            Physics2D.velocityIterations = 12;
+            Physics2D.positionIterations = 6;
+            Time.fixedDeltaTime = 1f / 60f;
+            grip = new PhysicsMaterial2D("Stein") { friction = Friction, bounciness = 0f };
             for (int i = 0; i < seats.Count; i++) towers.Add(BuildTower(seats[i], i == 0 ? 0f : (i % 2 == 1 ? 1 : -1) * Spacing * ((i + 1) / 2)));
             BuildBackdrop();
             focus = new GameObject("Kamerafokus").transform;
@@ -145,7 +148,7 @@ namespace GSG.Tower
             var root = new GameObject("Turm " + seat.name).transform;
             root.position = new Vector3(origin, 0f, 0f);
             var pedestal = Box(root, Palette.Stone, new Vector3(0f, -BaseDepth / 2f, 0f), new Vector3(BaseHalf * 2f, BaseDepth, 1.4f), 1.4f);
-            var col = pedestal.AddComponent<BoxCollider>(); col.sharedMaterial = grip; col.size = new Vector3(1f, 1f, 1f / 1.4f);
+            var col = pedestal.AddComponent<BoxCollider2D>(); col.sharedMaterial = grip; col.size = Vector2.one;
             Box(root, seat.Color, new Vector3(0f, -0.05f, 0f), new Vector3(BaseHalf * 2f + 0.1f, 0.1f, 1.45f), 0f);
             Part(root, "Säule", Lathe(new[] { new Vector2(0.4f, -14f), new Vector2(1.6f, -12f), new Vector2(BaseHalf * 0.9f, -1.2f), new Vector2(BaseHalf * 1.02f, -BaseDepth) }, 24), Toon(Palette.StoneShadow, 1f, 0.15f), Vector3.zero);
             if (!survival)
@@ -230,8 +233,8 @@ namespace GSG.Tower
         {
             foreach (var f in ShapeOf(k, r).fixtures)
             {
-                var center = new Vector3(t.origin + x + f.x, y + f.y, 0f);
-                if (Physics.CheckBox(center, new Vector3(f.hw - 0.01f, f.hh - 0.01f, 0.4f), Quaternion.identity, ~0, QueryTriggerInteraction.Ignore)) return true;
+                var center = new Vector2(t.origin + x + f.x, y + f.y);
+                if (Physics2D.OverlapBox(center, new Vector2(f.hw * 2f - 0.04f, f.hh * 2f - 0.04f), 0f) != null) return true;
             }
             return false;
         }
@@ -261,19 +264,19 @@ namespace GSG.Tower
         void Place(TowerState t, Piece p, float y, float speed)
         {
             var go = p.view.gameObject;
-            go.transform.position = new Vector3(t.origin + p.x, y, 0f);
+            // A hair above the contact: the stone settles under gravity instead of being pushed out of an overlap.
+            go.transform.position = new Vector3(t.origin + p.x, y + 0.02f, 0f);
             foreach (var f in ShapeOf(p.k, p.r).fixtures)
             {
-                var box = go.AddComponent<BoxCollider>();
-                box.center = new Vector3(f.x, f.y, 0f); box.size = new Vector3(f.hw * 2f, f.hh * 2f, 1f); box.sharedMaterial = grip;
+                var box = go.AddComponent<BoxCollider2D>();
+                box.offset = new Vector2(f.x, f.y); box.size = new Vector2(f.hw * 2f, f.hh * 2f); box.sharedMaterial = grip;
             }
-            var rb = go.AddComponent<Rigidbody>();
+            var rb = go.AddComponent<Rigidbody2D>();
+            rb.useAutoMass = false;
             rb.mass = 4f;
-            rb.constraints = RigidbodyConstraints.FreezePositionZ | RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY;
-            rb.interpolation = RigidbodyInterpolation.Interpolate;
-            rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
-            rb.linearVelocity = new Vector3(0f, -speed, 0f);
-            rb.sleepThreshold = 0.02f;
+            rb.interpolation = RigidbodyInterpolation2D.Interpolate;
+            rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            rb.linearVelocity = new Vector2(0f, -Mathf.Min(speed, 4f));
             t.bodies.Add(new Body { k = p.k, r = p.r, rb = rb, t = go.transform });
             t.piece = null; t.placed++; t.spawnAt = time + SpawnDelay;
             if (t.seat.isPlayer) { Sfx.Play("thud", 0.7f); Fx.Dust(go.transform.position + Vector3.down * 0.5f, Palette.Paper, 5); }
@@ -367,7 +370,7 @@ namespace GSG.Tower
         {
             float h = 0f;
             foreach (var b in t.bodies)
-                if (b.rb.linearVelocity.magnitude < SettleSpeed && b.rb.angularVelocity.magnitude < SettleSpeed) h = Mathf.Max(h, BodyTop(b));
+                if (b.rb.linearVelocity.magnitude < SettleSpeed && Mathf.Abs(b.rb.angularVelocity) * Mathf.Deg2Rad < SettleSpeed) h = Mathf.Max(h, BodyTop(b));
             t.height = h; t.best = Mathf.Max(t.best, h);
             if (survival) return;
             if (t.height >= Goal)
