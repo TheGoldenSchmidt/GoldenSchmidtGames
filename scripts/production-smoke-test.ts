@@ -17,6 +17,9 @@ try {
   assert.equal(page.status, 200);
   const html = await page.text();
   assert.match(html, /<title>GoldenSchmidtGames<\/title>/);
+  // Die ausgelieferte Version steht in der HTML, damit installierte Apps ihren eigenen Stand zeigen.
+  assert.match(html, /<meta name="gsg-build" content="(PR #\d+|[0-9a-f]{7,})"/);
+  assert.equal(await (await fetch(`${origin}/index.html?__WB_REVISION__=1`)).text(), html, "Service-Worker-Vorabspeicher erhält dieselbe gestempelte HTML");
   // Messenger lesen das HTML ohne JavaScript und laden das Vorschaubild separat.
   const metadata = Object.fromEntries([...html.matchAll(/<meta\s+(?:property|name)="([^"]+)"\s+content="([^"]*)"/g)].map(([, key, value]) => [key, value]));
   assert.equal(metadata["og:title"], "GoldenSchmidtGames");
@@ -40,6 +43,9 @@ try {
   assert.equal(serviceWorker.status, 200);
   assert.match(serviceWorker.headers.get("content-type") ?? "", /javascript/);
   const workerSource = await serviceWorker.text();
+  // Jede ausgelieferte Version ist ein Service-Worker-Update, damit die Versionsanzeige nachzieht.
+  const shownVersion = /<meta name="gsg-build" content="([^"]*)"/.exec(html)![1].replace(/[^\w.-]/g, "");
+  assert.match(workerSource, new RegExp(`\\{url:"index\\.html",revision:"[0-9a-f]+-${shownVersion}"`));
   assert.match(workerSource, /SKIP_WAITING/, "Manuelle Update-Aktivierung muss im Worker vorhanden sein");
   const worldModules=[...new Set(workerSource.match(/assets\/(?:sceneKit|boardWorld|arenaWorld)-[A-Za-z0-9_-]+\.js/g)??[])];
   assert.equal(worldModules.length,3,"Alle nachgeladenen 3D-Module müssen im PWA-Cache liegen");
