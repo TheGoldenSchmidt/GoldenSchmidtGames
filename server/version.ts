@@ -41,3 +41,24 @@ export async function resolveBuildVersion(env: NodeJS.ProcessEnv = process.env):
 let cached: Promise<BuildVersion> | undefined;
 /** One lookup per process, however many servers it starts. */
 export function buildVersion() { return cached ??= resolveBuildVersion(); }
+
+/** "PR #48", or the short commit when the title names no pull request. */
+export function versionLabel(version: BuildVersion) {
+  return version.pr ? `PR #${version.pr}` : version.commit ?? "";
+}
+
+/** Writes the label into the build meta tag of index.html. */
+export function stampIndexHtml(html: string, version: BuildVersion) {
+  const label = versionLabel(version).replace(/[^\w #.-]/g, "");
+  return html.replace(/<meta name="gsg-build" content="[^"]*"/, `<meta name="gsg-build" content="${label}"`);
+}
+
+/**
+ * Workbox refetches index.html only when its precache revision changes. Adding the version makes
+ * every deployment a service worker update, so a phone that took the update shows the new number.
+ */
+export function stampServiceWorker(source: string, version: BuildVersion) {
+  const suffix = versionLabel(version).replace(/[^\w.-]/g, "");
+  if (!suffix) return source;
+  return source.replace(/(\{url:"index\.html",revision:")([^"]+)"/, `$1$2-${suffix}"`);
+}

@@ -115,7 +115,9 @@ test("Live-Version nur für Admins und Entwickler im Startmenü", async ({ page,
   await loginTestOwner(page.request);
   await page.goto("/");
   // Lokal und in CI kommt die Nummer aus git; ohne PR-Titel bleibt der kurze Commit.
-  await expect(page.locator(".expedition-status .expedition-version")).toHaveText(/^(PR #\d+|[0-9a-f]{7,})$/);
+  const shown = await page.locator('meta[name="gsg-build"]').getAttribute("content");
+  expect(shown).toMatch(/^(PR #\d+|[0-9a-f]{7,})$/);
+  await expect(page.locator(".expedition-status .expedition-version")).toHaveText(shown!);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: info.outputPath("version-390.png") });
 });

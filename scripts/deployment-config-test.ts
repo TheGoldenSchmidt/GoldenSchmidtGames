@@ -47,7 +47,15 @@ try {
 
 // Live-Version im Startmenü: PR-Nummer aus dem Commit-Titel auf main.
 {
-  const { pullRequestFromSubject, resolveBuildVersion } = await import("../server/version");
+  const { pullRequestFromSubject, resolveBuildVersion, stampIndexHtml, stampServiceWorker } = await import("../server/version");
+  const worker = 's.precacheAndRoute([{url:"index.html",revision:"6348c6"},{url:"assets/a.js",revision:null}])';
+  assert.equal(stampServiceWorker(worker, { pr: 49, commit: "abc1234" }), 's.precacheAndRoute([{url:"index.html",revision:"6348c6-PR49"},{url:"assets/a.js",revision:null}])');
+  assert.equal(stampServiceWorker(worker, { commit: "abc1234" }), worker.replace("6348c6", "6348c6-abc1234"));
+  assert.equal(stampServiceWorker(worker, {}), worker, "Ohne Version bleibt der Service Worker unverändert");
+  const page = '<head><meta name="gsg-build" content="" /></head>';
+  assert.equal(stampIndexHtml(page, { pr: 48, commit: "886d17c" }), '<head><meta name="gsg-build" content="PR #48" /></head>');
+  assert.equal(stampIndexHtml(page, { commit: "886d17c" }), '<head><meta name="gsg-build" content="886d17c" /></head>');
+  assert.equal(stampIndexHtml(page, {}), page);
   assert.equal(pullRequestFromSubject("Unity: Rückmeldung zu Tower Tumble (#48)"), 48);
   assert.equal(pullRequestFromSubject("Merge pull request #12 from someone/branch"), 12);
   assert.equal(pullRequestFromSubject("Würfel (#3) neu sortiert"), undefined);
