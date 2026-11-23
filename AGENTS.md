@@ -34,6 +34,7 @@ Technische Einrichtung und noch offene Betreiberaufgaben: [Deployment](DEPLOYMEN
 
 - Regeln/Wertung in `shared/`; lokal, Node und Handy-Host verwenden dieselben Funktionen. Einstieg: [Katalog](shared/games.ts), [Raumkern](shared/roomCore.ts), [Ansichtsauswahl](src/App.tsx).
 - Match-Minispiele: `shared/matches/` und `src/matches/`. Vorher [Backlog](docs/minigames/backlog.md) und [Konzept](docs/minigames/konzept.md) lesen und relevante Änderungen nachführen.
+- Unity-Minispiele (`unity/`, `public/unity/`, `src/unityGames.ts`): **immer [UnityGames.md](UnityGames.md) mitlesen** und nachführen; dort stehen Regeln, Arbeitsumgebung, Bauen und Prüfungen.
 - Raumautorität entscheidet über Züge, Würfe und Punkte; beide Hostingadapter verwenden `roomCore` ohne eigene Spielregeln. Nachrichten vor Zustandsänderung prüfen, Erfolg erst nach Speicherung bestätigen.
 - Wiederbeitritt nur mit passendem Raum-, Spieler- und Sitzungsschlüssel. Jedes Gerät erhält nur seine Sicht; verdeckte Karten, Einsätze und Schlüssel schützen. Beim Handy-Hosting bleibt dasselbe Host-Gerät zuständig.
 
@@ -52,6 +53,7 @@ Touch auf getrennten Handys zuerst. Inselparty, Roll It Up! und Minispiele: kein
 | Spielansicht/Bedienung | `npm run test:screens`, danach betroffener Playwright-Fall |
 | Rich’s Universe | `npm run build`, `npm run test:screens`, dann `npm run test:browser -- tests/browser/richs-universe.spec.ts` |
 | PWA/Auslieferung | `npm run test:pwa`, `npm run build`, `npm run test:production` |
+| Unity-Minispiele | Gemäß [UnityGames.md](UnityGames.md#prüfungen); Builds erzeugt CI nicht |
 
 Nach Client-/`shared/`-Änderungen **vor Playwright bauen**: Server verwendet Quellcode, Client `dist/`. Beispiel: `npm run build`, danach `npm run test:browser -- tests/browser/qwixx-cup.spec.ts`. Bei Browser-Versionsabweichung `PLAYWRIGHT_CHROMIUM_PATH` setzen.
 

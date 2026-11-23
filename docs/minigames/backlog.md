@@ -10,7 +10,7 @@ Match-Framework, Touch-Steuerung, Bots/Übung, Party-/Wettbewerbsanbindung und b
 - Neu (Nov. 2026): Tower Tumble – Survival, Neon Racer (Hochformat, Lenkrad/Pedale), Neon Racer – Kippen (Querformat, Bewegungssteuerung), Schneeballschlacht (3D). Regeln/Entscheidungen im [Konzept](konzept.md#dokumentierte-abweichungen).
 - Erste Generation: 14 klassische Arenen, Hook Wars, Chaos Run und Wippenwerk; weiter direkt wählbar.
 - Proberaum: lokale Übungsinsel mit neun Stationen, Pause/Reset, Figurenwahl und Animationsvorschau; kein Minispiel-/Pool-Eintrag.
-- Unity-Tests (Nov. 2026): Parcours-Probelevel (15 Stationen, alle Hindernisarten) und Floor is Lava gegen Bots als getrennte Unity-WebGL-Builds unter „Frei ausprobieren“; kein Pool-/Raumeintrag. [Unity-Tests](../../unity/README.md).
+- Unity-Tests (Nov. 2026): Parcours-Probelevel (15 Stationen, alle Hindernisarten) und Floor is Lava gegen Bots als getrennte Unity-WebGL-Builds unter „Frei ausprobieren“; kein Pool-/Raumeintrag. [Unity-Minispiele](../../UnityGames.md).
 - 3D-Match-Szenen mit Canvas-Rückfall. Figurenpipeline: [Skelettfiguren](figuren-rigged.md).
 
 **Implementiert ist keine Abnahme auf echten Handys.**
