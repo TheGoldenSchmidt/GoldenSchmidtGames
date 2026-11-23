@@ -8,13 +8,13 @@ export const UNITY_GAMES = [
     id: "parcours",
     name: "Parcours-Probelevel",
     text: "15 Stationen mit allen Hindernisarten, gebaut in Unity.",
-    note: "Allein · erster Start lädt ca. 14 MB"
+    note: "Allein · erster Start lädt ca. 12 MB"
   },
   {
     id: "lava",
     name: "Floor is Lava",
     text: "Drei Etagen über der Lava gegen drei Bots, gebaut in Unity.",
-    note: "Gegen Bots · erster Start lädt ca. 14 MB"
+    note: "Gegen Bots · erster Start lädt ca. 12 MB"
   }
 ] as const;
 

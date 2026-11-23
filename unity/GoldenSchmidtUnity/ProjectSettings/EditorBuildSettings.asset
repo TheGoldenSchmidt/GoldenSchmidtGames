@@ -7,9 +7,12 @@ EditorBuildSettings:
   m_Scenes:
   - enabled: 1
     path: Assets/GSG/Scenes/ParcoursProbe.unity
-    guid: 00000000000000000000000000000000
+    guid: 82a48c9ebbaf3ab8c95c5298d38784ac
   - enabled: 1
     path: Assets/GSG/Scenes/FloorIsLava.unity
+    guid: 0c7d883ff1553a607b8bf00946139175
+  - enabled: 1
+    path: Assets/GSG/Scenes/RollItUp.unity
     guid: 00000000000000000000000000000000
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}

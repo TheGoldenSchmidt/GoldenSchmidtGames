@@ -52,6 +52,8 @@ export default function App() {
   const [localGameId, setLocalGameId] = useState<GameId>("qwixx");
   const [testGameId, setTestGameId] = useState<GameId>("party");
   const [unityGame, setUnityGame] = useState<UnityGameId>("parcours");
+  /** Developer test: the next Roll It Up! test match uses the Unity board. */
+  const [unityBoard, setUnityBoard] = useState(false);
   const [localDurakCheatMode, setLocalDurakCheatMode] = useState(false);
   const [playIntro, setPlayIntro] = useState(false);
   const [resumeError,setResumeError]=useState("");
@@ -337,7 +339,8 @@ export default function App() {
         <LocalSetupScreen
           onPractice={canDevelop(account?.role) ? openPractice : undefined}
           onUnity={id => { setUnityGame(id); setView("unity"); }}
-          onTest={gameId => { setTestGameId(gameId); setView("test"); }}
+          onUnityRollItUp={canDevelop(account?.role) ? () => { setUnityBoard(true); setTestGameId("roll-it-up"); setView("test"); } : undefined}
+          onTest={gameId => { setUnityBoard(false); setTestGameId(gameId); setView("test"); }}
           onBack={() => setView("home")}
           onStart={(gameId, names, options) => {
             setLocalGameId(gameId);
@@ -393,7 +396,7 @@ export default function App() {
             ? <QwixxGameScreen profile={profile} initialRoom={room} onExit={()=>leaveOnline()} onLobby={()=>backToLobby()} />
             : room.config.gameId === "durak" ? <DurakGameScreen profile={profile} initialRoom={room} onExit={()=>leaveOnline()} onLobby={()=>backToLobby()} />
             : room.config.gameId === "kribbeln" ? <KribbelnGameScreen profile={profile} initialRoom={room} onExit={()=>leaveOnline()} onLobby={()=>backToLobby()} />
-            : isPartyMode(room.config.gameId) && <PartyGameScreen profile={profile} initialRoom={room} onExit={()=>leaveOnline()} onLobby={room.partyTest ? undefined : ()=>backToLobby()}/>}
+            : isPartyMode(room.config.gameId) && <PartyGameScreen profile={profile} initialRoom={room} onExit={()=>leaveOnline()} onLobby={room.partyTest ? undefined : ()=>backToLobby()} unityBoard={unityBoard && Boolean(room.partyTest) && room.config.gameId === "roll-it-up" && canDevelop(account?.role)}/>}
         </GameIntro>
       )}
       {view==="game-online" && room && !room.partyTest && session?.nearby?.role==="host" && <HostInvite code={room.code}/>}

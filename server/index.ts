@@ -79,6 +79,12 @@ if (existsSync(distDirectory)) {
         // Vite assets and Unity build files carry content hashes in their names.
         response.setHeader("Cache-Control", "public, max-age=31536000, immutable");
       }
+      // Unity builds are gzip files (.unityweb): let the browser unpack them natively and compile
+      // WebAssembly while it streams in, instead of unpacking in JavaScript after the download.
+      if (filePath.includes(`${path.sep}unity${path.sep}`) && filePath.endsWith(".unityweb")) {
+        response.setHeader("Content-Encoding", "gzip");
+        response.setHeader("Content-Type", filePath.endsWith(".wasm.unityweb") ? "application/wasm" : filePath.endsWith(".js.unityweb") ? "application/javascript" : "application/octet-stream");
+      }
     }
   }));
   app.use((request, response, next) => {

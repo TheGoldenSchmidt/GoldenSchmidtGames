@@ -24,6 +24,7 @@ namespace GSG.EditorTools
         const string Res = Root + "/Resources/GSG";
         public const string ParcoursScene = Root + "/Scenes/ParcoursProbe.unity";
         public const string LavaScene = Root + "/Scenes/FloorIsLava.unity";
+        public const string RollScene = Root + "/Scenes/RollItUp.unity";
 
         [MenuItem("GSG/1 Alles einrichten")]
         public static void All()
@@ -34,6 +35,7 @@ namespace GSG.EditorTools
             Project();
             BuildParcoursScene();
             BuildLavaScene();
+            BuildRollItUpScene();
             AssetDatabase.SaveAssets();
             Debug.Log("[GSG] Einrichtung fertig.");
         }
@@ -118,6 +120,10 @@ namespace GSG.EditorTools
             var sky = Asset("Sky", "GSG/Sky");
             sky.SetColor("_Top", Palette.SkyTop); sky.SetColor("_Horizon", Palette.SkyHorizon); sky.SetColor("_Bottom", Palette.SkyBottom);
             sky.SetColor("_SunColor", Palette.Sun); sky.SetFloat("_SunSize", 28f);
+            // Roll It Up!: the violet evening gradient of the web Bauschale (src/three/rollingTray.ts).
+            var roll = Asset("RollSky", "GSG/Sky");
+            roll.SetColor("_Top", Palette.Hex("#4a47a6")); roll.SetColor("_Horizon", Palette.Hex("#d9b8ee"));
+            roll.SetColor("_Bottom", Palette.Hex("#7f9be8")); roll.SetColor("_SunColor", Palette.Sun); roll.SetFloat("_SunSize", 18f);
             var temple = Asset("TempleSky", "GSG/Sky");
             temple.SetColor("_Top", new Color(0.09f, 0.03f, 0.04f)); temple.SetColor("_Horizon", new Color(0.55f, 0.16f, 0.07f));
             temple.SetColor("_Bottom", new Color(0.3f, 0.06f, 0.02f)); temple.SetColor("_SunColor", Palette.LavaGlow); temple.SetFloat("_SunSize", 6f);
@@ -291,7 +297,12 @@ namespace GSG.EditorTools
             PlayerSettings.WebGL.template = "PROJECT:GSG";
             PlayerSettings.WebGL.showDiagnostics = false;
             PlayerSettings.SetIl2CppCodeGeneration(UnityEditor.Build.NamedBuildTarget.WebGL, UnityEditor.Build.Il2CppCodeGeneration.OptimizeSize);
-            PlayerSettings.SetManagedStrippingLevel(UnityEditor.Build.NamedBuildTarget.WebGL, ManagedStrippingLevel.Low);
+            // Load time on phones: smaller engine code, no splash screen (optional for Unity Personal since Unity 6).
+            PlayerSettings.SetManagedStrippingLevel(UnityEditor.Build.NamedBuildTarget.WebGL, ManagedStrippingLevel.High);
+            PlayerSettings.stripEngineCode = true;
+            PlayerSettings.SplashScreen.show = false;
+            PlayerSettings.SplashScreen.showUnityLogo = false;
+            SetWebGLCodeOptimization("DiskSizeLTO");
 
             // Phone-sized quality tier for the web, with shadows and HDR for the toon bands and bloom.
             var names = QualitySettings.names;
@@ -312,8 +323,18 @@ namespace GSG.EditorTools
                 SetPrivate(urp, "m_MainLightShadowsSupported", true);
                 SetPrivate(urp, "m_SoftShadowsSupported", true);
             }
-            EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ParcoursScene, true), new EditorBuildSettingsScene(LavaScene, true) };
+            EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ParcoursScene, true), new EditorBuildSettingsScene(LavaScene, true), new EditorBuildSettingsScene(RollScene, true) };
             AssetDatabase.SaveAssets();
+        }
+
+        /// <summary>WebGL "Code Optimization" (UnityEditor.WebGL.UserBuildSettings), set by reflection: the type lives in the WebGL module.</summary>
+        static void SetWebGLCodeOptimization(string value)
+        {
+            var settings = System.AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("UnityEditor.WebGL.UserBuildSettings")).FirstOrDefault(t => t != null);
+            var property = settings?.GetProperty("codeOptimization", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+            if (property == null) { Debug.LogWarning("[GSG] WebGL-Codeoptimierung nicht gefunden."); return; }
+            property.SetValue(null, System.Enum.Parse(property.PropertyType, value));
+            Debug.Log("[GSG] WebGL-Codeoptimierung: " + property.GetValue(null));
         }
 
         static void SetPrivate(Object target, string field, bool value)
@@ -343,7 +364,7 @@ namespace GSG.EditorTools
         static Material M(string n) => AssetDatabase.LoadAssetAtPath<Material>($"{Res}/Materials/{n}.mat");
 
         /// <summary>Camera with post-processing, warm key light, palette sky/ambient/fog and a global volume.</summary>
-        static void Frame(string sky, Color key, float intensity, Vector3 euler, Color ambientSky, Color ambientEquator, Color ambientGround, Color fog, float fogStart, float fogEnd, float bloom, bool temple)
+        static void Frame(string sky, Color key, float intensity, Vector3 euler, Color ambientSky, Color ambientEquator, Color ambientGround, Color fog, float fogStart, float fogEnd, float bloom, bool temple, string profileName = null)
         {
             var camGo = new GameObject("Main Camera") { tag = "MainCamera" };
             var cam = camGo.AddComponent<Camera>();
@@ -368,7 +389,7 @@ namespace GSG.EditorTools
             look.fog = fog; look.fogStart = fogStart; look.fogEnd = fogEnd;
             look.Apply();
 
-            var profilePath = $"{Root}/Scenes/{(temple ? "Tempel" : "Parcours")}-Volume.asset";
+            var profilePath = $"{Root}/Scenes/{profileName ?? (temple ? "Tempel" : "Parcours")}-Volume.asset";
             AssetDatabase.DeleteAsset(profilePath);
             var profile = ScriptableObject.CreateInstance<VolumeProfile>();
             AssetDatabase.CreateAsset(profile, profilePath);
@@ -408,6 +429,18 @@ namespace GSG.EditorTools
             var gameType = System.Type.GetType("GSG.Lava.LavaGame, GSG.Runtime");
             if (gameType != null) new GameObject("Spiel").AddComponent(gameType);
             EditorSceneManager.SaveScene(scene, LavaScene);
+        }
+
+        [MenuItem("GSG/8 Szene Roll It Up")]
+        public static void BuildRollItUpScene()
+        {
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            Frame("RollSky", new Color(1f, 0.93f, 0.82f), 1.2f, new Vector3(50f, -35f, 0f), new Color(0.62f, 0.64f, 0.95f), new Color(0.86f, 0.76f, 0.86f), new Color(0.32f, 0.3f, 0.4f),
+                new Color(0.72f, 0.66f, 0.9f), 60f, 160f, 0.35f, false, "Bauschale");
+            // The board itself is built at runtime from the app's board message (or the demo data in the editor).
+            var gameType = System.Type.GetType("GSG.RollItUp.RollGame, GSG.Runtime");
+            if (gameType != null) new GameObject("Spiel").AddComponent(gameType);
+            EditorSceneManager.SaveScene(scene, RollScene);
         }
 
         /// <summary>Static batching for everything that never moves (no rigid body or behaviour on it or above it).</summary>
