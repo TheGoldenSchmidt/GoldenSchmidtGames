@@ -32,7 +32,7 @@ namespace GSG.Snow
         Baller tapTarget;
 
         protected override string GameName => "Schneeballschlacht";
-        protected override string Intro => "Du trägst höchstens zwei Schneebälle: „Formen“ tippen und kurz stehen bleiben, oder über einen Schneehaufen laufen. „Werfen“ trifft den nächsten Gegner im Bild (goldener Ring). Wischen dreht die Kamera. Jeder Treffer macht 10 % langsamer, nach drei Treffern bist du ein Schneemann. Wer zuletzt steht, gewinnt.";
+        protected override string Intro => "Du trägst höchstens zwei Schneebälle: „Formen“ tippen und kurz stehen bleiben, oder über einen Schneehaufen laufen. „Werfen“ wirft in Blickrichtung; steht ein Gegner fast genau davor, rastet der Wurf ein (goldener Ring). Wischen dreht die Kamera – laufende Gegner musst du selbst vorhalten. Jeder Treffer macht 10 % langsamer, nach drei Treffern bist du ein Schneemann. Wer zuletzt steht, gewinnt.";
         protected override string ResultText => "Nach zwei Minuten gewinnt, wer am wenigsten getroffen wurde, dann wer mehr getroffen hat.";
         protected override bool ControlsVisible => sim != null && !sim.players[0].Out;
 
@@ -187,7 +187,7 @@ namespace GSG.Snow
                 while (acc >= StepTime && !sim.done && guard++ < 6) { acc -= StepTime; Tick(); }
                 if (sim.done) Finish();
             }
-            tapTarget = sim.players[0].Out ? null : sim.Target(sim.players[0], ViewDir(), SnowSim.TapCone);
+            tapTarget = sim.players[0].Out ? null : sim.Target(sim.players[0], ViewDir(), SnowSim.PlayerCone);
             Draw();
             UpdateHud();
         }
@@ -213,7 +213,7 @@ namespace GSG.Snow
                 if (now) throws.Add((i, aim));
             }
             sim.runInput = inputs;
-            foreach (var (seat, aim) in throws) if (!sim.Throw(seat, aim) && seat == 0) Sfx.Play("blip", 0.4f, 0.7f);
+            foreach (var (seat, aim) in throws) if (!sim.Throw(seat, aim, seat == 0 ? SnowSim.PlayerCone : SnowSim.Assist, seat != 0) && seat == 0) Sfx.Play("blip", 0.4f, 0.7f);
             sim.Step(StepTime, inputs, hold);
             foreach (var e in sim.events) Event(e);
             sim.events.Clear();

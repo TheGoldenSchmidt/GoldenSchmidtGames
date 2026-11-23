@@ -22,7 +22,7 @@ namespace GSG.Ring
     public class RingItem { public int id; public string kind; public float x, y; }
     public class Slick { public int id, owner; public float x, y, until, armedAt; }
     public class Obstacle { public int id; public float x, y, r, angle; }
-    public struct RingEvent { public string kind; public int a, b; }
+    public struct RingEvent { public string kind; public int a, b; public float v; }
 
     public abstract class RingRules
     {
@@ -38,6 +38,10 @@ namespace GSG.Ring
         public virtual List<Obstacle> Obstacles(RingSim s) => new();
         public virtual void MoveObstacles(RingSim s, float time) { }
         public abstract (Vector2 dir, bool act) Bot(RingSim s, Fighter me);
+        /// <summary>Unity change (feedback): no dash or turbo while sliding after a hit.</summary>
+        public virtual bool CanAct(Fighter f, float now) => now >= f.stunUntil;
+        /// <summary>Closing speed of the last ordinary contact (for bounce effects), set by Collide.</summary>
+        public float lastClosing;
     }
 
     public class RingSim
@@ -69,7 +73,7 @@ namespace GSG.Ring
         }
 
         public float Random() => (float)rng.NextDouble();
-        public void Emit(string kind, int a = -1, int b = -1) => events.Add(new RingEvent { kind = kind, a = a, b = b });
+        public void Emit(string kind, int a = -1, int b = -1, float v = 0f) => events.Add(new RingEvent { kind = kind, a = a, b = b, v = v });
 
         public static (float x, float y, float heading) SpawnPoint(int i, int count, float r)
         {
@@ -164,8 +168,10 @@ namespace GSG.Ring
                 {
                     var a = active[i]; var b = active[j];
                     if (Dist(a.x, a.y, b.x, b.y) >= rules.BodyOf(a, time) + rules.BodyOf(b, time)) continue;
+                    rules.lastClosing = 0f;
                     var victim = rules.Collide(a, b, time);
-                    if (victim != null) Emit("strike", victim.seat, victim == a ? b.seat : a.seat);
+                    if (victim != null) Emit("strike", victim.seat, victim == a ? b.seat : a.seat, rules.lastClosing);
+                    else if (rules.lastClosing > 0.3f) Emit("bounce", a.seat, b.seat, rules.lastClosing);
                 }
             foreach (var f in active)
                 foreach (var o in obstacles)
@@ -184,7 +190,7 @@ namespace GSG.Ring
         public bool Press(int seat)
         {
             var f = fighters[seat];
-            if (!f.alive || f.isOut || resetAt >= 0f || time - f.actionAt < rules.actionCooldown) return false;
+            if (!f.alive || f.isOut || resetAt >= 0f || time - f.actionAt < rules.actionCooldown || !rules.CanAct(f, time)) return false;
             f.actionAt = time;
             rules.Action(f, time);
             Emit("action", seat);
@@ -276,6 +282,7 @@ namespace GSG.Ring
                 return victim;
             }
             var (_, _, closing) = RingSim.Bounce(a, b, body, Bump, now, shieldA, shieldB);
+            lastClosing = closing;
             if (closing > 1.5f)
             {
                 if (!shieldA) a.stunUntil = Mathf.Max(a.stunUntil, now + BumpStunMs);
@@ -299,8 +306,12 @@ namespace GSG.Ring
     /// <summary>Bumper Mayhem (shared/matches/bumperMayhem.ts BUMPER, ITEMS).</summary>
     public class BumperRules : RingRules
     {
+        // Unity changes after feedback ("langweilig"): bouncy rubber (restitution 0.5 → 0.95), every
+        // contact pushes both cars apart by at least MinBounce, hard hits kick harder (0.9 → 1.3,
+        // cap 11 → 14) and the rammer rebounds instead of stopping.
+        public const float MinBounce = 2.6f, BounceGain = 0.6f, Rebound = 0.35f;
         public const float Body = 0.55f, AccelK = 7f, MaxSpeed = 4.4f, TurboSpeed = 8f, TurboMs = 800f, Turn = 4.2f, Grip = 0.25f, Drag = 0.985f, Coast = 0.92f,
-            Overspeed = 0.88f, Restitution = 0.5f, Kick = 0.9f, TurboKick = 1.75f, MaxKnock = 11f, HitterKeeps = 0.25f, StunBase = 220f, StunPer = 55f, StunMax = 650f,
+            Overspeed = 0.88f, Restitution = 0.95f, Kick = 1.3f, TurboKick = 1.75f, MaxKnock = 14f, HitterKeeps = 0.25f, StunBase = 220f, StunPer = 55f, StunMax = 700f,
             Slide = 0.93f, SpinRate = 6f, Hard = 2.5f, Cooldown = 4000f, Orbit = 2.8f, PostRadius = 0.6f, Spin = 0.6f;
         public const float ItemFirst = 4000f, ItemMin = 6000f, ItemMax = 9000f, Pick = 0.35f, Spread = 0.62f, MegaMs = 6000f, MegaScale = 1.45f, MegaKick = 1.5f, MegaTake = 0.45f,
             OilMs = 8000f, OilRadius = 0.85f, OilArm = 900f, OilStun = 650f, WaveRadius = 2.8f, WaveKnock = 7.5f, WaveStun = 350f;
@@ -387,6 +398,13 @@ namespace GSG.Ring
         public override Fighter Collide(Fighter a, Fighter b, float now)
         {
             var (nx, ny, closing) = RingSim.Bounce(a, b, (BodyOf(a, now) + BodyOf(b, now)) / 2f, Restitution, now, now < a.shieldUntil, now < b.shieldUntil);
+            lastClosing = closing;
+            if (closing <= 0f) return null;
+            // Every contact bounces: both cars are pushed apart, a giant car takes less of it.
+            float push = Mathf.Max(MinBounce, closing * BounceGain);
+            float takeA = Big(a, now) ? MegaTake : 1f, takeB = Big(b, now) ? MegaTake : 1f;
+            a.vx -= nx * push * takeA * 0.5f; a.vy -= ny * push * takeA * 0.5f;
+            b.vx += nx * push * takeB * 0.5f; b.vy += ny * push * takeB * 0.5f;
             if (closing <= Hard) return null;
             var victim = b.lastHitBy == a.seat && Mathf.Approximately(b.lastHitAt, now) ? b : a;
             var hitter = victim == a ? b : a;
@@ -396,7 +414,7 @@ namespace GSG.Ring
             float ux = nx * sign, uy = ny * sign, along = victim.vx * ux + victim.vy * uy;
             if (along < kick) { victim.vx += ux * (kick - along); victim.vy += uy * (kick - along); }
             if (!Big(victim, now)) victim.stunUntil = now + Mathf.Min(StunMax, StunBase + closing * StunPer);
-            hitter.vx *= HitterKeeps; hitter.vy *= HitterKeeps;
+            hitter.vx = hitter.vx * HitterKeeps - ux * closing * Rebound; hitter.vy = hitter.vy * HitterKeeps - uy * closing * Rebound;
             return victim;
         }
 

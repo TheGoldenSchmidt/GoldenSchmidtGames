@@ -29,6 +29,8 @@ namespace GSG.Snow
     {
         public const float Size = 22f, Radius = 0.42f, Speed = 4.4f, SlowPerHit = 0.1f, FormMs = 1000f, ThrowGap = 450f, BallSpeed = 15f, Range = 12f, BallRadius = 0.2f,
             HitGrace = 500f, PileRespawn = 6000f, PileRadius = 0.7f, MaxMs = 120000f, Assist = 0.38f, TapCone = 1.15f;
+        /// <summary>Unity change (feedback "trifft zu einfach"): the player's tap throw only locks within ±11° of the view and does not lead the target.</summary>
+        public const float PlayerCone = 0.2f;
         public const int HitsOut = 3, MaxBalls = 2, Substeps = 2;
         const float Half = Size / 2f;
 
@@ -224,7 +226,7 @@ namespace GSG.Snow
         public void Form(int seat) { var me = players[seat]; if (!me.Out && me.balls < MaxBalls) me.forming = true; }
 
         /// <summary>A throw: towards the target near the aim (leading its run), else along the facing.</summary>
-        public bool Throw(int seat, Vector2? aim, float cone = Assist)
+        public bool Throw(int seat, Vector2? aim, float cone = Assist, bool lead = true)
         {
             var me = players[seat];
             if (me.Out || me.balls <= 0 || time - me.lastThrow < ThrowGap) return false;
@@ -232,7 +234,7 @@ namespace GSG.Snow
             float dx = aim?.x ?? me.fx, dy = aim?.y ?? me.fy;
             if (target != null)
             {
-                var run = runInput[target.seat]; float stick = run.magnitude;
+                var run = lead ? runInput[target.seat] : Vector2.zero; float stick = run.magnitude;
                 float v = stick > 0.15f ? Speed * Slow(target) * Mathf.Min(1f, stick) / stick : 0f, fly = Dist(me.x, me.y, target.x, target.y) / BallSpeed;
                 float lx = target.x + run.x * v * fly - me.x, ly = target.y + run.y * v * fly - me.y, n = Mathf.Max(1e-6f, Mathf.Sqrt(lx * lx + ly * ly));
                 dx = lx / n; dy = ly / n;
