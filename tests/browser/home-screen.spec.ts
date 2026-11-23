@@ -168,3 +168,39 @@ test("Startbildschirm: Update-Prüfung verändert weder Größe noch Scrollbarke
     expect(await note.evaluate(element => element.getBoundingClientRect().width)).toBeLessThanOrEqual(1);
   }
 });
+
+for (const recovers of [true, false]) {
+  test(`Startbildschirm: Skriptfehler beim Update ${recovers ? "erholt sich nach Serverstart" : "zeigt die Ursache"}`, async ({ page }) => {
+    let healthCalls = 0;
+    await page.route("**/api/health", async route => {
+      healthCalls++;
+      const starting = recovers && healthCalls === 1;
+      await route.fulfill({ status: starting ? 503 : 200, json: { ok: !starting } });
+    });
+    await page.addInitScript(recovers => {
+      const original = ServiceWorkerRegistration.prototype.update;
+      let attempts = 0;
+      ServiceWorkerRegistration.prototype.update = function () {
+        if (++attempts === 1 || !recovers) {
+          return Promise.reject(new TypeError("An unknown error occurred when fetching the script."));
+        }
+        return original.call(this);
+      };
+    }, recovers);
+    await page.setViewportSize({ width: 320, height: 640 });
+    await page.goto("/");
+    await page.evaluate(async () => { await navigator.serviceWorker.ready; });
+
+    const tool = page.getByRole("complementary", { name: "App aktualisieren" });
+    const note = tool.getByRole("status");
+    await tool.getByRole("button", { name: "Updates prüfen" }).tap();
+    await expect(note).toContainText("prüft, ob der Spielserver antwortet");
+    await expect(tool.getByRole("button")).toBeDisabled();
+    await expect(note).toContainText(recovers
+      ? "Diese Ansicht ist aktuell."
+      : "Der Server ist erreichbar. Das Update-Skript konnte nicht abgerufen werden. Bitte erneut prüfen.");
+    await expect(note).toBeInViewport({ ratio: 1 });
+    await expect(tool.getByRole("button", { name: "Updates prüfen" })).toBeEnabled();
+    expect(healthCalls).toBe(recovers ? 2 : 1);
+  });
+}
