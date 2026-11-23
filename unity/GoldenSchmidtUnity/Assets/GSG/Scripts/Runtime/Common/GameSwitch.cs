@@ -15,7 +15,8 @@ namespace GSG
         {
             { "parcours", "ParcoursProbe" }, { "lava", "FloorIsLava" }, { "rollitup", "RollItUp" },
             { "sumo", "SumoSmash" }, { "bumpercars", "BumperMayhem" }, { "bombs", "BombArena" },
-            { "snowball", "Schneeballschlacht" }, { "tower", "TowerTumble" }
+            { "snowball", "Schneeballschlacht" }, { "tower", "TowerTumble" }, { "towersurvival", "TowerSurvival" },
+            { "tuerenlotto", "Tuerenlotto" }, { "kreiselkurs", "Kreiselkurs" }
         };
 
         void Start()

@@ -14,7 +14,10 @@ Alle Minispiele, die nicht zur ersten Generation gehören (`NEW_MATCH_IDS` in `s
 | Bumper Mayhem (`bumpercars`) | Gleicher Ringkern + `bumperMayhem.ts`: Lenken/Turbo, Schleudern, Item-Kisten (Riesenauto, Ölfleck, Schockwelle), drehende Pfosten, Fläche schrumpft ab 45 s. Neonfläche mit Riesenrad. | Szene `BumperMayhem` |
 | Bomb Arena (`bombs`) | Port von `bombArena.ts` (`Bombs/BombSim.cs`): 11 × 15 Felder, 2-s-Zünder, Kreuzflammen mit Ketten, Kisten mit Extras (Reichweite, Bombe, Tempo, Kick), Spirale ab 25 s, 2 Leben, K.o. +2, Durchgangssieg +3, zwei Durchgänge, Sudden Death. | Szene `BombArena` |
 | Schneeballschlacht (`snowball`) | Port von `snowball.ts` (`Snow/SnowSim.cs`): Formen/Schneehaufen, höchstens zwei Bälle, Wurf rastet auf den nächsten Gegner im Bild ein (Vorhalt), −10 % Tempo je Treffer, Schneemann nach drei. Verfolgerkamera, Wischen dreht. Zielen per Ziehen gibt es noch nicht, nur den Tipp-Wurf. | Szene `Schneeballschlacht` |
-| Tower Tumble (`tower`) | Turmrennen aus `towerTumble.ts` (Steinfolge, Steuerung, Ziellinie 16, 2 s halten, 120 s, Bot-Planer); die Physik ist **Unitys 2D-Physik (Box2D)** statt `physics2d.ts` (Reibung 0,9, Schwerkraft 18), die Steine werden als 3D-Würfel gezeichnet. Survival ist im Code vorbereitet (`survival`), aber noch nicht eingetragen. | Szene `TowerTumble` |
+| Tower Tumble (`tower`) | Turmrennen aus `towerTumble.ts` (Steinfolge, Steuerung, Ziellinie 16, 2 s halten, 120 s, Bot-Planer); die Physik ist **Unitys 2D-Physik (Box2D)** statt `physics2d.ts` (Reibung 0,9, Schwerkraft 18), die Steine werden als 3D-Würfel gezeichnet. | Szene `TowerTumble` |
+| Tower Tumble – Survival (`towersurvival`) | Gleiche Szene-Logik mit `survival`: keine Ziellinie, drei verlorene Steine = raus, Fallen bis × 1,8 schneller in 180 s, vorsichtigere Bots. | Szene `TowerSurvival` |
+| Türenlotto (`tuerenlotto`) | Parcours-Lauf aus den App-Streckendaten (`Resources/GSG/Courses/tuerenlotto.json`, erzeugt aus `parcoursCourses.ts`): Türreihen, Gassen mit Sackgasse/Falltür, Schieber, Graben, Drehbalken. Läufer und Hindernisse des Probelevels; eigener Kontrollpunkt je Läufer, Zielreihenfolge, Zielschluss 20 s nach dem Ersten, Zeitlimit 120 s. Bots nach `parcoursBot` (gemeinsames Wissen über probierte Türen/Gassen, springen/ducken an Balken, springen über Lücken, warten auf Inseln und Schieber). | Szene `Tuerenlotto` |
+| Kreiselkurs (`kreiselkurs`) | Gleicher Lauf-Rahmen: Drehbalken unten/oben/Kreuz, fahrende Inseln, zwei Wippen, Rührwerk. Bots scheitern gelegentlich an den Inseln (wie in der App). | Szene `Kreiselkurs` |
 
 Dazu kommt **Roll It Up! (Unity)** (`rollitup`, Szene `RollItUp`): die Bauschale als Unity-Brett. Nur für Admin/Entwicklung sichtbar (`canDevelop`) unter **Frei ausprobieren**; startet eine Testpartie mit Bots am lokalen Tisch. Regeln, Bots, Items, Inventar/Menü und die Minispiele zwischen den Runden bleiben unverändert in der App (`shared/party.ts` über die Raumautorität); Unity zeichnet nur Schale, Felder, Stationen, Figuren, Würfel und die Brett-Entscheidungen.
 
@@ -31,8 +34,10 @@ Begründung: zuerst Spiele, die am meisten von 3D/Physik gewinnen und eine gemei
 | 3 | Bomb Arena | umgesetzt (Nov. 2026) |
 | 4 | Schneeballschlacht | umgesetzt (Nov. 2026) |
 | 5 | Tower Tumble | umgesetzt (Nov. 2026) |
-| 6 | Tower Tumble – Survival | offen (Code vorbereitet) |
-| 7–13 | Parcours-Läufe Türenlotto, Kreiselkurs, Geisterpfad, Fallklappen, Windkanal, Kletterwand, Glibberflut | offen (Hindernisse aus dem Probelevel) |
+| 6 | Tower Tumble – Survival | umgesetzt (Nov. 2026) |
+| 7 | Türenlotto | umgesetzt (Nov. 2026) |
+| 8 | Kreiselkurs | umgesetzt (Nov. 2026) |
+| 9–13 | Parcours-Läufe Geisterpfad, Fallklappen, Windkanal, Kletterwand, Glibberflut | offen; Streckendaten liegen schon als JSON vor, es fehlen Geisterplatten-, Klappen-, Wind-, Griff- und Glibber-Aufbau im `CourseBuilder` sowie die zugehörigen Bot-Regeln |
 | 14 | Standhaft | offen |
 | 15 | Arrow Masters | offen |
 | 16–17 | Neon Racer, Neon Racer – Kippen | offen |
@@ -70,6 +75,8 @@ Nur in den Unity-Fassungen; die Web-Fassungen bleiben unverändert, bis über ei
 | Ort | Inhalt |
 | --- | --- |
 | `Assets/GSG/Scripts/Runtime/Common` | `Palette`, `Hud` (UI Toolkit + Touch, Spielerleiste, Tasten links), `CameraRig` (Cinemachine), `Figure`, `Sfx` (Synthese), `Fx` (Partikel, Shake, Hit-Stop), `SceneLook`, `AppLink` (URL-Parameter), `GameSwitch` (Startszene, `?spiel=`), `MatchGame` + `Seat` (Spielhülle: Titel, Countdown, Pause, Endtafel, Spieler gegen Bots), `Kit` (Toon-Materialien, Grundkörper, erzeugte Meshes mit neutraler UV) |
+| `Assets/GSG/Scripts/Runtime/Parcours` (Läufe) | `CourseData` (JSON-Spiegel von `parcoursCourses.ts`) + `CourseBuilder` (Strecke aus den Daten mit den Probelevel-Hindernissen), `RunGame` (Lauf gegen Bots, `IRaceHost`); `ParcoursRunner` lässt sich per `bot` von außen steuern |
+| `Assets/GSG/Resources/GSG/Courses` | Streckendaten aller Läufe als JSON; nach Änderungen an `parcoursCourses.ts` neu erzeugen (`npx tsx scripts/unity-export-courses.ts`; `npm run test:rules` meldet veraltete Dateien) |
 | `Assets/GSG/Scripts/Runtime/Ring`, `Bombs`, `Snow`, `Tower` | Regel-Ports (`RingSim`, `BombSim`, `SnowSim`) und Spiele (`RingGame` für Sumo/Bumper, `BombGame`, `SnowGame`, `TowerGame`) |
 | `Assets/GSG/Scripts/Runtime/Parcours` | `ParcoursRunner`, Hindernisse (je Datei ein MonoBehaviour), `ParcoursLevel` (Aufbau aller Stationen), `ParcoursGame` (Ablauf) |
 | `Assets/GSG/Scripts/Runtime/Lava` | `LavaTile`, `LavaRunner`, `LavaGame` (Regeln, Bots, Ablauf) |
@@ -119,7 +126,8 @@ Eigene Meshes (Drehkörper, Hügel, Steine) brauchen UV-Koordinaten: `GSG/Toon` 
 
 4. Die Builds mit dem Quellstand einchecken. CI und Render bauen sie nicht.
 5. Einstellungen (setzt `GSGSetup.Project()`): Gzip mit Entpack-Rückfall, Dateinamen mit Inhalts-Hash, Datencache, keine Ausnahmen, IL2CPP „Optimize Size“, WebGL-Codeoptimierung „Disk Size with LTO“, Managed Stripping „High“, Engine-Code-Stripping, kein Splash-Bildschirm, Qualitätsstufe „Mobile“ mit HDR und Schatten.
-6. `RollDemo.json` nach Änderungen an `src/unityRollItUp.ts` neu erzeugen (Felder müssen zu `RollModels.cs` passen); die Brücke selbst prüft `npm run test:rules` (`scripts/unity-roll-it-up-test.ts`).
+6. Streckendaten nach Änderungen an `shared/matches/parcoursCourses.ts` neu exportieren: `npx tsx scripts/unity-export-courses.ts` (flaches JSON nach `Resources/GSG/Courses/<id>.json`; nicht gesetzte Indizes = −1). `npm run test:rules` schlägt fehl, solange die Dateien veraltet sind.
+7. `RollDemo.json` nach Änderungen an `src/unityRollItUp.ts` neu erzeugen (Felder müssen zu `RollModels.cs` passen); die Brücke selbst prüft `npm run test:rules` (`scripts/unity-roll-it-up-test.ts`).
 
 Auslieferung: Der Server erlaubt **nur unter `/unity/`** WebAssembly (`'wasm-unsafe-eval'`), `blob:`-Skripte und das Einbetten im eigenen App-Rahmen (`frame-ancestors 'self'`, `X-Frame-Options: SAMEORIGIN`); die App selbst bleibt streng. `Build/`-Dateien sind ein Jahr cachebar. `.unityweb`-Dateien gehen mit `Content-Encoding: gzip` (und `application/wasm` für den Code) hinaus: Der Browser entpackt selbst und übersetzt WebAssembly schon während des Downloads. Der Service Worker nimmt `unity/**` nicht in den Offline-Cache und leitet Navigationen nach `/unity/` nicht auf die App um. Andere Hoster brauchen dieselben Header ([Deployment](DEPLOYMENT.md#node-starten)). Der erste Start lädt ca. 12 MB für alle Spiele zusammen (Engine-Code ≈ 7,2 MB, Daten ≈ 4,4 MB; neue Szenen sind klein, weil ihre Welt zur Laufzeit entsteht); weitere Spiele kommen danach aus dem Browser-Cache. Jeder Neubau legt den ganzen Build neu im Repository ab, deshalb Spiele gesammelt bauen und nicht für Kleinigkeiten. Startzeit bis spielbereit (Chromium-Emulation, 4× gedrosselte CPU, 30 Mbit/s, 40 ms): Parcours 8,4 s → 6,4–7,1 s, Floor is Lava 7,4 s → 6,2–6,4 s, Bauschale 6 s. Die Bauschale lädt verdeckt schon während des Auftakt-Minispiels.
 

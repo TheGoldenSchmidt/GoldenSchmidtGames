@@ -28,7 +28,7 @@ namespace GSG.EditorTools
         public const string StartScene = Root + "/Scenes/Start.unity";
         static string GameScene(string name) => $"{Root}/Scenes/{name}.unity";
         /// <summary>Match games built by <see cref="BuildMatchScenes"/> (scene name = GameSwitch entry).</summary>
-        static readonly string[] MatchScenes = { "SumoSmash", "BumperMayhem", "BombArena", "Schneeballschlacht", "TowerTumble" };
+        static readonly string[] MatchScenes = { "SumoSmash", "BumperMayhem", "BombArena", "Schneeballschlacht", "TowerTumble", "TowerSurvival", "Tuerenlotto", "Kreiselkurs" };
 
         [MenuItem("GSG/1 Alles einrichten")]
         public static void All()
@@ -496,11 +496,19 @@ namespace GSG.EditorTools
                         new GameObject("Spiel").AddComponent<GSG.Snow.SnowGame>();
                         break;
                     case "TowerTumble":
-                        var towerType = System.Type.GetType("GSG.Tower.TowerGame, GSG.Runtime");
-                        if (towerType == null) continue;
+                    case "TowerSurvival":
                         Frame("Sky", Palette.Sun, 1.2f, new Vector3(35f, -30f, 0f), new Color(0.56f, 0.55f, 0.88f), new Color(0.8f, 0.64f, 0.74f), new Color(0.23f, 0.17f, 0.31f),
                             new Color(0.62f, 0.45f, 0.66f), 60f, 200f, 0.4f, false, "Turm");
-                        new GameObject("Spiel").AddComponent(towerType);
+                        new GameObject("Spiel").AddComponent<GSG.Tower.TowerGame>().survival = name == "TowerSurvival";
+                        break;
+                    case "Tuerenlotto":
+                    case "Kreiselkurs":
+                        var runType = System.Type.GetType("GSG.Parcours.RunGame, GSG.Runtime");
+                        if (runType == null) continue;
+                        Frame("Sky", Palette.Sun, 1.25f, new Vector3(42f, -35f, 0f), new Color(0.56f, 0.55f, 0.88f), new Color(0.8f, 0.64f, 0.74f), new Color(0.23f, 0.17f, 0.31f),
+                            new Color(0.62f, 0.45f, 0.66f), 80f, 260f, 0.4f, false, "Lauf");
+                        var run = new GameObject("Spiel").AddComponent(runType);
+                        runType.GetField("course").SetValue(run, name == "Tuerenlotto" ? "tuerenlotto" : "kreiselkurs");
                         break;
                 }
                 EditorSceneManager.SaveScene(scene, GameScene(name));

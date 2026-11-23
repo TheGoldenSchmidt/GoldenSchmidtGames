@@ -86,3 +86,14 @@ console.log("Unity-Brücke Roll It Up! erfolgreich: Brett, Zustand, Bewegung, Ga
   assert.equal(unityGameUrl("sumo", "rig_lena", true), "/unity/spiele/index.html?spiel=sumo&figur=rig_lena&ruhig=1");
   console.log(`Unity-Spielliste erfolgreich: ${ids.length} Einträge mit Szene im gemeinsamen Build`);
 }
+
+// Unity runs: the exported course data matches the current parcours courses.
+{
+  const { readFileSync } = await import("node:fs");
+  const { flatCourse, UNITY_COURSE_DIR, UNITY_COURSE_IDS } = await import("./unity-export-courses");
+  for (const id of UNITY_COURSE_IDS) {
+    const stored = JSON.parse(readFileSync(new URL(`${id}.json`, UNITY_COURSE_DIR), "utf8"));
+    assert.deepEqual(stored, JSON.parse(JSON.stringify(flatCourse(id))), `${id}: Unity-Strecke veraltet – npx tsx scripts/unity-export-courses.ts`);
+  }
+  console.log(`Unity-Strecken aktuell: ${UNITY_COURSE_IDS.length} Läufe`);
+}

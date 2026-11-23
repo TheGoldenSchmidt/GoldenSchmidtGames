@@ -21,7 +21,15 @@ namespace GSG.Parcours
 
         public enum Pose { Run, Air, Dive, Prone, Hang, Climb, Stun, Done, Frozen }
         public Pose pose = Pose.Frozen;
-        public ParcoursGame game;
+        public IRaceHost game;
+        /// <summary>Driven by a bot (RunGame) instead of the HUD: stick, jump, dive, duck and grab set from outside.</summary>
+        public bool bot;
+        public Vector3 botMove;
+        public bool botDuck, botGrab;
+        public void BotJump() => jumpAt = Time.time;
+        public void BotDive() => diveAt = Time.time;
+        public bool Grounded => grounded;
+        public bool Ducking => duck;
         public Figure figure;
         public CameraRig rig;
 
@@ -75,7 +83,12 @@ namespace GSG.Parcours
         void Update()
         {
             var hud = Hud.Instance;
-            if (hud && pose != Pose.Frozen && pose != Pose.Done)
+            if (bot)
+            {
+                bool free = pose != Pose.Frozen && pose != Pose.Done;
+                move = free ? botMove : Vector3.zero; duck = free && botDuck; grab = free && botGrab;
+            }
+            else if (hud && pose != Pose.Frozen && pose != Pose.Done)
             {
                 if (hud.Pressed("a")) jumpAt = Time.time;
                 if (hud.Pressed("b")) diveAt = Time.time;
@@ -199,7 +212,7 @@ namespace GSG.Parcours
 
             body.linearVelocity = new Vector3(result.x, v.y, result.z);
 
-            if (game) game.CheckFall(this);
+            game?.CheckFall(this);
         }
 
         void Probe(Vector3 v)
@@ -309,11 +322,10 @@ namespace GSG.Parcours
             if (capsule.height < height) SetHeight(height);
             body.linearVelocity = velocity;
             pose = Pose.Stun; until = Time.time + stun; grounded = false; airDive = false;
-            Sfx.Play("hit");
+            Sfx.Play("hit", bot ? 0.35f : 1f);
             figure?.Shot("hit", stun, 0.04f, 1.2f);
             Fx.Sparks(transform.position + Vector3.up, Palette.Accent, big ? 14 : 8);
-            Fx.Shake(big ? 0.7f : 0.35f);
-            if (big) Fx.HitStop(0.07f);
+            if (!bot) { Fx.Shake(big ? 0.7f : 0.35f); if (big) Fx.HitStop(0.07f); }
         }
 
         /// <summary>A soft bounce back (a door that stays shut).</summary>

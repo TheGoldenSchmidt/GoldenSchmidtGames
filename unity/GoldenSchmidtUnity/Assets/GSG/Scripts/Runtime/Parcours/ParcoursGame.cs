@@ -11,7 +11,7 @@ namespace GSG.Parcours
     /// fifteen stations with checkpoints, falls return to the last checkpoint, finish moment,
     /// pause menu with restart and sound toggles. State: Title → Playing ⇄ Paused → Ended.
     /// </summary>
-    public class ParcoursGame : MonoBehaviour
+    public class ParcoursGame : MonoBehaviour, IRaceHost
     {
         public enum State { Title, Playing, Paused, Ended }
         public State state = State.Title;
@@ -114,6 +114,9 @@ namespace GSG.Parcours
                 hud.SetChip("falls", "Stürze " + falls);
             }
         }
+
+        void IRaceHost.Reached(Checkpoint cp, ParcoursRunner r) => Reached(cp);
+        void IRaceHost.Finish(Vector3 at, ParcoursRunner r) => Finish(at);
 
         public void Reached(Checkpoint cp)
         {

@@ -11,7 +11,8 @@ namespace GSG.Parcours
     {
         public bool carries;
         public bool lookLikeFloor;
-        bool known;
+        bool known, byBot;
+        public bool Known => known;
         Renderer look;
 
         void Awake() { look = GetComponent<Renderer>(); }
@@ -21,6 +22,7 @@ namespace GSG.Parcours
             if (known || !c.rigidbody || !c.rigidbody.GetComponent<ParcoursRunner>()) return;
             if (c.rigidbody.position.y < GetComponent<Collider>().bounds.max.y - 0.15f) return; // only from above
             known = true;
+            byBot = c.rigidbody.GetComponent<ParcoursRunner>().bot;
             if (carries)
             {
                 look.material.SetColor("_BaseColor", Palette.TileSafe);
@@ -34,7 +36,7 @@ namespace GSG.Parcours
         {
             look.material.SetColor("_BaseColor", Palette.Warn);
             Sfx.Play("crack");
-            Hud.Instance?.Toast(lookLikeFloor ? "Falltür!" : "Geisterplatte!", Palette.Warn, 0.8f);
+            if (!byBot) Hud.Instance?.Toast(lookLikeFloor ? "Falltür!" : "Geisterplatte!", Palette.Warn, 0.8f);
             yield return new WaitForSeconds(0.12f);
             GetComponent<Collider>().enabled = false;
             Fx.Shards(transform.position, Palette.Tile, 10);
