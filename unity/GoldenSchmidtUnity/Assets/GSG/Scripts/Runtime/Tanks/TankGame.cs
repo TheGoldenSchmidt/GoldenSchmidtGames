@@ -1,0 +1,351 @@
+using System.Collections.Generic;
+using System.Linq;
+using UnityEngine;
+using static GSG.Kit;
+using NVector2 = System.Numerics.Vector2;
+
+namespace GSG.Tanks
+{
+    public class TankGame : MatchGame
+    {
+        const float StepTime = TankSim.StepMs / 1000f, BulletHeight = 0.45f, WallHeight = 0.62f;
+        sealed class View
+        {
+            public Transform root, hull, turret;
+            public GameObject shield;
+            public readonly GameObject[] pips = new GameObject[TankSim.Hp];
+        }
+
+        TankSim sim;
+        Transform world, laser;
+        Camera overview;
+        Material steel, brick, cracked, tracer, laserMaterial;
+        readonly List<View> views = new();
+        GameObject[] walls;
+        readonly Dictionary<int, Transform> bullets = new(), pickups = new();
+        readonly HashSet<int> activeProps = new();
+        readonly List<int> staleProps = new();
+        float accumulator;
+        bool shotPending;
+        NVector2 shotAim;
+
+        protected override string GameName => "Tank Trouble";
+        protected override string Intro => "Fahre links und ziehe rechts zum Zielen. Lass zum Schießen los oder tippe kurz für einen Schuss in die letzte Richtung. Kugeln prallen zweimal von festen Mauern ab. Ziegelmauern zerbrechen nach zwei Treffern. Sieben Abschüsse oder die beste Bilanz nach 90 Sekunden gewinnen.";
+        protected override string ResultText => "Mehr Abschüsse und weniger Verluste entscheiden. Bei Gleichstand folgt ein Stechen.";
+        protected override bool ControlsVisible => sim.Tanks[0].Alive;
+
+        protected override void Setup()
+        {
+            world = new GameObject("Sandstein-Labyrinth").transform;
+            overview = Camera.main;
+            overview.orthographic = true;
+            overview.transform.rotation = Quaternion.Euler(74f, 0f, 0f);
+            overview.transform.position = -overview.transform.forward * 26f;
+            steel = Toon(Palette.TankWall);
+            brick = Toon(Palette.TankBrick);
+            cracked = Toon(Palette.TankCracked);
+            tracer = Toon(Palette.TankTrace, 0f, 0f, Palette.TankTrace * 1.8f);
+            laserMaterial = Toon(Palette.TankLaser, 0f, 0f, Palette.TankLaser * 1.6f);
+            BuildFloor();
+            sim = new TankSim(seats.Count, (uint)Random.Range(1, int.MaxValue));
+            BuildWalls();
+            foreach (var seat in seats) views.Add(BuildTank(seat));
+            focus = views[0].root;
+            laser = Box(world, Palette.TankLaser, Vector3.zero, Vector3.one, 0f).transform;
+            laser.GetComponent<Renderer>().sharedMaterial = laserMaterial;
+            laser.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            hud.AddChip("time", "90 s");
+            hud.AddChip("score", "0 / 7");
+            hud.UseAim();
+            hud.AimReleased += QueueShot;
+            Render(1f);
+            UpdateHud();
+        }
+
+        protected override void OnBegin()
+        {
+            accumulator = 0f;
+            shotPending = false;
+            UpdateHud();
+        }
+
+        static Vector3 At(NVector2 p, float y = 0f) => new(p.X - TankSim.Width / 2f, y, TankSim.Height / 2f - p.Y);
+        static Vector3 Heading(float angle) => new(Mathf.Cos(angle), 0f, -Mathf.Sin(angle));
+        static NVector2 Input(Vector2 vector) => new(vector.x, -vector.y);
+
+        void BuildFloor()
+        {
+            var deck = new GameObject("Sandstein").transform;
+            deck.SetParent(world, false);
+            Box(deck, Palette.TankBase, Vector3.down * 0.33f, new Vector3(TankSim.Width + 0.55f, 0.45f, TankSim.Height + 0.55f));
+            for (int y = 0; y < TankSim.Rows; y++) for (int x = 0; x < TankSim.Cols; x++)
+                Box(deck, (x + y) % 2 == 0 ? Palette.TankSand : Palette.TankSandDark,
+                    At(new NVector2((x + 0.5f) * TankSim.Cell, (y + 0.5f) * TankSim.Cell), -0.08f),
+                    new Vector3(TankSim.Cell, 0.16f, TankSim.Cell), 0.18f);
+            StaticBatchingUtility.Combine(deck.gameObject);
+        }
+
+        void BuildWalls()
+        {
+            walls = new GameObject[sim.Walls.Length];
+            for (int i = 0; i < walls.Length; i++)
+            {
+                var w = sim.Walls[i];
+                if (w.Kind == 0) continue;
+                var size = w.Max - w.Min;
+                var model = Box(world, Palette.TankWall, At(w.Center, WallHeight / 2f), new Vector3(size.X, WallHeight, size.Y));
+                model.GetComponent<Renderer>().sharedMaterial = w.Kind == 1 ? steel : brick;
+                if (w.Kind == 2)
+                {
+                    // Three pale joints distinguish breakable brickwork from solid steel.
+                    for (int j = -1; j <= 1; j++)
+                    {
+                        var joint = Box(model.transform, Palette.TankSand, Vector3.zero, Vector3.one, 0f);
+                        bool horizontal = size.X > size.Y;
+                        joint.transform.localPosition = horizontal ? new Vector3(j * 0.25f, 0.501f, 0f) : new Vector3(0f, 0.501f, j * 0.25f);
+                        joint.transform.localScale = horizontal ? new Vector3(0.025f, 0.035f, 0.84f) : new Vector3(0.84f, 0.035f, 0.025f);
+                    }
+                }
+                walls[i] = model;
+            }
+        }
+
+        View BuildTank(Seat seat)
+        {
+            var root = new GameObject(seat.name).transform;
+            root.SetParent(world, false);
+            var hull = new GameObject("Fahrgestell").transform;
+            hull.SetParent(root, false);
+            foreach (float side in new[] { -1f, 1f })
+            {
+                Box(hull, Palette.Ink, new Vector3(side * 0.29f, 0.11f, 0f), new Vector3(0.17f, 0.22f, 0.86f));
+                for (int i = -1; i <= 1; i++)
+                    Box(hull, Palette.TankWall, new Vector3(side * 0.29f, 0.23f, i * 0.21f), new Vector3(0.16f, 0.035f, 0.08f), 0f);
+            }
+            Box(hull, seat.Color, new Vector3(0f, 0.23f, 0f), new Vector3(0.49f, 0.24f, 0.76f));
+            var turret = new GameObject("Turm").transform;
+            turret.SetParent(root, false);
+            Cyl(turret, seat.Color, new Vector3(0f, 0.39f, 0f), 0.23f, 0.21f);
+            Box(turret, seat.Color, new Vector3(0f, BulletHeight, 0.31f), new Vector3(0.105f, 0.105f, 0.43f));
+            Cyl(turret, Palette.Ink, new Vector3(0f, 0.5f, -0.12f), 0.13f, 0.05f);
+            var driver = SpawnFigure(seat, turret, 0.33f);
+            driver.transform.localPosition = new Vector3(0f, 0.22f, -0.12f);
+            driver.Loop("idle");
+            var ring = Torus(0.49f, 0.035f, 24, 6);
+            var shield = Part(root, "Schild", ring, Toon(Palette.Rune, 0f, 0f, Palette.Rune), Vector3.up * 0.05f, shadows: false);
+            if (seat.isPlayer)
+                Part(root, "Dein Panzer", ring, Toon(Palette.Own, 0f, 0f, Palette.Own), Vector3.up * 0.025f,
+                    new Vector3(1.24f, 1f, 1.24f), false);
+            var view = new View { root = root, hull = hull, turret = turret, shield = shield };
+            for (int i = 0; i < view.pips.Length; i++)
+                view.pips[i] = Box(root, Palette.Accent, new Vector3((i - 1) * 0.17f, 0.93f, -0.5f), new Vector3(0.12f, 0.055f, 0.095f), 0f);
+            return view;
+        }
+
+        void QueueShot(Vector2 aim)
+        {
+            if (!Playing || !sim.Tanks[0].Alive) return;
+            shotAim = Input(aim);
+            shotPending = true;
+        }
+
+        void Update()
+        {
+            float width = (TankSim.Width + 0.8f) / (2f * overview.aspect * 0.92f);
+            float height = (TankSim.Height + 0.8f) / (2f * 0.72f);
+            overview.orthographicSize = Mathf.Max(width, height);
+            if (!Playing)
+            {
+                shotPending = false;
+                laser.gameObject.SetActive(false);
+                return;
+            }
+            accumulator += Time.deltaTime;
+            while (accumulator >= StepTime && !sim.Done)
+            {
+                accumulator -= StepTime;
+                bool wasAlive = ControlsVisible;
+                sim.Step(Input(hud.Stick), shotPending ? shotAim : Input(hud.Aim), shotPending);
+                shotPending = false;
+                foreach (var e in sim.Events) Feedback(e);
+                if (wasAlive != ControlsVisible)
+                {
+                    hud.ReleaseAll();
+                    hud.SetControlsVisible(ControlsVisible);
+                }
+                UpdateHud();
+            }
+            Render(sim.Done ? 1f : Mathf.Clamp01(accumulator / StepTime));
+            if (sim.Done) Finish();
+        }
+
+        void Render(float blend)
+        {
+            for (int i = 0; i < views.Count; i++)
+            {
+                var t = sim.Tanks[i];
+                var view = views[i];
+                view.root.gameObject.SetActive(t.Alive);
+                if (!t.Alive) continue;
+                view.root.position = At(NVector2.Lerp(t.Previous, t.Position, blend));
+                view.hull.rotation = Quaternion.LookRotation(Heading(t.Heading));
+                float angle = i == 0 && hud.Aim.sqrMagnitude > 0.1f ? Mathf.Atan2(-hud.Aim.y, hud.Aim.x) : t.Aim;
+                view.turret.rotation = Quaternion.LookRotation(Heading(angle));
+                view.shield.SetActive(sim.Protected(t));
+                for (int j = 0; j < view.pips.Length; j++) view.pips[j].SetActive(j < t.Life);
+            }
+            SyncProjectiles(blend);
+            SyncPickups();
+            DrawLaser();
+        }
+
+        void SyncProjectiles(float blend)
+        {
+            activeProps.Clear();
+            foreach (var b in sim.Bullets)
+            {
+                activeProps.Add(b.Id);
+                if (!bullets.TryGetValue(b.Id, out var model))
+                {
+                    model = Prim(PrimitiveType.Sphere, world, Palette.TankTrace, Vector3.zero, Vector3.one * (2 * TankSim.BulletRadius), 0f).transform;
+                    model.GetComponent<Renderer>().sharedMaterial = tracer;
+                    model.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                    bullets.Add(b.Id, model);
+                }
+                model.position = At(NVector2.Lerp(b.Previous, b.Position, blend), BulletHeight);
+            }
+            RemoveStale(bullets);
+        }
+
+        void SyncPickups()
+        {
+            activeProps.Clear();
+            foreach (var item in sim.Pickups)
+            {
+                activeProps.Add(item.id);
+                if (pickups.ContainsKey(item.id)) continue;
+                var color = PowerColor(item.kind);
+                var model = Cyl(world, Palette.Wall, At(item.at, 0.06f), 0.32f, 0.12f);
+                if (item.kind == TankSim.Power.Shield)
+                    Part(model.transform, "Schild", Torus(0.63f, 0.13f, 16, 6), Toon(color, 0f, 0f, color), Vector3.up * 1.5f);
+                else
+                {
+                    int bars = item.kind == TankSim.Power.Triple ? 3 : 1;
+                    for (int i = 0; i < bars; i++)
+                    {
+                        var token = Box(model.transform, color, new Vector3((i - (bars - 1) / 2f) * 0.5f, 1.5f, 0f),
+                            new Vector3(0.22f, 0.45f, 1.05f), 0f);
+                        token.transform.localRotation = Quaternion.Euler(0f, bars == 1 ? 40f : 0f, 0f);
+                    }
+                }
+                pickups.Add(item.id, model.transform);
+            }
+            RemoveStale(pickups);
+        }
+
+        void RemoveStale(Dictionary<int, Transform> props)
+        {
+            staleProps.Clear();
+            foreach (var pair in props) if (!activeProps.Contains(pair.Key)) staleProps.Add(pair.Key);
+            foreach (int id in staleProps) { Destroy(props[id].gameObject); props.Remove(id); }
+        }
+
+        void DrawLaser()
+        {
+            bool aiming = Playing && !sim.Done && sim.Tanks[0].Alive && hud.Aiming;
+            laser.gameObject.SetActive(aiming);
+            if (!aiming) return;
+            var tank = sim.Tanks[0];
+            var aim = hud.Aim.sqrMagnitude > 0.1f ? Input(hud.Aim) : TankSim.Direction(tank.Aim);
+            var root = views[0].root.position;
+            var p = new NVector2(root.x + TankSim.Width / 2f, TankSim.Height / 2f - root.z);
+            float length = sim.FirstWall(p, aim, 9f);
+            float start = Mathf.Min(TankSim.Muzzle, length);
+            laser.position = At(p + aim * ((length + start) / 2f), BulletHeight);
+            laser.rotation = Quaternion.LookRotation(new Vector3(aim.X, 0f, -aim.Y));
+            laser.localScale = new Vector3(0.035f, 0.025f, length - start);
+        }
+
+        static Color PowerColor(TankSim.Power power) => power switch
+        {
+            TankSim.Power.Rapid => Palette.Accent,
+            TankSim.Power.Triple => Palette.Door,
+            _ => Palette.Rune
+        };
+
+        void Feedback((TankSim.Effect kind, NVector2 at, int seat, int by, TankSim.Power power) e)
+        {
+            var point = At(e.at, BulletHeight);
+            switch (e.kind)
+            {
+                case TankSim.Effect.Shot:
+                    Fx.Sparks(point, Palette.TankTrace, 3);
+                    Sfx.Play("thud", e.seat == 0 ? 0.55f : 0.2f);
+                    break;
+                case TankSim.Effect.Bounce:
+                    Fx.Sparks(point, Palette.TankTrace, 4);
+                    Sfx.Play("tick", 0.3f);
+                    break;
+                case TankSim.Effect.Crack:
+                case TankSim.Effect.Break:
+                    for (int i = 0; i < walls.Length; i++)
+                    {
+                        if (!walls[i] || sim.Walls[i].Center != e.at) continue;
+                        if (sim.Walls[i].Kind == 0) walls[i].SetActive(false);
+                        else walls[i].GetComponent<Renderer>().sharedMaterial = cracked;
+                        break;
+                    }
+                    Fx.Shards(point, Palette.TankBrick, e.kind == TankSim.Effect.Crack ? 4 : 12);
+                    Sfx.Play("thud", 0.45f);
+                    break;
+                case TankSim.Effect.Block:
+                    Fx.Sparks(point, Palette.Rune, 6);
+                    if (e.seat == 0) hud.Toast("Schild hält!", Palette.Rune, 0.55f);
+                    break;
+                case TankSim.Effect.Hit:
+                    Fx.Sparks(point, Palette.TankTrace, 8);
+                    Sfx.Play("hit", 0.5f);
+                    if (e.seat == 0) hud.Toast(e.by == 0 ? "Eigener Abpraller!" : "Treffer!", Palette.Warn, 0.65f);
+                    break;
+                case TankSim.Effect.Destroyed:
+                    Fx.Shards(point, seats[e.seat].Color, 18);
+                    Sfx.Play("thud", 0.65f);
+                    if (e.seat == 0) hud.Toast("Zerstört · zurück in 2 s", Palette.Warn);
+                    else if (e.by == 0) hud.Toast("Abschuss!", Palette.Accent);
+                    break;
+                case TankSim.Effect.Pickup:
+                    Fx.Glow(point, PowerColor(e.power), 8);
+                    Sfx.Play("chime", 0.5f);
+                    if (e.seat == 0) hud.Toast(e.power == TankSim.Power.Rapid ? "Schnellschuss!" :
+                        e.power == TankSim.Power.Triple ? "Dreifachschuss!" : "Schutzschild!", PowerColor(e.power));
+                    break;
+                case TankSim.Effect.Tiebreak:
+                    hud.Toast("Stechen! Der nächste Abschuss der Führenden entscheidet.", Palette.Accent, 2f);
+                    Sfx.Play("sting");
+                    break;
+            }
+        }
+
+        void UpdateHud()
+        {
+            int limit = sim.InOvertime ? TankSim.Regular + TankSim.Overtime : TankSim.Regular;
+            int duration = sim.InOvertime ? TankSim.Overtime : TankSim.Regular;
+            int remaining = Mathf.Max(0, limit - sim.Time);
+            int seconds = Mathf.CeilToInt(remaining / 1000f);
+            hud.SetChip("time", sim.InOvertime ? $"Stechen · {seconds} s" : $"{seconds} s");
+            hud.SetChip("score", $"{sim.Tanks[0].Kills} / {TankSim.KillsToWin}");
+            if (timerFill != null) SetTimer(remaining / (float)duration);
+            foreach (var seat in seats)
+            {
+                var t = sim.Tanks[seat.slot];
+                Strip(seat, t.Alive ? $"· {t.Kills} · {t.Life} HP" : $"· {t.Kills} · zurück in {Mathf.CeilToInt((t.RespawnAt - sim.Time) / 1000f)} s", seat.isPlayer, !t.Alive);
+            }
+        }
+
+        protected override bool SamePlace(Seat a, Seat b) => a.slot != sim.Winner && b.slot != sim.Winner &&
+            sim.Tanks[a.slot].Kills == sim.Tanks[b.slot].Kills && sim.Tanks[a.slot].Deaths == sim.Tanks[b.slot].Deaths;
+        protected override List<(Seat seat, string value)> Ranking() => seats
+            .OrderByDescending(s => s.slot == sim.Winner).ThenByDescending(s => sim.Tanks[s.slot].Kills).ThenBy(s => sim.Tanks[s.slot].Deaths)
+            .Select(s => (s, $"{sim.Tanks[s.slot].Kills} Abschüsse · {sim.Tanks[s.slot].Deaths}× zerstört")).ToList();
+    }
+}

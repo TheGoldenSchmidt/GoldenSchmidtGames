@@ -6,7 +6,7 @@
  */
 export const UNITY_BUILD = "/unity/spiele/index.html";
 const NOTE = "erster Start lädt ca. 12 MB, danach aus dem Cache";
-export const UNITY_GAMES = [
+export const UNITY_GAME_CATALOG = [
   { id: "parcours", name: "Parcours-Probelevel", text: "15 Stationen mit allen Hindernisarten, gebaut in Unity.", note: `Allein · ${NOTE}` },
   { id: "lava", name: "Floor is Lava", text: "Drei Etagen über der Lava gegen drei Bots, gebaut in Unity.", note: `Gegen Bots · ${NOTE}` },
   { id: "sumo", name: "Sumo Smash", text: "Schubs die anderen vom Podest über dem See, gebaut in Unity.", note: `Gegen Bots · ${NOTE}` },
@@ -16,9 +16,13 @@ export const UNITY_GAMES = [
   { id: "tower", name: "Tower Tumble", text: "Turmrennen mit echter Unity-Physik: Steine kippen, rutschen, stürzen.", note: `Gegen Bots · ${NOTE}` },
   { id: "towersurvival", name: "Tower Tumble – Survival", text: "Bauen ohne Ziellinie, immer schneller: drei verlorene Steine und du bist raus.", note: `Gegen Bots · ${NOTE}` },
   { id: "tuerenlotto", name: "Türenlotto", text: "Parcours-Lauf: echte und falsche Türen, Gassen mit Sackgassen und Falltüren.", note: `Gegen Bots · ${NOTE}` },
-  { id: "kreiselkurs", name: "Kreiselkurs", text: "Parcours-Lauf: Drehbalken, fahrende Inseln, Wippen und das Rührwerk.", note: `Gegen Bots · ${NOTE}` }
+  { id: "kreiselkurs", name: "Kreiselkurs", text: "Parcours-Lauf: Drehbalken, fahrende Inseln, Wippen und das Rührwerk.", note: `Gegen Bots · ${NOTE}` },
+  // Erst zusammen mit dem WebGL-Build freischalten, damit die Galerie keine fehlenden Szenen startet.
+  { id: "standhaft", name: "Standhaft", text: "Weiche zwei Drehbalken aus und bleib auf den Fallklappen als Letzte stehen.", note: `Gegen Bots · ${NOTE}`, pendingBuild: true },
+  { id: "tanks", name: "Tank Trouble", text: "Nutze Abpraller und spreng Ziegelmauern im Panzerlabyrinth.", note: `Gegen Bots · ${NOTE}`, pendingBuild: true }
 ] as const;
 
+export const UNITY_GAMES = UNITY_GAME_CATALOG.filter(game => !("pendingBuild" in game));
 export type UnityGameId = typeof UNITY_GAMES[number]["id"];
 
 export const isUnityGame = (id: unknown): id is UnityGameId => UNITY_GAMES.some(game => game.id === id);

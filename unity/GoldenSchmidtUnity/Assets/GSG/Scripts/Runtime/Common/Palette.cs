@@ -61,6 +61,16 @@ namespace GSG
         public static readonly Color Crust = Hex("#1a0a06");
         public static readonly Color Own = Hex("#ffe44e");
 
+        // Tank Trouble (src/three/tankWorld.ts): sandstone deck and two visibly distinct wall types.
+        public static readonly Color TankSand = Hex("#d3c597");
+        public static readonly Color TankSandDark = Hex("#c9b98a");
+        public static readonly Color TankBase = Hex("#3b3524");
+        public static readonly Color TankWall = Hex("#3b3550");
+        public static readonly Color TankBrick = Hex("#b4553a");
+        public static readonly Color TankCracked = Hex("#7d3b2a");
+        public static readonly Color TankLaser = Hex("#e3263b");
+        public static readonly Color TankTrace = Hex("#ffb52e");
+
         // UI materials of the island world (designregeln.md).
         public static readonly Color Gold = Hex("#ffd777");
         public static readonly Color GoldDeep = Hex("#f1aa4c");

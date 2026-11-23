@@ -18,6 +18,8 @@ Alle Minispiele, die nicht zur ersten Generation gehören (`NEW_MATCH_IDS` in `s
 | Tower Tumble – Survival (`towersurvival`) | Gleiche Szene-Logik mit `survival`: keine Ziellinie, drei verlorene Steine = raus, Fallen bis × 1,8 schneller in 180 s, vorsichtigere Bots. | Szene `TowerSurvival` |
 | Türenlotto (`tuerenlotto`) | Parcours-Lauf aus den App-Streckendaten (`Resources/GSG/Courses/tuerenlotto.json`, erzeugt aus `parcoursCourses.ts`): Türreihen, Gassen mit Sackgasse/Falltür, Schieber, Graben, Drehbalken. Läufer und Hindernisse des Probelevels; eigener Kontrollpunkt je Läufer, Zielreihenfolge, Zielschluss 20 s nach dem Ersten, Zeitlimit 120 s. Bots nach `parcoursBot` (gemeinsames Wissen über probierte Türen/Gassen, springen/ducken an Balken, springen über Lücken, warten auf Inseln und Schieber). | Szene `Tuerenlotto` |
 | Kreiselkurs (`kreiselkurs`) | Gleicher Lauf-Rahmen: Drehbalken unten/oben/Kreuz, fahrende Inseln, zwei Wippen, Rührwerk. Bots scheitern gelegentlich an den Inseln (wie in der App). | Szene `Kreiselkurs` |
+| Standhaft (`standhaft`) | Ausscheidungsfinale aus `standhaft.json`. 25 Fallklappen öffnen sich von außen nach innen, zwei Drehbalken starten zeitversetzt. Spieler und drei Bots weichen über die Plattform aus. Letzte Überlebende gewinnen, nach 90 s auch gemeinsam. Unitys Parcours-Läufer verwendet Rigidbody-Kollisionen, die Balken folgen dem App-Kontaktmodell. | Szene `Standhaft` im Projekt. Editor-Prüfung und WebGL-Build offen. |
+| Tank Trouble (`tanks`) | C#-Port von `tankTrouble.ts` in 50-ms-Schritten. 7 × 11 Zellen, Abpraller, zerstörbare Ziegel, Extras, Respawn mit Schild und drei Bots mit Labyrinth-Pfadsuche. Übersicht auf das ganze Feld, links fahren, rechts ziehen und zum Schießen loslassen. Der Ziellaser reicht bis zur ersten Mauer. Sieben Abschüsse oder Zeitwertung mit höchstens 30 s Stechen. | Szene `TankTrouble` im Projekt, C#-Regelkern geprüft. Editor-Prüfung und WebGL-Build offen. |
 
 Dazu kommt **Roll It Up! (Unity)** (`rollitup`, Szene `RollItUp`): die Bauschale als Unity-Brett. Nur für Admin/Entwicklung sichtbar (`canDevelop`) unter **Frei ausprobieren**; startet eine Testpartie mit Bots am lokalen Tisch. Regeln, Bots, Items, Inventar/Menü und die Minispiele zwischen den Runden bleiben unverändert in der App (`shared/party.ts` über die Raumautorität); Unity zeichnet nur Schale, Felder, Stationen, Figuren, Würfel und die Brett-Entscheidungen.
 
@@ -38,10 +40,10 @@ Begründung: zuerst Spiele, die am meisten von 3D/Physik gewinnen und eine gemei
 | 7 | Türenlotto | umgesetzt (Nov. 2026) |
 | 8 | Kreiselkurs | umgesetzt (Nov. 2026) |
 | 9–13 | Parcours-Läufe Geisterpfad, Fallklappen, Windkanal, Kletterwand, Glibberflut | offen; Streckendaten liegen schon als JSON vor, es fehlen Geisterplatten-, Klappen-, Wind-, Griff- und Glibber-Aufbau im `CourseBuilder` sowie die zugehörigen Bot-Regeln |
-| 14 | Standhaft | offen |
+| 14 | Standhaft | Unity-Szene im Projekt, WebGL-Build offen |
 | 15 | Arrow Masters | offen |
 | 16–17 | Neon Racer, Neon Racer – Kippen | offen |
-| 18–19 | Tank Trouble, Turmsicht | offen |
+| 18–19 | Tank Trouble, Turmsicht | Unity-Szene für Tank Trouble im Projekt, WebGL-Build offen. Turmsicht offen. |
 | 20–22 | Light Trails, Neon Pong, Quick Draw | offen |
 
 Floor is Lava ist bereits umgesetzt; Wippenwerk, Hook Wars, Chaos Run und die klassischen Arenen gehören zur ersten Generation und werden nicht umgestellt.
@@ -96,7 +98,7 @@ Eigene Meshes (Drehkörper, Hügel, Steine) brauchen UV-Koordinaten: `GSG/Toon` 
 1. Regeln aus `shared/matches/<spiel>.ts` als C#-Port übernehmen (gleiche Konstanten, Zeit in ms, 50-ms-Schritte, Bots), nur wo Unity klar gewinnt eigene Physik (z. B. Tower Tumble). Laufzeitcode in `Assets/GSG/Scripts/Runtime/<Spiel>/`. Ein MonoBehaviour pro Datei, Dateiname = Klassenname (sonst kann der Player-Build abstürzen).
 2. Das Spiel erbt von `MatchGame` (Titel, Countdown, Pause, Endtafel, `Seat.Roster`) und baut seine Welt mit `Kit`.
 3. Szene in `GSGSetup.MatchScenes` und `BuildMatchScenes` eintragen; `Project()` nimmt sie in die Build-Einstellungen. Eintrag in `GameSwitch.Scenes` (`id` → Szenenname).
-4. Eintrag in `src/unityGames.ts`. `npm run test:rules` prüft, dass jede ID eine Szene in `GameSwitch` hat; die Browserprüfung startet jeden Eintrag.
+4. Eintrag in `src/unityGames.ts`. `npm run test:rules` prüft Szene, GUID und aktive Build-Einstellung. Einträge mit `pendingBuild` werden erst zusammen mit dem aktualisierten WebGL-Build freigeschaltet, danach startet die Browserprüfung auch diese Einträge.
 5. Build erzeugen (unten), [Prüfungen](#prüfungen) ausführen, diese Datei und betroffene Doku nachführen.
 
 ## Arbeitsumgebung (Cloud-Sitzung)
@@ -136,6 +138,8 @@ Auslieferung: Der Server erlaubt **nur unter `/unity/`** WebAssembly (`'wasm-uns
 | Schritt | Prüfung |
 | --- | --- |
 | Unity-Code | `unity recompile` ohne Fehler; Editor-Play-Mode mit `GSGPlaytest.Start("all")` (Parcours) bzw. Durchlauf mit Wertung (Floor is Lava); Aufnahmen hochkant prüfen |
+| Standhaft | Im Editor einen Durchgang spielen. Balkenstarts nach 3 und 20 s, Klappenwarnung und gestaffelte Öffnung ab 12 s, Ausscheiden ohne Wiedereinstieg und Ergebnis prüfen. |
+| Tank Trouble | C#-Regelkern separat mit .NET 8 prüfen (Befehle unten). Im Editor und im neuen Build gleichzeitig fahren und zielen, kurz tippen, einen Schuss abprallen lassen sowie Respawn und Ergebnis prüfen. |
 | Build | gemeinsamer Build erzeugt und nach `public/unity/spiele/` kopiert |
 | App | `npm run build`, `npm run test:production` (Header, Content-Encoding, Dateien, PWA-Ausschluss), dann `npm run test:browser -- tests/browser/unity-games.spec.ts` |
 | Roll It Up! (Unity) | `npm run test:rules` (Brücke), Editor-Vorschau mit `RollDemo.json` (`DemoAdvance()` schaltet Zustände weiter), dann `npm run test:browser -- tests/browser/unity-roll-it-up.spec.ts` (Einstieg nur mit Entwicklerkonto, Brett lädt, Würfeln per Touch im Build) |
@@ -143,6 +147,13 @@ Auslieferung: Der Server erlaubt **nur unter `/unity/`** WebAssembly (`'wasm-uns
 | Echte Handys | Bildrate, Ladezeit, Wärme und Touch-Gefühl; Browseremulation mit Software-GPU belegt keine Leistung |
 
 Nach Änderungen in `public/` vor Server-/Browserprüfungen `npm run build` ausführen: Der Server liefert `dist/`, nicht `public/`.
+
+C#-Regeltest für Tank Trouble ohne Editor, im Repository-Stamm ausführen.
+
+```sh
+dotnet build scripts/unity-tank-sim-test --artifacts-path .artifacts/unity-tank-sim-test
+dotnet .artifacts/unity-tank-sim-test/bin/TankSim.Tests/debug/TankSim.Tests.dll
+```
 
 ## Stolpersteine
 

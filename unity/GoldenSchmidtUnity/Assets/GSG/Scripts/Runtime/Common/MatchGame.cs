@@ -76,6 +76,7 @@ namespace GSG
         /// <summary>The result rows, best first: seat, value text.</summary>
         protected abstract List<(Seat seat, string value)> Ranking();
         protected virtual string ResultText => "";
+        protected virtual bool SamePlace(Seat a, Seat b) => false;
 
         void ShowTitle()
         {
@@ -121,10 +122,13 @@ namespace GSG
             hud.SetControlsVisible(false);
             hud.ReleaseAll();
             var order = Ranking();
-            int place = order.FindIndex(r => r.seat.isPlayer) + 1;
+            var own = order.Find(r => r.seat.isPlayer).seat;
+            int place = order.FindIndex(r => r.seat == own || SamePlace(r.seat, own)) + 1;
+            bool tied = order.Exists(r => r.seat != own && SamePlace(r.seat, own));
             Sfx.Play(place == 1 ? "fanfare" : "sting");
             if (place == 1 && focus) Fx.Confetti(focus.position + Vector3.up * 2f, 60);
-            panel = hud.Panel("Ergebnis", place == 1 ? "Du hast gewonnen!" : $"Platz {place}", ResultText,
+            string heading = tied ? $"Geteilter {place}. Platz" : place == 1 ? "Du hast gewonnen!" : $"Platz {place}";
+            panel = hud.Panel("Ergebnis", heading, ResultText,
                 new List<(string, Hud.Tone, System.Action)> { ("Nochmal spielen", Hud.Tone.Gold, Restart) });
             foreach (var (seat, value) in order) hud.AddRow(panel, seat.Color, seat.name, value);
         }

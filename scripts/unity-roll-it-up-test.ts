@@ -75,16 +75,28 @@ assert.deepEqual(unityRollAction(shop, shopper.id, { type: "shop", item: "sprint
 
 console.log("Unity-Brücke Roll It Up! erfolgreich: Brett, Zustand, Bewegung, Gabelung, Shop und Aktionsprüfung");
 
-// Shared Unity build: every app entry (and the Roll It Up! board) has a scene in the start switch.
+// Every Unity catalog entry, including pending WebGL releases, has a loadable source scene.
 {
   const { readFileSync } = await import("node:fs");
-  const { UNITY_GAMES, unityGameUrl } = await import("../src/unityGames");
-  const switchSource = readFileSync(new URL("../unity/GoldenSchmidtUnity/Assets/GSG/Scripts/Runtime/Common/GameSwitch.cs", import.meta.url), "utf8");
-  const ids = [...UNITY_GAMES.map(game => game.id as string), "rollitup"];
+  const { UNITY_GAME_CATALOG, UNITY_GAMES, isUnityGame, unityGameUrl } = await import("../src/unityGames");
+  const root = new URL("../unity/GoldenSchmidtUnity/", import.meta.url);
+  const switchSource = readFileSync(new URL("Assets/GSG/Scripts/Runtime/Common/GameSwitch.cs", root), "utf8");
+  const buildSettings = readFileSync(new URL("ProjectSettings/EditorBuildSettings.asset", root), "utf8").replaceAll("\r\n", "\n");
+  const ids = [...UNITY_GAME_CATALOG.map(game => game.id), "rollitup"];
   assert.equal(new Set(ids).size, ids.length, "Unity-IDs eindeutig");
-  for (const id of ids) assert.match(switchSource, new RegExp(`\\{ "${id}", "[A-Za-z]+" \\}`), `${id}: Szene in GameSwitch`);
+  for (const id of ids) {
+    const match = switchSource.match(new RegExp(`\\{ "${id}", "([A-Za-z]+)" \\}`));
+    assert.ok(match, `${id}: Szene in GameSwitch`);
+    const scenePath = `Assets/GSG/Scenes/${match[1]}.unity`;
+    const meta = readFileSync(new URL(`${scenePath}.meta`, root), "utf8");
+    const guid = /guid: ([a-f0-9]{32})/.exec(meta)?.[1];
+    assert.ok(guid, `${id}: gültige Szenen-GUID`);
+    assert.ok(buildSettings.includes(`- enabled: 1\n    path: ${scenePath}\n    guid: ${guid}`), `${id}: aktive Szene im Build-Projekt`);
+    assert.match(readFileSync(new URL(scenePath, root), "utf8"), /^%YAML/m);
+  }
+  for (const game of UNITY_GAME_CATALOG) assert.equal(isUnityGame(game.id), !("pendingBuild" in game), `${game.id}: Galerie folgt dem Build-Stand`);
   assert.equal(unityGameUrl("sumo", "rig_lena", true), "/unity/spiele/index.html?spiel=sumo&figur=rig_lena&ruhig=1");
-  console.log(`Unity-Spielliste erfolgreich: ${ids.length} Einträge mit Szene im gemeinsamen Build`);
+  console.log(`Unity-Spielliste erfolgreich: ${ids.length} Quellszenen, ${UNITY_GAMES.length} Spiele in der Galerie`);
 }
 
 // Unity runs: the exported course data matches the current parcours courses.

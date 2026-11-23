@@ -123,7 +123,7 @@ namespace GSG.Parcours
             return doors;
         }
 
-        internal static void Bar(float x, float z, float baseY, float y0, float y1, float halfLength, float speed, float phase)
+        internal static Sweeper Bar(float x, float z, float baseY, float y0, float y1, float halfLength, float speed, float phase)
         {
             var pivot = new GameObject("Drehbalken");
             pivot.transform.SetParent(root, false);
@@ -142,6 +142,7 @@ namespace GSG.Parcours
             trigger.isTrigger = true;
             trigger.size = new Vector3(1f, 1f, 1.5f);
             Cylinder("Mast", new Vector3(0f, (y1 + 0.3f) / 2f, 0f), 0.22f, y1 + 0.3f, Vector3.up, "Wall", pivot.transform);
+            return sweeper;
         }
 
         internal static Checkpoint Check(int index, float z, float y, float halfWidth = 6f)

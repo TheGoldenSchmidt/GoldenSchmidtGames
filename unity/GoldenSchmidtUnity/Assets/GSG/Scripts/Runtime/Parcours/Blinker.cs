@@ -11,6 +11,8 @@ namespace GSG.Parcours
         public enum Kind { Trapdoor, Hold }
         public Kind kind = Kind.Trapdoor;
         public float period = 4f, phase, open = 0.3f, warn = 0.9f;
+        internal System.Func<float> Clock;
+        internal float startsAt;
         public Transform hinge;   // trapdoor: pivot at one edge; hold: the moving visual
 
         Collider solid;
@@ -30,11 +32,11 @@ namespace GSG.Parcours
 
         void Update()
         {
-            float cycle = Mathf.Repeat(Time.time / period + phase, 1f);
-            bool isOpen = cycle < open;
-            float untilOpen = (1f - cycle) * period;
-            float warnK = !isOpen && untilOpen < warn ? 1f - untilOpen / warn : 0f;
-            solid.enabled = !isOpen;
+            float t = Clock?.Invoke() ?? Time.time;
+            float cycle = Mathf.Repeat(Mathf.Max(0f, t - startsAt) / period + phase, 1f);
+            bool isOpen = IsOpenAt(t);
+            float warnK = WarningAt(t);
+            SyncCollider(t);
             if (isOpen != wasOpen)
             {
                 if (isOpen) { Sfx.Play(kind == Kind.Trapdoor ? "thud" : "whoosh", 0.5f); Fx.Dust(transform.position, baseColor, 4); }
@@ -59,6 +61,17 @@ namespace GSG.Parcours
                 hinge.localPosition = rest + new Vector3(shake, -2.2f * GSG.Ease.OutCubic(openK), 0f);
                 look.enabled = openK < 0.98f;
             }
+        }
+
+        internal bool IsOpenAt(float t) => t >= startsAt && Mathf.Repeat((t - startsAt) / period + phase, 1f) < open;
+        internal void SyncCollider(float t) => solid.enabled = !IsOpenAt(t);
+
+        internal float WarningAt(float t)
+        {
+            if (IsOpenAt(t)) return 0f;
+            float cycle = Mathf.Repeat(Mathf.Max(0f, t - startsAt) / period + phase, 1f);
+            float until = t < startsAt ? startsAt - t + (cycle < open ? 0f : (1f - cycle) * period) : (1f - cycle) * period;
+            return Mathf.Clamp01(1f - until / warn);
         }
 
         bool IsNear()
