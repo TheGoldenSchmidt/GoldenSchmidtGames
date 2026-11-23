@@ -30,13 +30,16 @@ namespace GSG.Parcours
         public void BotDive() => diveAt = Time.time;
         public bool Grounded => grounded;
         public bool Ducking => duck;
+        internal bool GrabHeld => grab;
+        internal float RunScale { get; set; } = 1f;
+        internal bool RequireFreshGrab { get; set; }
         public Figure figure;
         public CameraRig rig;
 
         Rigidbody body;
         CapsuleCollider capsule;
         Transform model;
-        float jumpAt = -9f, diveAt = -9f, lastGround = -9f, until, guardUntil, face, faceVisual, landedAt;
+        float jumpAt = -9f, diveAt = -9f, grabAt = -9f, lastGround = -9f, until, guardUntil, face, faceVisual, landedAt;
         bool airDive, duck, grounded, grab;
         Vector3 move, drift, lastGust, groundVelocity, groundPoint;
         Rigidbody groundBody;
@@ -92,6 +95,7 @@ namespace GSG.Parcours
             {
                 if (hud.Pressed("a")) jumpAt = Time.time;
                 if (hud.Pressed("b")) diveAt = Time.time;
+                if (hud.Pressed("grab")) grabAt = Time.time;
                 duck = hud.Held("duck");
                 grab = hud.Held("grab");
                 move = rig ? rig.Relative(hud.Stick) : new Vector3(hud.Stick.x, 0f, hud.Stick.y);
@@ -155,7 +159,7 @@ namespace GSG.Parcours
             float mag = Mathf.Min(1f, move.magnitude);
             if (pose == Pose.Run || pose == Pose.Air)
             {
-                float speed = ducking ? duckSpeed : run;
+                float speed = (ducking ? duckSpeed : run) * RunScale;
                 float k = 1f - Mathf.Exp(-(grounded ? groundControl : airControl) * dt);
                 rel += (move * speed - rel) * k;
                 if (mag > 0.2f) face = Mathf.Atan2(move.x, move.z) * Mathf.Rad2Deg;
@@ -193,8 +197,9 @@ namespace GSG.Parcours
             }
 
             // Edges: grab while airborne (button or stick into the wall), or from the ground with the button.
-            if ((pose == Pose.Air || pose == Pose.Dive) && v.y < 3f && (grab || mag > 0.3f) && TryHang(t)) return;
-            if (pose == Pose.Run && grounded && grab && mag > 0.3f && TryHang(t)) return;
+            bool canCatch = RequireFreshGrab ? v.y <= 0.5f && grab && t - grabAt <= 0.32f : v.y < 3f && (grab || mag > 0.3f);
+            if ((pose == Pose.Air || pose == Pose.Dive) && canCatch && TryHang(t)) return;
+            if (!RequireFreshGrab && pose == Pose.Run && grounded && grab && mag > 0.3f && TryHang(t)) return;
 
             lastGust = gust * (grounded ? 1f : 1.3f);
             var result = rel + (grounded ? carried : Vector3.zero) + lastGust;
@@ -313,6 +318,17 @@ namespace GSG.Parcours
 
         public void AddDrift(Vector3 v) { drift += v; }
 
+        internal void SeparateFromBar(Vector3 offset)
+        {
+            Shift(offset);
+            var direction = offset.normalized;
+            var v = body.linearVelocity;
+            float into = Vector3.Dot(v, direction);
+            if (into < 0f) body.linearVelocity = v - direction * into;
+        }
+
+        internal void Shift(Vector3 offset) => body.position += offset;
+
         /// <summary>Knocked by a bar or pusher: flung, briefly without control.</summary>
         public void Knock(Vector3 velocity, float stun, bool big = false)
         {
@@ -344,7 +360,7 @@ namespace GSG.Parcours
             body.position = at;
             body.linearVelocity = Vector3.zero;
             face = faceVisual = yaw;
-            pose = Pose.Run; airDive = false; jumpAt = diveAt = -9f; guardUntil = Time.time + 0.6f; lastGust = Vector3.zero;
+            pose = Pose.Run; airDive = false; jumpAt = diveAt = grabAt = -9f; guardUntil = Time.time + 0.6f; lastGust = Vector3.zero;
             if (model) model.rotation = Quaternion.Euler(0f, yaw, 0f);
             figure?.EndShot(); figure?.Loop("idle", 0f);
         }

@@ -23,6 +23,9 @@ namespace GSG
 
         public Vector2 Stick { get; private set; }
         public Vector2 Look { get; private set; }
+        public Vector2 Aim { get; private set; }
+        public bool Aiming { get; private set; }
+        public event Action<Vector2> AimReleased;
         public bool AnyFingerDown => fingers.Count > 0;
         public float LastTouchTime { get; private set; } = -99f;
 
@@ -30,7 +33,7 @@ namespace GSG
         public bool InputEnabled = true;
 
         public enum Tone { Gold, Pink, Cyan, Stone }
-        public enum Icon { Jump, Dive, Duck, Grab, Shove, Pause, Play, Left, Right, Turn }
+        public enum Icon { Jump, Dive, Duck, Grab, Shove, Pause, Play, Left, Right, Turn, Aim }
 
         class Finger
         {
@@ -49,7 +52,7 @@ namespace GSG
         readonly Dictionary<string, VisualElement> actions = new();
         readonly Dictionary<string, Label> chips = new();
         readonly Dictionary<string, (VisualElement chip, VisualElement dot, Label text)> players = new();
-        VisualElement zone, stickBase, stickKnob, actionBox, leftBox, top, strip, hint, toastBox, fade, overlayLayer;
+        VisualElement zone, aimZone, aimHint, stickBase, stickKnob, actionBox, leftBox, top, strip, hint, toastBox, fade, overlayLayer;
         Label hintTitle, hintText, toast;
         Coroutine toastRoutine, fadeRoutine;
         Font title, text;
@@ -184,12 +187,30 @@ namespace GSG
             stickBase.EnableInClassList("is-hidden", !visible);
             actionBox.EnableInClassList("is-hidden", !visible);
             leftBox.EnableInClassList("is-hidden", !visible);
+            aimZone?.EnableInClassList("is-hidden", !visible);
             if (!stickUsed) { zone.EnableInClassList("is-hidden", true); stickBase.EnableInClassList("is-hidden", true); }
         }
 
         bool stickUsed = true;
         /// <summary>Games steered only with buttons hide the stick and its touch zone for good.</summary>
         public void UseStick(bool on) { stickUsed = on; zone.EnableInClassList("is-hidden", !on); stickBase.EnableInClassList("is-hidden", !on); }
+
+        public void UseAim()
+        {
+            aimZone = new VisualElement { name = "aim-zone" };
+            aimZone.AddToClassList("gsg-zone");
+            aimZone.style.left = StyleKeyword.Auto;
+            aimZone.style.right = 0f;
+            aimZone.style.width = Length.Percent(48f);
+            Root.Insert(Root.IndexOf(zone) + 1, aimZone);
+
+            aimHint = Add(actionBox, new VisualElement(), "gsg-action", "gsg-action--aim");
+            aimHint.pickingMode = PickingMode.Ignore;
+            var glyph = Add(aimHint, new VisualElement(), "gsg-action__icon");
+            glyph.pickingMode = PickingMode.Ignore;
+            glyph.generateVisualContent += ctx => DrawIcon(ctx, Icon.Aim, glyph.contentRect, Palette.Paper);
+            Text(aimHint, "Zielen", "gsg-action__label").style.color = Palette.Paper;
+        }
 
         public void SetTopVisible(bool visible) { top.EnableInClassList("is-hidden", !visible); strip.EnableInClassList("is-hidden", !visible); }
 
@@ -346,9 +367,9 @@ namespace GSG
                 {
                     // A quick tap can begin and end between two frames: still count it.
                     Begin(t.touchId, ending ? t.startScreenPosition : t.screenPosition);
-                    if (ending) End(t.touchId, t.screenPosition);
+                    if (ending) End(t.touchId, t.screenPosition, t.phase == TouchPhase.Canceled);
                 }
-                else if (ending) End(t.touchId, t.screenPosition);
+                else if (ending) End(t.touchId, t.screenPosition, t.phase == TouchPhase.Canceled);
                 else Move(t.touchId, t.screenPosition);
             }
             // Mouse only when no touch happened recently (browsers emulate mouse after touches).
@@ -364,7 +385,7 @@ namespace GSG
             {
                 var stale = new List<int>();
                 foreach (var id in fingers.Keys) if (!seen.Contains(id)) stale.Add(id);
-                foreach (var id in stale) End(id, fingers[id].last);
+                foreach (var id in stale) End(id, default, canceled: true);
             }
             if (!InputEnabled) { Stick = Vector2.zero; }
         }
@@ -387,6 +408,12 @@ namespace GSG
                     break;
                 }
                 if (e == zone && InputEnabled) { f.role = "stick"; ShowStick(p); break; }
+                if (e == aimZone && InputEnabled && !HasOverlay)
+                {
+                    f.role = Aiming ? "none" : "aim";
+                    if (!Aiming) { Aiming = true; aimHint.AddToClassList("is-pressed"); }
+                    break;
+                }
                 // Overlays and panels marked gsg-block swallow touches that hit no button.
                 if (e.ClassListContains("gsg-overlay") || e.ClassListContains("gsg-block")) { f.role = "none"; break; }
             }
@@ -408,25 +435,37 @@ namespace GSG
                 Stick = new Vector2(k.x, -k.y);
                 PlaceStick(f.origin, Vector2.ClampMagnitude(d, StickRadius));
             }
+            else if (f.role == "aim") Aim = AimDirection(p - f.origin);
             else if (f.role == "look") Look += p - f.last;
             f.travel += (p - f.last).magnitude;
             f.last = p;
         }
 
-        void End(int id, Vector2 screen)
+        static Vector2 AimDirection(Vector2 delta) => delta.sqrMagnitude >= 12f * 12f
+            ? new Vector2(delta.x, -delta.y).normalized : Vector2.zero;
+
+        void End(int id, Vector2 screen, bool canceled = false)
         {
             var f = fingers[id];
             fingers.Remove(id);
             if (f.element != null) f.element.RemoveFromClassList("is-pressed");
             if (f.role == "stick") { Stick = Vector2.zero; RestStick(); }
+            else if (f.role == "aim")
+            {
+                Aiming = false;
+                Aim = Vector2.zero;
+                aimHint.RemoveFromClassList("is-pressed");
+                if (!canceled && InputEnabled) AimReleased?.Invoke(AimDirection(ToPanel(screen) - f.origin));
+            }
             else if (f.role == "tap")
             {
+                if (canceled) return;
                 var p = ToPanel(screen);
                 if (f.element.worldBound.Contains(p) && taps.TryGetValue(f.element, out var a)) a?.Invoke();
             }
             else if (f.role == "look")
             {
-                if (f.travel < 12f && Time.unscaledTime - f.start < 0.45f) WorldTap?.Invoke(screen);
+                if (!canceled && f.travel < 12f && Time.unscaledTime - f.start < 0.45f) WorldTap?.Invoke(screen);
             }
             else if (f.role != "none") held.Remove(f.role);
         }
@@ -441,6 +480,8 @@ namespace GSG
         {
             foreach (var f in fingers.Values) f.element?.RemoveFromClassList("is-pressed");
             fingers.Clear(); held.Clear(); Stick = Vector2.zero; RestStick();
+            Aiming = false; Aim = Vector2.zero;
+            aimHint?.RemoveFromClassList("is-pressed");
         }
 
         void ShowStick(Vector2 at)
@@ -494,6 +535,10 @@ namespace GSG
                 case Icon.Grab:
                     p.BeginPath(); p.Arc(P(0.5f, 0.5f), Mathf.Min(w, h) * 0.38f, 0f, 360f); p.Stroke();
                     p.BeginPath(); p.Arc(P(0.5f, 0.5f), Mathf.Min(w, h) * 0.14f, 0f, 360f); p.Fill(); break;
+                case Icon.Aim:
+                    p.BeginPath(); p.Arc(P(0.5f, 0.5f), Mathf.Min(w, h) * 0.3f, 0f, 360f); p.Stroke();
+                    p.BeginPath(); p.MoveTo(P(0.5f, 0.04f)); p.LineTo(P(0.5f, 0.96f)); p.Stroke();
+                    p.BeginPath(); p.MoveTo(P(0.11f, 0.5f)); p.LineTo(P(0.89f, 0.5f)); p.Stroke(); break;
                 case Icon.Shove:
                     p.BeginPath(); p.MoveTo(P(0.18f, 0.15f)); p.LineTo(P(0.5f, 0.5f)); p.LineTo(P(0.18f, 0.85f)); p.Stroke();
                     p.BeginPath(); p.MoveTo(P(0.5f, 0.15f)); p.LineTo(P(0.82f, 0.5f)); p.LineTo(P(0.5f, 0.85f)); p.Stroke(); break;

@@ -28,7 +28,7 @@ namespace GSG.EditorTools
         public const string StartScene = Root + "/Scenes/Start.unity";
         static string GameScene(string name) => $"{Root}/Scenes/{name}.unity";
         /// <summary>Match games built by <see cref="BuildMatchScenes"/> (scene name = GameSwitch entry).</summary>
-        static readonly string[] MatchScenes = { "SumoSmash", "BumperMayhem", "BombArena", "Schneeballschlacht", "TowerTumble", "TowerSurvival", "Tuerenlotto", "Kreiselkurs" };
+        static readonly string[] MatchScenes = { "SumoSmash", "BumperMayhem", "BombArena", "Schneeballschlacht", "TowerTumble", "TowerSurvival", "Tuerenlotto", "Kreiselkurs", "Standhaft", "TankTrouble" };
 
         [MenuItem("GSG/1 Alles einrichten")]
         public static void All()
@@ -509,6 +509,16 @@ namespace GSG.EditorTools
                             new Color(0.62f, 0.45f, 0.66f), 80f, 260f, 0.4f, false, "Lauf");
                         var run = new GameObject("Spiel").AddComponent(runType);
                         runType.GetField("course").SetValue(run, name == "Tuerenlotto" ? "tuerenlotto" : "kreiselkurs");
+                        break;
+                    case "Standhaft":
+                        Frame("Sky", Palette.Sun, 1.25f, new Vector3(42f, -35f, 0f), new Color(0.56f, 0.55f, 0.88f), new Color(0.8f, 0.64f, 0.74f), new Color(0.23f, 0.17f, 0.31f),
+                            new Color(0.62f, 0.45f, 0.66f), 80f, 260f, 0.4f, false, "Lauf");
+                        new GameObject("Spiel").AddComponent<StandhaftGame>();
+                        break;
+                    case "TankTrouble":
+                        Frame("Sky", new Color(1f, 0.92f, 0.85f), 1.15f, new Vector3(60f, -25f, 0f), new Color(0.5f, 0.5f, 0.85f), new Color(0.72f, 0.6f, 0.75f), new Color(0.2f, 0.16f, 0.3f),
+                            new Color(0.35f, 0.3f, 0.6f), 40f, 120f, 0.7f, false, "Bomben");
+                        new GameObject("Spiel").AddComponent<GSG.Tanks.TankGame>();
                         break;
                 }
                 EditorSceneManager.SaveScene(scene, GameScene(name));

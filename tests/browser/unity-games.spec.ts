@@ -7,7 +7,7 @@ for (const game of UNITY_GAMES) test(`Unity-Test ${game.name}: Eintrag, Start im
   test.setTimeout(180000);
   const errors: string[] = [];
   page.on("pageerror", e => errors.push(e.message));
-  page.on("console", m => { if (/CSP-VERSTOSS/.test(m.text())) errors.push(m.text()); });
+  page.on("console", m => { if (/CSP-VERSTOSS|\[GSG\] Unbekanntes Spiel/.test(m.text())) errors.push(m.text()); });
   await page.addInitScript(() => document.addEventListener("securitypolicyviolation", e => console.log(`CSP-VERSTOSS ${e.violatedDirective} ${e.blockedURI}`)));
   await page.goto("/");
   await page.getByRole("button", { name: /Lokal spielen/ }).tap();

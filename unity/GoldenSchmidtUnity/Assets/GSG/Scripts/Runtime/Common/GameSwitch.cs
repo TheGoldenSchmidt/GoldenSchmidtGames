@@ -16,7 +16,8 @@ namespace GSG
             { "parcours", "ParcoursProbe" }, { "lava", "FloorIsLava" }, { "rollitup", "RollItUp" },
             { "sumo", "SumoSmash" }, { "bumpercars", "BumperMayhem" }, { "bombs", "BombArena" },
             { "snowball", "Schneeballschlacht" }, { "tower", "TowerTumble" }, { "towersurvival", "TowerSurvival" },
-            { "tuerenlotto", "Tuerenlotto" }, { "kreiselkurs", "Kreiselkurs" }
+            { "tuerenlotto", "Tuerenlotto" }, { "kreiselkurs", "Kreiselkurs" },
+            { "standhaft", "Standhaft" }, { "tanks", "TankTrouble" }
         };
 
         void Start()

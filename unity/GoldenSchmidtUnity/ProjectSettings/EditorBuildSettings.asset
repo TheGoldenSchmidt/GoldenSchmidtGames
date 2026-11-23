@@ -41,5 +41,11 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/GSG/Scenes/Kreiselkurs.unity
     guid: 2bbd269502868f0b2be6c1ad570d8dbf
+  - enabled: 1
+    path: Assets/GSG/Scenes/Standhaft.unity
+    guid: f673f5b89d634ba58a58cc3f85dd7bd4
+  - enabled: 1
+    path: Assets/GSG/Scenes/TankTrouble.unity
+    guid: 60646c055fc04b198a763fff378f65a0
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
