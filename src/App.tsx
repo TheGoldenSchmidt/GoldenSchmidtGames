@@ -322,6 +322,7 @@ export default function App() {
         <HomeScreen
           profile={profile}
           signedIn={Boolean(account)}
+          showVersion={canDevelop(account?.role)}
           online={online}
           onProfile={() => setShowProfile(true)}
           onLocal={() => setView("local-setup")}

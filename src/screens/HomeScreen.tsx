@@ -17,10 +17,14 @@ import crown from "../assets/expedition/crown.webp";
 
 const titleLayers = { plaque, golden, schmidt, games };
 let introShown = false;
+/** Version of the build this device displays, written into index.html by the server ("PR #48"). */
+const BUILD_VERSION = typeof document === "undefined" ? "" : document.querySelector<HTMLMetaElement>('meta[name="gsg-build"]')?.content ?? "";
 
 interface HomeProps {
   profile: GuestProfile;
   signedIn?: boolean;
+  /** Admins and developers see which merged pull request the server runs. */
+  showVersion?: boolean;
   online: boolean;
   onProfile: () => void;
   onLocal: () => void;
@@ -32,7 +36,7 @@ interface HomeProps {
   resumeError?: string;
 }
 
-export function HomeScreen({profile, signedIn, online, onProfile, onLocal, onOnline, onUniverse, onResumeHost, onResumeOnline, resumeGameName = "Inselparty", resumeError}: HomeProps) {
+export function HomeScreen({profile, signedIn, showVersion, online, onProfile, onLocal, onOnline, onUniverse, onResumeHost, onResumeOnline, resumeGameName = "Inselparty", resumeError}: HomeProps) {
   const name = displayName(profile);
   const hero = useRef<HTMLHeadingElement>(null);
   const [intro, setIntro] = useState<"loading" | "playing" | "complete">(() => introShown ? "complete" : "loading");
@@ -50,7 +54,7 @@ export function HomeScreen({profile, signedIn, online, onProfile, onLocal, onOnl
   }, [intro]);
   return <main className="home expedition-home" data-intro={intro}>
     <div className="expedition-bar">
-      <span className="expedition-status"><i data-online={online} />{online ? "Online" : "Offline"}</span>
+      <span className="expedition-status"><i data-online={online} />{online ? "Online" : "Offline"}{showVersion && BUILD_VERSION && <span className="expedition-version">{BUILD_VERSION}</span>}</span>
       <div className="expedition-account"><MenuSound/><button className="expedition-profile" onClick={onProfile} aria-label={`${signedIn ? "Konto" : "Gastprofil"}: ${name}`}>
         <span aria-hidden="true">{name.slice(0,1).toUpperCase()}</span><b>{name}</b>
       </button></div>

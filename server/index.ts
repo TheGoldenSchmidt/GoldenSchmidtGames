@@ -4,11 +4,13 @@ import { createRoomCore } from "../shared/roomCore";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { existsSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { Server } from "socket.io";
 import { accountRoutes, sessionCookie } from "./accountRoutes";
 import { hashToken } from "./accountStore";
+import { buildVersion, stampIndexHtml, stampServiceWorker, type BuildVersion } from "./version";
 export function createSpielraumServer(store = new RoomStore({ url: ":memory:" })) {
   const app = express();
   app.set("trust proxy", 1);
@@ -64,12 +66,32 @@ export function createSpielraumServer(store = new RoomStore({ url: ":memory:" })
   }, store);
   io.use((_socket, next) => next(core.available ? undefined : new Error("Spielstände werden geladen.")));
 
+  // Resolved once per start; the health check never waits for GitHub.
+  let build: BuildVersion = {};
+  void buildVersion().then(result => { build = result; });
 app.get("/api/health", (_request, response) => {
-  response.status(core.available ? 200 : 503).json({ ok: core.available, version: "0.1.0", rooms: core.count });
+  response.status(core.available ? 200 : 503).json({ ok: core.available, version: "0.1.0", rooms: core.count, build });
 });
 
 const distDirectory = path.resolve(process.cwd(), "dist");
 if (existsSync(distDirectory)) {
+  // index.html carries the deployed version. The service worker precaches it from this server
+  // together with the build's assets, so every phone shows the version it currently displays.
+  const stamped = (file: string, type: string, stamp: (source: string, version: BuildVersion) => string) => {
+    let source: Promise<string> | undefined;
+    return async (response: express.Response, next: express.NextFunction) => {
+      try {
+        source ??= readFile(path.join(distDirectory, file), "utf8");
+        const body = stamp(await source, await buildVersion());
+        response.setHeader("Cache-Control", "no-cache");
+        response.type(type).send(body);
+      } catch (error) { source = undefined; next(error); }
+    };
+  };
+  const sendIndex = stamped("index.html", "html", stampIndexHtml);
+  const sendWorker = stamped("sw.js", "js", stampServiceWorker);
+  app.get(["/", "/index.html"], (_request, response, next) => { void sendIndex(response, next); });
+  app.get("/sw.js", (_request, response, next) => { void sendWorker(response, next); });
   app.use(express.static(distDirectory, {
     maxAge: "1h",
     setHeaders(response, filePath) {
@@ -89,8 +111,7 @@ if (existsSync(distDirectory)) {
   }));
   app.use((request, response, next) => {
     if (request.method !== "GET" || !request.accepts("html")) return next();
-    response.setHeader("Cache-Control", "no-cache");
-    response.sendFile(path.join(distDirectory, "index.html"));
+    void sendIndex(response, next);
   });
 }
 
