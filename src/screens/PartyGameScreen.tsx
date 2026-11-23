@@ -6,7 +6,7 @@ import { getGame } from "../../shared/games";
 import { MinigameBetting, MinigameResults, MinigameScoreboard } from "../components/MinigameCompetition";
 import {PartyTrophyGoal,PartyCoinReward,type MiniReward} from "../components/PartyProgress";
 import {CharacterAvatar} from "../components/CharacterAvatar";
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { activePartyPlayer, type PartyGame, fieldLabel, isFinalStretch, ITEMS, ITEM_IDS, MINIS, partyMiniResults, partyStanding, type MiniId, type PartyAction } from "../../shared/party";
 import { PartyFinalStretchCall, PartyIslandFinale } from "../components/PartyFinale";
 import { NEUTRAL_INPUT, type ArenaInput, type ArenaState } from "../../shared/partyArena";
@@ -21,6 +21,8 @@ import { PartyPanel } from "../components/PartyPanel";
 import { PartyTestTools } from "../components/PartyTestTools";
 import { DuelChallenge, DuelHeadline, DuelResult } from "../components/PartyDuel";
 import { socket } from "../lib/socket";
+/** Developer test only: loaded on demand so the Unity bridge stays out of the main bundle. */
+const UnityRollItUpBoard=lazy(()=>import("../components/UnityRollItUpBoard").then(m=>({default:m.UnityRollItUpBoard})));
 
 export const PARTY_ONLINE_SAVE="spielraum.party.online.v1";
 export interface PartySavedSession {code:string;partyToken:string;gameId?:RoomState["config"]["gameId"]}
@@ -33,7 +35,8 @@ function pathPreview(game:PartyGame,steps:number,destination:number) {
   return {fields,label:fieldName(game,fields.at(-1)!)};
 }
 
-export function PartyGameScreen({profile,initialRoom,onExit,onLobby}:{profile:GuestProfile;initialRoom:RoomState;onExit:()=>void;onLobby?:()=>void}) {
+/** `unityBoard`: Roll It Up! board phases drawn by the Unity build (developer test); rules and minigames unchanged. */
+export function PartyGameScreen({profile,initialRoom,onExit,onLobby,unityBoard=false}:{profile:GuestProfile;initialRoom:RoomState;onExit:()=>void;onLobby?:()=>void;unityBoard?:boolean}) {
   const [room,setRoom]=useState(initialRoom);
   const [miniReward,setMiniReward]=useState<MiniReward>();
   const [now,setNow]=useState(Date.now()),[error,setError]=useState(""),[pending,setPending]=useState(false),[practice,setPractice]=useState<MiniId>();
@@ -135,7 +138,8 @@ export function PartyGameScreen({profile,initialRoom,onExit,onLobby}:{profile:Gu
     {room.partyTest&&!competition&&host&&socket.connected&&!["finished","aborted"].includes(g.phase)&&<PartyTestTools room={room} onUpdate={setRoom}/>}
     {!competition&&!boardPhase&&g.phase!=="mini-play"&&g.phase!=="finished"&&roster}
     {(!socket.connected||g.pausedAt>0)&&<section className="party-connection" role="status"><h2>Wir warten auf die Verbindung</h2><p>Die Partie pausiert, bis die Geräte wieder verbunden sind. Nach 60 Sekunden kann der Host ohne fehlende Spieler fortsetzen.</p>{host&&g.resumeOffered&&<button className="button button--primary" disabled={busy} onClick={()=>send({type:"resume"})}>Ohne getrennte Spieler fortsetzen</button>}{host&&<button className="button button--ghost" disabled={busy} onClick={()=>send({type:"abort"})}>Partie abbrechen</button>}</section>}
-    {tray&&boardPhase?<RollItUpBoard game={g} viewer={viewer} now={g.pausedAt||now} busy={busy} rolling={rolling} blocked={Boolean(panel)} connected={socket.connected} error={error} send={send} onMenu={()=>setPanel("menu")} onInventory={()=>setPanel("inventory")}/>:<div className="party-layout">
+    {tray&&unityBoard&&<Suspense fallback={null}><UnityRollItUpBoard game={g} viewer={viewer} now={g.pausedAt||now} busy={busy} connected={socket.connected} error={error} visible={boardPhase&&!over} send={send} onPanel={setPanel}/></Suspense>}
+    {tray&&boardPhase&&unityBoard?null:tray&&boardPhase?<RollItUpBoard game={g} viewer={viewer} now={g.pausedAt||now} busy={busy} rolling={rolling} blocked={Boolean(panel)} connected={socket.connected} error={error} send={send} onMenu={()=>setPanel("menu")} onInventory={()=>setPanel("inventory")}/>:<div className="party-layout">
       {boardPhase&&<PartyBoard game={g} now={g.pausedAt||now} rolling={rolling} onTravelChange={setTravelling} roster={roster} tools={sideTools} interactionBlocked={Boolean(panel)}/>}
       <section className={`party-decision ${moving&&boardPhase?"is-travelling":""}`}>
         {finalCall&&<PartyFinalStretchCall game={g} viewer={viewer}/>}

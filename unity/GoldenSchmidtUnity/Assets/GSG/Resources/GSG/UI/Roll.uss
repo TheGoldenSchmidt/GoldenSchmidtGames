@@ -1,0 +1,464 @@
+/* Roll It Up! board HUD (Unity): island-world materials of designregeln.md – gold for the one
+   main action, stone for secondary actions, glass for status, paper for the decision card. */
+
+.roll-top {
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    top: 8px;
+}
+
+.roll-bar {
+    flex-direction: row;
+    align-items: center;
+}
+
+.roll-icon-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 22px;
+    background-color: rgb(124, 112, 146);
+    border-width: 3px;
+    border-bottom-width: 6px;
+    border-color: rgb(36, 19, 63);
+    border-bottom-color: rgb(70, 60, 90);
+    align-items: center;
+    justify-content: center;
+    margin-right: 6px;
+}
+
+.roll-icon-btn.is-pressed {
+    border-bottom-width: 3px;
+    translate: 0 3px;
+}
+
+.roll-icon-btn__glyph {
+    width: 20px;
+    height: 20px;
+}
+
+.roll-title {
+    flex-grow: 1;
+    flex-shrink: 1;
+    margin-left: 2px;
+}
+
+.roll-title__name {
+    font-size: 22px;
+    color: rgb(255, 249, 237);
+    -unity-text-outline-width: 1px;
+    -unity-text-outline-color: rgb(36, 19, 63);
+    text-shadow: 0 2px 0 rgb(36, 19, 63);
+}
+
+.roll-title__sub {
+    font-size: 12px;
+    color: rgb(255, 249, 237);
+    text-shadow: 0 1px 0 rgb(36, 19, 63);
+}
+
+.roll-glass {
+    height: 40px;
+    border-radius: 20px;
+    background-color: rgba(31, 28, 84, 0.84);
+    border-width: 2px;
+    border-color: rgba(255, 249, 237, 0.35);
+    flex-direction: row;
+    align-items: center;
+    padding-left: 10px;
+    padding-right: 12px;
+}
+
+.roll-glass.is-pressed {
+    background-color: rgba(52, 46, 120, 0.95);
+}
+
+.roll-coin {
+    width: 22px;
+    height: 22px;
+    border-radius: 11px;
+    background-color: rgb(255, 215, 119);
+    border-width: 2px;
+    border-color: rgb(177, 110, 40);
+    margin-right: 6px;
+}
+
+.roll-glass__value {
+    font-size: 19px;
+    color: rgb(255, 249, 237);
+}
+
+.roll-glass__label {
+    font-size: 12px;
+    color: rgba(255, 249, 237, 0.82);
+}
+
+.roll-row {
+    flex-direction: row;
+    margin-top: 6px;
+}
+
+.roll-dots {
+    flex-direction: row;
+    margin-left: 6px;
+    margin-right: 6px;
+}
+
+.roll-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 5px;
+    margin-right: 3px;
+    background-color: rgba(255, 249, 237, 0.2);
+    border-width: 1px;
+    border-color: rgba(255, 249, 237, 0.55);
+}
+
+.roll-dot.is-on {
+    background-color: rgb(255, 215, 119);
+    border-color: rgb(255, 249, 237);
+}
+
+.roll-objective {
+    flex-grow: 1;
+    flex-shrink: 1;
+    margin-left: 6px;
+}
+
+.roll-objective__text {
+    font-size: 13px;
+    color: rgb(255, 249, 237);
+    flex-shrink: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.roll-roster {
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-top: 6px;
+}
+
+.roll-player {
+    flex-direction: row;
+    align-items: center;
+    height: 28px;
+    padding-left: 4px;
+    padding-right: 9px;
+    border-radius: 14px;
+    background-color: rgba(31, 28, 84, 0.72);
+    border-width: 2px;
+    border-color: rgba(0, 0, 0, 0);
+    margin-right: 4px;
+    margin-bottom: 4px;
+}
+
+.roll-player.is-active {
+    border-color: rgb(255, 228, 78);
+    background-color: rgba(31, 28, 84, 0.94);
+}
+
+.roll-player__dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 8px;
+    border-width: 2px;
+    border-color: rgb(255, 249, 237);
+    margin-right: 5px;
+}
+
+.roll-player__text {
+    font-size: 12px;
+    color: rgb(255, 249, 237);
+}
+
+.roll-card {
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    bottom: 10px;
+    padding: 12px 14px 12px 14px;
+    border-radius: 16px;
+    background-color: rgb(255, 248, 234);
+    border-width: 3px;
+    border-bottom-width: 7px;
+    border-color: rgb(36, 19, 63);
+}
+
+.roll-card.is-hidden {
+    display: none;
+}
+
+.roll-card__head {
+    flex-direction: row;
+    align-items: center;
+}
+
+.roll-card__face {
+    width: 26px;
+    height: 26px;
+    border-radius: 13px;
+    border-width: 3px;
+    border-color: rgb(36, 19, 63);
+    margin-right: 8px;
+}
+
+.roll-card__title {
+    font-size: 21px;
+    color: rgb(36, 19, 63);
+    flex-grow: 1;
+    flex-shrink: 1;
+    white-space: normal;
+}
+
+.roll-timer {
+    font-size: 15px;
+    color: rgb(36, 19, 63);
+    padding: 2px 9px 2px 9px;
+    border-radius: 10px;
+    background-color: rgba(36, 19, 63, 0.1);
+}
+
+.roll-timer.is-urgent {
+    color: rgb(255, 249, 237);
+    background-color: rgb(195, 61, 76);
+}
+
+.roll-card__text {
+    font-size: 14px;
+    color: rgb(36, 19, 63);
+    white-space: normal;
+    margin-top: 4px;
+}
+
+.roll-card__error {
+    font-size: 13px;
+    color: rgb(195, 61, 76);
+    white-space: normal;
+    margin-top: 4px;
+}
+
+.roll-buttons {
+    margin-top: 6px;
+}
+
+.roll-split {
+    flex-direction: row;
+}
+
+.roll-btn {
+    min-height: 50px;
+    border-radius: 14px;
+    border-width: 3px;
+    border-bottom-width: 6px;
+    border-color: rgb(36, 19, 63);
+    align-items: center;
+    justify-content: center;
+    flex-direction: row;
+    padding-left: 12px;
+    padding-right: 12px;
+    margin-top: 6px;
+}
+
+.roll-split > .roll-btn {
+    flex-grow: 1;
+    flex-basis: 0;
+    margin-right: 6px;
+}
+
+.roll-btn--gold {
+    background-color: rgb(255, 215, 119);
+    border-bottom-color: rgb(177, 110, 40);
+}
+
+.roll-btn--stone {
+    background-color: rgb(124, 112, 146);
+    border-bottom-color: rgb(70, 60, 90);
+}
+
+.roll-btn--paper {
+    background-color: rgb(255, 252, 245);
+    border-bottom-color: rgb(36, 19, 63);
+    justify-content: flex-start;
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+.roll-btn.is-selected {
+    background-color: rgb(255, 228, 78);
+}
+
+.roll-btn.is-pressed {
+    border-bottom-width: 3px;
+    translate: 0 3px;
+}
+
+.roll-btn.is-off {
+    opacity: 0.45;
+}
+
+.roll-btn__text {
+    font-size: 18px;
+    color: rgb(36, 19, 63);
+    -unity-text-align: middle-center;
+}
+
+.roll-btn--stone .roll-btn__text {
+    color: rgb(255, 249, 237);
+}
+
+.roll-btn__small {
+    font-size: 12px;
+    color: rgb(255, 249, 237);
+    margin-left: 6px;
+}
+
+.roll-option__main {
+    flex-grow: 1;
+    flex-shrink: 1;
+}
+
+.roll-option__title {
+    font-size: 16px;
+    color: rgb(36, 19, 63);
+}
+
+.roll-option__sub {
+    font-size: 12px;
+    color: rgba(36, 19, 63, 0.82);
+    white-space: normal;
+}
+
+.roll-option__price {
+    font-size: 16px;
+    color: rgb(36, 19, 63);
+    margin-left: 8px;
+}
+
+.roll-tools {
+    position: absolute;
+    right: 10px;
+    bottom: 190px;
+    flex-direction: row;
+}
+
+.roll-tool {
+    height: 40px;
+    border-radius: 20px;
+    padding-left: 14px;
+    padding-right: 14px;
+    background-color: rgb(124, 112, 146);
+    border-width: 3px;
+    border-bottom-width: 5px;
+    border-color: rgb(36, 19, 63);
+    border-bottom-color: rgb(70, 60, 90);
+    justify-content: center;
+    margin-left: 6px;
+}
+
+.roll-tool.is-pressed {
+    border-bottom-width: 3px;
+    translate: 0 2px;
+}
+
+.roll-tool__text {
+    font-size: 14px;
+    color: rgb(255, 249, 237);
+}
+
+.roll-info {
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: 240px;
+    padding: 8px 12px 9px 12px;
+    border-radius: 14px;
+    background-color: rgba(31, 28, 84, 0.9);
+    border-width: 2px;
+    border-color: rgba(255, 249, 237, 0.4);
+}
+
+.roll-info.is-hidden {
+    display: none;
+}
+
+.roll-info__title {
+    font-size: 16px;
+    color: rgb(255, 228, 78);
+}
+
+.roll-info__text {
+    font-size: 13px;
+    color: rgb(255, 249, 237);
+    white-space: normal;
+    margin-top: 2px;
+}
+
+.roll-labels {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.roll-label {
+    position: absolute;
+    align-items: center;
+    translate: -50% -100%;
+}
+
+.roll-label.is-hidden {
+    display: none;
+}
+
+.roll-label__box {
+    padding: 2px 8px 3px 8px;
+    border-radius: 10px;
+    background-color: rgba(31, 28, 84, 0.86);
+    border-width: 2px;
+    border-color: rgba(255, 249, 237, 0.5);
+    align-items: center;
+}
+
+.roll-label__text {
+    font-size: 12px;
+    color: rgb(255, 249, 237);
+    -unity-text-align: middle-center;
+}
+
+.roll-label__sub {
+    font-size: 10px;
+    color: rgba(255, 249, 237, 0.85);
+    -unity-text-align: middle-center;
+}
+
+.roll-label--active .roll-label__box {
+    background-color: rgb(255, 215, 119);
+    border-color: rgb(36, 19, 63);
+}
+
+.roll-label--active .roll-label__text {
+    color: rgb(36, 19, 63);
+}
+
+.roll-label--goal .roll-label__box {
+    border-color: rgb(255, 228, 78);
+}
+
+.roll-label--done .roll-label__box {
+    background-color: rgba(51, 120, 70, 0.92);
+}
+
+.roll-float {
+    position: absolute;
+    font-size: 26px;
+    -unity-text-outline-width: 2px;
+    -unity-text-outline-color: rgb(36, 19, 63);
+    text-shadow: 0 3px 0 rgb(36, 19, 63);
+    translate: -50% -50%;
+}
+
+.roll-hidden-all {
+    display: none;
+}

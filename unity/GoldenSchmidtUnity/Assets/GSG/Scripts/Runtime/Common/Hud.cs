@@ -37,7 +37,11 @@ namespace GSG
             public string role;
             public VisualElement element;
             public Vector2 origin, last;
+            public float start, travel;
         }
+
+        /// <summary>A short tap on the 3D world (not on a control): screen position in pixels.</summary>
+        public event Action<Vector2> WorldTap;
 
         readonly Dictionary<int, Finger> fingers = new();
         readonly HashSet<string> held = new(), pressedNow = new();
@@ -340,7 +344,7 @@ namespace GSG
         void Begin(int id, Vector2 screen)
         {
             var p = ToPanel(screen);
-            var f = new Finger { origin = p, last = p, role = "look" };
+            var f = new Finger { origin = p, last = p, role = "look", start = Time.unscaledTime };
             var picked = Root.panel.Pick(p);
             for (var e = picked; e != null; e = e.parent)
             {
@@ -353,7 +357,8 @@ namespace GSG
                     break;
                 }
                 if (e == zone && InputEnabled) { f.role = "stick"; ShowStick(p); break; }
-                if (e.ClassListContains("gsg-overlay")) { f.role = "none"; break; }
+                // Overlays and panels marked gsg-block swallow touches that hit no button.
+                if (e.ClassListContains("gsg-overlay") || e.ClassListContains("gsg-block")) { f.role = "none"; break; }
             }
             if (f.role == "look" && (!InputEnabled || HasOverlay)) f.role = "none";
             fingers[id] = f;
@@ -374,6 +379,7 @@ namespace GSG
                 PlaceStick(f.origin, Vector2.ClampMagnitude(d, StickRadius));
             }
             else if (f.role == "look") Look += p - f.last;
+            f.travel += (p - f.last).magnitude;
             f.last = p;
         }
 
@@ -388,7 +394,17 @@ namespace GSG
                 var p = ToPanel(screen);
                 if (f.element.worldBound.Contains(p) && taps.TryGetValue(f.element, out var a)) a?.Invoke();
             }
-            else if (f.role != "look" && f.role != "none") held.Remove(f.role);
+            else if (f.role == "look")
+            {
+                if (f.travel < 12f && Time.unscaledTime - f.start < 0.45f) WorldTap?.Invoke(screen);
+            }
+            else if (f.role != "none") held.Remove(f.role);
+        }
+
+        /// <summary>Forgets the tap handlers of an element and its children (before rebuilding it).</summary>
+        public void Untap(VisualElement element)
+        {
+            foreach (var e in element.Query<VisualElement>().ToList()) taps.Remove(e);
         }
 
         public void ReleaseAll()

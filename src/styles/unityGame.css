@@ -40,3 +40,22 @@
   border-bottom-width: 3px;
   transform: translateY(3px);
 }
+
+/* Roll It Up! with the Unity board: the build stays loaded for the whole match and is only
+   hidden while the web minigames run, so it never reloads between rounds. */
+.unity-roll {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  background: #1d2466;
+}
+
+.unity-roll.is-hidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Test tools of a test match: below the Unity header and player list, not over them. */
+.party-screen--board:has(> .unity-roll:not(.is-hidden)) > .party-test-tools {
+  top: calc(var(--party-top, 12px) + 178px);
+}
