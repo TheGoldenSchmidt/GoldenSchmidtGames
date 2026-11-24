@@ -10,6 +10,7 @@ Bei jeder UI-Erweiterung und -Bearbeitung anwenden. Technik und Prüfungen: [AGE
 | Rich’s Universe: Zugang/Experimentliste | Inselwelt; [Bereich](src/richs-universe/README.md). Nur dortige `experiments/` gestalten sich frei. |
 | Roll It Up! | Bauschale mit Inselwelt-HUD; [Umsetzung](docs/inselparty-3d.md#roll-it-up-die-bauschale) |
 | Einsatz-/Ergebnismenüs laufender Wettbewerbe | Bisheriger Party-Stil: `.party-menu`, `--menu-*`, `partyMenus.css` |
+| Minispiele | Vollbild; Match-Spiele mit dunklem Glas-HUD, klassische Arenen mit Inselwelt-Tafeln (siehe [Spielflächen](#spielflächen)) |
 | Übrige Spiele/Live-HUDs | Eigene bisherige Gestaltung; Umstellung nur auf Auftrag |
 
 Eine Ansicht vollständig umstellen oder ihren bestehenden Stil fortführen; nicht mischen. Keine neuen Party-Stil-Bausteine. Menüänderungen verändern keine Spielflächen nebenbei. Umstellungen hier nachführen; implementiert, geprüft und geplant unterscheiden. Die Experiment-Ausnahme hebt gemeinsame Sicherheits-, Offline- und Zugänglichkeitsanforderungen nicht auf.
@@ -35,7 +36,7 @@ Farben aus `--iw-*` in [inselwelt.css](src/styles/inselwelt.css); alte Renderpal
 
 Textkontrast ≥4,5:1 auf tatsächlichen Flächen, nach Neurendern/neuen Kombinationen erneut messen. Text braucht Materialhintergrund. Farben nie allein: Auswahl mit Rahmen/Häkchen, Bereitschaft mit Text, Fehler konkret. Spielfarben (Qwixx, Würfel, Karten) semantisch erhalten.
 
-Lilita One: Titel/kurze Hauptzeilen; Lexend: Bedienung/Fließtext (400–500, Bedienelemente 600). Lokal über Fontsource und offline verfügbar; keine weiteren/externen Schriften. Bestehende Spielansichten behalten Trebuchet bis zur Umstellung. Logo als Bild mit Alternativtext „GoldenSchmidtGames“.
+Lilita One: Titel/kurze Hauptzeilen; Lexend: Bedienung/Fließtext (400–500, Bedienelemente 600). Lokal über Fontsource und offline verfügbar; keine weiteren/externen Schriften. Bestehende Spielansichten behalten ihre Systemschriften (Trebuchet, Georgia für Karten und Intro-Titel) bis zur Umstellung. Logo als Bild mit Alternativtext „GoldenSchmidtGames“.
 
 Großschreibung per CSS nur auf kurzen Tafel-/Schildtiteln (etwa 18 Zeichen). Klare Titelhierarchie, kurze deutsche Aktionsnamen, gleiche Aktion gleich benennen. Beschriftung, zugänglicher Name und bestätigte Auswahl stimmen überein. Markenname GoldenSchmidtGames, Kurzform GSG.
 
@@ -52,13 +53,13 @@ Großschreibung per CSS nur auf kurzen Tafel-/Schildtiteln (etwa 18 Zeichen). Kl
 
 Online zuerst Erstellen/Beitreten; Raumcode/QR sind Beitrittsarten. Galerie in Erstellen, Beitreten und Lobby aufklappbar; lokale Plätze mit Namen/eigener Galerie. Nur Partienoptionen in Einstellungen; Fragezeichen an Spielkarten öffnen Regeln. Verlassen/Beenden unter Bereitschaft absetzen.
 
-Lokal: „Ein Handy für alle“ (Tischspiele), „Allein mit Bots“ (Brett-/Minispielmodi), Hinweis „Läuft nur auf diesem Handy, auch ohne Internet.“. Bot-Karten nennen 1–5 Bots, Einrichtung trägt Spielnamen. Proberaum bleibt eigener lokaler Zugang.
+Lokal: zuerst „Allein mit Bots“ (Brett-/Minispielmodi, Hinweis „Läuft nur auf diesem Handy, auch ohne Internet.“), dann „Ein Handy für alle“ (Tischspiele), darunter eine Stein-Tafel „Unity-Minispiele“ mit Untermenü (Unity-Spiele, Ladehinweis einmal oben; für Entwicklung zusätzlich Proberaum und Roll It Up! (Unity)). Bot-Karten nennen 1–5 Bots, Einrichtung trägt Spielnamen.
 
 ## Smartphone-Layout
 
 Touch zuerst; ab 320 px kein horizontaler Überlauf. Lange Namen umbrechen/kürzen, ohne Aktionen/Portraits zu verdrängen. Hochkant untereinander; im Querformat ab 700 px passende Bereiche nebeneinander. Kulisse bildschirmfüllend; Abstände etwa 8/16/24/32 px. PC-Prüfungen ruhen.
 
-Feste Aktionen brauchen Inhaltsabstand und Safe Areas; Bildschirmtastatur berücksichtigen. Dialoge passen in sichtbare Fläche, scrollen innen, haben erreichbare Schließen-Aktion und Fokus-Rückgabe. Kamera-/Welteingaben unter Modals sperren. QR-Codes quadratisch, unverzerrt, mit weißem Rand.
+Feste Aktionen brauchen Inhaltsabstand und Safe Areas; Bildschirmtastatur berücksichtigen. Dialoge passen in sichtbare Fläche, scrollen innen, haben erreichbare Schließen-Aktion und Fokus-Rückgabe. Die Zurück-Geste macht denselben Schritt wie die sichtbare Zurück-/Schließen-Aktion (`useBackStep`); im laufenden Spiel fragt sie „Partie verlassen?“ mit „Weiterspielen“ als Hauptaktion. Lobby und Spiele halten den Bildschirm wach (`useWakeLock`). Kamera-/Welteingaben unter Modals sperren. QR-Codes quadratisch, unverzerrt, mit weißem Rand.
 
 ## Start und Bewegung
 
@@ -74,9 +75,9 @@ Brett-/Roll-It-Up-Details: [3D-Spielansichten](docs/inselparty-3d.md). Größere
 
 Brettansicht eine Bildschirmhöhe; Spielerleiste unten, Ziel/Inventar und seltene Informationen in schließbaren Panels. Feldinfo verändert keinen Ausschnitt. Keine Minispielauswahl unter dem Brett. Inselparty behält ihre Farbwelt. Bauschale: Emaille/Messing/Hügel, Lilita/Lexend, Glas und Gold/Stein; oben Münzen/Set/Ziel, unten Entscheidung/Reihenfolge. Vorschau vor Bestätigung, Kauf kompakt, Feldwirkung einmal, Kamera während Zug stabil.
 
-Schlussrunden gelb markieren; bis erstem Wurf tiefblaue ×2-Ansage, Würfeln erreichbar. Siegerehrung: drei Bonuszeilen mit goldenen/grauen Sternen, danach Konfetti/Sieg; reduzierte Bewegung zeigt alles sofort.
+Schlussrunden gelb markieren; bis erstem Wurf tiefblaue ×2-Ansage, Würfeln erreichbar. Siegerehrung: je Bonus-Trophäe eine Zeile mit goldenem/grauem Stern, danach Konfetti/Sieg; reduzierte Bewegung zeigt alles sofort.
 
-Minispiele laufen im Vollbild (Nov. 2026): Die Spielfläche füllt den ganzen Bildschirm samt Safe Areas, ohne Rahmen. Match-Spiele: schwebendes dunkles Glas-HUD oben (links Titel in Gelb, Status, Spielerchips; rechts eigene Punkte, Ton, Menü „⋯“ mit Aufgeben bzw. Übung neu starten/schließen); Canvas-Spiele beginnen unter dem HUD auf ihrer Hintergrundfarbe, Übersichtskameras halten das Feld darunter frei. 1st-Generation-Arenen behalten ihr Inselwelt-HUD als schwebende Tafeln. Eigene Themen je Spiel. Stick links, Aktionen rechts; bei Bomb Arena/Tank Trouble 132 px Steuerreserve und gelber Eigenmarker. Countdown/Ergebnis/Rückmeldung gemeinsam; keine Tastatur-/PC-Erweiterung. [Minispiel-Konzept](docs/minigames/konzept.md).
+Minispiele laufen im Vollbild: Die Spielfläche füllt den ganzen Bildschirm samt Safe Areas, ohne Rahmen. Match-Spiele: schwebendes dunkles Glas-HUD oben (links Titel in Gelb, Status, Spielerchips; rechts eigene Punkte, Ton, Menü „⋯“ mit Aufgeben bzw. Übung neu starten/schließen); Canvas-Spiele beginnen unter dem HUD auf ihrer Hintergrundfarbe, Übersichtskameras halten das Feld darunter frei. 1st-Generation-Arenen behalten ihr Inselwelt-HUD als schwebende Tafeln. Eigene Themen je Spiel. Stick links, Aktionen rechts; bei Bomb Arena/Tank Trouble 132 px Steuerreserve und gelber Eigenmarker. Countdown/Ergebnis/Rückmeldung gemeinsam; keine Tastatur-/PC-Erweiterung. [Minispiel-Konzept](docs/minigames/konzept.md).
 
 ## Prüfung
 

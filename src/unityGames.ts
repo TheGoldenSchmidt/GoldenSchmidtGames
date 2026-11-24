@@ -5,19 +5,20 @@
  * random pool and the offline cache, and are listed only under "Frei ausprobieren".
  */
 export const UNITY_BUILD = "/unity/spiele/index.html";
-const NOTE = "erster Start lädt ca. 12 MB, danach aus dem Cache";
+/** Shown once above the Unity list. */
+export const UNITY_LOAD_NOTE = "Gegen Bots auf diesem Handy. Der erste Start braucht Internet und lädt ca. 12 MB, danach kommen alle Spiele aus dem Cache.";
 export const UNITY_GAME_CATALOG = [
-  { id: "parcours", name: "Parcours-Probelevel", text: "15 Stationen mit allen Hindernisarten, gebaut in Unity.", note: `Allein · ${NOTE}` },
-  { id: "lava", name: "Floor is Lava", text: "Drei Etagen über der Lava gegen drei Bots, gebaut in Unity.", note: `Gegen Bots · ${NOTE}` },
-  { id: "sumo", name: "Sumo Smash", text: "Schubs die anderen vom Podest über dem See, gebaut in Unity.", note: `Gegen Bots · ${NOTE}` },
-  { id: "bumpercars", name: "Bumper Mayhem", text: "Autoscooter auf der Neonfläche mit Turbo und Item-Kisten, gebaut in Unity.", note: `Gegen Bots · ${NOTE}` },
-  { id: "bombs", name: "Bomb Arena", text: "Bomben, Kettenreaktionen und Extras in der Bombenfabrik, gebaut in Unity.", note: `Gegen Bots · ${NOTE}` },
-  { id: "snowball", name: "Schneeballschlacht", text: "Formen, werfen, Deckung suchen in der Winterarena, gebaut in Unity.", note: `Gegen Bots · ${NOTE}` },
-  { id: "tower", name: "Tower Tumble", text: "Turmrennen mit echter Unity-Physik: Steine kippen, rutschen, stürzen.", note: `Gegen Bots · ${NOTE}` },
-  { id: "towersurvival", name: "Tower Tumble – Survival", text: "Bauen ohne Ziellinie, immer schneller: drei verlorene Steine und du bist raus.", note: `Gegen Bots · ${NOTE}` },
-  { id: "tuerenlotto", name: "Türenlotto", text: "Parcours-Lauf: echte und falsche Türen, Gassen mit Sackgassen und Falltüren.", note: `Gegen Bots · ${NOTE}` },
-  { id: "kreiselkurs", name: "Kreiselkurs", text: "Parcours-Lauf: Drehbalken, fahrende Inseln, Wippen und das Rührwerk.", note: `Gegen Bots · ${NOTE}` },
-  { id: "standhaft", name: "Standhaft", text: "Weiche zwei Drehbalken aus und bleib auf den Fallklappen als Letzte stehen.", note: `Gegen Bots · ${NOTE}` }
+  { id: "parcours", name: "Parcours-Probelevel", text: "15 Stationen mit allen Hindernisarten, gebaut in Unity.", note: "Allein" },
+  { id: "lava", name: "Floor is Lava", text: "Drei Etagen über der Lava gegen drei Bots, gebaut in Unity.", note: "Gegen Bots" },
+  { id: "sumo", name: "Sumo Smash", text: "Schubs die anderen vom Podest über dem See, gebaut in Unity.", note: "Gegen Bots" },
+  { id: "bumpercars", name: "Bumper Mayhem", text: "Autoscooter auf der Neonfläche mit Turbo und Item-Kisten, gebaut in Unity.", note: "Gegen Bots" },
+  { id: "bombs", name: "Bomb Arena", text: "Bomben, Kettenreaktionen und Extras in der Bombenfabrik, gebaut in Unity.", note: "Gegen Bots" },
+  { id: "snowball", name: "Schneeballschlacht", text: "Formen, werfen, Deckung suchen in der Winterarena, gebaut in Unity.", note: "Gegen Bots" },
+  { id: "tower", name: "Tower Tumble", text: "Turmrennen mit echter Unity-Physik: Steine kippen, rutschen, stürzen.", note: "Gegen Bots" },
+  { id: "towersurvival", name: "Tower Tumble – Survival", text: "Bauen ohne Ziellinie, immer schneller: drei verlorene Steine und du bist raus.", note: "Gegen Bots" },
+  { id: "tuerenlotto", name: "Türenlotto", text: "Parcours-Lauf: echte und falsche Türen, Gassen mit Sackgassen und Falltüren.", note: "Gegen Bots" },
+  { id: "kreiselkurs", name: "Kreiselkurs", text: "Parcours-Lauf: Drehbalken, fahrende Inseln, Wippen und das Rührwerk.", note: "Gegen Bots" },
+  { id: "standhaft", name: "Standhaft", text: "Weiche zwei Drehbalken aus und bleib auf den Fallklappen als Letzte stehen.", note: "Gegen Bots" }
   // Tank Trouble läuft als normales Minispiel mit Unity-Darstellung (src/unityMatch.ts), allein unter „Allein mit Bots“.
   // Neue Einträge mit `pendingBuild: true` erst zusammen mit dem WebGL-Build freischalten, damit die Galerie keine fehlenden Szenen startet.
 ] as const;

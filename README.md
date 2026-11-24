@@ -10,13 +10,13 @@ Installierbare Smartphone-PWA für eine Freundesrunde: lokale Tischspiele, Brett
 | Inselparty, Roll It Up! | Brettspiele auf getrennten Handys; allein mit 1–5 Bots |
 | Freies Minispiel | Passendes Minispiel direkt wählen |
 | Schlag den GoldenSchmidt | Wettbewerb mit einmaligen verdeckten Einsätzen |
-| Proberaum | Lokale Übungsinsel für Entwickler und Admins; Verbindung zum Öffnen erforderlich |
-| Unity-Fassungen | Parcours-Probelevel, Floor is Lava, Sumo Smash, Bumper Mayhem, Bomb Arena, Schneeballschlacht, Tower Tumble (+ Survival), Türenlotto, Kreiselkurs und Standhaft in einem gemeinsamen Unity-WebGL-Build unter „Frei ausprobieren“; Tank Trouble mit Unity-Darstellung und Ansichtswahl (Draufsicht, 3rd, 1st Person) als normales Minispiel in Räumen; allein/gegen Bots, Internet beim ersten Start ([Unity-Minispiele](UnityGames.md)) |
+| Unity-Minispiele | Unity-Fassungen gegen Bots unter **Lokal spielen → Unity-Minispiele**; Tank Trouble läuft zusätzlich mit Unity-Darstellung und Ansichtswahl als normales Minispiel in Räumen; Internet beim ersten Start ([Liste und Stand](UnityGames.md)) |
+| Proberaum | Lokale Übungsinsel für Entwickler und Admins im selben Untermenü; Verbindung zum Öffnen erforderlich |
 | Rich’s Universe | Eigener Bereich für lokale Experimente |
 
 Vorher eine Figur wählen. Modi/Spielerzahlen: [Spielekatalog](shared/games.ts), einzelne Minispiele: [Minispielkatalog](shared/minigameCatalog.ts). Binokel ist angekündigt, noch nicht spielbar.
 
-**Lokal spielen** führt zu Tischspielen, Bot-Partien und für freigeschaltete Konten zum Proberaum; **Online spielen** zu Erstellen/Beitreten. Nach vollständigem Laden der PWA funktionieren lokale Spiele und Handy-Räume offline.
+**Lokal spielen** führt zuerst zu Bot-Partien, dann zu Tischspielen an einem Handy und zu den Unity-Minispielen; **Online spielen** zu Erstellen/Beitreten. Nach vollständigem Laden der PWA funktionieren lokale Spiele und Handy-Räume offline.
 
 Über das Profil anmelden oder ein Einladungskonto anlegen: Anzeigename, Figur und Spieltöne werden geräteübergreifend gespeichert; abgeschlossene Online-Partien und Siege pro Spiel unter **Deine Statistiken** angezeigt. Admins verteilen Einladungen und Entwicklerrechte. [Kontoeinrichtung und Grenzen](DEPLOYMENT.md#konten-rechte-und-statistiken).
 

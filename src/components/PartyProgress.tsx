@@ -1,17 +1,24 @@
 import {useEffect,useRef,useState} from 'react';
-import {type PartyGame} from '../../shared/party';
+import {bonusLeaders,bonusTrophies,TROPHY_PRICE,type PartyGame} from '../../shared/party';
 import {ARENA_META,isArenaId} from '../../shared/partyArena';
 
 export interface MiniReward {id:number;coins:number;total:number}
 
-export function PartyTrophyGoal({coins,field,reward}:{coins:number;field:number;reward?:MiniReward}) {
+/** Trophy goal (coins for the next trophy and where the stand is) and the bonus trophies of this game with their leaders. */
+export function PartyTrophyGoal({game,viewer,reward}:{game:PartyGame;viewer:string;reward?:MiniReward}) {
+  const coins=game.players.find(p=>p.id===viewer)?.coins??0;
   const [highlight,setHighlight]=useState(Boolean(reward&&reward.coins>0));
   useEffect(()=>{if(!reward||reward.coins<=0)return;setHighlight(true);const timer=setTimeout(()=>setHighlight(false),3000);return()=>clearTimeout(timer);},[reward?.id]);
   return <aside className={`party-trophy-goal ${highlight?'is-rewarded':''}`} aria-label="Dein Trophäenziel">
-    <div><strong>{coins>=20?'Bereit für eine Trophäe!':`Noch ${20-coins} Münzen bis zum Trophäenkauf`}</strong><span>{coins} / 20 Münzen</span></div>
-    <meter min={0} max={20} value={Math.min(20,coins)} aria-label="Münzen für den nächsten Trophäenkauf"/>
-    <small>Kauf am Trophäenstand auf Feld {field} · 20 Münzen</small>
+    <div><strong>{coins>=TROPHY_PRICE?'Bereit für eine Trophäe!':`Noch ${TROPHY_PRICE-coins} Münzen bis zum Trophäenkauf`}</strong><span>{coins} / {TROPHY_PRICE} Münzen</span></div>
+    <meter min={0} max={TROPHY_PRICE} value={Math.min(TROPHY_PRICE,coins)} aria-label="Münzen für den nächsten Trophäenkauf"/>
+    <small>Kauf am Trophäenstand auf Feld {game.trophyField} · {TROPHY_PRICE} Münzen</small>
     {highlight&&reward&&<p role="status">+{reward.coins} Münzen aus dem Minispiel · jetzt {reward.total}</p>}
+    <section className="party-bonus-goals" aria-labelledby="party-bonus-goals-title">
+      <h3 id="party-bonus-goals-title">Bonus-Trophäen am Ende</h3>
+      <ul>{bonusTrophies(game).map(bonus=>{const {value,players}=bonusLeaders(game,bonus.id),mine=players.some(p=>p.id===viewer);
+        return <li key={bonus.id} className={mine?'is-you':undefined}><span aria-hidden="true">★</span><div><strong>{bonus.name}</strong><small>{bonus.label}</small></div><em>{players.length?`${players.map(p=>p.id===viewer?'Du':p.name).join(' & ')} · ${value}`:'noch offen'}</em></li>;})}</ul>
+    </section>
   </aside>;
 }
 

@@ -62,6 +62,7 @@ try{
       else if(g.phase==="duel")await command({type:"duel"});
       else if(g.phase==="shop")await command({type:"shop"});
       else if(g.phase==="trophy")await command({type:"trophy",buy:false});
+      else if(g.phase==="mini-result"){for(const id of [a,b])if(room.partyGame!.phase==="mini-result")await sendAs(id,{type:"next"});}
       else await command({type:"next"});
     }
   }
@@ -102,11 +103,10 @@ try{
     else if(g.phase==="duel"){const other=g.players.find(q=>q.id!==p.id&&q.coins>0);if(other&&p.coins>0){await command({type:"duel",target:other.id,stake:1});duels++;}else await command({type:"duel"});}
     else if(g.phase==="shop")await command({type:"shop"});
     else if(g.phase==="trophy")await command({type:"trophy",buy:true});
-    else if(g.phase==="summary"||g.phase==="mini-result")await command({type:"next"});
-    else if(g.phase==="mini-intro"){
-      if(["words","bridge"].includes(g.mini!.id))await sendAs(a,{type:"material",available:false});
-      else {await sendAs(a,{type:"ready"});await sendAs(b,{type:"ready"});}
-    }else if(g.phase==="mini-play"){
+    else if(g.phase==="summary")await command({type:"next"});
+    // Every device confirms the result.
+    else if(g.phase==="mini-result"){for(const id of [a,b])if(room.partyGame!.phase==="mini-result")await sendAs(id,{type:"next"});}
+    else if(g.phase==="mini-intro"){await sendAs(a,{type:"ready"});await sendAs(b,{type:"ready"});}else if(g.phase==="mini-play"){
       for(const id of [a,b])if(room.partyGame!.phase==="mini-play")await sendAs(id,{type:"finish"});
     }else throw new Error(`Unerwartete Phase ${g.phase}`);
   }

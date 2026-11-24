@@ -18,17 +18,11 @@ TheGoldenSchmidt verantwortet Integration und Betrieb, Rich seinen [Bereich](src
 
 Technische Einrichtung und noch offene Betreiberaufgaben: [Deployment](DEPLOYMENT.md#einrichtung-durch-den-betreiber).
 
-## Codesuche und Kontextstrategie
+## Codesuche
 
-- Graphify ist optional und keine Voraussetzung für die Mitarbeit. Nur wenn die Werkzeuge in der aktuellen Sitzung verfügbar sind und Zugriff auf einen nutzbaren Repository-Index besteht, Codesuche und Architekturorientierung zuerst über Graphify für `TheGoldenSchmidt/GoldenSchmidtGames` durchführen. Ohne Graphify, Verbindung oder Berechtigung direkt gezielte Dateisuche, `rg` und aktuelle Dateien verwenden; die Arbeit ohne Installationsaufforderung oder wiederholte Verbindungsversuche fortsetzen.
-- Bei Architekturfragen und Aufgaben über mehrere Dateien Graphify vor breiten Repository-Suchen abfragen, sofern verfügbar. Bei trivialen, isolierten Änderungen mit bereits bekannter Zieldatei Graphify überspringen.
-- Zur ersten Orientierung `graphify_rank_files` oder `query_graph` mit `skeleton=true` und kleinem `budget` bevorzugen. Symbole mit `graphify_find`, Dateiabhängigkeiten mit `graphify_file_neighbors` untersuchen; vollständige Definitionen nur bei Bedarf mit `graphify_node` nachladen.
-- Vor Änderungen an gemeinsam genutzten Schnittstellen oder Kernsystemen bei verfügbarem Graphify mit `graphify_impact` potenziell betroffene Komponenten ermitteln. Das Ergebnis ist ein erster, begrenzter Überblick und keine vollständige Liste aller Folgen.
-- Große Modell-, Animations- und Figuren-Datendateien (insbesondere in `src/3DModels/`, `public/models/` und `src/figures/data/`) bei allgemeinen Codesuchen auslassen und nur bei konkretem Bedarf gezielt lesen. Zunächst Kataloge, Ladefunktionen und Schnittstellen untersuchen.
-- Keine vollständigen Codegraphen, breiten Dateidumps oder wiederholten Suchläufe ohne neue Fragestellung in den Kontext laden.
-- Den zurückgegebenen `commitSha` mit dem untersuchten Branchstand vergleichen und lokale Änderungen berücksichtigen. Bei passendem Stand und ausreichender Abdeckung Ergebnisse nicht nochmals mit `rg` verifizieren.
-- Bei fehlendem/veraltetem Index, leeren, unvollständigen oder abgeschnittenen Ergebnissen sowie nicht indexierten Dateien gezielt aktuelle Dateien lesen bzw. `rg` verwenden. Fehlende Graphkanten beweisen keine fehlenden Abhängigkeiten; semantische Treffer sind Vorschläge.
-- Vor Änderungen die betroffenen tatsächlichen Quelldateien lesen und prüfen; Graphify kann nicht eingecheckte oder nur auf dem Arbeitsbranch vorhandene Änderungen noch nicht enthalten. Graphify ersetzt weder verbindliche Repo-Dokumentation noch Builds, Tests oder die Prüfung des Diffs.
+- Graphify ist optional. Ist es verfügbar und passt `commitSha` zum Branchstand, Architektur- und Mehrdateifragen zuerst damit klären (`graphify_rank_files`, `query_graph` mit `skeleton=true`, vor Schnittstellenänderungen `graphify_impact`); sonst direkt `rg` und aktuelle Dateien, ohne Installationsaufforderung.
+- Große Modell-, Animations-, Figuren- und Build-Daten (`src/3DModels/`, `public/models/`, `src/figures/data/`, `public/unity/**/Build/`) bei allgemeinen Suchen auslassen.
+- Vor Änderungen die tatsächlichen Quelldateien lesen; kein Werkzeug ersetzt Doku, Build, Tests oder Diffprüfung.
 
 ## Architektur
 
@@ -40,7 +34,7 @@ Technische Einrichtung und noch offene Betreiberaufgaben: [Deployment](DEPLOYMEN
 
 ## Oberfläche
 
-Bei UI-Änderungen zuerst [Designregeln](designregeln.md) samt Geltungsbereich anwenden. Bei UI-Design `frontend-design:frontend-design` nutzen; fehlt er, in der Übergabe nennen. Für HUDs/Menüs/Overlays zusätzlich [game-ui-frontend](.agents/skills/game-ui-frontend/SKILL.md).
+Bei UI-Änderungen zuerst [Designregeln](designregeln.md) samt Geltungsbereich anwenden. Bei UI-Design `frontend-design:frontend-design` nutzen; fehlt er, in der Übergabe nennen. Für HUDs/Menüs/Overlays zusätzlich [game-ui-frontend](.agents/skills/game-ui-frontend/SKILL.md). Projekt-Skills liegen in `.agents/skills/`; `.claude/skills` verweist für Claude Code darauf.
 
 Touch auf getrennten Handys zuerst. Inselparty, Roll It Up! und Minispiele: keine PC-Layouts, Tastaturbedienung oder Desktop-Tests. PC-Prüfungen ruhen auch für übrige Ansichten. Animationen erklären Aktionen; `prefers-reduced-motion` beachten, mit identischem Spielergebnis.
 
@@ -67,4 +61,4 @@ CI: schnelle Prüfung (Build, Regeln, Screens, PWA, Online, Produktion) bei jede
 
 [documentation-audit](.agents/skills/documentation-audit/SKILL.md) bei angefordertem/regelmäßigem Audit oder größeren Architektur-, Hosting- oder Spielmodul-Meilensteinen; nicht bei kleinen Änderungen.
 
-Betroffene Doku im selben Auftrag knapp nachführen, wenn die Änderung implementiert und überprüft ist. Veraltetes nur nach Beleg entfernen, Dopplungen vermeiden; implementiert/getestet/geplant unterscheiden. Dauerhafte Entscheidungen einmal im zuständigen Dokument pflegen. Wiederkehrende Fehler und ineffiziente Abläufe belegen und konkrete Regel-/Skillverbesserungen vorschlagen. Grundlegende Agentenregeln und Qualitätsanforderungen nur nach Freigabe ändern; Tests und Sicherheitsregeln niemals abschwächen. Diff klein und prüfbar halten.
+Betroffene Doku im selben Auftrag knapp nachführen, wenn die Änderung implementiert und überprüft ist. Doku beschreibt den gültigen Stand: keine Datums- oder Rückmeldungschronik, der Verlauf steht in Git und PRs. Veraltetes nur nach Beleg entfernen, Dopplungen vermeiden; implementiert/getestet/geplant unterscheiden. Dauerhafte Entscheidungen einmal im zuständigen Dokument pflegen; Listen (z. B. Spiele) nur an einer Stelle führen und sonst verlinken. Wiederkehrende Fehler und ineffiziente Abläufe belegen und konkrete Regel-/Skillverbesserungen vorschlagen. Grundlegende Agentenregeln und Qualitätsanforderungen nur nach Freigabe ändern; Tests und Sicherheitsregeln niemals abschwächen. Diff klein und prüfbar halten.

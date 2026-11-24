@@ -9,7 +9,7 @@ import { VIEW_VARIANT_IDS } from "./minigameLooks";
  * switched off per room (option `classic`); match games depend on the player count.
  */
 export type PlayableMiniId = ArenaId | MatchId;
-export const FIRST_GEN_LABEL = "1st Generation Minigames";
+export const FIRST_GEN_LABEL = "Klassische Minispiele";
 /** Match games moved to the first generation; they stay playable but are not "new" (Wippenwerk: its seesaws now are part of Kreiselkurs). */
 export const FIRST_GEN_MATCH_IDS: readonly MatchId[] = ["hooks", "chaosrun", "wippenwerk"];
 /** The obstacle runs; each one is a standalone minigame with its own entry in every pool. */
@@ -25,6 +25,16 @@ export const isClassicMini = (id: unknown): id is PlayableMiniId => typeof id ==
 export function miniName(id: PlayableMiniId) { return isMatchId(id) ? MATCH_MODULES[id].meta.name : ARENA_META[id].name; }
 export function miniEligible(id: PlayableMiniId, players: number) { return isMatchId(id) ? matchEligible(id, players) : players >= 1 && players <= 6; }
 export function miniPlayerHint(id: PlayableMiniId) { return isMatchId(id) ? `${playerRange(id)} Spieler` : "1–6 Spieler"; }
+
+/**
+ * Game family for the draw: variants of one game (and all obstacle runs) count as one family,
+ * so the random order mixes genres instead of repeating one.
+ */
+export function miniFamily(id: PlayableMiniId): string {
+  const key: string = id;
+  if (key === "standhaft" || key === "wippenwerk" || isParcoursRun(key)) return "parcours";
+  return ({ tankview: "tanks", towersurvival: "tower", racertilt: "racer" } as Record<string, string>)[key] ?? key;
+}
 
 /** Draw pool for a room, every minigame (each obstacle run too) as one entry. Callers check `length`. */
 export function miniPool(players: number, classic: boolean): PlayableMiniId[] {

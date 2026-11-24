@@ -30,7 +30,7 @@ test("Lobby: neue Spiele, 1st-Generation-Checkbox und 320 Pixel ohne Überlauf",
   await selectEntryCharacter(page, "Morty Smith");
   await page.getByRole("button", { name: "Neuen Raum erstellen" }).click();
   await selectLobbyGame(page, "goldenschmidt");
-  const classic = page.getByRole("checkbox", { name: /1st Generation Minigames/ });
+  const classic = page.getByRole("checkbox", { name: /Klassische Minispiele/ });
   await expect(classic).toBeChecked();
   await classic.tap();
   await expect(classic).not.toBeChecked();
@@ -40,7 +40,7 @@ test("Lobby: neue Spiele, 1st-Generation-Checkbox und 320 Pixel ohne Überlauf",
   await page.getByRole("combobox", { name: "Minispiel", exact: true }).selectOption("quickdraw");
   await expect(page.getByRole("combobox", { name: "Minispiel", exact: true })).toHaveValue("quickdraw");
   await selectLobbyGame(page, "party");
-  await expect(page.getByRole("checkbox", { name: /1st Generation Minigames/ })).toBeChecked();
+  await expect(page.getByRole("checkbox", { name: /Klassische Minispiele/ })).toBeChecked();
   await page.setViewportSize({ width: 320, height: 760 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({ path: testInfo.outputPath("lobby-classic-320.png"), fullPage: true });
@@ -206,6 +206,8 @@ for (const motion of ["no-preference", "reduce"] as const) test(`Tank Trouble 2.
   await page.emulateMedia({ reducedMotion: motion });
   const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "tanks" });
   try {
+    // Unity is the default rendering; this case checks the app's own web view from above.
+    await session.action({ type: "look", renderer: "web", view: "top" }, session.ids[0]);
     await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
     await session.action({ type: "ready" }, session.ids[1]);
     await matchStarted(page);
@@ -333,6 +335,7 @@ for (const [miniId, name] of [["bombs", "Bomb Arena"], ["tanks", "Tank Trouble"]
   const six = ["alpha_rick_prime", "alpha_morty_smith", "alpha_summer_smith", "alpha_eric_cartman", "alpha_korvo", "alpha_mr_poopybutthole"] as const;
   const session = await onlineSession(page, false, [...six], false, "free-minigame", { miniId });
   try {
+    if (miniId === "tanks") await session.action({ type: "look", renderer: "web", view: "top" }, session.ids[0]);
     await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
     for (const other of session.ids.slice(1)) await session.action({ type: "ready" }, other);
     await matchStarted(page);

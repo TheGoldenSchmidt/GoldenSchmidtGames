@@ -6,6 +6,7 @@ for(const motion of ["no-preference","reduce"] as const)test(`Proberaum: Station
  const errors:string[]=[];page.on("pageerror",e=>errors.push(e.message));
  await loginTestOwner(page.request);
  await page.goto("/");await page.getByRole("button",{name:/Lokal spielen/}).tap();
+ await page.getByRole("button",{name:/^Unity-Minispiele/}).tap();
  await page.getByRole("button",{name:/Proberaum Eine Insel/}).tap();
  const root=page.locator(".practice-world"),world=page.getByRole("img",{name:"3D-Proberaum"});
  await expect(world).toHaveAttribute("data-ready","true");

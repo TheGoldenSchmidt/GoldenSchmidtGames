@@ -1,8 +1,10 @@
 import { useEffect, useId, useRef, type ReactNode } from "react";
+import { useBackStep } from "../lib/backNavigation";
 
 /** Native modal: traps focus and keeps touch/keyboard input away from the map. */
 export function PartyPanel({title,onClose,children}:{title:string;onClose:()=>void;children:ReactNode}) {
   const dialog=useRef<HTMLDialogElement>(null),label=useId();
+  useBackStep(onClose);
   useEffect(()=>{
     const element=dialog.current!,opener=document.activeElement;
     element.showModal();

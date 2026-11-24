@@ -2,7 +2,7 @@
 
 Verbindliche Ausgangsregeln (November 2026), redaktionell gekürzt.
 Sie dokumentieren die ursprünglichen Anforderungen; der aktuelle Stand ergibt sich mit den unten verlinkten Abweichungen. Abweichungen, die Bedienbarkeit, Fairness oder Spielspaß
-verbessern, stehen mit Begründung in [konzept.md](konzept.md#dokumentierte-abweichungen).
+verbessern, stehen mit Begründung in [konzept.md](konzept.md#gültige-regeln-je-spiel).
 Umsetzungsstand und Reihenfolge: [backlog.md](backlog.md).
 
 ## Allgemeines
@@ -109,14 +109,14 @@ Gruppenpunktzahl.
 
 ## 4. Tower Tumble – Turmrennen
 
-2–6 Personen. Die ursprüngliche Variante am gemeinsamen Turm wurde nach Spielrückmeldung ersetzt; aktuelle Regeln/Begründung im [Konzept](konzept.md#dokumentierte-abweichungen). Alle bauen gleichzeitig auf eigenen Sockeln mit derselben Steinfolge und deterministischer Starrkörperphysik. Frühere Fassung in der Git-Historie.
+2–6 Personen. Die ursprüngliche Variante am gemeinsamen Turm wurde nach Spielrückmeldung ersetzt; aktuelle Regeln/Begründung im [Konzept](konzept.md#gültige-regeln-je-spiel). Alle bauen gleichzeitig auf eigenen Sockeln mit derselben Steinfolge und deterministischer Starrkörperphysik. Frühere Fassung in der Git-Historie.
 
 ## 5. Light Trails – Neon Survival
 
 **Spieler:** 2–6
 
 **Steuerung:** Stick zeigt die gewünschte Richtung, zwei Haltetasten lenken
-voll nach links oder rechts (seit Nov. 2026; vorher Wischen auf einem Raster).
+voll nach links oder rechts.
 
 **Mechanik und Regeln:**
 
@@ -274,10 +274,10 @@ die Bonuspunkte geteilt. Bei Gesamtgleichstand: Sudden Death.
 verbleibende Spieler die beste Platzierung. Bei Gesamtgleichstand folgt
 eine Stechrunde.
 
-> Umgesetzt mit Abweichungen (Nov. 2026): drei Etagen übereinander, Lava erst
+> Umgesetzt mit Abweichungen: drei Etagen übereinander, Lava erst
 > unter der untersten, Lava heißt raus ohne Respawn, Durchgänge bis 30 s,
 > Randeinsturz ab 16 s, Schubser.
-> Verbindlich ist die Tabelle „Dokumentierte Abweichungen“ in
+> Verbindlich ist die Tabelle „Gültige Regeln je Spiel“ in
 > [konzept.md](konzept.md).
 
 

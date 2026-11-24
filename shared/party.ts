@@ -1,15 +1,20 @@
-import { ACTION_MINI_IDS, advanceArena, ARENA_META, createArena, isArenaId, NEUTRAL_INPUT, publicArena, setArenaControl, type ArenaId, type ArenaInput, type ArenaState } from "./partyArena";
+import { advanceArena, ARENA_META, createArena, isArenaId, NEUTRAL_INPUT, publicArena, setArenaControl, type ArenaId, type ArenaInput, type ArenaState } from "./partyArena";
 import { defaultLook, isMiniLook, lookChoices, matchIdForLook, type MiniLook, type MiniRenderer, type MiniView } from "./minigameLooks";
 import { advanceMatch, createMatch, finishMatch, isMatchId, MATCH_IDS, MATCH_MODULES, matchStandings, neutralizeMatch, publicMatch, removeMatchPlayer, setMatchControl, type MatchId } from "./matches/framework";
 import type { MatchState } from "./matches/types";
-import { miniEligible, miniPool, type PlayableMiniId } from "./minigameCatalog";
+import { miniEligible, miniFamily, miniPool, type PlayableMiniId } from "./minigameCatalog";
 import { partyBoard, partyPaths, fieldCoins, fieldLabel, FINAL_ROUNDS, hasFullSet, isFinalStretch, stationAt, JAYSPOT, TROPHY_SHOPS } from "./partyBoard";
 import { characterId, type CharacterId } from "./characters";
 import { checkMinigameSetup, isMinigameMode, minigameOptions, placeMinigameBet, type MinigameCompetition, type MinigameMode, type MinigameOptions } from "./minigameModes";
-export type PartyTempo = "slow" | "normal" | "fast";
-/** `classic` keeps the 14 original 3D arenas in the minigame draw. */
-export interface PartyOptions { rounds: number; tempo: PartyTempo; analog: boolean; classic?: boolean }
-export const PARTY_DEFAULTS: PartyOptions = { rounds: 8, tempo: "normal", analog: false, classic: true };
+/** `classic` keeps the 1st generation minigames in the draw. */
+export interface PartyOptions { rounds: number; classic?: boolean }
+export const PARTY_DEFAULTS: PartyOptions = { rounds: 8, classic: true };
+/** Price of a trophy at the trophy stand (Inselparty). */
+export const TROPHY_PRICE = 15;
+/** Trophies one visit at the trophy stand can buy. */
+export const MAX_TROPHIES_PER_VISIT = 2;
+/** Time a figure needs for one board step. */
+export const PARTY_STEP_MS = 320;
 export type Item = "sprint" | "double" | "shield" | "magnet" | "compass";
 export const ITEMS: Record<Item, { name: string; price: number; icon: string; description: string }> = {
   sprint: { name: "Sprintschuhe", price: 5, icon: "➜", description: "+3 Schritte beim nächsten Wurf" },
@@ -32,26 +37,17 @@ export function duelTargets(g: PartyGame) {
   return g.players.filter(o => o.id !== p.id && !o.passive && o.coins > 0).map(o => ({ id: o.id, max: Math.min(DUEL.maxStake, p.coins, o.coins) })).filter(o => o.max > 0);
 }
 export { BOARD, FIELD_ICONS, FIELD_LABELS, FINAL_ROUNDS, fieldLabel, isFinalStretch, TROPHY_SHOPS, type Field } from "./partyBoard";
-export const MINI_IDS = ["targets", "colors", "memory", "timing", "trail", "risk"] as const;
-export type MiniId = typeof MINI_IDS[number] | ArenaId | MatchId | "words" | "bridge";
-export const MINIS: Record<MiniId, { name: string; seconds: number; instruction: string }> = {
+export type MiniId = ArenaId | MatchId;
+/** `instruction`: the short intro text; `rules`: optional details behind „Alle Regeln“. */
+export const MINIS: Record<MiniId, { name: string; seconds: number; instruction: string; rules?: string }> = {
   ...ARENA_META,
-  ...Object.fromEntries(MATCH_IDS.map(id => [id, { name: MATCH_MODULES[id].meta.name, seconds: MATCH_MODULES[id].meta.seconds, instruction: MATCH_MODULES[id].meta.instruction }])) as Record<MatchId, { name: string; seconds: number; instruction: string }>,
-  targets: { name: "Schatzfänger", seconds: 24, instruction: "Tippe das leuchtende Schatzfeld an. Zwölf Ziele, jeweils zwei Sekunden. Jeder Treffer zählt!" },
-  colors: { name: "Farbfalle", seconds: 24, instruction: "Wähle die Schriftfarbe, nicht das geschriebene Wort. Zwölf Aufgaben, je ein Punkt." },
-  memory: { name: "Muschelmemory", seconds: 30, instruction: "Finde sechs Paare. Mehr Paare gewinnen; bei Gleichstand zählen weniger Versuche." },
-  timing: { name: "Brückenstopp", seconds: 12, instruction: "Stoppe den Marker in der Mitte. Fünf Versuche, bis zu 100 Punkte pro Versuch." },
-  trail: { name: "Dschungelspur", seconds: 26, instruction: "Merke dir sechs Symbole. Nach sechs Sekunden gibst du ihre Reihenfolge ein. Jede richtige Stelle zählt." },
-  risk: { name: "Schatzrisiko", seconds: 30, instruction: "Fünf Versuche: Öffnen bringt 1–5 Schätze, eine Falle löscht die ungesicherte Beute. Sichere rechtzeitig!" },
-  words: { name: "Inselwörter", seconds: 30, instruction: "Papier und Stift: Notiert unterschiedliche Tiere. Jeder gemeinsam bestätigte gültige Begriff zählt einen Punkt." },
-  bridge: { name: "Papierbrücke", seconds: 45, instruction: "Baut aus einem A4-Blatt ohne Hilfsmittel eine selbststehende Brücke. Ganze Zentimeter freier Spannweite zählen. Ihr benötigt ein Lineal." }
+  ...Object.fromEntries(MATCH_IDS.map(id => [id, { name: MATCH_MODULES[id].meta.name, seconds: MATCH_MODULES[id].meta.seconds, instruction: MATCH_MODULES[id].meta.instruction, rules: MATCH_MODULES[id].meta.rules }])) as Record<MatchId, { name: string; seconds: number; instruction: string; rules?: string }>
 };
-export const SYMBOLS = ["☀", "☂", "♣", "★", "♥", "⚓"];
-export const COLORS = ["Rot", "Blau", "Grün", "Gelb"];
-export interface PartyPlayer { id: string; name: string; characterId?: CharacterId; bot?: boolean; position: number; supplies?: number[]; coins: number; trophies: number; wins: number; items: Item[]; shield: boolean; passive: boolean; walked?: number; lost?: number }
-export interface MiniRun { ready: boolean; done: boolean; score: number; attempts: number; cursor: number; opened: number[]; matched: number[]; blockedUntil: number; bank: number; loot: number; feedback: string; lastInput: number }
-export interface PartyMini { resultReady?: string[]; id: MiniId; startAt: number; runs: Record<string, MiniRun>; cards: number[]; prompts: number[]; words: number[]; targets: number[]; trail: number[]; risk: number[]; reports: Record<string, number>; confirms: Record<string, boolean>; material: Record<string, boolean>; arenaSeed?:number; arena?:ArenaState; match?: MatchState; /** Rendering and view chosen by the host (minigames with a choice only). */ look?: MiniLook }
-export type PartyPhase = "turn" | "moving" | "path" | "trophy" | "supply" | "shop" | "gift" | "duel" | "summary" | "mini-bet" | "mini-intro" | "mini-play" | "analog-confirm" | "mini-result" | "finished" | "aborted";
+export interface PartyPlayer { id: string; name: string; characterId?: CharacterId; bot?: boolean; position: number; supplies?: number[]; coins: number; trophies: number; wins: number; items: Item[]; shield: boolean; passive: boolean; walked?: number; lost?: number; duels?: number; spent?: number; found?: number }
+export interface MiniRun { ready: boolean; done: boolean; score: number; feedback: string; lastInput: number }
+/** `resultReady`: humans who confirmed the result; the game continues once all active humans have. */
+export interface PartyMini { resultReady?: string[]; id: MiniId; startAt: number; runs: Record<string, MiniRun>; arenaSeed?:number; arena?:ArenaState; match?: MatchState; /** Rendering and view chosen by the host (minigames with a choice only). */ look?: MiniLook }
+export type PartyPhase = "turn" | "moving" | "path" | "trophy" | "supply" | "shop" | "gift" | "duel" | "summary" | "mini-bet" | "mini-intro" | "mini-play" | "mini-result" | "finished" | "aborted";
 export interface PartyGame {
   mode?: "party" | "roll-it-up" | MinigameMode;
   competition?: MinigameCompetition;
@@ -59,6 +55,8 @@ export interface PartyGame {
   opening:boolean;movement?:{destination:number;departAt:number;arriveAt:number};
   /** Inselparty: help for the last places when the last rounds begin. */
   finalStretch?: { round: number; help: { id: string; item?: Item; coins?: number }[] };
+  /** Inselparty: bonus trophies announced at the start (missing in older rooms: the former three). */
+  bonusPicks?: BonusTrophyId[];
   /** Inselparty: bonus trophies awarded at the end; they count like bought trophies. */
   bonus?: { id: BonusTrophyId; winners: string[]; value: number }[];
   /** Inselparty: the running duel (set from the stake until the result is confirmed). */
@@ -74,18 +72,17 @@ export interface PartyGame {
 export type PartyAction =
   | { type: "bet"; value: number }
   | { type: "roll" } | { type: "item"; index: number; target?: string; destination?: number }
-  | { type: "path"; destination: number } | { type: "trophy"; buy: boolean } | { type: "supply"; buy: boolean }
+  | { type: "path"; destination: number } | { type: "trophy"; buy: boolean; count?: number } | { type: "supply"; buy: boolean }
   | { type: "shop"; item?: Item; replace?: number } | { type: "gift"; accept: boolean; replace?: number }
   | { type: "duel"; target?: string; stake?: number }
-  | { type: "next" } | { type: "ready" } | { type: "input"; value: number | string }
-  | { type: "finish" } | { type: "material"; available: boolean } | { type: "report"; score: number }
-  | { type: "confirm"; accept: boolean } | { type: "resume" } | { type: "abort" }
+  | { type: "next" } | { type: "ready" } | { type: "finish" } | { type: "resume" } | { type: "abort" }
   | { type: "look"; renderer: MiniRenderer; view: MiniView };
 
+/** Older clients may still send `tempo`/`analog`; both are ignored. */
 export function partyOptions(value?: Partial<PartyOptions>): PartyOptions {
-  const rounds = value?.rounds ?? 8, tempo = value?.tempo ?? "normal", classic = value?.classic ?? true;
-  if (!Number.isInteger(rounds) || rounds < 5 || rounds > 15 || !["slow","normal","fast"].includes(tempo) || (value?.analog !== undefined && typeof value.analog !== "boolean") || typeof classic !== "boolean") throw new Error("Ungültige Inselparty-Einstellungen.");
-  return { rounds, tempo: "normal", analog: false, classic };
+  const rounds = value?.rounds ?? PARTY_DEFAULTS.rounds, classic = value?.classic ?? true;
+  if (!Number.isInteger(rounds) || rounds < 5 || rounds > 15 || typeof classic !== "boolean") throw new Error("Ungültige Inselparty-Einstellungen.");
+  return { rounds, classic };
 }
 function random(g: PartyGame) { g.rng = (Math.imul(g.rng, 1664525) + 1013904223) >>> 0; return g.rng / 4294967296; }
 function shuffle<T>(g: PartyGame, source: readonly T[]): T[] { const result = [...source]; for (let i=result.length-1;i>0;i--) { const j=Math.floor(random(g)*(i+1)); [result[i],result[j]]=[result[j],result[i]]; } return result; }
@@ -93,15 +90,29 @@ function log(g: PartyGame, message: string) { g.log = [...g.log.slice(-11),messa
 export function activePartyPlayer(g: PartyGame) { return g.players.find(p => p.id === g.order[g.turn])!; }
 function progress(g: PartyGame, p: PartyPlayer) { return g.mode === 'roll-it-up' ? p.supplies?.length ?? 0 : p.trophies; }
 export function partyStanding(g: PartyGame) { return [...g.players].sort((a,b) => progress(g,b)-progress(g,a) || b.coins-a.coins || b.wins-a.wins); }
-export type BonusTrophyId = "minis" | "walker" | "unlucky";
+export type BonusTrophyId = "minis" | "walker" | "unlucky" | "duelist" | "shopper" | "finder";
 export const BONUS_TROPHIES: { id: BonusTrophyId; name: string; label: string; stat: (p: PartyPlayer) => number }[] = [
   { id: "minis", name: "Minispiel-Ass", label: "Meiste Minispielsiege", stat: p => p.wins },
   { id: "walker", name: "Weltenbummler", label: "Meiste gelaufene Felder", stat: p => p.walked ?? 0 },
-  { id: "unlucky", name: "Pechvogel", label: "Meiste verlorene Münzen", stat: p => p.lost ?? 0 }
+  { id: "unlucky", name: "Pechvogel", label: "Meiste verlorene Münzen", stat: p => p.lost ?? 0 },
+  { id: "duelist", name: "Duellkönig", label: "Meiste gewonnene Duelle", stat: p => p.duels ?? 0 },
+  { id: "shopper", name: "Marktkönig", label: "Meiste Münzen im Inselmarkt ausgegeben", stat: p => p.spent ?? 0 },
+  { id: "finder", name: "Glückspilz", label: "Meiste Münzen von Plus- und Ereignisfeldern", stat: p => p.found ?? 0 }
 ];
+/** Minispiel-Ass always, plus one bonus drawn from the seed (without touching the game's random state). */
+export function pickBonusTrophies(seed: number): BonusTrophyId[] {
+  const others = BONUS_TROPHIES.slice(1).map(b => b.id), mixed = (Math.imul(seed >>> 0, 2654435761) >>> 0) % others.length;
+  return ["minis", others[mixed]];
+}
+export const bonusTrophies = (g: PartyGame) => (g.bonusPicks ?? ["minis", "walker", "unlucky"]).map(id => BONUS_TROPHIES.find(b => b.id === id)!);
+/** Current leaders of a bonus trophy (nobody while the best value is 0). */
+export function bonusLeaders(g: PartyGame, id: BonusTrophyId) {
+  const stat = BONUS_TROPHIES.find(b => b.id === id)!.stat, value = Math.max(...g.players.map(stat));
+  return { value, players: value > 0 ? g.players.filter(p => stat(p) === value) : [] };
+}
 /** Every player with the highest value receives the bonus trophy; nobody receives it for a value of 0. */
 function awardBonusTrophies(g:PartyGame){
-  g.bonus=BONUS_TROPHIES.map(({id,name,stat})=>{
+  g.bonus=bonusTrophies(g).map(({id,name,stat})=>{
     const value=Math.max(...g.players.map(stat)),winners=value>0?g.players.filter(p=>stat(p)===value):[];
     for(const p of winners)p.trophies++;
     if(winners.length)log(g,`Bonus-Trophäe ${name}: ${winners.map(p=>p.name).join(" & ")}.`);
@@ -130,6 +141,7 @@ export function createPartyGame(players: {id:string;name:string;characterId?:Cha
     if (mode === "free-minigame") g.miniBag = [settings.miniId];
     selectMini(g, now);
   } else {
+    if (mode === "party") g.bonusPicks = pickBonusTrophies(seed);
     selectMini(g,now);log(g,"Das Auftakt-Minispiel bestimmt eure feste Zugreihenfolge. Bei Gleichstand entscheidet das Los.");
   }
   return g;
@@ -142,7 +154,7 @@ function addItem(p: PartyPlayer, item: Item, replace?: number) {
 function event(g: PartyGame) {
   if (!g.events.length) g.events=shuffle(g,[0,1,2,3,4,5]);
   const p=activePartyPlayer(g), e=g.events.pop()!;
-  if(e===0) {p.coins+=5;log(g,"Strandfund: +5 Münzen.");}
+  if(e===0) {p.coins+=5;p.found=(p.found??0)+5;log(g,"Strandfund: +5 Münzen.");}
   if(e===1) {g.players.forEach(p=>p.coins+=2);log(g,"Inselrunde: alle erhalten 2 Münzen.");}
   if(e===2 || e===5) {g.offered=e===2?"sprint":"shield";log(g,`Marktgeschenk: ${ITEMS[g.offered].name}.`);}
   if(e===3) {lose(g,p,4);log(g,"Reparatur: bis zu 4 Münzen abgeben.");}
@@ -151,7 +163,7 @@ function event(g: PartyGame) {
 function land(g: PartyGame, now:number) {
   const p=activePartyPlayer(g), field=partyBoard(g)[p.position];
   log(g,`${p.name}: ${g.mode==="roll-it-up" && field.id===0?"Start":fieldLabel(g,field.type)}.`);
-  if(field.type==="coin") p.coins+=fieldCoins(g);
+  if(field.type==="coin") {p.coins+=fieldCoins(g);p.found=(p.found??0)+fieldCoins(g);}
   if(field.type==="bad") lose(g,p,fieldCoins(g));
   if(field.type==="event") event(g);
   if(field.type==="gift") g.offered=ITEM_IDS[Math.floor(random(g)*5)];
@@ -161,14 +173,13 @@ function land(g: PartyGame, now:number) {
   }
   if(g.offered) phase(g,"gift",now); else phase(g,field.type==="shop"?"shop":"summary",now);
 }
-export const partyStepMs=(tempo:PartyTempo)=>({slow:420,normal:320,fast:240}[tempo]);
 function move(g:PartyGame,now:number,delay=0,destination?:number){
   const p=activePartyPlayer(g);
   if(g.steps<=0){land(g,now);return;}
   const choices=partyPaths(g,p);
   if(destination===undefined&&choices.length>1){phase(g,"path",now);return;}
   const target=destination??choices[0];
-  phase(g,"moving",now);g.movement={destination:target,departAt:now+delay,arriveAt:now+delay+partyStepMs(g.options.tempo)};
+  phase(g,"moving",now);g.movement={destination:target,departAt:now+delay,arriveAt:now+delay+PARTY_STEP_MS};
 }
 function arrive(g:PartyGame,now:number){
   const target=g.movement!.destination;step(g,target);
@@ -187,10 +198,11 @@ function arrive(g:PartyGame,now:number){
       return;
     }
     move(g, now);
-  } else if(p.position===g.trophyField&&!g.trophyBought&&p.coins>=20)phase(g,"trophy",now);
+  } else if(canBuyTrophy(g,p))phase(g,"trophy",now);
   else move(g,now);
 }
 function step(g:PartyGame,destination:number) {const p=activePartyPlayer(g);p.position=destination;p.walked=(p.walked??0)+1;g.path.push(destination);g.steps--;if(destination===0){p.coins+=3;log(g,`${p.name} passiert ${g.mode==="roll-it-up"?"das Startfeld":"den Hafen"}: +3 Münzen.`);}}
+function canBuyTrophy(g:PartyGame,p:PartyPlayer){return (g.mode??"party")==="party"&&p.position===g.trophyField&&!g.trophyBought&&p.coins>=TROPHY_PRICE;}
 /** After a purchase the trophy stand moves to one of the two other shops, drawn by the room's random state. */
 function moveTrophy(g:PartyGame){const others=TROPHY_SHOPS.filter(field=>field!==g.trophyField);g.trophyField=others[Math.floor(random(g)*others.length)];log(g,`Der Trophäenstand zieht weiter zu Feld ${g.trophyField}.`);}
 /** The last three rounds begin: every last-placed player receives a random item, or its price in coins with a full inventory. */
@@ -202,13 +214,30 @@ function startFinalStretch(g:PartyGame){
   for(const entry of help){const p=g.players.find(q=>q.id===entry.id)!;log(g,`Rückenwind für ${p.name}: ${entry.item?ITEMS[entry.item].name:`+${entry.coins} Münzen`}.`);}
 }
 function startTurn(g:PartyGame,now:number) {g.itemUsed=false;g.double=false;g.boost=0;g.trophyBought=false;g.dice=[];g.path=[];g.offered=undefined;phase(g,"turn",now);log(g,`${activePartyPlayer(g).name} ist am Zug.`);}
-function selectMini(g:PartyGame,now:number,forceDigital=false) {
+/**
+ * Draw order for the next minigames: one entry per game family (obstacle runs: two different
+ * courses), never the same family twice in a row. Competitions never repeat a played game.
+ */
+function fillMiniBag(g:PartyGame,active:number){
+  const played=new Set<string>(g.competition?.history.map(h=>h.miniId)??[]);
+  let pool=miniPool(active,g.options.classic??true);
+  if(pool.some(id=>!played.has(id)))pool=pool.filter(id=>!played.has(id));
+  const families=new Map<string,PlayableMiniId[]>();
+  for(const id of pool)families.set(miniFamily(id),[...(families.get(miniFamily(id))??[]),id]);
+  const entries=shuffle(g,[...families].flatMap(([family,ids])=>shuffle(g,ids).slice(0,family==="parcours"?2:1)));
+  const order:PlayableMiniId[]=[];let previous=g.lastMini;
+  while(entries.length){
+    const index=Math.max(0,entries.findIndex(id=>!previous||miniFamily(id)!==miniFamily(previous)));
+    previous=entries.splice(index,1)[0];order.push(previous);
+  }
+  g.miniBag=order.reverse();
+}
+function selectMini(g:PartyGame,now:number) {
   const active=g.players.filter(p=>!p.passive).length;
-  const refill=()=>{g.miniBag=shuffle(g,miniPool(active,g.options.classic??true));if(g.miniBag.at(-1)===g.lastMini) [g.miniBag[0],g.miniBag[g.miniBag.length-1]]=[g.miniBag[g.miniBag.length-1],g.miniBag[0]];};
-  if(!g.miniBag.length)refill();
+  if(!g.miniBag.length)fillMiniBag(g,active);
   // Players may have become passive since the bag was filled; skip games that no longer fit.
-  while(g.miniBag.length&&!miniEligible(g.miniBag.at(-1) as PlayableMiniId,active)){g.miniBag.pop();if(!g.miniBag.length)refill();}
-  let id=g.miniBag.pop()!;if(forceDigital) id=ACTION_MINI_IDS[Math.floor(random(g)*ACTION_MINI_IDS.length)];g.lastMini=id;
+  while(g.miniBag.length&&!miniEligible(g.miniBag.at(-1)!,active)){g.miniBag.pop();if(!g.miniBag.length)fillMiniBag(g,active);}
+  const id=g.miniBag.pop()!;g.lastMini=id;
   prepareMini(g,id,now);
   if(g.mode === "goldenschmidt") {
     g.competition!.bets = {}; g.competition!.locked = [];
@@ -218,7 +247,7 @@ function selectMini(g:PartyGame,now:number,forceDigital=false) {
 /** A fresh minigame state; in a duel only the two duelists play, everyone else watches (already done and ready). */
 function prepareMini(g:PartyGame,id:MiniId,now:number){
   const watching=(p:PartyPlayer)=>Boolean(g.duel&&p.id!==g.duel.challenger&&p.id!==g.duel.opponent);
-  g.mini={id,startAt:0,runs:Object.fromEntries(g.players.map(p=>[p.id,{ready:watching(p),done:p.passive||watching(p),score:0,attempts:0,cursor:0,opened:[],matched:[],blockedUntil:0,bank:0,loot:0,feedback:"",lastInput:0}])),cards:shuffle(g,[0,0,1,1,2,2,3,3,4,4,5,5]),prompts:Array.from({length:12},()=>Math.floor(random(g)*4)),words:Array.from({length:12},()=>Math.floor(random(g)*4)),targets:Array.from({length:12},()=>Math.floor(random(g)*9)),trail:Array.from({length:6},()=>Math.floor(random(g)*6)),risk:Array.from({length:256},()=>random(g)),reports:{},confirms:{},material:{}};
+  g.mini={id,startAt:0,runs:Object.fromEntries(g.players.map(p=>[p.id,{ready:watching(p),done:p.passive||watching(p),score:0,feedback:"",lastInput:0}]))};
   g.mini.arenaSeed=g.rng;
   const look=defaultLook(id);if(look)g.mini.look=look;
   g.localMiniIndex=0;phase(g,"mini-intro",now);if(g.online)g.deadline=now+90000;
@@ -237,7 +266,7 @@ function startDuel(g:PartyGame,target:PartyPlayer,stake:number,now:number){
 function settleDuel(g:PartyGame,now:number){
   const d=g.duel!,results=partyMiniResults(g),top=results.filter(r=>r.participated&&r.place===1);
   const pot=d.stake*2,a=g.players.find(p=>p.id===d.challenger)!,b=g.players.find(p=>p.id===d.opponent)!;
-  if(top.length===1){d.winner=top[0].player.id;top[0].player.coins+=pot;log(g,`${top[0].player.name} gewinnt das Duell und den Pott: +${pot} Münzen.`);}
+  if(top.length===1){d.winner=top[0].player.id;top[0].player.coins+=pot;top[0].player.duels=(top[0].player.duels??0)+1;log(g,`${top[0].player.name} gewinnt das Duell und den Pott: +${pot} Münzen.`);}
   else{d.draw=true;a.coins+=d.stake;b.coins+=d.stake;log(g,"Duell unentschieden: beide bekommen ihren Einsatz zurück.");}
   phase(g,"mini-result",now);
 }
@@ -287,7 +316,7 @@ function syncArenaRuns(g:PartyGame,now:number) {
 /** One source for awarded coins and the result screen, including lower-place ties. */
 export function partyMiniResults(g:PartyGame) {
   const m=g.mini!;
-  const eligible=g.players.filter(p=>!p.passive&&(m.runs[p.id].lastInput>0||m.reports[p.id]!==undefined));
+  const eligible=g.players.filter(p=>!p.passive&&m.runs[p.id].lastInput>0);
   if(m.match){
     // The match module ranks with shared places; non-participants are left out before places are counted.
     const standings=matchStandings(m.match),place=(id:string)=>standings.find(s=>s.id===id)?.place??99;
@@ -295,15 +324,15 @@ export function partyMiniResults(g:PartyGame) {
     return g.players.map(player=>{
       const participated=eligible.includes(player),rank=participated?1+eligible.filter(other=>place(other.id)<place(player.id)).length:0;
       const coins=participated&&!g.opening&&!g.competition&&!g.duel?([10,4,2][rank-1]??0):0;
-      return {player,place:rank,coins,participated,score:standings.find(s=>s.id===player.id)?.score??0,attempts:0,detail:standings.find(s=>s.id===player.id)?.detail};
+      return {player,place:rank,coins,participated,score:standings.find(s=>s.id===player.id)?.score??0,detail:standings.find(s=>s.id===player.id)?.detail};
     }).sort((a,b)=>(a.place||99)-(b.place||99)||order.indexOf(a.player)-order.indexOf(b.player));
   }
-  const better=(a:PartyPlayer,b:PartyPlayer)=>m.runs[a.id].score>m.runs[b.id].score||(m.runs[a.id].score===m.runs[b.id].score&&m.id==="memory"&&m.runs[a.id].attempts<m.runs[b.id].attempts);
-  const ranked=[...eligible].sort((a,b)=>better(a,b)?-1:better(b,a)?1:(m.arena?.actors.find(p=>p.id===a.id)?.falls??0)-(m.arena?.actors.find(p=>p.id===b.id)?.falls??0)||g.order.indexOf(a.id)-g.order.indexOf(b.id));
+  const falls=(p:PartyPlayer)=>m.arena?.actors.find(a=>a.id===p.id)?.falls??0;
+  const ranked=[...eligible].sort((a,b)=>m.runs[b.id].score-m.runs[a.id].score||falls(a)-falls(b)||g.order.indexOf(a.id)-g.order.indexOf(b.id));
   return g.players.map(player=>{
     const participated=eligible.includes(player),place=participated?ranked.indexOf(player)+1:0;
     const coins=participated&&!g.opening&&!g.competition?([10,4,2][place-1]??0):0;
-    return {player,place,coins,participated,score:m.runs[player.id].score,attempts:m.runs[player.id].attempts,detail:undefined as string|undefined};
+    return {player,place,coins,participated,score:m.runs[player.id].score,detail:undefined as string|undefined};
   }).sort((a,b)=>(a.place||99)-(b.place||99));
 }
 function rewardMini(g:PartyGame,now:number){
@@ -333,29 +362,10 @@ function rewardMini(g:PartyGame,now:number){
 }
 
 function finishRun(g:PartyGame,id:string,now:number) {const m=g.mini!;if(m.match)return;m.runs[id].done=true;
-  if(m.id==="words"||m.id==="bridge") {if(g.players.filter(p=>!p.passive).every(p=>m.runs[p.id].done)){phase(g,"analog-confirm",now);}return;}
   if(g.players.filter(p=>!p.passive).every(p=>m.runs[p.id].done)) rewardMini(g,now);
   else if(!g.online) {g.localMiniIndex=g.players.findIndex(p=>!p.passive&&!m.runs[p.id].done);phase(g,"mini-intro",now);}
 }
 export function partyMiniActor(g:PartyGame,id:string) {return g.online?id:g.players[g.localMiniIndex].id;}
-export function partyInput(g:PartyGame,id:string,value:number|string,now:number) {
-  const m=g.mini!,r=m.runs[id], elapsed=now-m.startAt;
-  if(!r||r.done||elapsed<0||now>g.deadline||now-r.lastInput<40) throw new Error("Diese Eingabe ist gerade nicht möglich.");
-  r.lastInput=now;
-  if(m.id==="targets") {const turn=Math.floor(elapsed/2000);if(turn<12&&turn>=r.cursor&&value===m.targets[turn]){r.score++;r.cursor=turn+1;r.feedback="Schatz gefunden!";}}
-  else if(m.id==="colors") {if(!Number.isInteger(value)||Number(value)<0||Number(value)>3||r.cursor>=12)throw new Error("Ungültige Farbe.");if(value===m.prompts[r.cursor])r.score++;r.cursor++;if(r.cursor===12)finishRun(g,id,now);}
-  else if(m.id==="memory") {
-    if(now<r.blockedUntil)throw new Error("Warte kurz, bis die Muscheln wieder verdeckt sind.");
-    if(r.opened.length===2)r.opened=[];
-    if(!Number.isInteger(value)||Number(value)<0||Number(value)>11||r.matched.includes(Number(value))||r.opened.includes(Number(value)))throw new Error("Diese Muschel ist bereits offen.");
-    r.opened.push(Number(value));
-    if(r.opened.length===2){r.attempts++;if(m.cards[r.opened[0]]===m.cards[r.opened[1]]){r.matched.push(...r.opened);r.opened=[];r.score++;if(r.score===6)finishRun(g,id,now);}else r.blockedUntil=now+700;}
-  }
-  else if(m.id==="timing") {const turn=Math.floor(elapsed/2400);if(turn>=5||turn<r.cursor)throw new Error("Dieser Versuch ist vorbei.");const distance=Math.abs((elapsed%2400)/2400-.5)*2;r.score+=Math.round(100*(1-distance));r.cursor=turn+1;r.feedback=`${r.score} Punkte`;if(r.cursor===5)finishRun(g,id,now);}
-  else if(m.id==="trail") {if(elapsed<6000||!Number.isInteger(value)||Number(value)<0||Number(value)>5||r.cursor>=6)throw new Error("Merke dir erst die Spur.");if(value===m.trail[r.cursor])r.score++;r.cursor++;if(r.cursor===6)finishRun(g,id,now);}
-  else if(m.id==="risk") {if(value!=="open"&&value!=="bank")throw new Error("Öffnen oder sichern wählen.");if(value==="bank"){r.bank+=r.loot;r.loot=0;r.attempts++;r.feedback="Beute gesichert!";}else{const draw=m.risk[r.cursor++];if(draw===undefined||draw<.25){r.loot=0;r.attempts++;r.feedback="Eine Falle! Ungesicherte Beute verloren.";}else{const n=1+Math.floor(((draw-.25)/.75)*5);r.loot+=n;r.feedback=`${n} Schätze gefunden!`;}}r.score=r.bank;if(r.attempts>=5)finishRun(g,id,now);}
-  else throw new Error("Analoge Ergebnisse gemeinsam eintragen.");
-}
 
 /** Arena simulation time is relative to mini.startAt. Only wall-clock deadlines move. */
 export function shiftPartyClock(game: PartyGame, elapsed: number) {
@@ -366,19 +376,19 @@ export function shiftPartyClock(game: PartyGame, elapsed: number) {
     game.movement.arriveAt += offset;
   }
   if (game.mini?.startAt) game.mini.startAt += offset;
-  for (const run of Object.values(game.mini?.runs ?? {})) {
-    if (run.blockedUntil) run.blockedUntil += offset;
-    if (run.lastInput) run.lastInput += offset;
-  }
+  for (const run of Object.values(game.mini?.runs ?? {})) if (run.lastInput) run.lastInput += offset;
 }
 
+/** All active humans confirmed the minigame result (bots and pausing players never block). */
+export function resultConfirmed(g:PartyGame){return g.players.every(q=>q.bot||q.passive||g.mini?.resultReady?.includes(q.id));}
 export function applyPartyAction(current:PartyGame,id:string,action:PartyAction,now=Date.now()):PartyGame {
   if(!current.players.some(p=>p.id===id)||current.phase==="finished"||current.phase==="aborted")throw new Error("Diese Partie ist nicht aktiv.");
   const g=structuredClone(current),p=activePartyPlayer(g),own=g.players.find(p=>p.id===id)!;
   if(action.type==="abort"){phase(g,"aborted",now);return g;}
   if(action.type==="resume"){if(!g.resumeOffered)throw new Error("Die Wartezeit läuft noch.");Object.keys(g.disconnected).forEach(id=>{g.players.find(p=>p.id===id)!.passive=true;if(g.mini?.match)removeMatchPlayer(g.mini.match,id);if(g.mini){g.mini.runs[id].done=true;const actor=g.mini.arena?.actors.find(a=>a.id===id);if(actor){actor.finished=true;actor.inputUntil=0;}}});shiftPartyClock(g,now-g.pausedAt);g.pausedAt=0;g.resumeOffered=false;return g;}
   if(g.pausedAt)throw new Error("Die Partie wartet auf die Verbindung.");
-  const miniPhase=["mini-bet","mini-intro","mini-play","analog-confirm"].includes(g.phase) || Boolean((g.competition||g.mode==="roll-it-up") && g.phase === "mini-result");
+  // Minigame phases involve everyone; results wait until every active human confirmed.
+  const miniPhase=["mini-bet","mini-intro","mini-play","mini-result"].includes(g.phase);
   if(!miniPhase && id!==p.id)throw new Error("Du bist nicht am Zug.");
   if(own.passive)throw new Error("Du schaust derzeit zu.");
   if(action.type === "bet" && g.phase === "mini-bet" && g.mode === "goldenschmidt" && g.competition) {
@@ -392,9 +402,11 @@ export function applyPartyAction(current:PartyGame,id:string,action:PartyAction,
     const item=p.items[action.index];if(g.itemUsed||!item)throw new Error("Dieses Item kann nicht verwendet werden.");
     if(item==="shield"&&p.shield)throw new Error("Dein Schild ist bereits aktiv.");
     if(item==="magnet"){const target=g.players.find(p=>p.id===action.target);if(!target||target.id===id)throw new Error("Wähle eine andere Person.");p.coins+=lose(g,target,5);}
-    if(item==="compass"){if(![6,15,24].includes(action.destination??-1))throw new Error("Wähle einen Shop.");p.position=action.destination!;g.path=[];}
+    if(item==="compass"){if(!(TROPHY_SHOPS as readonly number[]).includes(action.destination??-1))throw new Error("Wähle einen Shop.");p.position=action.destination!;g.path=[];}
     if(item==="shield")p.shield=true;if(item==="double")g.double=true;if(item==="sprint")g.boost=3;
     p.items.splice(action.index,1);g.itemUsed=true;log(g,`${p.name} setzt ${ITEMS[item].name} ein.`);
+    // Travelling straight to the trophy stand offers the trophy before the roll.
+    if(item==="compass"&&canBuyTrophy(g,p))phase(g,"trophy",now);
   }
   else if(action.type==="path"&&g.phase==="path"){if(!partyPaths(g,p).includes(action.destination))throw new Error("Ungültiger Weg.");move(g,now,0,action.destination);}
   else if (action.type === "supply" && g.mode === "roll-it-up" && g.phase === "supply") {
@@ -408,8 +420,18 @@ export function applyPartyAction(current:PartyGame,id:string,action:PartyAction,
     }
     move(g, now);
   }
-  else if(action.type==="trophy"&&g.phase==="trophy"){if(action.buy){if(p.coins<20)throw new Error("Nicht genug Münzen.");p.coins-=20;p.trophies++;g.trophyBought=true;log(g,`${p.name} kauft eine Trophäe!`);moveTrophy(g);}move(g,now);}
-  else if(action.type==="shop"&&g.phase==="shop"){if(action.item){if(!ITEM_IDS.includes(action.item)||p.coins<ITEMS[action.item].price)throw new Error("Nicht genug Münzen oder ungültiges Item.");addItem(p,action.item,action.replace);p.coins-=ITEMS[action.item].price;}phase(g,"summary",now);}
+  else if(action.type==="trophy"&&g.phase==="trophy"){
+    if(action.buy){
+      // Saved coins pay off: up to MAX_TROPHIES_PER_VISIT trophies at once.
+      const count=action.count??1;
+      if(!Number.isInteger(count)||count<1||count>MAX_TROPHIES_PER_VISIT)throw new Error("Ungültige Anzahl.");
+      if(p.coins<TROPHY_PRICE*count)throw new Error("Nicht genug Münzen.");
+      p.coins-=TROPHY_PRICE*count;p.trophies+=count;g.trophyBought=true;log(g,count>1?`${p.name} kauft ${count} Trophäen!`:`${p.name} kauft eine Trophäe!`);moveTrophy(g);
+    }
+    // Before the roll (after the compass) the turn continues with the roll.
+    if(g.dice.length)move(g,now);else phase(g,"turn",now);
+  }
+  else if(action.type==="shop"&&g.phase==="shop"){if(action.item){if(!ITEM_IDS.includes(action.item)||p.coins<ITEMS[action.item].price)throw new Error("Nicht genug Münzen oder ungültiges Item.");addItem(p,action.item,action.replace);p.coins-=ITEMS[action.item].price;p.spent=(p.spent??0)+ITEMS[action.item].price;}phase(g,"summary",now);}
   else if(action.type==="gift"&&g.phase==="gift"){if(action.accept&&g.offered)addItem(p,g.offered,action.replace);g.offered=undefined;phase(g,"summary",now);}
   else if(action.type==="duel"&&g.phase==="duel"){
     if(action.target===undefined){log(g,`${p.name} verzichtet auf das Duell.`);phase(g,"summary",now);}
@@ -421,26 +443,23 @@ export function applyPartyAction(current:PartyGame,id:string,action:PartyAction,
     }
   }
   else if(action.type==="next"&&g.phase==="summary"){g.turn++;if(g.turn===g.order.length){g.turn=0;selectMini(g,now);}else startTurn(g,now);}
-  else if(action.type==="ready"&&g.phase==="mini-intro") {const m=g.mini!;if(!g.online&&id!==g.players[g.localMiniIndex].id&&m.id!=="words"&&m.id!=="bridge")throw new Error("Bitte das Gerät weitergeben.");m.runs[id].ready=true;if(!g.online||g.players.filter(p=>!p.passive).every(p=>m.runs[p.id].ready)){if((m.id==="words"||m.id==="bridge")&&!g.players.filter(p=>!p.passive).every(p=>m.material[p.id]===true))throw new Error("Erst das Material bestätigen.");startMini(g,now);}}
+  else if(action.type==="ready"&&g.phase==="mini-intro") {const m=g.mini!;if(!g.online&&id!==g.players[g.localMiniIndex].id)throw new Error("Bitte das Gerät weitergeben.");m.runs[id].ready=true;if(!g.online||g.players.filter(p=>!p.passive).every(p=>m.runs[p.id].ready))startMini(g,now);}
   else if(action.type==="look"&&g.phase==="mini-intro"){const look={renderer:action.renderer,view:action.view};if(!isMiniLook(g.mini!.id,look))throw new Error("Diese Ansicht gibt es für dieses Minispiel nicht.");g.mini!.look=look;}
-  else if(action.type==="material"&&g.phase==="mini-intro"){if(!["words","bridge"].includes(g.mini!.id))throw new Error("Kein Material nötig.");if(!action.available)selectMini(g,now,true);else{if(!g.online)g.players.forEach(p=>g.mini!.material[p.id]=true);else g.mini!.material[id]=true;}}
-  else if(action.type==="input"&&g.phase==="mini-play") {if(!g.online&&id!==g.players[g.localMiniIndex].id)throw new Error("Nicht dein Versuch.");partyInput(g,id,action.value,now);}
   else if(action.type==="finish"&&g.phase==="mini-play"){if(g.duel&&id!==g.duel.challenger&&id!==g.duel.opponent)throw new Error("Du schaust beim Duell zu.");if(g.mini!.match){
     // Giving up leaves the match for good; the module ranks earlier leavers lower.
     const m=g.mini!;advanceMatch(m.match!,now-m.startAt);removeMatchPlayer(m.match!,id);m.runs[id].done=true;syncMatchRuns(g,now);
     if(m.match!.done||m.match!.players.every(p=>p.gone))endMatch(g,now);
     return g;
-  }if(["words","bridge"].includes(g.mini!.id))throw new Error("Analoge Aufgaben laufen bis zum Zeitende.");if(!g.online&&id!==g.players[g.localMiniIndex].id)throw new Error("Nicht dein Versuch.");const actor=g.mini?.arena?.actors.find(a=>a.id===id);if(actor){actor.finished=true;actor.vx=0;actor.vz=0;actor.inputUntil=0;}finishRun(g,id,now);}
-  else if(action.type==="report"&&(g.phase==="mini-play"||g.phase==="analog-confirm")){if(!g.mini||!["words","bridge"].includes(g.mini.id)||now<g.deadline&&g.phase==="mini-play")throw new Error("Die Aufgabe läuft noch.");if(!Number.isInteger(action.score)||action.score<0||action.score>200)throw new Error("Bitte 0–200 ganze Punkte eintragen.");g.mini.reports[id]=action.score;g.mini.runs[id].score=action.score;g.mini.confirms={};finishRun(g,id,now);}
-  else if(action.type==="confirm"&&g.phase==="analog-confirm"){if(!action.accept)selectMini(g,now,true);else{g.mini!.confirms[id]=true;if(!g.online||g.players.filter(p=>!p.passive).every(p=>g.mini!.confirms[p.id]))rewardMini(g,now);}}
-  else if(action.type==="next"&&g.phase==="mini-result"&&g.duel){g.duel=undefined;g.mini=undefined;phase(g,"summary",now);}
+  }if(!g.online&&id!==g.players[g.localMiniIndex].id)throw new Error("Nicht dein Versuch.");const actor=g.mini?.arena?.actors.find(a=>a.id===id);if(actor){actor.finished=true;actor.vx=0;actor.vz=0;actor.inputUntil=0;}finishRun(g,id,now);}
   else if(action.type==="next"&&g.phase==="mini-result"){
-    if(g.mode==="roll-it-up"){
-      const ready=g.mini!.resultReady??=[];
+    // Board games continue once every active human confirmed; bots never block.
+    if(!g.competition&&g.mini){
+      const ready=g.mini.resultReady??=[];
       if(!ready.includes(id))ready.push(id);
-      if(g.players.some(q=>!q.bot&&!q.passive&&!ready.includes(q.id)))return g;
+      if(!resultConfirmed(g))return g;
     }
-    if(g.competition){g.round++;selectMini(g,now);}else if(g.opening){g.opening=false;g.mini=undefined;g.turn=0;startTurn(g,now);}else if(g.mode!=="roll-it-up"&&g.round===g.options.rounds){finishParty(g,now);}else{g.round++;g.turn=0;g.mini=undefined;if(isFinalStretch(g)&&g.round===g.options.rounds-FINAL_ROUNDS+1)startFinalStretch(g);startTurn(g,now);}}
+    if(g.duel){g.duel=undefined;g.mini=undefined;phase(g,"summary",now);}
+    else if(g.competition){g.round++;selectMini(g,now);}else if(g.opening){g.opening=false;g.mini=undefined;g.turn=0;startTurn(g,now);}else if(g.mode!=="roll-it-up"&&g.round===g.options.rounds){finishParty(g,now);}else{g.round++;g.turn=0;g.mini=undefined;if(isFinalStretch(g)&&g.round===g.options.rounds-FINAL_ROUNDS+1)startFinalStretch(g);startTurn(g,now);}}
   else throw new Error("Diese Aktion passt nicht zur aktuellen Spielphase.");
   return g;
 }
@@ -462,21 +481,20 @@ export function tickParty(current:PartyGame,now=Date.now()):PartyGame {
     const finished=g.mini.arena.actors.filter(a=>a.finished&&!g.mini!.runs[a.id].done).map(a=>a.id);
     for(const id of finished)if(g.phase==="mini-play")finishRun(g,id,now);
   }
-  if(g.phase==="mini-play"&&now>=g.deadline){const m=g.mini!;if(m.id==="words"||m.id==="bridge"){phase(g,"analog-confirm",now);return g;}const ids=g.online?g.players.filter(p=>!p.passive&&!m.runs[p.id].done).map(p=>p.id):[g.players[g.localMiniIndex].id];ids.forEach(id=>{if(g.phase==="mini-play")finishRun(g,id,now);});return g;}
+  if(g.phase==="mini-play"&&now>=g.deadline){const m=g.mini!;const ids=g.online?g.players.filter(p=>!p.passive&&!m.runs[p.id].done).map(p=>p.id):[g.players[g.localMiniIndex].id];ids.forEach(id=>{if(g.phase==="mini-play")finishRun(g,id,now);});return g;}
   while(g.phase==="moving"&&g.movement&&now>=g.movement.arriveAt)arrive(g,g.movement.arriveAt);
-  if(g.mode==="roll-it-up"&&g.phase==="mini-result"){
-    const remaining=g.players.filter(q=>!q.passive&&!q.bot);
+  // Results continue once every active human confirmed (also after someone left or paused).
+  if(!g.competition&&g.phase==="mini-result"){
     const actor=g.players.find(q=>!q.passive);
-    if(actor&&remaining.every(q=>g.mini?.resultReady?.includes(q.id)))return applyPartyAction(g,actor.id,{type:"next"},now);
+    if(actor&&resultConfirmed(g))return applyPartyAction(g,actor.id,{type:"next"},now);
     return g;
   }
   if(!g.online)return g;
   const p=activePartyPlayer(g);
-  if(g.phase==="mini-intro"&&now>=g.deadline){if(["words","bridge"].includes(g.mini!.id))selectMini(g,now,true);else startMini(g,now);return g;}
-  if(g.phase==="analog-confirm"&&now>=g.deadline){selectMini(g,now,true);return g;}
+  if(g.phase==="mini-intro"&&now>=g.deadline){startMini(g,now);return g;}
   if((g.deadline&&now>=g.deadline)||p.passive) {
-    const defaults:Partial<Record<PartyPhase,PartyAction>>={turn:{type:"roll"},path:{type:"path",destination:partyPaths(g,p)[0]},supply:{type:"supply",buy:false},trophy:{type:"trophy",buy:false},shop:{type:"shop"},gift:{type:"gift",accept:false},duel:{type:"duel"},summary:{type:"next"},"mini-result":{type:"next"}};
-    const a=g.competition&&g.phase==="mini-result"?undefined:defaults[g.phase];if(a){const passive=p.passive;p.passive=false;const result=applyPartyAction(g,p.id,a,now);result.players.find(q=>q.id===p.id)!.passive=passive;return result;}
+    const defaults:Partial<Record<PartyPhase,PartyAction>>={turn:{type:"roll"},path:{type:"path",destination:partyPaths(g,p)[0]},supply:{type:"supply",buy:false},trophy:{type:"trophy",buy:false},shop:{type:"shop"},gift:{type:"gift",accept:false},duel:{type:"duel"},summary:{type:"next"}};
+    const a=defaults[g.phase];if(a){const passive=p.passive;p.passive=false;const result=applyPartyAction(g,p.id,a,now);result.players.find(q=>q.id===p.id)!.passive=passive;return result;}
   }return g;
 }
 
@@ -489,14 +507,10 @@ export function publicParty(current:PartyGame,viewer:string,now=Date.now()):Part
       delete g.competition.bets[id];
     }
   }
-  if(g.mini){const m=g.mini,original=current.mini!,r=original.runs[viewer];m.risk=[];
+  if(g.mini){const m=g.mini,original=current.mini!;
     if(m.arena)m.arena=publicArena(m.arena,viewer);
     if(original.match)m.match=publicMatch(original.match,viewer);
-    m.cards=original.cards.map((value,i)=>r&&(r.matched.includes(i)||r.opened.includes(i))?value:-1);
-    m.trail=g.phase==="mini-play"&&now>=m.startAt&&now<m.startAt+6000?m.trail:[];
-    m.targets=original.targets.map((v,i)=>g.phase==="mini-play"&&i===Math.floor((now-m.startAt)/2000)?v:-1);
-    m.prompts=original.prompts.map((v,i)=>r&&i===r.cursor?v:-1);m.words=original.words.map((v,i)=>r&&i===r.cursor?v:-1);
-    if(g.phase!=="mini-result"&&g.phase!=="finished")for(const [id,run] of Object.entries(m.runs))if(id!==viewer)m.runs[id]={...run,score:0,opened:[],matched:[],bank:0,loot:0};
+    if(g.phase!=="mini-result"&&g.phase!=="finished")for(const [id,run] of Object.entries(m.runs))if(id!==viewer)m.runs[id]={...run,score:0};
   }return g;
 }
 

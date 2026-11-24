@@ -1,5 +1,5 @@
 import { characterId, characterPortrait } from "../../shared/characters";
-import type { PartyGame, PartyPlayer } from "../../shared/party";
+import { TROPHY_PRICE, type PartyGame, type PartyPlayer } from "../../shared/party";
 import { hasFullSet, JAYSPOT, stationAt, STATIONS } from "../../shared/partyBoard";
 
 export function Collection({player,onShow}:{player:PartyPlayer;onShow?:(field:number)=>void}) {
@@ -13,11 +13,11 @@ export function Collection({player,onShow}:{player:PartyPlayer;onShow?:(field:nu
 export function mapObjective(game:PartyGame) {
   return game.mode === "roll-it-up"
     ? <span><b>⌖</b> Jayspot<small>Bank auf dem Hügel · Feld {JAYSPOT}</small></span>
-    : <span><b>★</b> Trophäenstand<small>Feld {game.trophyField} · 20 Münzen</small></span>;
+    : <span><b>★</b> Trophäenstand<small>Feld {game.trophyField} · {TROPHY_PRICE} Münzen</small></span>;
 }
 
 export function objectiveHint(game:PartyGame, id:number) {
-  if (game.mode !== "roll-it-up") return id === game.trophyField ? "Trophäenstand: 20 Münzen. " : "";
+  if (game.mode !== "roll-it-up") return id === game.trophyField ? `Trophäenstand: ${TROPHY_PRICE} Münzen. ` : "";
   if (id === JAYSPOT) return "Mit vollständigem Set gewinnst du bei Ankunft.";
   const station = stationAt(id);
   return station ? station.name + " beim Passieren für " + station.price + " Münzen kaufen. " : "";

@@ -1,5 +1,5 @@
 import {test,expect} from '@playwright/test';
-import {partyMiniResults} from '../../shared/party';
+import {partyMiniResults,TROPHY_PRICE} from '../../shared/party';
 import {onlineSession,toArenaMini,practiceSession} from './party-session';
 
 for(const motion of ['no-preference','reduce'] as const)test(`Trophäenziel und Münzbelohnung (${motion})`,async({page},info)=>{
@@ -9,7 +9,10 @@ for(const motion of ['no-preference','reduce'] as const)test(`Trophäenziel und 
     const viewer=await page.evaluate(()=>JSON.parse(localStorage.getItem('spielraum.profile.v1')!).id as string);
     const goal=page.getByRole('complementary',{name:'Dein Trophäenziel'});
     await page.getByRole('button',{name:'Dein Trophäenziel öffnen',exact:true}).click();
-    await expect(goal).toContainText('Noch 10 Münzen bis zum Trophäenkauf');
+    await expect(goal).toContainText(`Noch ${TROPHY_PRICE-10} Münzen bis zum Trophäenkauf`);
+    // Both bonus trophies of this game are announced with their current leader.
+    await expect(goal.getByRole('heading',{name:'Bonus-Trophäen am Ende'})).toBeVisible();
+    await expect(goal).toContainText('Minispiel-Ass');
     await expect(goal).toContainText('Feld 6');
     await expect(goal.getByRole('meter')).toHaveAttribute('value','10');
     await page.keyboard.press('Escape');
@@ -26,10 +29,11 @@ for(const motion of ['no-preference','reduce'] as const)test(`Trophäenziel und 
     await expect(page.locator('.party-coin-reward')).toContainText(`+${result.coins} Münzen`);
     await expect(page.locator('.party-coin-reward')).toContainText(`jetzt ${result.player.coins}`);
     await page.screenshot({path:info.outputPath('coin-reward.png'),fullPage:false});
-    await session.action({type:'next'});
+    // Every player confirms the result.
+    for(const id of session.ids)if((await session.state()).partyGame!.phase==='mini-result')await session.action({type:'next'},id);
     await page.getByRole('button',{name:'Dein Trophäenziel öffnen',exact:true}).click();
     await expect(goal).toContainText(`+${result.coins} Münzen aus dem Minispiel`);
-    await expect(goal.getByRole('meter')).toHaveAttribute('value',String(Math.min(20,result.player.coins)));
+    await expect(goal.getByRole('meter')).toHaveAttribute('value',String(Math.min(TROPHY_PRICE,result.player.coins)));
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
     await page.screenshot({path:info.outputPath('trophy-goal.png'),fullPage:false});
   }finally{session.close();}

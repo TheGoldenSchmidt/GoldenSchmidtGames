@@ -25,7 +25,8 @@ export async function onlineSession(page:Page,followTurn=false,characters:Charac
     for(let i=0;i<sockets.length;i++)await send(i,{type:"ready"});
     // Match games end as soon as only one player is left in them.
     for(let i=0;i<sockets.length;i++)if(room.partyGame!.phase==="mini-play")await send(i,{type:"finish"});
-    if(gameId==="roll-it-up"){for(let i=0;i<ids.length;i++)if(room.partyGame!.phase==="mini-result")await send(i,{type:"next"});}else await send(ids.indexOf(activePartyPlayer(room.partyGame!).id),{type:"next"});
+    // Every player confirms the result.
+    for(let i=0;i<ids.length;i++)if(room.partyGame!.phase==="mini-result")await send(i,{type:"next"});
   }
   const viewer=followTurn?activePartyPlayer(room.partyGame!).id:ids[0];
   await page.addInitScript(({profile,session})=>{localStorage.setItem("spielraum.profile.v1",JSON.stringify(profile));localStorage.setItem("spielraum.party.online.v1",JSON.stringify(session));},{profile:{id:viewer,username:room.players.find(p=>p.id===viewer)!.name},session:{gameId,code:room.code,partyToken:tokens[viewer]}});
@@ -105,7 +106,7 @@ export async function toArenaMini(session:Session) {
     for(const id of session.ids)if((await session.state()).partyGame!.phase==="mini-intro")await session.action({type:"ready"},id);
     for(const id of session.ids)if((await session.state()).partyGame!.phase==="mini-play")await session.action({type:"finish"},id);
     room=await session.state();
-    if(room.partyGame!.phase==="mini-result")await session.action({type:"next"});
+    for(const id of session.ids)if((await session.state()).partyGame!.phase==="mini-result")await session.action({type:"next"},id);
   }
   throw new Error("Keine 3D-Arena gezogen.");
 }

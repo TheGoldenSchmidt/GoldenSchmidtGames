@@ -218,7 +218,8 @@ export const neonRacer: MatchModule<RacerGame> = {
   id: "racer",
   meta: {
     name: "Neon Racer", seconds: NR.maxMs / 1000 + 2, players: [2, 3, 4, 5, 6], hz: 20,
-    instruction: "Rennen auf der Neon-Strecke, drei Runden. Unten links lenkst du mit dem Lenkrad (drehen und halten), rechts gibst du Gas oder bremst – bremst du im Stand weiter, fährst du rückwärts. Fahr durch die leuchtenden Kisten: Turbo, Blaster (drei Schüsse geradeaus), Lenkrakete (verfolgt das Auto vor dir) oder Schild (fünf Sekunden geschützt). Tippe den Item-Knopf zum Einsetzen. Treffer lassen das Auto schleudern, Wände bremsen. Wer zuerst drei Runden schafft, gewinnt; danach bleiben den anderen 15 Sekunden.",
+    instruction: "Drei Runden auf der Neon-Strecke. Fahr durch leuchtende Kisten für Turbo, Blaster, Lenkrakete oder Schild – wer zuerst ankommt, gewinnt.",
+    rules: "Rennen auf der Neon-Strecke, drei Runden. Unten links lenkst du mit dem Lenkrad (drehen und halten), rechts gibst du Gas oder bremst – bremst du im Stand weiter, fährst du rückwärts. Fahr durch die leuchtenden Kisten: Turbo, Blaster (drei Schüsse geradeaus), Lenkrakete (verfolgt das Auto vor dir) oder Schild (fünf Sekunden geschützt). Tippe den Item-Knopf zum Einsetzen. Treffer lassen das Auto schleudern, Wände bremsen. Wer zuerst drei Runden schafft, gewinnt; danach bleiben den anderen 15 Sekunden.",
     controls: "Lenkrad drehen · Gas und Bremse halten · Item-Knopf tippen.",
     look: { icon: "⚑", action: "Drei Runden, alles erlaubt", hint: "Lenkrad · Gas/Bremse · Item", goal: "Zuerst drei Runden im Ziel" }
   },
@@ -304,7 +305,8 @@ export const neonRacerTilt: MatchModule<RacerGame> = {
   meta: {
     ...neonRacer.meta,
     name: "Neon Racer – Kippen",
-    instruction: "Neon Racer im Querformat: Halte das Handy quer wie ein Lenkrad (Oberkante links; das Spiel dreht sich mit) und drehe es nach links oder rechts zum Lenken. Rechter Daumen: Gas, linker Daumen: Bremse (im Stand rückwärts). Oben in der Mitte setzt du das Item aus den leuchtenden Kisten ein: Turbo, Blaster (drei Schüsse), Lenkrakete oder Schild. Ohne Bewegungssensor lenkst du mit den Pfeiltasten. Wer zuerst drei Runden schafft, gewinnt; danach bleiben den anderen 15 Sekunden.",
+    instruction: "Neon Racer quer: Dreh das Handy wie ein Lenkrad. Drei Runden mit Items aus leuchtenden Kisten – wer zuerst ankommt, gewinnt.",
+    rules: "Neon Racer im Querformat: Halte das Handy quer wie ein Lenkrad (Oberkante links; das Spiel dreht sich mit) und drehe es nach links oder rechts zum Lenken. Rechter Daumen: Gas, linker Daumen: Bremse (im Stand rückwärts). Oben in der Mitte setzt du das Item aus den leuchtenden Kisten ein: Turbo, Blaster (drei Schüsse), Lenkrakete oder Schild. Ohne Bewegungssensor lenkst du mit den Pfeiltasten. Wer zuerst drei Runden schafft, gewinnt; danach bleiben den anderen 15 Sekunden.",
     controls: "Handy quer halten, Oberkante links · drehen zum Lenken · rechts Gas, links Bremse.",
     look: { icon: "↻", action: "Kippen statt Lenkrad", hint: "Quer halten · kippen · Gas/Bremse", goal: "Zuerst drei Runden im Ziel" }
   }

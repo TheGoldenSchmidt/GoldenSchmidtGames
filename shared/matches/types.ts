@@ -61,8 +61,10 @@ export interface MatchMeta {
   seconds: number;
   /** Allowed numbers of players. */
   players: readonly number[];
-  /** Short rules: goal, controls and victory condition. */
+  /** Intro text: goal and victory condition in one or two sentences. */
   instruction: string;
+  /** Full rules, shown behind „Alle Regeln“. */
+  rules?: string;
   controls: string;
   /** Snapshot rate sent to the devices. */
   hz: 10 | 20;

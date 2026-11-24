@@ -20,7 +20,7 @@ test("Auftakt legt Reihenfolge fest und startet ohne hektische Brettfrist",async
   for(const id of session.ids){const r=await session.state();if(r.partyGame!.phase==="mini-play")await session.action({type:"finish"},id);}
   await expect(page.getByRole("heading",{name:"Eure Reihenfolge steht!",exact:true})).toBeVisible();
   const result=await session.state(),order=[...result.partyGame!.order];expect(result.partyGame!.players.every(p=>p.coins===10)).toBe(true);
-  await session.action({type:"next"});await expect(page.locator(".party-world")).toHaveAttribute("data-webgl","ready",{timeout:15000});
+  for(const id of session.ids)if((await session.state()).partyGame!.phase==="mini-result")await session.action({type:"next"},id);await expect(page.locator(".party-world")).toHaveAttribute("data-webgl","ready",{timeout:15000});
   const current=await session.state();expect(current.partyGame!.order).toEqual(order);expect(current.partyGame!.deadline).toBe(0);
   await expect(page.locator(".party-decision-time")).toHaveCount(0);await expect(page.getByLabel("Feste Zugreihenfolge und Punktestand")).toBeVisible();
   await page.screenshot({path:info.outputPath("klare-inselkarte.png"),fullPage:true});

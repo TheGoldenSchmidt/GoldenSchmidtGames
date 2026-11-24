@@ -110,7 +110,8 @@ export const hookWars: MatchModule<HookGame> = {
   id: "hooks",
   meta: {
     name: "Hook Wars", seconds: (HW.regular + HW.overtime) / 1000 + 1, players: [2, 3, 4, 5, 6], hz: 20,
-    instruction: "Lauf mit dem Stick (nach oben = springen). Ziehe rechts in eine Richtung, um den Greifhaken zu schießen: An Ankern schwingst du und wirst herangezogen, loslassen löst das Seil. Sammle Energiekerne und bring sie in deine eigene Zone (+1). Triffst du einen Gegner, ziehst du ihn heran und er verliert seinen Kern (danach 4 Sekunden Pause). Wer abstürzt, verliert seinen Kern. Die meisten Kerne nach 90 Sekunden gewinnen.",
+    instruction: "Schwing dich mit dem Greifhaken durch die Arena, sammle Energiekerne und bring sie in deine Zone. Die meisten Kerne gewinnen.",
+    rules: "Lauf mit dem Stick (nach oben = springen). Ziehe rechts in eine Richtung, um den Greifhaken zu schießen: An Ankern schwingst du und wirst herangezogen, loslassen löst das Seil. Sammle Energiekerne und bring sie in deine eigene Zone (+1). Triffst du einen Gegner, ziehst du ihn heran und er verliert seinen Kern (danach 4 Sekunden Pause). Wer abstürzt, verliert seinen Kern. Die meisten Kerne nach 90 Sekunden gewinnen.",
     controls: "Links laufen · rechts ziehen = Haken · loslassen = lösen.",
     look: { icon: "⚓", action: "Schwingen, schnappen, abliefern", hint: "Stick laufen · rechts ziehen für den Haken", goal: "Die meisten Kerne nach 90 s" }
   },
