@@ -3,7 +3,7 @@ import { Collection, JayspotFinish } from "../components/RollItUp";
 import { RollItUpBoard } from "../components/RollItUpBoard";
 import { fieldName, goalField, hasFullSet, partyBoard, partyPaths, shopFields, stationAt } from "../../shared/partyBoard";
 import { getGame } from "../../shared/games";
-import { MinigameBetting, MinigameResults, MinigameScoreboard } from "../components/MinigameCompetition";
+import { MinigameBetting, MinigameResults, MinigameScoreboard, RoundTrack } from "../components/MinigameCompetition";
 import {PartyTrophyGoal,PartyCoinReward,type MiniReward} from "../components/PartyProgress";
 import {CharacterAvatar} from "../components/CharacterAvatar";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
@@ -140,7 +140,7 @@ export function PartyGameScreen({profile,initialRoom,onExit,onLobby,unityBoard=f
       </div>}
     </>}
   </fieldset>;
-  return <main data-board-phase={boardPhase?g.phase:undefined} className={`party-screen ${tray?"roll-it-up":""} ${competition?"minigame-mode":""} ${competition&&g.phase!=="mini-play"?"party-menu":""} ${boardPhase?"party-screen--board":"party-screen--stage"} ${g.phase==="mini-play"?"party-screen--playing":""}`}>
+  return <main data-board-phase={boardPhase?g.phase:undefined} className={`party-screen ${tray?"roll-it-up":""} ${competition?"minigame-mode":""} ${competition&&g.phase!=="mini-play"?"gs-studio":""} ${boardPhase?"party-screen--board":"party-screen--stage"} ${g.phase==="mini-play"?"party-screen--playing":""}`}>
     {!(tray&&boardPhase)&&<header className="party-header"><div><strong>{getGame(room.config.gameId).name}<span aria-hidden="true">✦</span></strong><small>Raum {room.code}</small></div><div className={`party-round ${finalStretch?"is-final":""}`}><span>{g.opening?"Auftakt":<>Runde <b>{g.round}</b>{!tray&&` / ${competition?.rounds??g.options.rounds}`}</>}</span>{finalStretch&&<small className="party-round-final">Schlussrunde</small>}</div><div className="party-header-actions"><button className="party-game-menu" onClick={()=>setPanel("menu")} aria-label="Spielmenü öffnen" aria-haspopup="dialog">☰</button>{!boardPhase&&!(over&&onLobby)&&<button className="text-button" onClick={onExit}>Verlassen</button>}</div></header>}
     {room.partyTest&&!competition&&host&&socket.connected&&!["finished","aborted"].includes(g.phase)&&<PartyTestTools room={room} onUpdate={setRoom}/>}
     {!competition&&!boardPhase&&g.phase!=="mini-play"&&g.phase!=="finished"&&roster}
@@ -177,7 +177,7 @@ export function PartyGameScreen({profile,initialRoom,onExit,onLobby,unityBoard=f
         </fieldset>}
         {!canAct&&boardPhase&&<div className="party-wait"><strong>{p.name} entscheidet gerade.</strong><p>Du kannst die Felder erkunden. Dein nächster Zug kommt!</p></div>}
 
-        {competition&&g.mode==="goldenschmidt"&&["mini-bet","mini-intro"].includes(g.phase)&&<MinigameScoreboard game={g}/>}
+        {competition&&g.mode==="goldenschmidt"&&g.phase==="mini-intro"&&<><RoundTrack game={g}/>{Object.values(competition.scores).some(Boolean)&&<MinigameScoreboard game={g}/>}</>}
         {g.phase==="mini-bet"&&<MinigameBetting key={g.phaseId} game={g} viewer={viewer} busy={busy||Boolean(g.pausedAt)} send={send}/>}
         {competition&&["mini-result","finished"].includes(g.phase)&&<MinigameResults game={g} viewer={viewer} host={host} busy={busy||Boolean(g.pausedAt)} send={send} onExit={onLobby??onExit} exitLabel={onLobby?"Zurück zur Lobby":"Zurück zu GSG"}/>}
         {g.phase==="mini-intro"&&m&&<PartyMiniIntro game={g} viewer={viewer} busy={busy} send={send} onPractice={()=>setPractice(m.id)} onLook={host||!g.online?()=>setPanel("menu"):undefined}/>}

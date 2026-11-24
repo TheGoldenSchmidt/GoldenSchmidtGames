@@ -1,0 +1,157 @@
+/* Schlag den GoldenSchmidt and Freies Minispiel between the games: a game-show studio.
+   Dark stage with spotlights, gold for the main action and coins, glass panels for status.
+   Minigames themselves keep their own full-screen look. */
+.gs-studio {
+  --gs-stage: #140f2e;
+  --gs-glass: rgb(31 28 84 / .74);
+  --gs-line: rgb(255 215 119 / .35);
+  --gs-gold: #ffd777;
+  --gs-gold-deep: #f1aa4c;
+  --gs-paper: #fff8ea;
+  --gs-muted: #d4c8ec;
+  --deep: var(--gs-paper);
+  min-height: 100dvh;
+  padding-bottom: max(28px, env(safe-area-inset-bottom));
+  color: var(--gs-paper);
+  font-family: var(--iw-font-ui);
+  background:
+    radial-gradient(60% 42% at 20% 0%, rgb(255 215 119 / .22), transparent 70%),
+    radial-gradient(55% 40% at 85% 6%, rgb(193 142 242 / .28), transparent 72%),
+    radial-gradient(120% 60% at 50% 110%, #2b1f63, transparent 70%),
+    var(--gs-stage);
+}
+.gs-studio .party-header { background: rgb(10 8 28 / .55); color: var(--gs-paper); border-bottom: 1px solid var(--gs-line); flex-wrap: wrap; }
+.gs-studio .party-header > div:first-child { flex: 1 1 180px; }
+.gs-studio .party-header strong { overflow-wrap: anywhere; font-family: var(--iw-font-display); font-weight: 400; letter-spacing: .01em; }
+.gs-studio .party-header-actions { flex-shrink: 0; }
+.gs-studio .party-header-actions :is(button, summary) { min-height: 44px; display: inline-flex; align-items: center; color: var(--gs-paper); }
+.gs-studio .party-decision { background: var(--gs-glass); border: 1px solid var(--gs-line); border-radius: 22px; box-shadow: 0 18px 48px rgb(0 0 0 / .35); color: var(--gs-paper); }
+.gs-studio h1, .gs-studio h2 { font-family: var(--iw-font-display); font-weight: 400; letter-spacing: .01em; color: var(--gs-paper); }
+.gs-studio h1 { font-size: clamp(1.9rem, 7vw, 2.6rem); line-height: 1.05; margin: 6px 0 12px; overflow-wrap: anywhere; }
+.gs-studio h2 { font-size: 1.3rem; margin: 22px 0 10px; }
+.gs-studio .gs-note, .gs-studio .party-mini-round { color: var(--gs-muted); font-size: .85rem; line-height: 1.5; max-width: 60ch; }
+.gs-kicker { margin: 14px 0 0; color: var(--gs-gold); font-size: .75rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.gs-studio :is(button, summary):focus-visible { outline: 3px solid var(--gs-gold); outline-offset: 3px; }
+
+/* Intro of the drawn minigame inside the studio. */
+.gs-studio .party-mini-facts { border-color: var(--gs-line); color: var(--gs-muted); }
+.gs-studio .party-mini-facts > span { color: var(--gs-paper); }
+.gs-studio .party-ready-players > span { background: rgb(255 255 255 / .1); color: var(--gs-paper); }
+.gs-studio .party-ready-players .is-ready { background: rgb(118 201 135 / .3); color: #e7ffe9; }
+.gs-studio .party-mini-rules summary { color: var(--gs-gold); }
+.gs-studio .button--primary, .gs-action { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 54px; margin-top: 16px; border: 0; border-radius: 16px; background: linear-gradient(#ffd777, #f1aa4c); color: #3d2412; font: 400 1.15rem var(--iw-font-display); letter-spacing: .02em; box-shadow: inset 0 2px 0 rgb(255 255 255 / .55), 0 5px 0 #a3631e; cursor: pointer; }
+.gs-studio .button--secondary, .gs-studio .button--ghost { border: 1px solid var(--gs-line); background: rgb(255 255 255 / .08); color: var(--gs-paper); box-shadow: none; }
+.gs-action:active:not(:disabled) { transform: translateY(3px); box-shadow: inset 0 2px 0 rgb(255 255 255 / .55), 0 2px 0 #a3631e; }
+.gs-action:disabled { cursor: not-allowed; filter: grayscale(.85) brightness(.85); opacity: .75; }
+
+/* Round track: one plate per game. */
+.gs-track { list-style: none; display: flex; gap: 6px; margin: 0 0 14px; padding: 0 0 4px; overflow-x: auto; scrollbar-width: none; }
+.gs-track li { position: relative; flex: 0 0 auto; display: grid; place-items: center; min-width: 40px; height: 48px; padding: 0 6px; border: 1px solid var(--gs-line); border-radius: 12px; background: rgb(255 255 255 / .06); }
+.gs-track b { font: 400 1.1rem var(--iw-font-display); color: var(--gs-muted); }
+.gs-track li.is-played { background: rgb(255 215 119 / .14); }
+.gs-track li.is-played b { position: absolute; top: 2px; left: 5px; font-size: .7rem; color: var(--gs-gold); }
+.gs-track li.is-current { border-color: var(--gs-gold); background: rgb(255 215 119 / .22); box-shadow: 0 0 0 2px rgb(255 215 119 / .25); }
+.gs-track li.is-current b { color: var(--gs-gold); }
+.gs-track .character-avatar { width: 26px; height: 30px; margin-top: 8px; }
+/* Shared wins: the winners sit side by side and overlap slightly instead of spilling out of the plate. */
+.gs-track li.is-played { grid-auto-flow: column; }
+.gs-track li.is-played .character-avatar + .character-avatar { margin-left: -8px; }
+
+/* Title card of the drawn game. */
+.gs-card { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; align-items: center; padding: 14px; border: 1px solid var(--gs-line); border-radius: 18px; background: linear-gradient(135deg, rgb(255 215 119 / .16), rgb(193 142 242 / .14)); }
+.gs-card__icon { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 16px; background: radial-gradient(circle at 40% 35%, #6c4fd8, #24133f); color: var(--gs-gold); font-size: 2.2rem; box-shadow: inset 0 0 0 2px rgb(255 215 119 / .35); }
+.gs-card p { margin: 0; color: var(--gs-muted); font-size: .8rem; line-height: 1.45; }
+.gs-card h1 { margin: 2px 0 4px; font-size: clamp(1.6rem, 6.5vw, 2.2rem); }
+
+/* Bet coins. */
+.gs-coins { display: grid; grid-template-columns: repeat(auto-fill, minmax(62px, 1fr)); gap: 12px; margin: 16px 0 4px; }
+.gs-coins button { aspect-ratio: 1; display: grid; place-content: center; gap: 2px; min-height: 62px; padding: 0; border: 0; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff0b8, #ffd777 40%, #f1aa4c 75%, #b8721f); color: #3d2412; box-shadow: inset 0 0 0 4px rgb(255 255 255 / .35), inset 0 -4px 0 rgb(0 0 0 / .18), 0 4px 0 #7a4a14; cursor: pointer; transition: transform .15s; }
+.gs-coins button b { font: 400 1.6rem/1 var(--iw-font-display); }
+.gs-coins button small { font-size: .62rem; font-weight: 700; }
+.gs-coins button.is-selected { transform: translateY(-4px) scale(1.06); box-shadow: inset 0 0 0 4px rgb(255 255 255 / .55), 0 0 0 3px var(--gs-paper), 0 8px 0 #7a4a14; }
+.gs-coins button:disabled { background: radial-gradient(circle at 35% 30%, #6f6888, #3e3a56); color: #a9a2c2; box-shadow: inset 0 0 0 2px rgb(255 255 255 / .12); cursor: not-allowed; }
+.gs-locked { display: flex; align-items: center; gap: 14px; margin: 16px 0; padding: 12px; border: 1px solid var(--gs-line); border-radius: 16px; background: rgb(255 255 255 / .06); }
+.gs-locked p { margin: 0; font-size: .9rem; }
+
+/* Covered bet card and its face. */
+.gs-cardback, .gs-cardface { display: grid; place-content: center; width: 46px; height: 62px; border-radius: 10px; }
+.gs-cardback { flex-shrink: 0; background: repeating-linear-gradient(45deg, #3a2c86 0 6px, #2a2066 6px 12px); box-shadow: inset 0 0 0 2px var(--gs-gold); color: var(--gs-gold); }
+.gs-cardback b { font: 400 1.4rem var(--iw-font-display); }
+.gs-cardface { background: linear-gradient(#fff8ea, #f3e2c0); color: #3d2412; box-shadow: inset 0 0 0 2px #d8b575; text-align: center; }
+.gs-cardface b { font: 400 1.5rem/1 var(--iw-font-display); }
+.gs-cardface small, .gs-reveal .gs-cardface small { display: block; color: #6b4a1c; font-size: .7rem; font-weight: 800; }
+
+.gs-bet-status { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 0; padding: 0; }
+.gs-bet-status li { display: flex; align-items: center; gap: 6px; min-height: 44px; padding: 4px 10px 4px 4px; border-radius: 999px; background: rgb(255 255 255 / .07); font-size: .78rem; }
+.gs-bet-status li span { max-width: 9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gs-bet-status li small { color: var(--gs-muted); }
+.gs-bet-status li small::before { content: "◷ "; }
+.gs-bet-status li.is-set small { color: var(--gs-gold); }
+.gs-bet-status li.is-set small::before { content: "✓ "; }
+.gs-bet-status .character-avatar { width: 30px; height: 34px; }
+
+/* Score bars. */
+.gs-scoreboard { list-style: none; display: grid; gap: 8px; margin: 14px 0 6px; padding: 0; }
+.gs-scoreboard li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 6px 10px 6px 6px; border-radius: 14px; background: rgb(255 255 255 / .06); }
+.gs-scoreboard li.is-leader { background: rgb(255 215 119 / .14); box-shadow: inset 0 0 0 1px var(--gs-line); }
+.gs-scoreboard .character-avatar, .gs-reveal .character-avatar { width: 36px; height: 40px; flex-shrink: 0; }
+.gs-scoreboard strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .85rem; }
+.gs-scoreboard i { display: block; height: 8px; margin-top: 6px; border-radius: 999px; background: rgb(255 255 255 / .1); overflow: hidden; }
+.gs-scoreboard em { display: block; width: calc(min(1, var(--share)) * 100%); height: 100%; border-radius: inherit; background: linear-gradient(90deg, #f1aa4c, #ffd777); animation: gs-grow .8s calc(var(--i) * .08s) both ease-out; }
+.gs-scoreboard li > span { font-size: .75rem; color: var(--gs-muted); text-align: right; }
+.gs-scoreboard li > span b { display: block; font: 400 1.3rem/1 var(--iw-font-display); color: var(--gs-paper); }
+.gs-scoreboard small { color: var(--gs-gold); font-weight: 700; }
+.gs-crown { color: var(--gs-gold); }
+
+/* Result: places and the bet cards that flip open. */
+.gs-reveal { list-style: none; display: grid; gap: 8px; margin: 12px 0; padding: 0; }
+.gs-reveal > li { display: grid; grid-template-columns: 26px auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid transparent; border-radius: 16px; background: rgb(255 255 255 / .06); }
+.gs-reveal > li.is-you { border-color: var(--gs-line); }
+.gs-reveal > li.is-winner { background: rgb(255 215 119 / .16); }
+.gs-reveal strong { display: block; overflow-wrap: anywhere; font-size: .9rem; }
+.gs-reveal small { display: block; color: var(--gs-muted); font-size: .72rem; }
+.gs-place { font: 400 1.2rem var(--iw-font-display); color: var(--gs-gold); text-align: center; }
+.gs-flip { perspective: 400px; width: 46px; height: 62px; }
+.gs-flip__inner { position: relative; display: block; width: 100%; height: 100%; transform-style: preserve-3d; transform: rotateY(180deg); animation: gs-flip .7s calc(.35s + var(--i) * .25s) both ease-in-out; }
+.gs-flip__inner > span { position: absolute; inset: 0; backface-visibility: hidden; }
+.gs-flip__inner .gs-cardface { transform: rotateY(180deg); }
+.gs-reveal > li.is-winner .gs-cardface { background: linear-gradient(#ffe9a6, #ffd777); }
+
+/* Podium at the end. */
+.gs-podium { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); align-items: end; gap: 8px; margin: 18px 0 4px; }
+.gs-step { display: grid; justify-items: center; gap: 4px; text-align: center; min-width: 0; }
+.gs-step__people { display: flex; justify-content: center; }
+.gs-step__people .character-avatar { width: 54px; height: 62px; }
+.gs-step strong { max-width: 100%; overflow-wrap: anywhere; font-size: .85rem; }
+.gs-step span { color: var(--gs-muted); font-size: .72rem; }
+.gs-step b { display: grid; place-items: center; width: 100%; border-radius: 12px 12px 0 0; background: linear-gradient(#ffd777, #f1aa4c); color: #3d2412; font: 400 2rem var(--iw-font-display); box-shadow: inset 0 2px 0 rgb(255 255 255 / .5); }
+.gs-step--1 b { height: 110px; }
+.gs-step--2 b { height: 78px; background: linear-gradient(#e9e6f2, #b8b2cc); }
+.gs-step--3 b { height: 56px; background: linear-gradient(#f0b98a, #c47a45); }
+.gs-step--1 .gs-step__people .character-avatar { width: 64px; height: 74px; }
+.gs-step--1 strong::before { content: "♛ "; color: var(--gs-gold); }
+.gs-step--3 { --rise: 0; } .gs-step--2 { --rise: 1; } .gs-step--1 { --rise: 2; }
+.gs-podium .gs-step { animation: gs-rise .6s calc(var(--rise, 0) * .25s) both ease-out; }
+.gs-winner { margin-top: 8px; text-align: center; color: var(--gs-gold); }
+
+/* Full history as a table. */
+.gs-history { margin: 18px 0 0; font-size: .82rem; }
+.gs-history summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; font-weight: 700; color: var(--gs-gold); }
+.gs-history__scroll { overflow-x: auto; }
+.gs-history table { width: 100%; border-collapse: collapse; }
+.gs-history :is(th, td) { padding: 8px 6px; border-bottom: 1px solid rgb(255 255 255 / .12); text-align: left; vertical-align: top; }
+.gs-history td.is-win { color: var(--gs-gold); font-weight: 700; }
+
+.gs-studio .party-connection { max-width: 580px; margin: auto; }
+.gs-studio .error-message { color: #ffdfdf; background: rgb(128 38 49 / .45); border: 1px solid #ff9aa6; }
+
+@keyframes gs-grow { from { width: 0; } }
+@keyframes gs-flip { from { transform: rotateY(0); } to { transform: rotateY(180deg); } }
+@keyframes gs-rise { from { opacity: 0; transform: translateY(24px); } }
+@media (min-width: 700px) {
+  body:has(.gs-studio) { background: var(--gs-stage, #140f2e); }
+  .app-shell:has(> .gs-studio) { width: min(100%, 1100px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gs-studio *, .gs-studio *::before, .gs-studio *::after { animation: none !important; transition: none !important; }
+}

@@ -29,7 +29,9 @@ test("Beide Minispielmodi sind in der Lobby konfigurierbar", async ({ page }, te
   await page.getByRole("button", { name: "Neuen Raum erstellen" }).click();
   await selectLobbyGame(page, "roll-it-up");
   await expect(page.getByRole("checkbox", {name:"Klassische Minispiele",exact:true})).toBeVisible();
-  await expect(page.locator(".lobby-settings select")).toHaveCount(1);
+  // Roll It Up!: board (default Bauschale) and number of rounds.
+  await expect(page.locator(".lobby-settings select")).toHaveCount(2);
+  await expect(page.getByRole("combobox", { name: /^Spielbrett/ })).toHaveValue("bauschale");
   await expect(page.locator(".lobby-settings p")).toHaveCount(0);
   await selectLobbyGame(page, "free-minigame");
   const minigame = page.getByRole("combobox", { name: "Minispiel", exact: true });
