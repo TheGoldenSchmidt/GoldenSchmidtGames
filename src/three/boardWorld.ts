@@ -1,7 +1,7 @@
 import { boardWalking } from "../lib/boardMotion";
 import { rollingTray, trayHeight, trayPoint, trayStation } from "./rollingTray";
 import { batchScenery } from "./staticBatch";
-import { partyBoard, partyPaths } from "../../shared/partyBoard";
+import { partyBoard, partyPaths, rollBoard, stationAt } from "../../shared/partyBoard";
 import * as T from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { BOARD, type PartyGame } from "../../shared/party";
@@ -27,7 +27,7 @@ export function createBoardWorld(host:HTMLElement,read:()=>BoardFrame,select:(id
   const boardPoint=(id:number)=>tray ? trayPoint(board[id]) : islandPoint(id);
   const figurePoint=(id:number)=>boardPoint(id).multiply(new T.Vector3(BOARD_SPREAD,1,BOARD_SPREAD));
   const scenery=new T.Group();world.add(scenery);
-  if(tray) {rollingTray(kit,scenery);kit.renderer.shadowMap.autoUpdate=false;kit.renderer.shadowMap.needsUpdate=true;} else kit.water(world);
+  if(tray) {rollingTray(kit,scenery,rollBoard(game));kit.renderer.shadowMap.autoUpdate=false;kit.renderer.shadowMap.needsUpdate=true;} else kit.water(world);
   const controls=new OrbitControls(kit.camera,kit.renderer.domElement);controls.enablePan=false;controls.enableDamping=true;controls.dampingFactor=.12;controls.minPolarAngle=.35;controls.maxPolarAngle=1.08;
   controls.touches.ONE=T.TOUCH.ROTATE;controls.touches.TWO=T.TOUCH.DOLLY_PAN;
   const initial=read(),initialTarget=initial.follow?figurePoint(initial.positions[initial.game.order[initial.game.turn]]).add(new T.Vector3(0,1,0)):new T.Vector3(0,1,0);
@@ -55,7 +55,7 @@ export function createBoardWorld(host:HTMLElement,read:()=>BoardFrame,select:(id
     for(const mesh of [bases,tops]){mesh.userData.fieldIds=board.map(f=>f.id);mesh.receiveShadow=true;world.add(mesh);fields.push(mesh);}
   }
   for(const field of board){const p=boardPoint(field.id);
-    if(tray) trayStation(kit,scenery,field.id,p);
+    const station=tray?stationAt(game,field.id):undefined;if(station) trayStation(kit,scenery,station,p);
     if(!tray && p.y>1.6)kit.cylinder(world,0xc29c69,p.x,p.y/2,p.z,.28,p.y);
     if(!tray){const tile=kit.cylinder(world,0x8d9c73,p.x,p.y+.05,p.z,.68,.1);tile.userData.field=field.id;fields.push(tile);}
     const look=FIELD_VISUALS[field.type];

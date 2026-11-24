@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { advanceMatch, botMatchInput, createMatch, matchStandings, removeMatchPlayer, setMatchControl } from "../shared/matches/framework";
 import type { Fighter, RingGame } from "../shared/matches/ringCore";
-import { SUMO } from "../shared/matches/sumoSmash";
+import { SUMO, sumoRules } from "../shared/matches/sumoSmash";
 import { BUMPER, ITEMS } from "../shared/matches/bumperMayhem";
 import { NEUTRAL_MATCH_INPUT, type MatchInput, type MatchState } from "../shared/matches/types";
 import { createPartyGame, partyMiniResults, tickParty } from "../shared/party";
@@ -206,5 +206,20 @@ for (const id of ["sumo", "bumpercars"] as const) {
   const play = () => { const s = make(id, 4); for (let t = 50, n = 0; !s.done && t < 120000; t += 50) { for (const p of s.players) setMatchControl(s, p.id, botMatchInput(s, p.id), ++n, t); advanceMatch(s, t); } return s; };
   const a = play(), b = play();
   assert.deepEqual(a.game.fighters, b.game.fighters); assert.equal(a.time, b.time);
+}
+// Head-on clash of two dashes: the list order never decides.
+{
+  const fighter = (id: string, x: number, vx: number) => ({ id, x, y: 0, vx, vy: 0, lives: 3, alive: true, out: false, respawnAt: 0, shieldUntil: 0, actionAt: 0, actionUntil: 10000, lastHitAt: -9999, ringOuts: 0, stunUntil: 0 } as Fighter);
+  const clash = (va: number, vb: number, swap: boolean) => {
+    const a = fighter("a", -.45, va), b = fighter("b", .45, -vb);
+    return { victim: (swap ? sumoRules.collide(b, a, 100) : sumoRules.collide(a, b, 100))?.id, a, b };
+  };
+  for (const swap of [false, true]) {
+    const even = clash(SUMO.dash, SUMO.dash, swap);
+    assert.equal(even.victim, undefined, "Gleich schnelle Stöße: niemand gewinnt");
+    assert.ok(even.a.vx < 0 && even.b.vx > 0, "Beide prallen zurück");
+    assert.equal(clash(SUMO.dash, SUMO.dash * .7, swap).victim, "b", "Der schnellere Stoß gewinnt");
+    assert.equal(clash(SUMO.dash * .7, SUMO.dash, swap).victim, "a");
+  }
 }
 console.log("Sumo Smash und Bumper Mayhem erfolgreich: Startplätze, Ring-Out mit Gutschrift und Verfall, Respawnschutz, gleichzeitige Ring-Outs, letzter Überlebender, Schrumpfen, 75-s-Entscheid, Sudden Death, Stoß mit Rückstoß, Abklingzeiten, Turbo-Rammwirkung, Wurfweite, Hindernisse, Aufgeben, Bots und Determinismus.");

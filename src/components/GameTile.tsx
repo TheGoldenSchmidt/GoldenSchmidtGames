@@ -4,7 +4,7 @@ import { GameCardFace } from "./GameCardFace";
 
 const rules: Record<GameDefinition["id"], string> = {
   party: "Das Auftakt-Minispiel legt die Zugreihenfolge fest. Würfle, wähle an Abzweigungen deinen Weg und kaufe Trophäen. Nach jeder Brettrunde spielt ihr um Münzen. Für den Gesamtsieg zählen zuerst die Trophäen.",
-  "roll-it-up": "Würfle und besuche die Stationen auf dem Brett. Kaufe Grinder, Pape, Filter und drei Weedbuds für deine Bauschale. Wer mit vollständigem Set zuerst den Jayspot erreicht, gewinnt.",
+  "roll-it-up": "Der Host wählt das Brett: die Bauschale mit einem Rundweg oder den Grinder mit zwei gegenläufigen Ringen, Speichen und Rohrpost. Würfle und besuche die Stationen auf dem Brett. Kaufe Grinder, Pape, Filter und drei Weedbuds für deine Bauschale. Wer mit vollständigem Set zuerst den Jayspot erreicht, gewinnt.",
   goldenschmidt: "Ihr spielt zufällig gezogene Minispiele ohne Wiederholung. Vor jeder Runde setzt jede Person verdeckt einen Wert von 1 bis zur Anzahl der Runden. Jeder Wert ist nur einmal verfügbar. Wer gewinnt, erhält den eigenen Einsatz als Punkte. Die höchste Gesamtsumme gewinnt. Bei Gleichstand teilt ihr euch den Sieg.",
   "free-minigame": "Der Host wählt ein zur Spielerzahl passendes Minispiel. Ihr könnt die Steuerung vor dem Start ohne Wertung üben. Im gewerteten Durchgang spielen alle auf dem eigenen Gerät. Die Wertung des gewählten Minispiels entscheidet.",
   qwixx: "Alle dürfen die Summe der beiden weißen Würfel ankreuzen. Wer am Zug ist, darf zusätzlich einen weißen mit einem farbigen Würfel kombinieren. Kreuze jede Farbreihe von links nach rechts an. Mehr Kreuze bringen mehr Punkte, Fehlwürfe kosten Punkte.",

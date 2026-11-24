@@ -327,14 +327,20 @@ function windkanal(): Course {
 
 function kletterwand(): Course {
   const boxes: Box[] = [floor(-2, 10)];
-  // Four levels of holds, each 1.7 m higher (too high to jump: hold on and pull up).
+  // First wall: four levels of holds, each 1.7 m higher (too high to jump: hold on and pull up).
   // Every level has three blocks; each vanishes now and then, so pick one that stays.
   for (let level = 0; level < 4; level++) {
     const z0 = 10 + level * 2.6, y = 1.7 * (level + 1);
     [[-5, -1.75], [-1.65, 1.65], [1.75, 5]].forEach(([x0, x1], i) => boxes.push({ x0, x1, y0: -1, y1: y, z0, z1: z0 + 2.6, look: "hold", blink: { period: 5200 + i * 700, phase: spread(level * 3 + i + 90), open: .3 } }));
   }
-  boxes.push(floor(20.4, 28, 6.8, -5, 5, "finish"));
-  return { id: "kletterwand", name: "Kletterwand", width: 10, finishZ: 25, finishY: 6.8, killY: -8, boxes, sweepers: [], checkpoints: [{ z: 1, y: 0 }], doorRows: [], tileRows: [], seesaws: 0, winds: [] };
+  // Resting ledge with a checkpoint, then the second wall: narrower holds that vanish faster.
+  boxes.push(floor(20.4, 25, 6.8));
+  for (let level = 0; level < 4; level++) {
+    const z0 = 25 + level * 2.6, y = 6.8 + 1.7 * (level + 1);
+    [[-5, -2.2], [-1.4, 1.4], [2.2, 5]].forEach(([x0, x1], i) => boxes.push({ x0, x1, y0: 5.8, y1: y, z0, z1: z0 + 2.6, look: "hold", blink: { period: 4100 + i * 500, phase: spread(level * 3 + i + 120), open: .35 } }));
+  }
+  boxes.push(floor(35.4, 43, 13.6, -5, 5, "finish"));
+  return { id: "kletterwand", name: "Kletterwand", width: 10, finishZ: 40, finishY: 13.6, killY: -8, boxes, sweepers: [], checkpoints: [{ z: 1, y: 0 }, { z: 21.5, y: 6.8 }], doorRows: [], tileRows: [], seesaws: 0, winds: [] };
 }
 
 /** Final: trapdoor plates under two spinning bars; the outer ring starts to open first. */

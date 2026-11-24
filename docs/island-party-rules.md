@@ -179,7 +179,7 @@ das Match. Details: [Konzept](minigames/konzept.md).
 
 **Inselparty:** 2–6 Personen, 5–15 Runden (Standard 8, auch für Testpartien mit Bots), Startkapital 10 Münzen. Trophäe kostet 15; Sieg nach Trophäen, Münzen, Minispielsiegen. Hafenüberquerung gibt 3 Münzen, normale Felder wirken beim Landen. Inventar: drei Items, ein Einsatz vor dem Würfeln. Auftakt/Rundenminispiele wie oben.
 
-**Roll It Up!:** 2–6 Personen, kein Rundenlimit. Bauschale mit sechs Kaufstellen im Abstand von fünf Feldern: Grinder 8 Münzen, Pape/Filter je 3, drei Weedbuds je 5. Jede Figur kauft jede Station einmal für ihr Set; Zug-Items bleiben getrennt mit drei Inventarplätzen. Mit vollem Set führen Hügelwege ab Feld 31/33 zum Jayspot auf Feld 34. Erste Ankunft gewinnt sofort, auch mit restlichen Würfelschritten. Auftakt bestimmt Reihenfolge, gemeinsame Minispiele liefern Münzen.
+**Roll It Up!:** 2–6 Personen, kein Rundenlimit, Brett nach Wahl des Hosts. **Bauschale:** ein Rundweg mit zwei Hügelpfaden und sechs Kaufstellen im Abstand von fünf Feldern. **Grinder:** äußerer Ring im Uhrzeigersinn, innerer Ring gegen den Uhrzeigersinn, je vier Speichen nach innen und außen, zwei Wege zur Lounge in der Mitte; drei Kaufstellen außen, drei innen. Wer auf einer Rohrpost (⇄) landet, saust zum Partnerfeld auf der anderen Seite. Kaufstellen auf beiden Brettern: Grinder 8 Münzen, Pape/Filter je 3, drei Weedbuds je 5. Jede Figur kauft jede Station einmal für ihr Set; Zug-Items bleiben getrennt mit drei Inventarplätzen. Mit vollem Set führen Hügelwege ab Feld 31/33 zum Jayspot auf Feld 34. Erste Ankunft gewinnt sofort, auch mit restlichen Würfelschritten. Auftakt bestimmt Reihenfolge, gemeinsame Minispiele liefern Münzen.
 
 ## Prüfungen
 

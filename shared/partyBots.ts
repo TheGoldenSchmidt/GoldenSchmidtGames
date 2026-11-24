@@ -1,4 +1,4 @@
-import { boardDistances, hasFullSet, partyPaths, STATIONS, type Collector } from "./partyBoard";
+import { boardDistances, goalField, hasFullSet, partyPaths, stationsOf, type Collector } from "./partyBoard";
 import { availableBets } from "./minigameModes";
 import { botMatchInput } from "./matches/framework";
 import {COMMAND_ZONES,DUO_SWITCHES,GOLF_GATES,HEX_PLATFORMS,hexCue,photoSpot,saysCue,wallHoles,wallCellPoint} from "./arenaChallenges";
@@ -47,7 +47,7 @@ function distanceTo(g:PartyGame,p:Collector,from:number,targets:readonly number[
 }
 /** Where a bot wants to go: the trophy stand once it can pay, otherwise the next missing utensil. */
 function botGoal(g:PartyGame,p:PartyGame["players"][number]):number[]|undefined{
-  if(g.mode==="roll-it-up")return hasFullSet(p)?undefined:STATIONS.filter(s=>!p.supplies?.includes(s.field)&&p.coins>=s.price).map(s=>s.field);
+  if(g.mode==="roll-it-up")return hasFullSet(g,p)?[goalField(g)]:stationsOf(g).filter(s=>!p.supplies?.includes(s.field)&&p.coins>=s.price).map(s=>s.field);
   return p.coins>=TROPHY_PRICE?[g.trophyField]:undefined;
 }
 const has=(p:{items:Item[]},item:Item)=>p.items.indexOf(item);
@@ -68,8 +68,6 @@ export function botBoardAction(g:PartyGame):PartyAction|undefined {
   }
   if(g.phase==="path"){
     const paths = partyPaths(g,p);
-    // The second route leads uphill at both forks and onward to the bench.
-    if(g.mode === "roll-it-up" && hasFullSet(p)) return {type:"path", destination: paths[1] ?? paths[0]};
     const goal=botGoal(g,p);
     if(goal?.length){const best=[...paths].sort((a,b)=>distanceTo(g,p,a,goal)-distanceTo(g,p,b,goal))[0];return {type:"path",destination:best};}
     // Without a goal the bots vary their route (deterministic, no own random state).

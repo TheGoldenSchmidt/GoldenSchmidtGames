@@ -241,3 +241,5 @@
 .room .lobby-exit__confirm { display:grid; gap:10px; padding:18px 16px 16px; color:#221b4f; background:#fff8ea; border:2px solid #221b4f; border-radius:14px; }
 .room .lobby-exit__confirm h2 { margin:0; font:400 1.3rem var(--iw-font-display); }
 .room .lobby-exit__confirm p { margin:0 0 4px; font:400 .88rem/1.45 var(--iw-font-ui); }
+.room .lobby-settings .settings-fields > label:has(> small) { flex-wrap:wrap; row-gap:4px; }
+.room .lobby-settings .settings-fields > label > small { flex-basis:100%; font-size:.74rem; color:#ead7bd; }

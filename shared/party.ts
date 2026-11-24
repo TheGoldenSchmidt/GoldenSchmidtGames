@@ -3,11 +3,11 @@ import { defaultLook, isMiniLook, lookChoices, matchIdForLook, type MiniLook, ty
 import { advanceMatch, createMatch, finishMatch, isMatchId, MATCH_IDS, MATCH_MODULES, matchStandings, neutralizeMatch, publicMatch, removeMatchPlayer, setMatchControl, type MatchId } from "./matches/framework";
 import type { MatchState } from "./matches/types";
 import { miniEligible, miniFamily, miniPool, type PlayableMiniId } from "./minigameCatalog";
-import { partyBoard, partyPaths, fieldCoins, fieldLabel, FINAL_ROUNDS, hasFullSet, isFinalStretch, stationAt, JAYSPOT, TROPHY_SHOPS } from "./partyBoard";
+import { partyBoard, partyPaths, fieldCoins, fieldLabel, FINAL_ROUNDS, goalField, hasFullSet, isFinalStretch, isRollBoardId, rollBoard, shopFields, stationAt, TROPHY_SHOPS, type RollBoardId } from "./partyBoard";
 import { characterId, type CharacterId } from "./characters";
 import { checkMinigameSetup, isMinigameMode, minigameOptions, placeMinigameBet, type MinigameCompetition, type MinigameMode, type MinigameOptions } from "./minigameModes";
-/** `classic` keeps the 1st generation minigames in the draw. */
-export interface PartyOptions { rounds: number; classic?: boolean }
+/** `classic` keeps the 1st generation minigames in the draw; `board` picks the Roll It Up! board. */
+export interface PartyOptions { rounds: number; classic?: boolean; board?: RollBoardId }
 export const PARTY_DEFAULTS: PartyOptions = { rounds: 8, classic: true };
 /** Price of a trophy at the trophy stand (Inselparty). */
 export const TROPHY_PRICE = 15;
@@ -80,9 +80,9 @@ export type PartyAction =
 
 /** Older clients may still send `tempo`/`analog`; both are ignored. */
 export function partyOptions(value?: Partial<PartyOptions>): PartyOptions {
-  const rounds = value?.rounds ?? PARTY_DEFAULTS.rounds, classic = value?.classic ?? true;
-  if (!Number.isInteger(rounds) || rounds < 5 || rounds > 15 || typeof classic !== "boolean") throw new Error("Ungültige Inselparty-Einstellungen.");
-  return { rounds, classic };
+  const rounds = value?.rounds ?? PARTY_DEFAULTS.rounds, classic = value?.classic ?? true, board = value?.board;
+  if (!Number.isInteger(rounds) || rounds < 5 || rounds > 15 || typeof classic !== "boolean" || (board !== undefined && !isRollBoardId(board))) throw new Error("Ungültige Inselparty-Einstellungen.");
+  return board && board !== "bauschale" ? { rounds, classic, board } : { rounds, classic };
 }
 function random(g: PartyGame) { g.rng = (Math.imul(g.rng, 1664525) + 1013904223) >>> 0; return g.rng / 4294967296; }
 function shuffle<T>(g: PartyGame, source: readonly T[]): T[] { const result = [...source]; for (let i=result.length-1;i>0;i--) { const j=Math.floor(random(g)*(i+1)); [result[i],result[j]]=[result[j],result[i]]; } return result; }
@@ -167,6 +167,8 @@ function land(g: PartyGame, now:number) {
   if(field.type==="bad") lose(g,p,fieldCoins(g));
   if(field.type==="event") event(g);
   if(field.type==="gift") g.offered=ITEM_IDS[Math.floor(random(g)*5)];
+  // Pneumatic tube (Grinder): the figure travels on to the partner field; that field has no further effect.
+  if(field.type==="tunnel"){const target=rollBoard(g).tunnels[field.id];if(target!==undefined){p.position=target;g.path.push(target);log(g,`${p.name} saust durch die Rohrpost zu Feld ${target}.`);}}
   if(field.type==="duel"&&(g.mode??"party")==="party"){
     if(duelTargets(g).length){phase(g,"duel",now);return;}
     log(g,p.coins>0?"Niemand hat Münzen für ein Duell.":"Ohne Münzen kein Duell.");
@@ -185,14 +187,14 @@ function arrive(g:PartyGame,now:number){
   const target=g.movement!.destination;step(g,target);
   const p=activePartyPlayer(g);
   if (g.mode === "roll-it-up") {
-    if (p.position === JAYSPOT && hasFullSet(p)) {
+    if (p.position === goalField(g) && hasFullSet(g, p)) {
       g.winners = [p.id];
       g.steps = 0;
       log(g, p.name + " erreicht den Jayspot!");
       phase(g, "finished", now);
       return;
     }
-    const station = stationAt(p.position);
+    const station = stationAt(g, p.position);
     if (station && !p.supplies?.includes(station.field) && p.coins >= station.price) {
       phase(g, "supply", now);
       return;
@@ -402,7 +404,7 @@ export function applyPartyAction(current:PartyGame,id:string,action:PartyAction,
     const item=p.items[action.index];if(g.itemUsed||!item)throw new Error("Dieses Item kann nicht verwendet werden.");
     if(item==="shield"&&p.shield)throw new Error("Dein Schild ist bereits aktiv.");
     if(item==="magnet"){const target=g.players.find(p=>p.id===action.target);if(!target||target.id===id)throw new Error("Wähle eine andere Person.");p.coins+=lose(g,target,5);}
-    if(item==="compass"){if(!(TROPHY_SHOPS as readonly number[]).includes(action.destination??-1))throw new Error("Wähle einen Shop.");p.position=action.destination!;g.path=[];}
+    if(item==="compass"){if(!shopFields(g).includes(action.destination??-1))throw new Error("Wähle einen Shop.");p.position=action.destination!;g.path=[];}
     if(item==="shield")p.shield=true;if(item==="double")g.double=true;if(item==="sprint")g.boost=3;
     p.items.splice(action.index,1);g.itemUsed=true;log(g,`${p.name} setzt ${ITEMS[item].name} ein.`);
     // Travelling straight to the trophy stand offers the trophy before the roll.
@@ -410,7 +412,7 @@ export function applyPartyAction(current:PartyGame,id:string,action:PartyAction,
   }
   else if(action.type==="path"&&g.phase==="path"){if(!partyPaths(g,p).includes(action.destination))throw new Error("Ungültiger Weg.");move(g,now,0,action.destination);}
   else if (action.type === "supply" && g.mode === "roll-it-up" && g.phase === "supply") {
-    const station = stationAt(p.position);
+    const station = stationAt(g, p.position);
     if (typeof action.buy !== "boolean" || !station || p.supplies?.includes(p.position)) throw new Error("Ungültiger Einkauf.");
     if (action.buy) {
       if (p.coins < station.price) throw new Error("Nicht genug Münzen.");

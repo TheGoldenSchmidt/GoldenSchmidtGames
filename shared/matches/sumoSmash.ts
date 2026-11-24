@@ -1,4 +1,4 @@
-import { bounce, ringModule, type Fighter } from "./ringCore";
+import { bounce, ringModule, type Fighter, type RingRules } from "./ringCore";
 
 /** Sumo Smash – free movement, a forward dash with 3 s cooldown and strong knockback. */
 /**
@@ -7,8 +7,11 @@ import { bounce, ringModule, type Fighter } from "./ringCore";
  */
 export const SUMO = { body: .5, speed: 3.4, accel: .22, dash: 9.5, dashMs: 240, knock: 12.5, stunMs: 520, slide: .94, bump: 1, bumpStunMs: 180, cooldown: 2500 } as const;
 const dashing = (f: Fighter, now: number) => now < f.actionUntil;
+/** Two dashes this close in speed count as equally strong. */
+const CLASH_TIE = .25;
 
-export const sumoSmash = ringModule({
+/** The Sumo rules (exported for the rule tests); the module wraps them with the ring core. */
+export const sumoRules: RingRules = {
   id: "sumo", name: "Sumo Smash",
   instruction: "Schubs die anderen mit deinem Stoß aus dem Ring. Jeder hat 3 Leben, der Ring wird kleiner – wer zuletzt drin steht, gewinnt.",
   rules: "Bewege deinen Sumo mit dem Stick. Der Stoß-Knopf schiebt dich nach vorn; wer getroffen wird, fliegt zurück. Danach braucht der Stoß 2,5 Sekunden. Wer aus dem Ring fällt, verliert eines von 3 Leben; wer den Ring-Out verursacht, bekommt +2. Im Duell zu zweit stellen sich danach beide wieder auf ihre Startplätze, sonst kehrt nur die herausgefallene Person zurück. Ab Sekunde 40 schrumpft der Ring. Letzter im Ring gewinnt, nach 75 Sekunden zählen Leben, dann Ring-Outs.",
@@ -32,9 +35,20 @@ export const sumoSmash = ringModule({
     if (d < 1e-9) { dx = 1; dy = 0; d = 1; }
     const nx = dx / d, ny = dy / d;
     // A dash into the opponent (checked before any momentum exchange) becomes a knockback along the contact normal.
-    for (const [hitter, victim, sign] of [[a, b, 1], [b, a, -1]] as const) {
-      if (!dashing(hitter, now) || (victim === b ? shieldB : shieldA) || (hitter === a ? shieldA : shieldB)) continue;
-      if ((hitter.vx * nx + hitter.vy * ny) * sign <= .5) continue;
+    // Head-on clash of two dashes: the faster one wins; equally fast dashes knock both back, so the
+    // order of the player list never decides.
+    const strikes = ([[a, b, 1], [b, a, -1]] as const).filter(([hitter, victim, sign]) => dashing(hitter, now)
+      && !(victim === b ? shieldB : shieldA) && !(hitter === a ? shieldA : shieldB) && (hitter.vx * nx + hitter.vy * ny) * sign > .5);
+    if (strikes.length === 2) {
+      const speedA = a.vx * nx + a.vy * ny, speedB = -(b.vx * nx + b.vy * ny);
+      if (Math.abs(speedA - speedB) < CLASH_TIE) {
+        bounce(a, b, SUMO.body, 0, now, true, true);
+        for (const [f, sign] of [[a, -1], [b, 1]] as const) { f.vx = nx * sign * SUMO.knock * .6; f.vy = ny * sign * SUMO.knock * .6; f.stunUntil = now + SUMO.stunMs; f.actionUntil = now; }
+        return undefined;
+      }
+      strikes.splice(speedA > speedB ? 1 : 0, 1);
+    }
+    for (const [hitter, victim, sign] of strikes) {
       bounce(a, b, SUMO.body, 0, now, true, true); // only separate the bodies
       victim.vx = nx * sign * SUMO.knock; victim.vy = ny * sign * SUMO.knock; victim.stunUntil = now + SUMO.stunMs;
       hitter.vx *= .15; hitter.vy *= .15; hitter.actionUntil = now;
@@ -55,4 +69,5 @@ export const sumoSmash = ringModule({
     const facing = Math.cos(Math.atan2(dy, dx) - me.heading);
     return { x: dx / d, y: dy / d, act: d < 2.2 && facing > .9 && s.time - me.actionAt >= SUMO.cooldown };
   }
-});
+};
+export const sumoSmash = ringModule(sumoRules);

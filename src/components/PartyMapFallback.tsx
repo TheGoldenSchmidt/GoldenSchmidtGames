@@ -1,4 +1,4 @@
-import { fieldName, JAYSPOT, partyBoard, partyPaths, stationAt } from "../../shared/partyBoard";
+import { fieldName, goalField, partyBoard, partyPaths, stationAt } from "../../shared/partyBoard";
 import { mapObjective, objectiveHint, TrayMapArt } from "./RollItUp";
 import {characterId,characterPortrait} from "../../shared/characters";
 import { useEffect, useState, type CSSProperties } from "react";
@@ -31,7 +31,7 @@ export function PartyMapFallback({game,rolling=false,onTravelChange,onInspect,pr
         <filter id="party-field-shadow" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dy=".5" stdDeviation=".25" floodColor="#695c36" floodOpacity=".3"/></filter>
         <g id="party-market"><path d="M-4 0h8v6h-8Z" fill="#fff5d4"/><path d="M-5 0l2-4h6l2 4Z" fill="#e66352"/><path d="M-2-4v4m4-4v4" stroke="#fff5d4" strokeWidth="1.6"/><path d="M-2 6V2h4v4" fill="#a56e39"/></g>
       </defs>
-      {tray?<TrayMapArt/>:<><rect width="100" height="100" fill="url(#party-ocean)"/><rect width="100" height="100" fill="url(#party-water)"/>
+      {tray?<TrayMapArt game={game}/>:<><rect width="100" height="100" fill="url(#party-ocean)"/><rect width="100" height="100" fill="url(#party-water)"/>
       <path d="M48 3Q80 1 94 25Q105 52 90 80Q75 103 43 98Q11 100 3 72Q-4 43 10 21Q23 3 48 3" fill="#9bdfcf" opacity=".5"/>
       <path d="M49 5Q83 4 92 29Q102 55 85 79Q74 99 45 95Q15 96 7 73Q-1 48 12 24Q23 6 49 5" fill="#e5c37c"/>
       <path d="M49 4Q83 3 92 28Q102 54 85 78Q74 97 45 93Q15 94 7 71Q-1 46 12 23Q23 6 49 4" fill="#fff0bb"/>
@@ -49,11 +49,11 @@ export function PartyMapFallback({game,rolling=false,onTravelChange,onInspect,pr
       {map.map(f=><g key={f.id} role="button" tabIndex={0} aria-label={`Feld ${f.id}: ${fieldName(game,f.id)}${!tray && f.id===game.trophyField?", Trophäenstand":""}`} onClick={()=>inspect(f.id)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();inspect(f.id);}}} style={{"--field-color":FIELD_VISUALS[f.type].color,"--field-ink":FIELD_VISUALS[f.type].ink} as CSSProperties} className={`party-field party-field--${f.type} ${selected===f.id?"is-selected":""} ${choices.includes(f.id)?"is-choice":""}`}>
         <rect x={f.x-5.7} y={f.y-5.7} width="11.4" height="11.4" fill="transparent" pointerEvents="all"/>
         <circle cx={f.x} cy={f.y} r="3.1" filter="url(#party-field-shadow)"/><text className="party-field-symbol" x={f.x} y={f.y} dominantBaseline="central">{FIELD_VISUALS[f.type].symbol}</text>
-        {tray && stationAt(f.id) && <g className="roll-map-label" transform={`translate(${50+(f.x-50)*.8} ${50+(f.y-50)*.8})`}><rect x="-6.2" y="-2.1" width="12.4" height="4.2" rx="1.4"/><text y=".8">{stationAt(f.id)!.name}</text></g>}
+        {tray && stationAt(game,f.id) && <g className="roll-map-label" transform={`translate(${50+(f.x-50)*.8} ${50+(f.y-50)*.8})`}><rect x="-6.2" y="-2.1" width="12.4" height="4.2" rx="1.4"/><text y=".8">{stationAt(game,f.id)!.name}</text></g>}
         {!tray && f.id===game.trophyField&&<g className="party-map-trophy" transform={`translate(${f.x} ${f.y-6})`}><path d="m0 5-3-5h6Z" fill="#ffcc4d"/><circle r="3.6" fill="#ffcc4d" stroke="#fff7d6" strokeWidth=".8"/><text y="1.2">★</text></g>}
       </g>)}
       {game.players.map((player,i)=>{const field=map[player.id===p.id&&animated!==undefined?animated:player.position],occupants=game.players.filter(q=>q.position===player.position),same=occupants.findIndex(q=>q.id===player.id);const shift=occupants.length>1?(same%3-1)*2.6:0;return <g key={player.id} data-player={player.id} data-field={field.id} className={`party-pawn party-pawn--${i} ${player.id===p.id?"is-active":""}`} style={{transform:`translate(${field.x+shift}px,${field.y-2.5-Math.floor(same/3)*3}px)`}}><title>{`${player.name}: Feld ${player.position}`}</title><ellipse cy="3" rx="2" ry=".65" fill="#10485b" opacity=".3"/><path d="M-1.8 1.4q-1-3.5 1.8-4.2 2.8.7 1.8 4.2L0 3Z"/><circle cy="-.9" r="1.65"/><image href={characterPortrait(characterId(player.characterId,i))} x="-2.5" y="-3.5" width="5" height="6"/></g>;})}
     </svg></div>
-    {!onInspect&&<div className="party-map-caption" role="status">{selected!==undefined?<><strong>Feld {selected}: {fieldName(game,selected)}</strong><span>{objectiveHint(game,selected)}{selected!==JAYSPOT&&fieldHelp(game,map[selected].type)}</span></>:<><strong>{game.phase==="path"?"Du stehst an einer Abzweigung.":tray?"Die Bauschale":"Deine Insel, dein Weg."}</strong><span>{game.phase==="path"?"Die markierten Felder zeigen deine beiden Wege.":"Felder antippen und entdecken, was dich erwartet."}</span></>}</div>}
+    {!onInspect&&<div className="party-map-caption" role="status">{selected!==undefined?<><strong>Feld {selected}: {fieldName(game,selected)}</strong><span>{objectiveHint(game,selected)}{selected!==goalField(game)&&fieldHelp(game,map[selected].type)}</span></>:<><strong>{game.phase==="path"?"Du stehst an einer Abzweigung.":tray?"Die Bauschale":"Deine Insel, dein Weg."}</strong><span>{game.phase==="path"?"Die markierten Felder zeigen deine beiden Wege.":"Felder antippen und entdecken, was dich erwartet."}</span></>}</div>}
   </section>;
 }

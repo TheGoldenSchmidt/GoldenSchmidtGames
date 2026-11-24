@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { activePartyPlayer, applyPartyAction, type PartyGame } from "../shared/party";
-import { JAYSPOT, STATIONS } from "../shared/partyBoard";
+import { goalField, stationsOf } from "../shared/partyBoard";
+
+const JAYSPOT = goalField({ mode: "roll-it-up" }), STATIONS = stationsOf({ mode: "roll-it-up" });
 import { unityRollAction, unityRollBoard, unityRollState } from "../src/unityRollItUp";
 import { boardGame, settleMovement } from "./party-fixtures";
 
