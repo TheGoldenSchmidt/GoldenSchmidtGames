@@ -16,7 +16,7 @@ Reihenfolge: zuerst Spiele, die am meisten von 3D/Physik gewinnen; flache Reakti
 | --- | --- | --- |
 | Parcours-Probelevel (`parcours`, `ParcoursProbe`) | umgesetzt | 15 Stationen mit allen Hindernisarten, allein, Kontrollpunkte und Bestzeit. Stand vor getimtem Festhalten, langen Lücken, Serpentinen-Glibberflut und Ventilatoren mit Anlauf. |
 | Floor is Lava (`lava`, `FloorIsLava`) | umgesetzt | Regeln/Bots aus `floorIsLava.ts`, du gegen drei Bots. |
-| Sumo Smash (`sumo`, `SumoSmash`) | umgesetzt | C#-Port `Ring/RingSim.cs`; Podest über einem See. Kein Stoß, solange man nach einem Treffer rutscht (`CanAct`). |
+| Sumo Smash (`sumo`, `SumoSmash`) | umgesetzt | C#-Port `Ring/RingSim.cs`; Podest über einem See. Kein Stoß, solange man nach einem Treffer rutscht (`CanAct`). Offen: symmetrischer Frontalzusammenstoß aus `sumoSmash.ts` nach `RingSim.cs` übernehmen. |
 | Bumper Mayhem (`bumpercars`, `BumperMayhem`) | umgesetzt | Gleicher Ringkern; Gummi-Elastizität 0,95, jeder Kontakt stößt beide um ≥2,6 m/s auseinander, harte Treffer × 1,3 (≤14), Rammer prallt zurück; kein Turbo im Rutschen. |
 | Bomb Arena (`bombs`, `BombArena`) | umgesetzt | C#-Port `Bombs/BombSim.cs`. |
 | Schneeballschlacht (`snowball`, `Schneeballschlacht`) | umgesetzt | C#-Port `Snow/SnowSim.cs`; eigener Wurf rastet nur ±11° um die Blickrichtung ein, ohne Vorhalt (Bots unverändert); Zielen per Ziehen fehlt noch. |
