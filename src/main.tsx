@@ -12,7 +12,7 @@ import "./styles/partyCharacters.css";
 import "./styles/gameIntro.css";
 import "./styles/kribbelnCup.css";
 import "./styles/qwixxCup.css";
-import "./styles/partyMenus.css";
+import "./styles/studio.css";
 import "./styles/menus.css";
 import "./styles/rollItUp.css";
 import "./styles/matches.css";

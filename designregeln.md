@@ -9,11 +9,11 @@ Bei jeder UI-Erweiterung und -Bearbeitung anwenden. Technik und Prüfungen: [AGE
 | Start, lokale/Online-Auswahl, Lobby, Profil, QR, Wiederverbindung | Inselwelt: `HomeScreen.tsx`, `AdventureChoice.tsx`, `home.css`, `menus.css` |
 | Rich’s Universe: Zugang/Experimentliste | Inselwelt; [Bereich](src/richs-universe/README.md). Nur dortige `experiments/` gestalten sich frei. |
 | Roll It Up! | Bauschale mit Inselwelt-HUD; [Umsetzung](docs/inselparty-3d.md#roll-it-up-die-bauschale) |
-| Einsatz-/Ergebnismenüs laufender Wettbewerbe | Bisheriger Party-Stil: `.party-menu`, `--menu-*`, `partyMenus.css` |
+| Schlag den GoldenSchmidt und Freies Minispiel zwischen den Spielen | Gameshow-Studio: `.gs-studio`, `studio.css` (dunkle Bühne, Gold für Hauptaktion und Einsatzmünzen, Glas für Status, Lilita/Lexend) |
 | Minispiele | Vollbild; Match-Spiele mit dunklem Glas-HUD, klassische Arenen mit Inselwelt-Tafeln (siehe [Spielflächen](#spielflächen)) |
 | Übrige Spiele/Live-HUDs | Eigene bisherige Gestaltung; Umstellung nur auf Auftrag |
 
-Eine Ansicht vollständig umstellen oder ihren bestehenden Stil fortführen; nicht mischen. Keine neuen Party-Stil-Bausteine. Menüänderungen verändern keine Spielflächen nebenbei. Umstellungen hier nachführen; implementiert, geprüft und geplant unterscheiden. Die Experiment-Ausnahme hebt gemeinsame Sicherheits-, Offline- und Zugänglichkeitsanforderungen nicht auf.
+Eine Ansicht vollständig umstellen oder ihren bestehenden Stil fortführen; nicht mischen. Menüänderungen verändern keine Spielflächen nebenbei. Umstellungen hier nachführen; implementiert, geprüft und geplant unterscheiden. Die Experiment-Ausnahme hebt gemeinsame Sicherheits-, Offline- und Zugänglichkeitsanforderungen nicht auf.
 
 ## Visuelle Richtung
 
