@@ -241,8 +241,10 @@ for (const motion of ["no-preference", "reduce"] as const) test(`Tank Trouble 2.
 
 for (const motion of ["no-preference", "reduce"] as const) test(`Tank Trouble – Turmsicht (${motion}): Kamera hinter dem Panzer, Stick und Zielen relativ zur Kamera, Schuss`, async ({ page }, testInfo) => {
   await page.emulateMedia({ reducedMotion: motion });
-  const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "tankview" });
+  const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "tanks" });
   try {
+    // Turmsicht is Tank Trouble in 3rd person, here with the app's own web rendering.
+    await session.action({ type: "look", renderer: "web", view: "third" }, session.ids[0]);
     await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
     await session.action({ type: "ready" }, session.ids[1]);
     await matchStarted(page);

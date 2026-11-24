@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef } from "react";
 import { UNITY_MATCH_URL, unityStage, type UnityMessage } from "../unityMatch";
-import "../styles/unityGame.css";
 
 /**
  * The persistent Unity frame of a party with Unity rendering. It starts loading during the
@@ -21,6 +20,6 @@ export function UnityMatchHost() {
     return () => { window.removeEventListener("message", receive); unityStage.attach(undefined); };
   }, []);
   return <div className="unity-match" aria-hidden="true">
-    <iframe ref={frame} className="unity-game__frame" src={`${UNITY_MATCH_URL}${reduced ? "&ruhig=1" : ""}`} title="Unity-Darstellung" tabIndex={-1} />
+    <iframe ref={frame} src={`${UNITY_MATCH_URL}${reduced ? "&ruhig=1" : ""}`} title="Unity-Darstellung" tabIndex={-1} />
   </div>;
 }

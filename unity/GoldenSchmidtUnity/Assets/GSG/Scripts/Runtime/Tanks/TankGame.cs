@@ -533,7 +533,10 @@ namespace GSG.Tanks
             }
             else
             {
-                wantEye = target - forward * 2.6f + Vector3.up * 3.6f;
+                // A wall right behind the tank would block the view: then the camera comes closer and looks over it.
+                float behind = sim.FirstWall(p, new NVector2(-Mathf.Sin(camYaw), Mathf.Cos(camYaw)), 2.6f);
+                float distance = Mathf.Min(2.6f, Mathf.Max(0.35f, behind * 2.6f));
+                wantEye = target - forward * distance + Vector3.up * 3.6f;
                 wantLook = target + forward * 1.7f;
             }
             float k = !eyeReady || Fx.Reduced ? 1f : 1f - Mathf.Exp(-Time.deltaTime * (view == "first" ? 18f : 9f));

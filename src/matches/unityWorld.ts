@@ -20,7 +20,7 @@ export function createUnityWorld(view: MiniView, host: HTMLElement, read: () => 
   // Shown at once: while the build still loads, its own loading bar is visible under the countdown.
   unityStage.show(true);
   const off = unityStage.listen(message => {
-    if (message.type === "cam" && typeof message.yaw === "number" && Number.isFinite(message.yaw)) camYaw = message.yaw;
+    if (message.type === "cam" && typeof message.yaw === "number" && Number.isFinite(message.yaw)) { camYaw = message.yaw; host.dataset.yaw = camYaw.toFixed(3); }
     else if (message.type === "error") fail();
   });
   const fail = () => { if (disposed) return; dispose(); onError(); };

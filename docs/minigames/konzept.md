@@ -182,6 +182,8 @@ Frühere Node-/Chromium-Messungen sind historische Vergleichswerte, keine Gerät
 
 ## Unity-Tests
 
+**Darstellung und Ansicht (Nov. 2026):** Der Host wählt im Spielmenü vor „Ich bin bereit“ für alle die Darstellung (Unity/Web) und die Ansicht (Draufsicht, 3rd, 1st Person) des nächsten Minispiels (`shared/minigameLooks.ts`, Aktion `look`; Übungen folgen der Ansicht in der Web-Darstellung). Ansichten sind Einstellungen, keine eigenen Minispiele: Tank Trouble – Turmsicht ist seitdem Tank Trouble in 3rd Person (`tankview` bleibt als Regelmodul, nicht im Pool); 1st Person gibt es vorerst nur für Tank Trouble mit Unity. Mit Unity rechnet weiter die Raumautorität, Unity zeichnet nur ([Unity-Minispiele](../../UnityGames.md#zweck-und-stand)).
+
 Getrennt von den Match-Minispielen: Unity-Fassungen der Nicht-1st-Gen-Minispiele in einem gemeinsamen WebGL-Build im App-Rahmen (`src/unityGames.ts`, `UnityGameScreen`). Sie portieren Werte, Regeln und Bots aus `shared/matches/` nach C# (gleiche 50-ms-Schritte; Tower Tumble nutzt Unitys 2D-Physik statt `physics2d.ts`; Abweichungen nach Rückmeldungen stehen in [Unity-Minispiele](../../UnityGames.md#abweichungen-nach-rückmeldung-nov-2026)) und laufen lokal ohne `roomCore`, Authorität oder Online-Räume. Aufbau, Prüfungen und offene Punkte: [Unity-Minispiele](../../UnityGames.md).
 
 ## 3D-Darstellung und Parcours

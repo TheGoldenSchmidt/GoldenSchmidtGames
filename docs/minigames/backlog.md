@@ -20,6 +20,7 @@ Match-Framework, Touch-Steuerung, Bots/Übung, Party-/Wettbewerbsanbindung und b
 | Thema | Nächster Schritt |
 | --- | --- |
 | Echte Geräte | Android/iPhone, möglichst älteres Gerät, Node und Handy-Host bis sechs Geräte nach [Gerätetest](geraetetest.md) prüfen. |
+| Unity im Raum | Tank Trouble läuft mit Unity-Darstellung und Ansichtswahl in Räumen. Nächste Spiele nach demselben Muster umstellen, zuerst Standhaft mit 3rd Person; Ansichten für weitere Minispiele in `MINI_LOOKS` ergänzen. |
 | Unity-Umstellung | Rückmeldung zu Tower Tumble – Survival, Türenlotto, Kreiselkurs, Standhaft und Tank Trouble auf echten Handys einholen, dann die Liste in [Unity-Minispiele](../../UnityGames.md#reihenfolge-der-umstellung) weiter abarbeiten. |
 | Handy-Hosting | `nearby.spec.ts` mit Match-Spielen in WebRTC-fähiger Umgebung prüfen. Frühere Cloud-Grenzen sind kein aktueller Laufbeleg. CI nur auf ausdrücklichen Wunsch. |
 | Tower Tumble | Hohe Türme, Pfeilsteuerung und Leistung auf Handy-Host/Render Free messen. Bots nur zum Üben. |
