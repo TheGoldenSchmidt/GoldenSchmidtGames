@@ -98,6 +98,7 @@ for(let turns=0;match.phase!=="finished" && turns<1500;turns++) {
     for(const p of match.players) if(match.phase===phase) match=applyPartyAction(match,p.id,action,100000);
     continue;
   }
+  if(match.phase==="mini-result"){for(const p of match.players)if(match.phase==="mini-result")match=applyPartyAction(match,p.id,{type:"next"},100000);continue;}
   const action=botBoardAction(match);
   assert.ok(action,match.phase);
   match=command(match,action);

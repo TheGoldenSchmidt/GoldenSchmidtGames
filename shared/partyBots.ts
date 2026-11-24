@@ -1,8 +1,8 @@
-import { hasFullSet, partyPaths } from "./partyBoard";
+import { boardDistances, hasFullSet, partyPaths, STATIONS, type Collector } from "./partyBoard";
 import { availableBets } from "./minigameModes";
 import { botMatchInput } from "./matches/framework";
 import {COMMAND_ZONES,DUO_SWITCHES,GOLF_GATES,HEX_PLATFORMS,hexCue,photoSpot,saysCue,wallHoles,wallCellPoint} from "./arenaChallenges";
-import { activePartyPlayer, applyPartyAction, applyPartyControl, duelTargets, ITEMS, tickParty, type PartyAction, type PartyGame } from "./party";
+import { activePartyPlayer, applyPartyAction, applyPartyControl, duelTargets, ITEMS, MAX_TROPHIES_PER_VISIT, tickParty, TROPHY_PRICE, type Item, type PartyAction, type PartyGame } from "./party";
 import { bridgeCenter, clamp, DASH_BLOCKS, HURDLES, TILT_HOLES, type ArenaActor, type ArenaInput, type ArenaState } from "./partyArena";
 
 /** Bots kennen nur die sichtbare Arena und senden normale Eingaben. */
@@ -40,26 +40,52 @@ export function botArenaInput(s:ArenaState,a:ArenaActor):ArenaInput {
   const n=Math.max(1,Math.hypot(x,z));return {x:x/n,z:z/n,jump,punch};
 }
 
+/** Walking distance from a field to the nearest of the targets (Infinity when none can be reached). */
+function distanceTo(g:PartyGame,p:Collector,from:number,targets:readonly number[]){
+  const distances=boardDistances(g,{...p,position:from});
+  return Math.min(...targets.map(t=>distances.get(t)??Infinity));
+}
+/** Where a bot wants to go: the trophy stand once it can pay, otherwise the next missing utensil. */
+function botGoal(g:PartyGame,p:PartyGame["players"][number]):number[]|undefined{
+  if(g.mode==="roll-it-up")return hasFullSet(p)?undefined:STATIONS.filter(s=>!p.supplies?.includes(s.field)&&p.coins>=s.price).map(s=>s.field);
+  return p.coins>=TROPHY_PRICE?[g.trophyField]:undefined;
+}
+const has=(p:{items:Item[]},item:Item)=>p.items.indexOf(item);
+
 export function botBoardAction(g:PartyGame):PartyAction|undefined {
-  if(g.competition && g.phase === "mini-result") return;
-  const p=activePartyPlayer(g);
+  if(g.phase === "mini-result") return;
+  const p=activePartyPlayer(g),party=(g.mode??"party")==="party";
   if(g.phase==="turn"){
+    if(g.itemUsed)return {type:"roll"};
+    // Travel to the trophy stand when it is far away and affordable.
+    const compass=has(p,"compass");
+    if(compass>=0&&party&&p.coins>=TROPHY_PRICE&&p.position!==g.trophyField&&distanceTo(g,p,p.position,[g.trophyField])>6)return {type:"item",index:compass,destination:g.trophyField};
+    // Fish coins from the richest player without a shield.
+    const magnet=has(p,"magnet"),rich=g.players.filter(o=>o.id!==p.id&&!o.shield&&o.coins>=3).sort((a,b)=>b.coins-a.coins)[0];
+    if(magnet>=0&&rich)return {type:"item",index:magnet,target:rich.id};
     const index=p.items.findIndex(i=>i==="sprint"||i==="double"||i==="shield"&&!p.shield);
-    return !g.itemUsed&&index>=0?{type:"item",index}:{type:"roll"};
+    return index>=0?{type:"item",index}:{type:"roll"};
   }
   if(g.phase==="path"){
     const paths = partyPaths(g,p);
     // The second route leads uphill at both forks and onward to the bench.
-    const uphill = g.mode === "roll-it-up" && hasFullSet(p);
-    return {type:"path", destination: uphill ? paths[1] : paths[0]};
+    if(g.mode === "roll-it-up" && hasFullSet(p)) return {type:"path", destination: paths[1] ?? paths[0]};
+    const goal=botGoal(g,p);
+    if(goal?.length){const best=[...paths].sort((a,b)=>distanceTo(g,p,a,goal)-distanceTo(g,p,b,goal))[0];return {type:"path",destination:best};}
+    // Without a goal the bots vary their route (deterministic, no own random state).
+    return {type:"path", destination: paths[(g.round+g.turn)%paths.length]};
   }
   if(g.phase==="supply")return {type:"supply",buy:true};
-  if(g.phase==="trophy")return {type:"trophy",buy:p.coins>=20};
+  if(g.phase==="trophy"){const count=Math.min(MAX_TROPHIES_PER_VISIT,Math.floor(p.coins/TROPHY_PRICE));return count?{type:"trophy",buy:true,count}:{type:"trophy",buy:false};}
   if(g.phase==="gift")return {type:"gift",accept:true,replace:0};
   // Duels: challenge the richest player for up to 5 coins.
   if(g.phase==="duel"){const options=duelTargets(g).sort((a,b)=>g.players.find(q=>q.id===b.id)!.coins-g.players.find(q=>q.id===a.id)!.coins);return options.length?{type:"duel",target:options[0].id,stake:Math.min(5,options[0].max)}:{type:"duel"};}
-  if(g.phase==="shop")return {type:"shop",item:p.coins>=25&&p.items.length<3&&p.coins>=ITEMS.double.price?"double":undefined};
-  if(g.phase==="summary"||g.phase==="mini-result")return {type:"next"};
+  if(g.phase==="shop"){
+    // Keep enough coins for the next trophy; prefer the compass, then the double die and the coin hook.
+    const reserve=party?TROPHY_PRICE:8,wish=(["compass","double","magnet"] as Item[]).find(item=>has(p,item)<0&&p.coins-ITEMS[item].price>=reserve);
+    return {type:"shop",item:p.items.length<3?wish:undefined};
+  }
+  if(g.phase==="summary")return {type:"next"};
 }
 
 export class PartyBotDriver {
@@ -67,8 +93,8 @@ export class PartyBotDriver {
   private due=0;
   step(current:PartyGame,now:number,skipWait=false):PartyGame {
     if(current.pausedAt||current.phase==="finished"||current.phase==="aborted")return current;
-    // Roll It Up results wait for humans; bots are already counted as ready.
-    if(current.mode==="roll-it-up"&&current.phase==="mini-result")return current;
+    // Results wait for humans; bots are already counted as ready.
+    if(current.phase==="mini-result"&&!current.competition)return current;
     let g=current;
     if(g.phase==="mini-play"&&g.mini?.match&&now>=g.mini.startAt&&now<g.deadline){
       for(const p of g.players.filter(p=>p.bot&&!p.passive)){

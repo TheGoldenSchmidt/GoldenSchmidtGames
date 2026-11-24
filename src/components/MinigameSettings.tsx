@@ -1,11 +1,11 @@
 import { FIRST_GEN_LABEL, FIRST_GEN_MINI_IDS, miniEligible, miniName, miniPlayerHint, miniPool, NEW_MATCH_IDS, PLAYABLE_MINI_IDS, type PlayableMiniId } from "../../shared/minigameCatalog";
 import { MINIGAME_DEFAULTS, type MinigameMode, type MinigameOptions } from "../../shared/minigameModes";
 
-/** The "1st Generation Minigames" (14 3D arenas and Hook Wars) can be left out of random draws. */
+/** The classic minigames (first generation: 14 arenas, Hook Wars, Chaos Run, Wippenwerk) can be left out of random draws. */
 export function ClassicToggle({ value, onChange }: { value: boolean; onChange: (value: boolean) => void }) {
   return <label className="settings-checkbox">
-    <span>{FIRST_GEN_LABEL}</span>
-    <input type="checkbox" checked={value} onChange={event => onChange(event.target.checked)} />
+    <span>{FIRST_GEN_LABEL}<small id="classic-minis-hint">{FIRST_GEN_MINI_IDS.length} ältere Arenen und Läufe mit ziehen</small></span>
+    <input type="checkbox" aria-label={FIRST_GEN_LABEL} aria-describedby="classic-minis-hint" checked={value} onChange={event => onChange(event.target.checked)} />
   </label>;
 }
 

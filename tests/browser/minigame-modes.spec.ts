@@ -28,7 +28,7 @@ test("Beide Minispielmodi sind in der Lobby konfigurierbar", async ({ page }, te
   await selectEntryCharacter(page, "Morty Smith");
   await page.getByRole("button", { name: "Neuen Raum erstellen" }).click();
   await selectLobbyGame(page, "roll-it-up");
-  await expect(page.getByRole("checkbox", {name:"1st Generation Minigames",exact:true})).toBeVisible();
+  await expect(page.getByRole("checkbox", {name:"Klassische Minispiele",exact:true})).toBeVisible();
   await expect(page.locator(".lobby-settings select")).toHaveCount(1);
   await expect(page.locator(".lobby-settings p")).toHaveCount(0);
   await selectLobbyGame(page, "free-minigame");

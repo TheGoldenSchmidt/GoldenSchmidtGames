@@ -1,17 +1,13 @@
 # Minispiele: Stand und offene Arbeit
 
-Architektur/Abweichungen: [Konzept](konzept.md). Ausgangsregeln: [Spezifikation](spezifikation.md). Bei relevanten Änderungen nachführen; erledigte Phasen und Rückmeldungen bleiben in der Git-Historie.
+Architektur und gültige Regeln: [Konzept](konzept.md). Ausgangsregeln: [Spezifikation](spezifikation.md). Erledigtes steht in der Git-Historie.
 
 ## Implementiert
 
-Match-Framework, Touch-Steuerung, Bots/Übung, Party-/Wettbewerbsanbindung und beide Hostingadapter. Spiele: `MATCH_IDS` in `shared/matches/framework.ts`; Gruppen/Zufallspool: `shared/minigameCatalog.ts`.
-
-- Ursprüngliche Match-Spiele plus Turmsicht, Hindernis-Parcours und Standhaft; jeder Parcours-Lauf ist ein eigenständiges Minispiel mit eigenem Eintrag in Auswahl und Zufallspool (Nov. 2026).
-- Neu (Nov. 2026): Tower Tumble – Survival, Neon Racer (Hochformat, Lenkrad/Pedale), Neon Racer – Kippen (Querformat, Bewegungssteuerung), Schneeballschlacht (3D). Regeln/Entscheidungen im [Konzept](konzept.md#dokumentierte-abweichungen).
-- Erste Generation: 14 klassische Arenen, Hook Wars, Chaos Run und Wippenwerk; weiter direkt wählbar.
-- Proberaum: lokale Übungsinsel mit neun Stationen, Pause/Reset, Figurenwahl und Animationsvorschau; kein Minispiel-/Pool-Eintrag.
-- Unity-Fassungen (Nov. 2026): Parcours-Probelevel, Floor is Lava, Sumo Smash, Bumper Mayhem, Bomb Arena, Schneeballschlacht, Tower Tumble (+ Survival), Türenlotto, Kreiselkurs, Standhaft und Tank Trouble gegen Bots in einem gemeinsamen Unity-WebGL-Build unter „Frei ausprobieren“; kein Pool-/Raumeintrag. Reihenfolge der weiteren Umstellung: [Unity-Minispiele](../../UnityGames.md#reihenfolge-der-umstellung).
-- 3D-Match-Szenen mit Canvas-Rückfall. Figurenpipeline: [Skelettfiguren](figuren-rigged.md).
+- Match-Framework, Touch-Steuerung, Bots/Übung, Party-/Wettbewerbsanbindung und beide Hostingadapter. Spiele: `MATCH_IDS` in `shared/matches/framework.ts`; Pool und Spielfamilien: `shared/minigameCatalog.ts`; gültige Regeln: [Konzept](konzept.md#gültige-regeln-je-spiel).
+- Erste Generation (14 klassische Arenen, Hook Wars, Chaos Run, Wippenwerk) weiter direkt wählbar und abschaltbar.
+- Proberaum: lokale Übungsinsel, kein Pool-Eintrag. Unity-Fassungen: [Unity-Minispiele](../../UnityGames.md).
+- 3D-Match-Szenen mit Canvas-Rückfall; Figuren: [Skelettfiguren](figuren-rigged.md).
 
 **Implementiert ist keine Abnahme auf echten Handys.**
 
@@ -20,7 +16,7 @@ Match-Framework, Touch-Steuerung, Bots/Übung, Party-/Wettbewerbsanbindung und b
 | Thema | Nächster Schritt |
 | --- | --- |
 | Echte Geräte | Android/iPhone, möglichst älteres Gerät, Node und Handy-Host bis sechs Geräte nach [Gerätetest](geraetetest.md) prüfen. |
-| Unity-Umstellung | Rückmeldung zu Tower Tumble – Survival, Türenlotto, Kreiselkurs, Standhaft und Tank Trouble auf echten Handys einholen, dann die Liste in [Unity-Minispiele](../../UnityGames.md#reihenfolge-der-umstellung) weiter abarbeiten. |
+| Unity-Umstellung | Rückmeldungen auf echten Handys einholen, dann die Reihenfolge in [Unity-Minispiele](../../UnityGames.md#spiele-und-stand) weiter abarbeiten. |
 | Handy-Hosting | `nearby.spec.ts` mit Match-Spielen in WebRTC-fähiger Umgebung prüfen. Frühere Cloud-Grenzen sind kein aktueller Laufbeleg. CI nur auf ausdrücklichen Wunsch. |
 | Tower Tumble | Hohe Türme, Pfeilsteuerung und Leistung auf Handy-Host/Render Free messen. Bots nur zum Üben. |
 | Kamera/Balance | Klettern, Balkentreffer, Sprung/Hechten, Lava-Etagen/Schubser, kleine Figuren, Light-Trails-Lenkung, Quick-Draw-Fairness und Funklatenz beurteilen. |

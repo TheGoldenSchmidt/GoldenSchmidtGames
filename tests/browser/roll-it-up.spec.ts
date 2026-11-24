@@ -105,7 +105,7 @@ test("Ergebnisse bleiben bis zur Bestätigung aller Teilnehmer sichtbar",async({
  try{
   for(const id of session.ids)await session.action({type:"ready"},id);
   for(const id of session.ids)if((await session.state()).partyGame!.phase==="mini-play")await session.action({type:"finish"},id);
-  await page.getByRole("button",{name:"Ergebnis bestätigen",exact:true}).tap();
+  await page.getByRole("button",{name:"Weiter zur Bauschale",exact:true}).tap();
   await expect(page.getByRole("button",{name:"Bestätigt",exact:true})).toBeDisabled();
   expect((await session.state()).partyGame!.phase).toBe("mini-result");
   await page.reload();

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { duelTargets, MINIS, type PartyAction, type PartyGame } from "../../shared/party";
 import { CharacterAvatar } from "./CharacterAvatar";
+import { ResultConfirm } from "./PartyMiniViews";
 
 const STAKES = [1, 2, 3, 5, 10];
 const name = (game: PartyGame, id: string) => game.players.find(p => p.id === id)?.name ?? "";
@@ -35,19 +36,8 @@ export function DuelChallenge({ game, send }: { game: PartyGame; send: (action: 
   </div>;
 }
 
-/** Who duels whom for how much; shown on the intro and above the running match. */
-export function DuelHeadline({ game, viewer }: { game: PartyGame; viewer: string }) {
-  const d = game.duel;
-  if (!d) return null;
-  const duelist = viewer === d.challenger || viewer === d.opponent;
-  return <p className="party-duel-headline">
-    <strong>{name(game, d.challenger)} gegen {name(game, d.opponent)}</strong>
-    <span>Pott {d.stake * 2} Münzen · {duelist ? "ihr zwei spielt, alle anderen schauen zu" : "du schaust live zu"}</span>
-  </p>;
-}
-
 /** Duel result: the winner takes the pot; a draw returns the stakes. */
-export function DuelResult({ game, viewer, canAct, busy, send }: { game: PartyGame; viewer: string; canAct: boolean; busy: boolean; send: (action: PartyAction) => void }) {
+export function DuelResult({ game, viewer, busy, send }: { game: PartyGame; viewer: string; busy: boolean; send: (action: PartyAction) => void }) {
   const d = game.duel!, winner = d.winner ? game.players.find(p => p.id === d.winner) : undefined;
   return <div className="party-mini-results party-duel-result">
     <h1>{winner ? (winner.id === viewer ? "Duell gewonnen!" : `${winner.name} gewinnt!`) : "Unentschieden"}</h1>
@@ -63,7 +53,6 @@ export function DuelResult({ game, viewer, canAct, busy, send }: { game: PartyGa
         </li>;
       })}
     </ol>
-    {canAct ? <button className="button button--primary button--wide" disabled={busy} onClick={() => send({ type: "next" })}>Weiter auf der Insel</button>
-      : <p className="party-wait">{name(game, d.challenger)} bringt euch gleich zurück zur Insel.</p>}
+    <ResultConfirm game={game} viewer={viewer} busy={busy} send={send} label="Weiter auf der Insel" />
   </div>;
 }

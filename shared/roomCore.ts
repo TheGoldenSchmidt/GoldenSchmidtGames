@@ -2,7 +2,7 @@ import { getGame, isPartyMode } from "./games";
 import { checkMinigameSetup, isMinigameMode, minigameOptions, type MinigameOptions } from "./minigameModes";
 import { isPlayableMini, miniPool, type PlayableMiniId } from "./minigameCatalog";
 import { MATCH_MODULES, publicMatch, type MatchId } from "./matches/framework";
-import { applyPartyAction, applyPartyControl, createPartyGame, neutralizePartyInputs, partyOptions, publicParty, selectPartyTestMini, shiftPartyClock, startPartyTestDuel, tickParty, type PartyAction, type PartyOptions } from "./party";
+import { applyPartyAction, applyPartyControl, createPartyGame, neutralizePartyInputs, PARTY_DEFAULTS, partyOptions, publicParty, selectPartyTestMini, shiftPartyClock, startPartyTestDuel, tickParty, type PartyAction, type PartyOptions } from "./party";
 import { CHARACTERS, characterId, isCharacterId } from "./characters";
 import { PartyBotDriver } from "./partyBots";
 import { publicArena, type ArenaInput } from "./partyArena";
@@ -317,7 +317,7 @@ hub.onPeer((socket) => {
     if (!id) return callback({ok:false,error:"Ungültige Spieler-ID."});
     const players:Player[]=[{id,name:cleanName(payload.name,"Gast"),connected:true,ready:false,score:0,characterId:payload.characterId}];
     for(let i=0;i<payload.bots!;i++)players.push({id:`bot-${randomUUID()}`,name:`Inselbot ${i+1}`,connected:true,ready:true,score:0,bot:true,characterId:CHARACTERS[randomInt(CHARACTERS.length)].id});
-    const room:RoomState={code,hostId:id,players,phase:"lobby",config:{gameId:mode,playerCount:players.length,party:partyOptions({rounds:5})},partyTest:{seed:payload.seed!}};
+    const room:RoomState={code,hostId:id,players,phase:"lobby",config:{gameId:mode,playerCount:players.length,party:partyOptions({rounds:PARTY_DEFAULTS.rounds})},partyTest:{seed:payload.seed!}};
     registerRoom(room);enterRoom(socket.id,room,id);callback({ok:true,data:publicRoom(room,id)});
   });
   withPayload("room:character",(payload:{characterId?:unknown},callback:(ack:Ack<RoomState>)=>void)=>{
@@ -527,7 +527,7 @@ hub.onPeer((socket) => {
       // Reject settings that could not start, so a room never fails at its start signal.
       try {
         if (minis && isMinigameMode(game.id)) checkMinigameSetup(game.id, minis, playerCount);
-        else if (isPartyMode(game.id) && !miniPool(playerCount, options.classic ?? true).length) throw new Error("Ohne 1st Generation Minigames gibt es für diese Spielerzahl noch kein passendes Spiel.");
+        else if (isPartyMode(game.id) && !miniPool(playerCount, options.classic ?? true).length) throw new Error("Ohne klassische Minispiele gibt es für diese Spielerzahl noch kein passendes Spiel.");
       } catch (error) { return callback({ok:false,error:error instanceof Error ? error.message : "Ungültige Minispiel-Einstellungen."}); }
       room.config = {
         gameId: game.id,

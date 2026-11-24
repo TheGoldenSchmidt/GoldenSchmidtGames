@@ -142,7 +142,8 @@ export const snowball: MatchModule<SnowGame> = {
   id: "snowball",
   meta: {
     name: "Schneeballschlacht", seconds: SB.maxMs / 1000 + 2, players: [2, 3, 4, 5, 6], hz: 20,
-    instruction: "Schneeballschlacht in einer kleinen Winterarena. Du trägst höchstens zwei Schneebälle: Tippe „Formen“ und bleib kurz stehen, oder lauf über einen Schneehaufen. Tippe rechts, um auf den nächsten Gegner in Sicht zu werfen, oder ziehe zum Zielen und lass los; der Wurf rastet auf einen Gegner nahe der Zielrichtung ein (markiert). Mauern und Bäume halten Bälle auf. Jeder Treffer macht dich 10 % langsamer, nach drei Treffern bist du ein Schneemann und raus. Wer zuletzt übrig ist, gewinnt; nach zwei Minuten gewinnt, wer am wenigsten getroffen wurde.",
+    instruction: "Forme Schneebälle und triff die anderen – nach drei Treffern bist du ein Schneemann. Wer zuletzt übrig ist, gewinnt.",
+    rules: "Schneeballschlacht in einer kleinen Winterarena. Du trägst höchstens zwei Schneebälle: Tippe „Formen“ und bleib kurz stehen, oder lauf über einen Schneehaufen. Tippe rechts, um auf den nächsten Gegner in Sicht zu werfen, oder ziehe zum Zielen und lass los; der Wurf rastet auf einen Gegner nahe der Zielrichtung ein (markiert). Mauern und Bäume halten Bälle auf. Jeder Treffer macht dich 10 % langsamer, nach drei Treffern bist du ein Schneemann und raus. Wer zuletzt übrig ist, gewinnt; nach zwei Minuten gewinnt, wer am wenigsten getroffen wurde.",
     controls: "Links laufen (Kamera-Richtung) · rechts tippen = Wurf auf den Nächsten, ziehen = zielen · „Formen“ tippen und stehen bleiben.",
     look: { icon: "❄", action: "Formen, zielen, treffen", hint: "Stick laufen · rechts tippen oder ziehen · Formen tippen", goal: "Als Letzter kein Schneemann" }
   },

@@ -36,7 +36,7 @@ export interface RingGame {
   nextId?: number;
 }
 export interface RingRules {
-  id: string; name: string; instruction: string; controls: string; look: MatchModule["meta"]["look"];
+  id: string; name: string; instruction: string; rules: string; controls: string; look: MatchModule["meta"]["look"];
   radius: number; minRadius: number; shrinkFrom: number; shrinkTo: number;
   body: number; lives: number; respawn: number; shield: number; credit: number;
   regular: number; suddenMax: number; suddenRadius: number;
@@ -120,7 +120,7 @@ function decide(s: MatchState<RingGame>) {
 export function ringModule(rules: RingRules): MatchModule<RingGame> {
   return {
     id: rules.id,
-    meta: { name: rules.name, seconds: (rules.regular + rules.suddenMax) / 1000 + 2, players: [2, 3, 4, 5, 6], hz: 20, instruction: rules.instruction, controls: rules.controls, look: rules.look },
+    meta: { name: rules.name, seconds: (rules.regular + rules.suddenMax) / 1000 + 2, players: [2, 3, 4, 5, 6], hz: 20, instruction: rules.instruction, rules: rules.rules, controls: rules.controls, look: rules.look },
     create(s) {
       const count = s.players.length;
       s.game = { fighters: {}, radius: rules.radius, obstacles: [], decided: false };

@@ -84,7 +84,7 @@ export function HomeScreen({profile, signedIn, showVersion, online, onProfile, o
       </figure>
       <div className="expedition-controls">
         <nav className="expedition-actions" aria-label="Spielmodus wählen">
-          <AdventureChoice title="Lokal spielen" detail="Zusammen an einem Gerät" icon="group" onClick={onLocal}/>
+          <AdventureChoice title="Lokal spielen" detail="Mit Bots oder an einem Handy" icon="group" onClick={onLocal}/>
           <AdventureChoice title="Online spielen" detail="Jeder am eigenen Gerät" icon="globe" violet onClick={onOnline}/>
         </nav>
         <button className="iw-slab iw-slab--stone expedition-universe" onClick={onUniverse}>

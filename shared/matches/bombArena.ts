@@ -184,7 +184,8 @@ export const bombArena: MatchModule<BombGame> = {
   id: "bombs",
   meta: {
     name: "Bomb Arena", seconds: (BA.rounds * (BA.roundMax + BA.pause) + BA.suddenMax + BA.pause) / 1000 + 2, players: [2, 3, 4, 5, 6], hz: 20,
-    instruction: "Lauf mit dem Stick durch die Bombenfabrik und lege mit dem Knopf Bomben. Nach 2 Sekunden explodieren sie kreuzförmig, sprengen Kisten und zünden andere Bomben. Bomben und andere Spieler versperren den Weg – wer nicht aufpasst, wird eingesperrt. Du hast 2 Leben pro Durchgang. Ein gegnerischer K.o. bringt +2, der Durchgangssieg +3. Ab Sekunde 25 schließt sich die Arena. Zwei Durchgänge; bei Gleichstand entscheidet Sudden Death.",
+    instruction: "Lege Bomben, sprenge Kisten, sammle Extras und erwische die anderen. Jeder hat 2 Leben – wer zuletzt steht, holt den Durchgang.",
+    rules: "Lauf mit dem Stick durch die Bombenfabrik und lege mit dem Knopf Bomben. Nach 2 Sekunden explodieren sie kreuzförmig, sprengen Kisten und zünden andere Bomben. Bomben und andere Spieler versperren den Weg – wer nicht aufpasst, wird eingesperrt. Du hast 2 Leben pro Durchgang. Ein gegnerischer K.o. bringt +2, der Durchgangssieg +3. Ab Sekunde 25 schließt sich die Arena. Zwei Durchgänge; bei Gleichstand entscheidet Sudden Death.",
     controls: "Stick: laufen · Knopf: Bombe legen.",
     look: { icon: "✹", action: "Sprenge dir den Weg frei", hint: "Stick laufen · Knopf Bombe", goal: "K.o. +2 · Durchgangssieg +3" }
   },

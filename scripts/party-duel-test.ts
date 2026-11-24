@@ -58,8 +58,9 @@ assert.equal(partyBoard({ mode: "roll-it-up" }).some(f => f.type === "duel"), fa
   assert.equal(g.players.find(p => p.id === challenger.id)!.coins, 7);
   assert.ok(partyMiniResults(g).every(r => r.coins === 0), "Keine 10/4/2-Münzen im Duell");
   assert.equal(g.players.find(p => p.id === other.id)!.wins, 0, "Duelle zählen nicht als Minispielsieg");
-  assert.throws(() => act(g, other.id, { type: "next" }, now), /nicht am Zug/);
-  g = act(g, challenger.id, { type: "next" }, now += 100);
+  // Everyone confirms the duel result; the turn continues once the last human did.
+  for (const p of g.players.slice(0, -1)) { g = act(g, p.id, { type: "next" }, now += 100); assert.equal(g.phase, "mini-result"); }
+  g = act(g, g.players.at(-1)!.id, { type: "next" }, now += 100);
   assert.equal(g.phase, "summary"); assert.equal(g.duel, undefined); assert.equal(g.mini, undefined);
   assert.match(g.log.at(-1)!, /gewinnt das Duell/);
 }

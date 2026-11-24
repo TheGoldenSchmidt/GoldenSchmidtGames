@@ -11,6 +11,7 @@ for (const game of UNITY_GAMES) test(`Unity-Test ${game.name}: Eintrag, Start im
   await page.addInitScript(() => document.addEventListener("securitypolicyviolation", e => console.log(`CSP-VERSTOSS ${e.violatedDirective} ${e.blockedURI}`)));
   await page.goto("/");
   await page.getByRole("button", { name: /Lokal spielen/ }).tap();
+  await page.getByRole("button", { name: /^Unity-Minispiele/ }).tap();
   // Name plus the start of the description: "Tower Tumble" must not also match "Tower Tumble – Survival".
   const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const entry = page.getByRole("button", { name: new RegExp(`^${escape(game.name)} ${escape(game.text.split(" ")[0])}`) });

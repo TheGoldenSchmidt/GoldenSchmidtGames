@@ -1,6 +1,6 @@
 ---
 name: documentation-audit
-description: Prüfe Projektdokumentation, Architektur und Codex-Workflow gegen Code, Tests und CI bei angeforderten oder regelmäßigen Audits sowie größeren Meilensteinen; kein Voll-Audit für kleine Änderungen.
+description: Prüfe Projektdokumentation, Architektur und Agenten-Workflow gegen Code, Tests und CI bei angeforderten oder regelmäßigen Audits sowie größeren Meilensteinen; kein Voll-Audit für kleine Änderungen.
 ---
 
 # Documentation Audit

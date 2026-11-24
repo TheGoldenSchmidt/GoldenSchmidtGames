@@ -142,7 +142,8 @@ export const arrowMasters: MatchModule<ArrowGame> = {
   id: "arrows",
   meta: {
     name: "Arrow Masters", seconds: (AM.rounds + 1) * (AM.aimMs + AM.flightMs + AM.resultMs) / 1000 + 2, players: [2, 3, 4, 5, 6], hz: 10,
-    instruction: "Ziehe auf der Zielfläche wie an einer Bogensehne: Richtung und Länge bestimmen Winkel und Stärke. Nach 10 Sekunden fliegen alle Pfeile gleichzeitig, der Wind wechselt jede Runde. Gegnertreffer +2, Besiegen +1, Zielscheiben +1. Je einmal pro Partie wählst du vor dem Schuss einen Dreifachpfeil (drei Pfeile im Fächer) oder einen schweren Pfeil (fliegt unbeirrt vom Wind, ein Treffer kostet zwei Trefferpunkte). Jeder hat 3 Trefferpunkte pro Runde und steht jede Runde an einem neuen Platz. Fünf Runden; bei Gleichstand entscheidet ein Präzisionsschuss auf die Scheibe.",
+    instruction: "Spann den Bogen und triff Gegner und Zielscheiben – der Wind wechselt jede Runde. Nach fünf Runden gewinnen die meisten Punkte.",
+    rules: "Ziehe auf der Zielfläche wie an einer Bogensehne: Richtung und Länge bestimmen Winkel und Stärke. Nach 10 Sekunden fliegen alle Pfeile gleichzeitig, der Wind wechselt jede Runde. Gegnertreffer +2, Besiegen +1, Zielscheiben +1. Je einmal pro Partie wählst du vor dem Schuss einen Dreifachpfeil (drei Pfeile im Fächer) oder einen schweren Pfeil (fliegt unbeirrt vom Wind, ein Treffer kostet zwei Trefferpunkte). Jeder hat 3 Trefferpunkte pro Runde und steht jede Runde an einem neuen Platz. Fünf Runden; bei Gleichstand entscheidet ein Präzisionsschuss auf die Scheibe.",
     controls: "Ziehen = spannen und zielen · der Schuss löst automatisch aus.",
     look: { icon: "➶", action: "Spannen, zielen, treffen", hint: "Ziehen zum Zielen · Schuss nach 10 s", goal: "Die meisten Punkte nach 5 Runden" }
   },

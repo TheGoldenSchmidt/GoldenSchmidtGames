@@ -30,7 +30,7 @@ test("Lobby: neue Spiele, 1st-Generation-Checkbox und 320 Pixel ohne Überlauf",
   await selectEntryCharacter(page, "Morty Smith");
   await page.getByRole("button", { name: "Neuen Raum erstellen" }).click();
   await selectLobbyGame(page, "goldenschmidt");
-  const classic = page.getByRole("checkbox", { name: /1st Generation Minigames/ });
+  const classic = page.getByRole("checkbox", { name: /Klassische Minispiele/ });
   await expect(classic).toBeChecked();
   await classic.tap();
   await expect(classic).not.toBeChecked();
@@ -40,7 +40,7 @@ test("Lobby: neue Spiele, 1st-Generation-Checkbox und 320 Pixel ohne Überlauf",
   await page.getByRole("combobox", { name: "Minispiel", exact: true }).selectOption("quickdraw");
   await expect(page.getByRole("combobox", { name: "Minispiel", exact: true })).toHaveValue("quickdraw");
   await selectLobbyGame(page, "party");
-  await expect(page.getByRole("checkbox", { name: /1st Generation Minigames/ })).toBeChecked();
+  await expect(page.getByRole("checkbox", { name: /Klassische Minispiele/ })).toBeChecked();
   await page.setViewportSize({ width: 320, height: 760 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({ path: testInfo.outputPath("lobby-classic-320.png"), fullPage: true });

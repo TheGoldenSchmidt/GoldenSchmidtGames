@@ -100,7 +100,8 @@ export const chaosRun: MatchModule<RunGame> = {
   id: "chaosrun",
   meta: {
     name: "Chaos Run", seconds: CR.maxMs / 1000 + 1, players: [2, 3, 4, 5, 6], hz: 20,
-    instruction: "Deine Figur rennt von selbst. Tippe zum Springen, halte länger für einen höheren Sprung, wische nach unten zum Rutschen. Weiche Lücken, Hämmern, Wänden und niedrigen Balken aus; Brücken stürzen hinter dir ein. Nach einem Sturz geht es am letzten Checkpoint weiter. Wer zuerst im Ziel ist, gewinnt; nach 90 Sekunden zählt der weiteste Fortschritt.",
+    instruction: "Deine Figur rennt von selbst: Spring über Lücken und rutsch unter Balken durch. Wer zuerst im Ziel ist, gewinnt.",
+    rules: "Deine Figur rennt von selbst. Tippe zum Springen, halte länger für einen höheren Sprung, wische nach unten zum Rutschen. Weiche Lücken, Hämmern, Wänden und niedrigen Balken aus; Brücken stürzen hinter dir ein. Nach einem Sturz geht es am letzten Checkpoint weiter. Wer zuerst im Ziel ist, gewinnt; nach 90 Sekunden zählt der weiteste Fortschritt.",
     controls: "Tippen springen · halten höher · nach unten wischen rutschen.",
     look: { icon: "⚑", action: "Durch den Hindernisparcours", hint: "Tippen springen · runter wischen rutschen", goal: "Zuerst im Ziel" }
   },

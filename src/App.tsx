@@ -11,7 +11,7 @@ import { socket, useTableTransport } from "./lib/socket";
 import { clearActiveSession, loadActiveSession, loadLastHost, storeActiveSession, type ActiveSession } from "./lib/roomSession";
 import { HomeScreen } from "./screens/HomeScreen";
 import { IslandWorld } from "./components/IslandWorld";
-import { LocalSetupScreen } from "./screens/LocalSetupScreen";
+import { LocalSetupScreen, type LocalSection } from "./screens/LocalSetupScreen";
 import { OnlineEntryScreen, RoomEntryForm } from "./screens/OnlineEntryScreen";
 import { QwixxGameScreen } from "./screens/QwixxGameScreen";
 import { DurakGameScreen } from "./screens/DurakGameScreen";
@@ -23,6 +23,9 @@ import { playMenuClick, setSoundEnabled } from "./matches/sfx";
 import { GameIntro } from "./components/GameIntro";
 import type {CharacterId} from "../shared/characters";
 import type { UnityGameId } from "./unityGames";
+import { useBackStep } from "./lib/backNavigation";
+import { useWakeLock } from "./lib/wakeLock";
+import { LeaveGameDialog } from "./components/LeaveGameDialog";
 
 const PracticeWorldScreen=lazy(()=>import("./screens/PracticeWorldScreen").then(m=>({default:m.PracticeWorldScreen})));
 const UnityGameScreen=lazy(()=>import("./screens/UnityGameScreen").then(m=>({default:m.UnityGameScreen})));
@@ -59,6 +62,9 @@ export default function App() {
   const [resumeError,setResumeError]=useState("");
   const [canResumeParty,setCanResumeParty]=useState(false);
   const [lobbyError,setLobbyError]=useState("");
+  const [leaveAsk,setLeaveAsk]=useState(false);
+  /** Which list „Lokal spielen“ shows; kept when returning from a Unity game. */
+  const [localSection,setLocalSection]=useState<LocalSection>("games");
 
   function acceptAccount(next?: Account) {
     accountRevision.current++;
@@ -304,6 +310,26 @@ export default function App() {
     socket.connect();socket.timeout(8000).emit("room:join",{code:saved.code,playerId:profile.id,name:profile.username,partyToken:saved.partyToken},(err:Error|null,response:{ok:boolean;data?:RoomState;error?:string})=>{if(err||!response.ok||!response.data){setCanResumeParty(false);if(!err)localStorage.removeItem(PARTY_ONLINE_SAVE);setResumeError(response?.error??"Der Raum ist nicht erreichbar. Versuche es erneut.");return;}keepSession(response.data);openOnlineGame(response.data, false);});
   }
 
+  const inGame = view === "game-local" || view === "game-online";
+  // Keep the screen on in lobbies and games (other players' turns, hosting phone).
+  useWakeLock(inGame || view === "room" || view === "practice-world" || view === "unity");
+  useEffect(() => { if (!inGame) setLeaveAsk(false); }, [inGame]);
+  // Android back gesture: the same step as the visible back button; in a game first ask.
+  useBackStep(() => {
+    if (showProfile) return setShowProfile(false);
+    switch (view) {
+      case "local-setup": case "online-entry": case "richs-universe": return setView("home");
+      case "unity": case "practice-world": return setView("local-setup");
+      case "host": case "join": case "test": socket.disconnect(); return setView(view === "test" ? "local-setup" : "online-entry");
+      case "room": return leaveOnline();
+      case "game-local": case "game-online": return setLeaveAsk(true);
+    }
+  }, view !== "home" || showProfile);
+  function leaveGame() {
+    setLeaveAsk(false);
+    if (view === "game-online") leaveOnline(); else setView("home");
+  }
+
   if (session && reconnecting) return <main className="page iw-menu"><IslandWorld /><section className="page__content party-connection iw-card">
     <h2 className="iw-plank iw-card__title" role="status">Verbindung wird wiederhergestellt …</h2>
     {session.nearby?.role === "guest" && (needsPairing
@@ -325,7 +351,7 @@ export default function App() {
           showVersion={canDevelop(account?.role)}
           online={online}
           onProfile={() => setShowProfile(true)}
-          onLocal={() => setView("local-setup")}
+          onLocal={() => { setLocalSection("games"); setView("local-setup"); }}
           onOnline={() => {useTableTransport(); setView("online-entry");}}
           onUniverse={() => setView("richs-universe")}
           onResumeHost={loadLastHost(profile.id)?resumeHost:undefined}
@@ -338,6 +364,8 @@ export default function App() {
       {view === "unity" && <Suspense fallback={<p role="status">Unity-Test wird geladen …</p>}><UnityGameScreen game={unityGame} characterId={profile.characterId} onExit={()=>setView("local-setup")}/></Suspense>}
       {view === "local-setup" && (
         <LocalSetupScreen
+          section={localSection}
+          onSection={setLocalSection}
           onPractice={canDevelop(account?.role) ? openPractice : undefined}
           onUnity={id => { setUnityGame(id); setView("unity"); }}
           onUnityRollItUp={canDevelop(account?.role) ? () => { setUnityBoard(true); setTestGameId("roll-it-up"); setView("test"); } : undefined}
@@ -406,6 +434,7 @@ export default function App() {
         <AccountDialog account={account} profile={profile} onAccount={acceptAccount} onGuestSave={updateProfile} onClose={() => setShowProfile(false)} />
       )}
       {accountError && <p className="error-message account-sync-error" role="alert">{accountError}</p>}
+      {leaveAsk && inGame && <LeaveGameDialog online={view === "game-online"} onStay={() => setLeaveAsk(false)} onLeave={leaveGame} />}
     </div>
   );
 }

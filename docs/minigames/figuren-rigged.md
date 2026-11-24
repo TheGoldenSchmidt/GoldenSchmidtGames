@@ -29,7 +29,7 @@ Ergebnis in `public/models/` (im PWA-Cache):
 | --- | --- |
 | `body_m.glb`, `body_f.glb` | gehäutete Körper ohne Texturen, mit Kleidungsbereichen je Eckpunkt (≈ 720 KB je Körper) |
 | `hair_*.glb` | sechs Frisuren/Bart am selben Skelett (55–224 KB) |
-| `anims.glb` | benötigte Animationen auf einem nackten Skelett (≈ 750 KB): dazu seit Nov. 2026 Klettern (`ClimbUp_1m`, daraus beim Laden auch die Hängepose), Hocken (stehend und gehend) und Fahren (`Driving_Loop` für Bumper Mayhem); das Skelett trägt auch Bolt und Glubschi |
+| `anims.glb` | benötigte Animationen auf einem nackten Skelett (≈ 750 KB): dazu Klettern (`ClimbUp_1m`, daraus beim Laden auch die Hängepose), Hocken (stehend und gehend) und Fahren (`Driving_Loop` für Bumper Mayhem); das Skelett trägt auch Bolt und Glubschi |
 | `tex/body_<m|f>_<light|dark>.jpg` | Haut/Kleidung 512 px |
 | `tex/outfit_<m|f>.png` | Maske der Kleidung (grau, ungesättigt) |
 | `tex/hair_1.jpg`, `hair_2.jpg`, `eye.jpg` | Haar (graustufig) und Augen |

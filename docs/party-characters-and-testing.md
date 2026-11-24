@@ -4,7 +4,7 @@ Entscheidungen: [Freigabe](approved-character-design.md); Skelettfiguren: [Pipel
 
 ## Bot-Test
 
-**Lokal spielen → Allein mit Bots** startet Brett-/Minispielmodi mit 1–5 Bots auf diesem Handy, nach vollständigem Laden offline. Figur/Rundenzahl wählen, **Ich bin bereit**; Bots nutzen dieselben Aktionen/Eingaben wie Menschen. Andere Personen können nicht beitreten; Wiederaufnahme über **Handy-Tisch fortsetzen**.
+**Lokal spielen → Allein mit Bots** startet Brett-/Minispielmodi mit 1–5 Bots auf diesem Handy, nach vollständigem Laden offline. Figur/Rundenzahl wählen, **Ich bin bereit**; Bots nutzen dieselben Aktionen/Eingaben wie Menschen. Auf dem Brett sparen sie auf Trophäen, nutzen Kompass und Münzangel und wählen Wege zum Trophäenstand bzw. zur nächsten fehlenden Station. Andere Personen können nicht beitreten; Wiederaufnahme über **Handy-Tisch fortsetzen**.
 
 Brett-Testwerkzeuge: Minispielwahl, Wiederholung desselben Arenaaufbaus, Bot-Züge überspringen, Neustart mit gleichem Startwert. Eigenständige gewertete Minispielmodi bieten keine Werkzeuge zum Überspringen. Normale Mehrspielerräume erhalten keine Testwerkzeuge. Startwert bestimmt Zufallsfolgen, nicht die Wirkung unterschiedlicher Eingaben.
 
@@ -12,7 +12,7 @@ Auswahl im Gastprofil speichern, in Lobby änderbar; Wechsel setzt Bereitschaft 
 
 ## Klassische Modelle
 
-Aus `C:/Users/PCUser/PC_Fighters/packages/engine/src/data/figures/` unverändert kopiert; Herkunfts-Hashes in `src/figures/data/approved-sources.json`. Register: `shared/characters.ts`. Kein Laufzeitzugriff auf PC_Fighters, GLB-Exporter oder importierte Kartenspielregeln. Neue Modelle nur mit Freigabe.
+Aus dem Projekt PC_Fighters (`packages/engine/src/data/figures/`) unverändert kopiert; Herkunfts-Hashes in `src/figures/data/approved-sources.json`. Register: `shared/characters.ts`. Kein Laufzeitzugriff auf PC_Fighters, GLB-Exporter oder importierte Kartenspielregeln. Neue Modelle nur mit Freigabe.
 
 `CardFigure.ts`/`AnimationPlayer.ts` stammen aus `packages/client/src/figures/`, Typen lokal angepasst. `src/figures/resolve.ts` verbindet Basis/Varianten: Palette, Teile/Nachkommen, Anschlüsse, Animationen (Profil vor Basis vor Variante); fehlende Clips erben Standards.
 
