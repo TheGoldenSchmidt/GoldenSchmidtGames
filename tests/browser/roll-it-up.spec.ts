@@ -41,7 +41,7 @@ test("Bauschale: Kaufbestätigung und Wegvorschau folgen dem tatsächlichen Zug"
       const g=(await session.state()).partyGame!,p=activePartyPlayer(g);
       if(g.phase==="moving"){await page.waitForTimeout(150);continue;}
       if(p.id===viewer&&g.phase==="supply"&&!purchased){
-        const station=stationAt(p.position)!;
+        const station=stationAt(g,p.position)!;
         await expect(page.locator(".roll-purchase")).toContainText(`${station.price} Münzen`);
         await expect(page.locator(".roll-purchase")).not.toContainText("Danach");
         await expect(page.locator(".roll-set")).toContainText(`${p.supplies?.length??0} / 6`);

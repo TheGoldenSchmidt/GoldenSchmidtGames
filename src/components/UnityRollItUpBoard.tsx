@@ -37,7 +37,7 @@ export function UnityRollItUpBoard({ game, viewer, now, busy, connected, error, 
       if (message.type === "ready") {
         ready.current = true;
         setLoaded(true);
-        post(unityRollBoard());
+        post(unityRollBoard(game));
         post(snapshot());
         post({ type: "visible", on: visible });
       } else if (message.type === "action") {

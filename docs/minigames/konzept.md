@@ -69,7 +69,7 @@ Nur Abweichungen von der [Spezifikation](spezifikation.md); Werte stehen als Kon
 - **Kanten:** Festhalten fängt nur, wenn der Knopf beim Vorbeifallen frisch gedrückt wird (≤320 ms, `PC.grabWindow`); hängend zieht Stick zur Wand oder Springen hoch.
 - **Hindernislänge:** Abschnitte über dem Abgrund sind länger als Sprung + Hechten (≈11 m nötig); `parcours-test.ts` misst das mit der Physik.
 - **Gewundene Strecken:** `Course.route` (achsparallele Abschnitte); Fortschritt, Kontrollpunkte, Bots (`parcoursFrame.ts`) und Kamera folgen dem Weg.
-- **Läufe:** Türenlotto, Kreiselkurs, Glibberflut (Serpentinen-Aufstieg, Glibber 0,2 m/s + 0,003 m/s² ab 3 s), Geisterpfad, Fallklappen, Windkanal (Böen mit 0,8 s Vorwarnung, `windState`), Kletterwand; Wippenwerk gehört zur ersten Generation. **Standhaft:** Sturz = raus, letzter Überlebender bzw. Sturzzeit, höchstens 90 s.
+- **Läufe:** Türenlotto, Kreiselkurs, Glibberflut (Serpentinen-Aufstieg, Glibber 0,2 m/s + 0,003 m/s² ab 3 s), Geisterpfad, Fallklappen, Windkanal (Böen mit 0,8 s Vorwarnung, `windState`), Kletterwand (zwei Wände mit je vier Stufen, Zwischenplateau mit Kontrollpunkt, an der zweiten Wand schmalere und schneller verschwindende Griffe); Wippenwerk gehört zur ersten Generation. **Standhaft:** Sturz = raus, letzter Überlebender bzw. Sturzzeit, höchstens 90 s.
 - Eigene Gameshow-Strecken; kein Nachbau fremder Level oder Figuren.
 
 ## Proberaum und Unity

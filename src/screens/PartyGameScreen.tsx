@@ -1,13 +1,13 @@
 import { FIELD_VISUALS, fieldSymbol } from "../lib/partyFieldVisuals";
 import { Collection, JayspotFinish } from "../components/RollItUp";
 import { RollItUpBoard } from "../components/RollItUpBoard";
-import { fieldName, hasFullSet, JAYSPOT, partyBoard, partyPaths, stationAt } from "../../shared/partyBoard";
+import { fieldName, goalField, hasFullSet, partyBoard, partyPaths, shopFields, stationAt } from "../../shared/partyBoard";
 import { getGame } from "../../shared/games";
 import { MinigameBetting, MinigameResults, MinigameScoreboard } from "../components/MinigameCompetition";
 import {PartyTrophyGoal,PartyCoinReward,type MiniReward} from "../components/PartyProgress";
 import {CharacterAvatar} from "../components/CharacterAvatar";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
-import { activePartyPlayer, type PartyGame, fieldLabel, isFinalStretch, ITEMS, ITEM_IDS, MAX_TROPHIES_PER_VISIT, partyMiniResults, partyStanding, TROPHY_PRICE, TROPHY_SHOPS, type MiniId, type PartyAction } from "../../shared/party";
+import { activePartyPlayer, type PartyGame, fieldLabel, isFinalStretch, ITEMS, ITEM_IDS, MAX_TROPHIES_PER_VISIT, partyMiniResults, partyStanding, TROPHY_PRICE, type MiniId, type PartyAction } from "../../shared/party";
 import { PartyFinalStretchCall, PartyIslandFinale } from "../components/PartyFinale";
 import { NEUTRAL_INPUT, type ArenaInput, type ArenaState } from "../../shared/partyArena";
 import type { MatchInput, MatchState } from "../../shared/matches/types";
@@ -96,13 +96,14 @@ export function PartyGameScreen({profile,initialRoom,onExit,onLobby,unityBoard=f
   const competition=g.competition;
   // Online rooms return to their lobby after the end; leaving the room happens there.
   const over=["finished","aborted"].includes(g.phase);
-  const tray=g.mode==="roll-it-up", board=partyBoard(g), station=tray?stationAt(p.position):undefined;
+  const tray=g.mode==="roll-it-up", board=partyBoard(g), station=tray?stationAt(g,p.position):undefined;
   // Inselparty: the last rounds are marked in the header; their start is announced until the first roll.
   const finalStretch=isFinalStretch(g)&&!competition&&!over,finalCall=Boolean(finalStretch&&g.finalStretch?.round===g.round&&g.turn===0&&g.phase==="turn");
   const turnKey=`${g.round}:${g.turn}`;
   if(turnStart.current.key!==turnKey)turnStart.current={key:turnKey,coins:p.coins,trophies:p.trophies};
   const coinsChanged=p.coins-turnStart.current.coins,trophiesChanged=p.trophies-turnStart.current.trophies;
   const moving=g.phase==="moving"||rolling||travelling,item=selectedItem===undefined?undefined:own.items[selectedItem];
+  const compassTarget=shopFields(g).includes(destination)?destination:shopFields(g)[0];
   const seconds=g.deadline>0?Math.max(0,Math.ceil((g.deadline-now)/1000)):0;
   function send(action:PartyAction) {
     if(lock.current||!socket.connected||g.pausedAt&&action.type!=="resume"&&action.type!=="abort")return;
@@ -134,8 +135,8 @@ export function PartyGameScreen({profile,initialRoom,onExit,onLobby,unityBoard=f
       {g.itemUsed&&canAct&&<p>Dein Item ist eingesetzt. Jetzt wird gewürfelt!</p>}
       {item&&<div className="party-item-confirm">
         {item==="magnet"&&<label>Wem angelst du Münzen ab?<select value={target||g.players.find(player=>player.id!==viewer)?.id} onChange={event=>setTarget(event.target.value)}>{g.players.filter(player=>player.id!==viewer).map(player=><option key={player.id} value={player.id}>{player.name} · {player.coins} Münzen{player.shield?" · Schild aktiv":""}</option>)}</select></label>}
-        {item==="compass"&&<label>Zu welchem Inselmarkt?<select value={destination} onChange={event=>setDestination(Number(event.target.value))}>{TROPHY_SHOPS.map(n=><option key={n} value={n}>Feld {n}{!tray&&g.trophyField===n?" · Trophäenstand":""}</option>)}</select></label>}
-        <button className="button button--secondary button--wide" onClick={()=>send({type:"item",index:selectedItem!,target:target||g.players.find(player=>player.id!==viewer)?.id,destination})}>{ITEMS[item].name} einsetzen</button>
+        {item==="compass"&&<label>Zu welchem Inselmarkt?<select value={compassTarget} onChange={event=>setDestination(Number(event.target.value))}>{shopFields(g).map(n=><option key={n} value={n}>Feld {n}{!tray&&g.trophyField===n?" · Trophäenstand":""}</option>)}</select></label>}
+        <button className="button button--secondary button--wide" onClick={()=>send({type:"item",index:selectedItem!,target:target||g.players.find(player=>player.id!==viewer)?.id,destination:compassTarget})}>{ITEMS[item].name} einsetzen</button>
       </div>}
     </>}
   </fieldset>;
@@ -157,12 +158,12 @@ export function PartyGameScreen({profile,initialRoom,onExit,onLobby,unityBoard=f
         {canAct&&!g.pausedAt&&boardPhase&&<fieldset className="party-controls" disabled={busy||moving}>
           {g.phase==="turn"&&<>
             <div className="party-roll-dock">
-              <div className="party-roll-status"><strong>{p.name}, du bist dran!</strong><small>{moving?(rolling?"Der Würfel fällt …":(tray?"Unterwegs in der Bauschale":"Ab auf die Insel!")):`Zug ${g.turn+1} von ${g.players.length} · danach Minispiel`}</small><small className="party-roll-goal">{tray?(hasFullSet(own)?"Zum Jayspot · Feld 34":`Dein Set · ${own.supplies?.length}/6 Utensilien`):<>★ {own.coins>=TROPHY_PRICE?"Trophäenkauf möglich":`Noch ${TROPHY_PRICE-own.coins} Münzen zur Trophäe`} · Feld {g.trophyField}</>}</small></div>
+              <div className="party-roll-status"><strong>{p.name}, du bist dran!</strong><small>{moving?(rolling?"Der Würfel fällt …":(tray?"Unterwegs in der Bauschale":"Ab auf die Insel!")):`Zug ${g.turn+1} von ${g.players.length} · danach Minispiel`}</small><small className="party-roll-goal">{tray?(hasFullSet(g,own)?"Zum Jayspot · Feld 34":`Dein Set · ${own.supplies?.length}/6 Utensilien`):<>★ {own.coins>=TROPHY_PRICE?"Trophäenkauf möglich":`Noch ${TROPHY_PRICE-own.coins} Münzen zur Trophäe`} · Feld {g.trophyField}</>}</small></div>
               <button className="button button--primary button--wide party-roll-button" onClick={()=>send({type:"roll"})}><span aria-hidden="true">⚄</span>Würfeln & losziehen</button>
             </div>
 
           </>}
-          {g.phase==="path"&&<><h3>Welchen Weg nimmst du?</h3><p>Du hast noch {g.steps} Schritte. {tray?"An Kaufstellen kannst du unterwegs einkaufen.":"Nur dein Zielfeld löst seine Wirkung aus; am Trophäenstand kannst du unterwegs anhalten."}</p><div className="party-path-choices">{partyPaths(g,p).map((n,i)=>{const preview=pathPreview(g,g.steps,n);return <button key={n} onClick={()=>send({type:"path",destination:n})}><strong>{n===JAYSPOT?"Zur Bank":i===0?"Hauptweg":tray?"Hügelweg":"Abenteuerweg"}</strong><span aria-hidden="true">{preview.fields.map((field,index)=><i key={index} style={{backgroundColor:FIELD_VISUALS[board[field].type].color,color:FIELD_VISUALS[board[field].type].ink}}>{fieldSymbol(board[field].type)}</i>)}</span><small>{preview.label} · ab Feld {n}</small></button>;})}</div></>}
+          {g.phase==="path"&&<><h3>Welchen Weg nimmst du?</h3><p>Du hast noch {g.steps} Schritte. {tray?"An Kaufstellen kannst du unterwegs einkaufen.":"Nur dein Zielfeld löst seine Wirkung aus; am Trophäenstand kannst du unterwegs anhalten."}</p><div className="party-path-choices">{partyPaths(g,p).map((n,i)=>{const preview=pathPreview(g,g.steps,n);return <button key={n} onClick={()=>send({type:"path",destination:n})}><strong>{n===goalField(g)?"Zur Bank":i===0?"Hauptweg":tray?"Hügelweg":"Abenteuerweg"}</strong><span aria-hidden="true">{preview.fields.map((field,index)=><i key={index} style={{backgroundColor:FIELD_VISUALS[board[field].type].color,color:FIELD_VISUALS[board[field].type].ink}}>{fieldSymbol(board[field].type)}</i>)}</span><small>{preview.label} · ab Feld {n}</small></button>;})}</div></>}
           {g.phase==="supply"&&station&&<div className="party-special-decision roll-purchase">
             <h3>{station.name}</h3><p>Feld {p.position} · Du hast {p.coins} Münzen.</p>
             <button className="button button--primary button--wide" onClick={()=>send({type:"supply",buy:true})}>{station.name} kaufen · {station.price} Münzen</button>
@@ -196,7 +197,7 @@ export function PartyGameScreen({profile,initialRoom,onExit,onLobby,unityBoard=f
     </div>}
     {panel&&<PartyPanel title={panel==="inventory"?"Dein Inventar":panel==="collection"?(tray?"Dein Set":"Dein Trophäenziel"):panel==="journal"?(tray?"Spielverlauf":"Inselchronik"):"Spielmenü"} onClose={()=>setPanel(undefined)}>
       {panel==="inventory"&&inventory}
-      {panel==="collection"&&(tray?<Collection player={own}/>:<PartyTrophyGoal game={g} viewer={viewer} reward={miniReward}/>)}
+      {panel==="collection"&&(tray?<Collection game={g} player={own}/>:<PartyTrophyGoal game={g} viewer={viewer} reward={miniReward}/>)}
       {panel==="journal"&&<ol className="party-game-log">{g.log.map((line,i)=><li key={i}>{line}</li>)}</ol>}
       {panel==="menu"&&<div className="party-game-options"><MiniLookSettings game={g} host={host||!g.online} busy={busy} send={send}/>{tray&&<button className="button button--secondary" onClick={()=>setPanel("inventory")}>Dein Inventar ansehen</button>}<label><input type="checkbox" checked={sound} onChange={event=>setSound(event.target.checked)}/> Kurze Spieltöne</label><label><input type="checkbox" checked={haptics} onChange={event=>setHaptics(event.target.checked)}/> Vibration, falls unterstützt</label><button className="button button--secondary" onClick={()=>setPanel("journal")}>{tray?"Spielverlauf":"Inselchronik"} öffnen</button>{host&&!["finished","aborted"].includes(g.phase)&&<button className="button button--ghost" disabled={busy} onClick={()=>send({type:"abort"})}>Partie für alle beenden</button>}<button className="button button--ghost" onClick={onExit}>Verlassen</button></div>}
       {error&&<p className="error-message" role="alert">{error}</p>}

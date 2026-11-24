@@ -1,5 +1,5 @@
 import { activePartyPlayer, ITEMS, ITEM_IDS, type Item, type PartyAction, type PartyGame } from "../shared/party";
-import { boardDistances, boardPathTo, boardRoute, FIELD_LABELS, fieldName, hasFullSet, JAYSPOT, partyBoard, partyPaths, stationAt, STATIONS } from "../shared/partyBoard";
+import { boardDistances, boardPathTo, boardRoute, FIELD_LABELS, fieldName, goalField, hasFullSet, partyBoard, partyPaths, stationAt, stationsOf, type PartyBoardState } from "../shared/partyBoard";
 import { FIELD_HELP } from "./lib/partyFieldVisuals";
 import { unityGameUrl } from "./unityGames";
 
@@ -35,18 +35,18 @@ export interface UnityRollState {
 }
 
 /** Static board: positions in [-1, 1] across the bowl, field types, links and stations. */
-export function unityRollBoard(): { type: "board"; fields: UnityRollField[] } {
-  const board = partyBoard({ mode: "roll-it-up" });
+export function unityRollBoard(game: PartyBoardState = { mode: "roll-it-up" }): { type: "board"; fields: UnityRollField[] } {
+  const board = partyBoard(game), goal = goalField(game);
   return {
     type: "board",
     fields: board.map(field => {
-      const station = stationAt(field.id);
-      const help = field.id === JAYSPOT ? "Mit vollständigem Set gewinnst du bei Ankunft."
+      const station = stationAt(game, field.id);
+      const help = field.id === goal ? "Mit vollständigem Set gewinnst du bei Ankunft."
         : station ? `Kaufstelle: ${station.name} beim Passieren für ${station.price} Münzen kaufen.` : FIELD_HELP[field.type];
       return {
         id: field.id, x: (field.x - 50) / 50, z: (field.y - 50) / 50,
-        type: field.id === 0 ? "start" : field.id === JAYSPOT ? "jayspot" : station ? "station" : field.type,
-        next: [...field.next], station: station?.name ?? "", price: station?.price ?? 0, name: fieldName({ mode: "roll-it-up" }, field.id), help
+        type: field.id === 0 ? "start" : field.id === goal ? "jayspot" : station ? "station" : field.type,
+        next: [...field.next], station: station?.name ?? "", price: station?.price ?? 0, name: fieldName(game, field.id), help
       };
     })
   };
@@ -54,19 +54,19 @@ export function unityRollBoard(): { type: "board"; fields: UnityRollField[] } {
 
 export function unityRollState(g: PartyGame, viewer: string, extra: { serverNow: number; busy: boolean; connected: boolean; error: string; reduced: boolean }): UnityRollState {
   const p = activePartyPlayer(g), own = g.players.find(player => player.id === viewer) ?? p, canAct = p.id === viewer && !g.pausedAt;
-  const board = partyBoard(g), station = stationAt(p.position);
+  const board = partyBoard(g), station = stationAt(g, p.position);
   // Same wording as the web board's path buttons (src/components/RollItUpBoard.tsx).
   const paths = g.phase === "path" ? partyPaths(g, p).map((field, index) => {
     const preview = boardRoute(g, p, field, g.steps), last = preview.fields.at(-1) ?? field, next = preview.stations.find(s => !s.owned);
     const detail = next ? `${next.name} in ${next.steps} ${next.steps === 1 ? "Schritt" : "Schritten"} · ${next.price} Münzen${p.coins < next.price ? ` (noch ${next.price - p.coins} nötig)` : ""}`
-      : preview.junction ? "Weitere Wegwahl" : last === JAYSPOT ? "Ziel erreicht" : `Landung: ${FIELD_LABELS[board[last].type]}`;
-    return { field, title: field === JAYSPOT ? "Zum Jayspot" : index === 0 ? "Außenweg" : "Hügelweg", detail, route: [p.position, ...preview.fields] };
+      : preview.junction ? "Weitere Wegwahl" : last === goalField(g) ? "Ziel erreicht" : `Landung: ${FIELD_LABELS[board[last].type]}`;
+    return { field, title: field === goalField(g) ? "Zum Jayspot" : index === 0 ? "Außenweg" : "Hügelweg", detail, route: [p.position, ...preview.fields] };
   }) : [];
-  const distances = boardDistances(g, own), missing = STATIONS.filter(s => !own.supplies?.includes(s.field));
+  const distances = boardDistances(g, own), missing = stationsOf(g).filter(s => !own.supplies?.includes(s.field));
   const next = missing.slice().sort((a, b) => (distances.get(a.field) ?? Infinity) - (distances.get(b.field) ?? Infinity))[0];
-  const objectiveField = hasFullSet(own) ? JAYSPOT : next?.field ?? JAYSPOT;
-  const objectiveText = hasFullSet(own) ? "Set komplett · auf zum Jayspot" : next ? `${next.name} · ${own.supplies?.includes(next.field) ? "gesammelt" : `${next.price} Münzen`}` : "Jayspot";
-  const route = hasFullSet(p) && p.id === viewer ? boardPathTo(g, p, JAYSPOT) : [];
+  const objectiveField = hasFullSet(g, own) ? goalField(g) : next?.field ?? goalField(g);
+  const objectiveText = hasFullSet(g, own) ? "Set komplett · auf zum Jayspot" : next ? `${next.name} · ${own.supplies?.includes(next.field) ? "gesammelt" : `${next.price} Münzen`}` : "Jayspot";
+  const route = hasFullSet(g, p) && p.id === viewer ? boardPathTo(g, p, goalField(g)) : [];
   const moving = g.phase === "moving" && Boolean(g.movement);
   const fieldType = board[p.position]?.type ?? "safe";
   const who = canAct ? "Du" : p.name;

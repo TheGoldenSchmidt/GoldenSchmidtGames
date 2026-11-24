@@ -20,9 +20,9 @@ Reduzierte Bewegung setzt Brettkamera/-figuren direkt, ändert keine Ankunftszei
 
 Trophäenziel hinter Sternbutton, Münzen in Spielerleiste; Ergebnisse zeigen Gutschrift/Kontostand. Übungsfeedback nur visuell, ohne zusätzliche Punkte. Three.js/Assets lokal und im PWA-Cache; Ressourcen/Sensorlistener beim Verlassen freigeben. Klassische Action-Arenen benötigen WebGL 2; Bretter und neue Match-Spiele besitzen 2D-Ersatzdarstellungen.
 
-## Roll It Up: Die Bauschale
+## Roll It Up: Bretter
 
-`BAUSCHALE` in `shared/partyBoard.ts` benennt erstes Brett; weitere nicht implementiert. `src/three/rollingTray.ts`: Emaille, Messingrand, sechs Orte, Hügelbank. `src/components/RollItUpBoard.tsx`: HUD. [Ursprüngliche Vorschau](design/roll-it-up-entwurf/README.md) vom Client getrennt.
+`ROLL_BOARDS` in `shared/partyBoard.ts` beschreibt jedes Brett (Felder mit x/y, sechs Kaufstellen, Ziel, Rohrpost-Paare); der Host wählt es in der Lobby (`options.board`, Standard Bauschale). `src/three/rollingTray.ts` baut die Szenerie: **Bauschale** mit Emaille, Messingrand, sechs Orten und Hügelbank; **Grinder** als Stahlscheibe mit geriffeltem Rand, Mahlzähnen, orangen Rohrpost-Bögen und Lounge auf dem Hügel. Die 2D-Karte (`TrayMapArt`) zeichnet beide. `src/components/RollItUpBoard.tsx`: HUD. [Ursprüngliche Vorschau](design/roll-it-up-entwurf/README.md) vom Client getrennt.
 
 Oben Münzen, Set, nächstes fehlendes Utensil nach gerichteter Wegentfernung; Sammlung mit Preisen/Fehlbetrag/Besitz. Übersicht nennt alle Stationen, Zugansicht Ziel/gewählten Ort. Vorschau folgt `partyPaths` bis nächster offener Gabelung; mit vollem Set erlaubten Jayspot-Weg hervorheben. Auswahl/Bestätigung trennen, Kauf erst nach aktualisiertem Raumzustand bestätigen. Kaufzeile kompakt, Feldwirkung einmal, Zugansage nur vor Würfeln. Feldinfo bei `click` nach `pointerup` öffnen, damit Folge-Klick nicht schließt.
 
