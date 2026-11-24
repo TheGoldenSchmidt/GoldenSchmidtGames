@@ -9,7 +9,8 @@ namespace GSG
     /// <summary>One place at the table: the phone's player (slot 0) or a bot, with figure and name.</summary>
     public class Seat
     {
-        public int slot;
+        /// <summary>Colour slot (and seat order in local games); <see cref="index"/> is the place in the match.</summary>
+        public int slot, index;
         public string figureId, name;
         public bool isPlayer;
         public Color Color => Palette.Player(slot);
@@ -24,7 +25,19 @@ namespace GSG
             for (int i = 0; i < count; i++)
             {
                 string id = i == 0 ? own : ids[(i - 1) % ids.Count];
-                seats.Add(new Seat { slot = i, isPlayer = i == 0, figureId = id, name = i == 0 ? "Du" : char.ToUpperInvariant(id[4]) + id.Substring(5) });
+                seats.Add(new Seat { slot = i, index = i, isPlayer = i == 0, figureId = id, name = i == 0 ? "Du" : char.ToUpperInvariant(id[4]) + id.Substring(5) });
+            }
+            return seats;
+        }
+
+        /// <summary>Online: the room's players in match order with their colour slot and chosen figure.</summary>
+        public static List<Seat> FromSetup(OnlineSetup setup)
+        {
+            var seats = new List<Seat>();
+            for (int i = 0; i < setup.players.Length; i++)
+            {
+                var p = setup.players[i];
+                seats.Add(new Seat { slot = p.slot, index = i, isPlayer = p.id == setup.viewer, figureId = p.figure, name = p.name });
             }
             return seats;
         }
@@ -54,6 +67,8 @@ namespace GSG
         protected virtual string Kicker => "Unity-Test · Du gegen 3 Bots";
         protected virtual int PlayerCount => 4;
         protected bool Playing => phase == Phase.Play;
+        /// <summary>The room computes the match and Unity only draws it (no title, countdown, pause or result of its own).</summary>
+        protected static bool Online => MatchBridge.Online;
         protected float PlayTime => phase == Phase.Play || phase == Phase.Paused || phase == Phase.Ended ? Time.time - playStart : 0f;
 
         protected virtual void Start()
@@ -61,11 +76,22 @@ namespace GSG
             AppLink.Apply();
             Sfx.Ensure();
             Fx.Ensure();
-            seats = Seat.Roster(PlayerCount);
+            seats = Online ? Seat.FromSetup(MatchBridge.Setup) : Seat.Roster(PlayerCount);
             hud = Hud.Create();
             hud.AddRoundButton("pause", Hud.Icon.Pause, Pause);
             Setup();
             timerFill = hud.Bar();
+            if (Online)
+            {
+                // The app draws HUD, controls, countdown and result above the Unity frame.
+                hud.Root.style.display = DisplayStyle.None;
+                hud.InputEnabled = false;
+                OnBegin();
+                phase = Phase.Play;
+                playStart = Time.time;
+                OnPlay();
+                return;
+            }
             ShowTitle();
         }
 
@@ -119,6 +145,7 @@ namespace GSG
         {
             if (phase == Phase.Ended) return;
             phase = Phase.Ended;
+            if (Online) return;
             hud.SetControlsVisible(false);
             hud.ReleaseAll();
             var order = Ranking();
@@ -181,7 +208,7 @@ namespace GSG
 
         void OnApplicationFocus(bool focused)
         {
-            if (!focused && (phase == Phase.Play || phase == Phase.Countdown)) Pause();
+            if (!focused && !Online && (phase == Phase.Play || phase == Phase.Countdown)) Pause();
         }
 
         /// <summary>Remaining share of a time limit for the bar at the top (1 = full).</summary>

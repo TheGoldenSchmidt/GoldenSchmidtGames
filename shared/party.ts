@@ -1,4 +1,5 @@
 import { advanceArena, ARENA_META, createArena, isArenaId, NEUTRAL_INPUT, publicArena, setArenaControl, type ArenaId, type ArenaInput, type ArenaState } from "./partyArena";
+import { defaultLook, isMiniLook, lookChoices, matchIdForLook, type MiniLook, type MiniRenderer, type MiniView } from "./minigameLooks";
 import { advanceMatch, createMatch, finishMatch, isMatchId, MATCH_IDS, MATCH_MODULES, matchStandings, neutralizeMatch, publicMatch, removeMatchPlayer, setMatchControl, type MatchId } from "./matches/framework";
 import type { MatchState } from "./matches/types";
 import { miniEligible, miniFamily, miniPool, type PlayableMiniId } from "./minigameCatalog";
@@ -45,7 +46,7 @@ export const MINIS: Record<MiniId, { name: string; seconds: number; instruction:
 export interface PartyPlayer { id: string; name: string; characterId?: CharacterId; bot?: boolean; position: number; supplies?: number[]; coins: number; trophies: number; wins: number; items: Item[]; shield: boolean; passive: boolean; walked?: number; lost?: number; duels?: number; spent?: number; found?: number }
 export interface MiniRun { ready: boolean; done: boolean; score: number; feedback: string; lastInput: number }
 /** `resultReady`: humans who confirmed the result; the game continues once all active humans have. */
-export interface PartyMini { resultReady?: string[]; id: MiniId; startAt: number; runs: Record<string, MiniRun>; arenaSeed?:number; arena?:ArenaState; match?: MatchState }
+export interface PartyMini { resultReady?: string[]; id: MiniId; startAt: number; runs: Record<string, MiniRun>; arenaSeed?:number; arena?:ArenaState; match?: MatchState; /** Rendering and view chosen by the host (minigames with a choice only). */ look?: MiniLook }
 export type PartyPhase = "turn" | "moving" | "path" | "trophy" | "supply" | "shop" | "gift" | "duel" | "summary" | "mini-bet" | "mini-intro" | "mini-play" | "mini-result" | "finished" | "aborted";
 export interface PartyGame {
   mode?: "party" | "roll-it-up" | MinigameMode;
@@ -74,7 +75,8 @@ export type PartyAction =
   | { type: "path"; destination: number } | { type: "trophy"; buy: boolean; count?: number } | { type: "supply"; buy: boolean }
   | { type: "shop"; item?: Item; replace?: number } | { type: "gift"; accept: boolean; replace?: number }
   | { type: "duel"; target?: string; stake?: number }
-  | { type: "next" } | { type: "ready" } | { type: "finish" } | { type: "resume" } | { type: "abort" };
+  | { type: "next" } | { type: "ready" } | { type: "finish" } | { type: "resume" } | { type: "abort" }
+  | { type: "look"; renderer: MiniRenderer; view: MiniView };
 
 /** Older clients may still send `tempo`/`analog`; both are ignored. */
 export function partyOptions(value?: Partial<PartyOptions>): PartyOptions {
@@ -247,6 +249,7 @@ function prepareMini(g:PartyGame,id:MiniId,now:number){
   const watching=(p:PartyPlayer)=>Boolean(g.duel&&p.id!==g.duel.challenger&&p.id!==g.duel.opponent);
   g.mini={id,startAt:0,runs:Object.fromEntries(g.players.map(p=>[p.id,{ready:watching(p),done:p.passive||watching(p),score:0,feedback:"",lastInput:0}]))};
   g.mini.arenaSeed=g.rng;
+  const look=defaultLook(id);if(look)g.mini.look=look;
   g.localMiniIndex=0;phase(g,"mini-intro",now);if(g.online)g.deadline=now+90000;
 }
 /** Starts the duel: both pay the stake, a game from the duel pool is drawn (not the previous one). */
@@ -272,7 +275,7 @@ function startMini(g:PartyGame,now:number) {
   if(isArenaId(m.id))m.arena=createArena(m.id,g.players.filter((p,i)=>!p.passive&&(g.online||i===g.localMiniIndex)).map(p=>({id:p.id,style:g.players.indexOf(p),characterId:p.characterId})),m.arenaSeed??1);
   // In a duel only the two duelists enter the match.
   const contenders=g.duel?g.players.filter(p=>p.id===g.duel!.challenger||p.id===g.duel!.opponent):g.players.filter(p=>!p.passive);
-  if(isMatchId(m.id))m.match=createMatch(m.id,contenders.map(p=>({id:p.id,style:g.players.indexOf(p),characterId:p.characterId})),m.arenaSeed??1);
+  if(isMatchId(m.id))m.match=createMatch(matchIdForLook(m.id,m.look),contenders.map(p=>({id:p.id,style:g.players.indexOf(p),characterId:p.characterId})),m.arenaSeed??1);
   phase(g,"mini-play",now);g.deadline=m.startAt+MINIS[m.id].seconds*1000;
 }
 
@@ -441,6 +444,7 @@ export function applyPartyAction(current:PartyGame,id:string,action:PartyAction,
   }
   else if(action.type==="next"&&g.phase==="summary"){g.turn++;if(g.turn===g.order.length){g.turn=0;selectMini(g,now);}else startTurn(g,now);}
   else if(action.type==="ready"&&g.phase==="mini-intro") {const m=g.mini!;if(!g.online&&id!==g.players[g.localMiniIndex].id)throw new Error("Bitte das Gerät weitergeben.");m.runs[id].ready=true;if(!g.online||g.players.filter(p=>!p.passive).every(p=>m.runs[p.id].ready))startMini(g,now);}
+  else if(action.type==="look"&&g.phase==="mini-intro"){const look={renderer:action.renderer,view:action.view};if(!isMiniLook(g.mini!.id,look))throw new Error("Diese Ansicht gibt es für dieses Minispiel nicht.");g.mini!.look=look;}
   else if(action.type==="finish"&&g.phase==="mini-play"){if(g.duel&&id!==g.duel.challenger&&id!==g.duel.opponent)throw new Error("Du schaust beim Duell zu.");if(g.mini!.match){
     // Giving up leaves the match for good; the module ranks earlier leavers lower.
     const m=g.mini!;advanceMatch(m.match!,now-m.startAt);removeMatchPlayer(m.match!,id);m.runs[id].done=true;syncMatchRuns(g,now);
@@ -510,12 +514,15 @@ export function publicParty(current:PartyGame,viewer:string,now=Date.now()):Part
   }return g;
 }
 
-export function createPartyPractice(id:MiniId,now=Date.now(),selectedCharacter?:CharacterId):PartyGame {
+/** Practice of a minigame; `look` follows the host's view in the app's own web rendering (light, also offline). */
+export function createPartyPractice(id:MiniId,now=Date.now(),selectedCharacter?:CharacterId,look?:MiniLook):PartyGame {
   if(isMatchId(id)){
     // Match games need opponents: practise against bots that use the normal input path.
     const size=MATCH_MODULES[id].meta.players[0];
     const g=createPartyGame([{id:"practice",name:"Du",characterId:selectedCharacter},...Array.from({length:size-1},(_,i)=>({id:`practice-bot-${i+1}`,name:`Übungsbot ${i+1}`,bot:true}))],{rounds:5},true,now,now);
-    g.opening=false;g.miniBag=[id];selectMini(g,now);startMini(g,now);return g;
+    g.opening=false;g.miniBag=[id];selectMini(g,now);
+    const web=lookChoices(id)?.web;if(look&&isMiniLook(id,look)&&web?.length)g.mini!.look={renderer:"web",view:web.includes(look.view)?look.view:web[web.length-1]};
+    startMini(g,now);return g;
   }
   const g=createPartyGame([{id:"practice",name:"Du",characterId:selectedCharacter},{id:"spectator",name:"Übung"}],{rounds:5},false,now,now);
   g.opening=false;g.players[1].passive=true;g.miniBag=[id];selectMini(g,now);startMini(g,now);return g;

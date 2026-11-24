@@ -206,6 +206,8 @@ for (const motion of ["no-preference", "reduce"] as const) test(`Tank Trouble 2.
   await page.emulateMedia({ reducedMotion: motion });
   const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "tanks" });
   try {
+    // Unity is the default rendering; this case checks the app's own web view from above.
+    await session.action({ type: "look", renderer: "web", view: "top" }, session.ids[0]);
     await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
     await session.action({ type: "ready" }, session.ids[1]);
     await matchStarted(page);
@@ -241,8 +243,10 @@ for (const motion of ["no-preference", "reduce"] as const) test(`Tank Trouble 2.
 
 for (const motion of ["no-preference", "reduce"] as const) test(`Tank Trouble – Turmsicht (${motion}): Kamera hinter dem Panzer, Stick und Zielen relativ zur Kamera, Schuss`, async ({ page }, testInfo) => {
   await page.emulateMedia({ reducedMotion: motion });
-  const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "tankview" });
+  const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "tanks" });
   try {
+    // Turmsicht is Tank Trouble in 3rd person, here with the app's own web rendering.
+    await session.action({ type: "look", renderer: "web", view: "third" }, session.ids[0]);
     await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
     await session.action({ type: "ready" }, session.ids[1]);
     await matchStarted(page);
@@ -331,6 +335,7 @@ for (const [miniId, name] of [["bombs", "Bomb Arena"], ["tanks", "Tank Trouble"]
   const six = ["alpha_rick_prime", "alpha_morty_smith", "alpha_summer_smith", "alpha_eric_cartman", "alpha_korvo", "alpha_mr_poopybutthole"] as const;
   const session = await onlineSession(page, false, [...six], false, "free-minigame", { miniId });
   try {
+    if (miniId === "tanks") await session.action({ type: "look", renderer: "web", view: "top" }, session.ids[0]);
     await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
     for (const other of session.ids.slice(1)) await session.action({ type: "ready" }, other);
     await matchStarted(page);

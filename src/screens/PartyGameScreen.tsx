@@ -17,6 +17,8 @@ import { Celebration } from "../components/PartyArt";
 import { PartyMiniIntro, PartyMiniResults } from "../components/PartyMiniViews";
 import { PartyDice } from "../components/PartyDice";
 import { PartyMini, PartyPractice } from "../components/PartyMini";
+import { MiniLookSettings } from "../components/MiniLookSettings";
+import { UnityMatchHost } from "../components/UnityMatchHost";
 import { preloadMatchWorld } from "../matches/registry";
 import { PartyPanel } from "../components/PartyPanel";
 import { PartyTestTools } from "../components/PartyTestTools";
@@ -87,6 +89,9 @@ export function PartyGameScreen({profile,initialRoom,onExit,onLobby,unityBoard=f
   if(!game)return <main className="page"><p>{getGame(room.config.gameId).name} wird geladen …</p><button onClick={onExit}>Zurück</button></main>;
   const g=game,p=activePartyPlayer(g),viewer=profile.id;
   const projected=g,own=g.players.find(q=>q.id===viewer)!,canAct=p.id===profile.id,host=room.hostId===profile.id;
+  // The Unity frame starts loading with the first minigame that uses Unity and then stays for the whole match.
+  const [unityHost,setUnityHost]=useState(false);
+  useEffect(()=>{if(g.mini?.look?.renderer==="unity")setUnityHost(true);},[g.mini?.look?.renderer]);
   const m=projected.mini,standings=partyStanding(g),busy=pending;
   const competition=g.competition;
   // Online rooms return to their lobby after the end; leaving the room happens there.
@@ -174,7 +179,7 @@ export function PartyGameScreen({profile,initialRoom,onExit,onLobby,unityBoard=f
         {competition&&g.mode==="goldenschmidt"&&["mini-bet","mini-intro"].includes(g.phase)&&<MinigameScoreboard game={g}/>}
         {g.phase==="mini-bet"&&<MinigameBetting key={g.phaseId} game={g} viewer={viewer} busy={busy||Boolean(g.pausedAt)} send={send}/>}
         {competition&&["mini-result","finished"].includes(g.phase)&&<MinigameResults game={g} viewer={viewer} host={host} busy={busy||Boolean(g.pausedAt)} send={send} onExit={onLobby??onExit} exitLabel={onLobby?"Zurück zur Lobby":"Zurück zu GSG"}/>}
-        {g.phase==="mini-intro"&&m&&<PartyMiniIntro game={g} viewer={viewer} busy={busy} send={send} onPractice={()=>setPractice(m.id)}/>}
+        {g.phase==="mini-intro"&&m&&<PartyMiniIntro game={g} viewer={viewer} busy={busy} send={send} onPractice={()=>setPractice(m.id)} onLook={host||!g.online?()=>setPanel("menu"):undefined}/>}
         {g.phase==="mini-play"&&m&&<><div className="party-mini-player"><CharacterAvatar id={own.characterId}/>{own.name}<small>{g.duel?(viewer===g.duel.challenger||viewer===g.duel.opponent?`Duell um ${g.duel.stake*2} Münzen`:"Du schaust beim Duell zu"):"Alle spielen gleichzeitig"}</small></div><PartyMini game={projected} id={viewer} now={g.pausedAt||now} send={send} control={control} busy={!socket.connected||own.passive||Boolean(g.pausedAt)||Boolean(panel)} matchUi={{note:g.duel?(viewer===g.duel.challenger||viewer===g.duel.opponent?`Duell um ${g.duel.stake*2} Münzen`:"Du schaust beim Duell zu"):undefined,
           menu:<>{!m.runs[viewer]?.done&&(m.match?<><p>Du scheidest aus diesem Spiel aus und landest hinter allen, die noch spielen.</p><button type="button" disabled={busy} onClick={()=>send({type:"finish"})}>Jetzt aufgeben</button></>:<><p>Deine bisher erspielten Punkte zählen.</p><button type="button" disabled={busy} onClick={()=>send({type:"finish"})}>Versuch beenden</button></>)}<button type="button" className="is-quiet" onClick={()=>setPanel("menu")} aria-haspopup="dialog">Spielmenü öffnen</button></>}}/></>}
         {g.phase==="mini-result"&&g.duel&&m&&<DuelResult game={g} viewer={viewer} busy={busy} send={send}/>}
@@ -193,9 +198,10 @@ export function PartyGameScreen({profile,initialRoom,onExit,onLobby,unityBoard=f
       {panel==="inventory"&&inventory}
       {panel==="collection"&&(tray?<Collection player={own}/>:<PartyTrophyGoal game={g} viewer={viewer} reward={miniReward}/>)}
       {panel==="journal"&&<ol className="party-game-log">{g.log.map((line,i)=><li key={i}>{line}</li>)}</ol>}
-      {panel==="menu"&&<div className="party-game-options">{tray&&<button className="button button--secondary" onClick={()=>setPanel("inventory")}>Dein Inventar ansehen</button>}<label><input type="checkbox" checked={sound} onChange={event=>setSound(event.target.checked)}/> Kurze Spieltöne</label><label><input type="checkbox" checked={haptics} onChange={event=>setHaptics(event.target.checked)}/> Vibration, falls unterstützt</label><button className="button button--secondary" onClick={()=>setPanel("journal")}>{tray?"Spielverlauf":"Inselchronik"} öffnen</button>{host&&!["finished","aborted"].includes(g.phase)&&<button className="button button--ghost" disabled={busy} onClick={()=>send({type:"abort"})}>Partie für alle beenden</button>}<button className="button button--ghost" onClick={onExit}>Verlassen</button></div>}
+      {panel==="menu"&&<div className="party-game-options"><MiniLookSettings game={g} host={host||!g.online} busy={busy} send={send}/>{tray&&<button className="button button--secondary" onClick={()=>setPanel("inventory")}>Dein Inventar ansehen</button>}<label><input type="checkbox" checked={sound} onChange={event=>setSound(event.target.checked)}/> Kurze Spieltöne</label><label><input type="checkbox" checked={haptics} onChange={event=>setHaptics(event.target.checked)}/> Vibration, falls unterstützt</label><button className="button button--secondary" onClick={()=>setPanel("journal")}>{tray?"Spielverlauf":"Inselchronik"} öffnen</button>{host&&!["finished","aborted"].includes(g.phase)&&<button className="button button--ghost" disabled={busy} onClick={()=>send({type:"abort"})}>Partie für alle beenden</button>}<button className="button button--ghost" onClick={onExit}>Verlassen</button></div>}
       {error&&<p className="error-message" role="alert">{error}</p>}
     </PartyPanel>}
-    {practice&&<PartyPractice key={practice} miniId={practice} characterId={own.characterId} onClose={()=>setPractice(undefined)}/>}
+    {practice&&<PartyPractice key={practice} miniId={practice} characterId={own.characterId} look={g.mini?.look} onClose={()=>setPractice(undefined)}/>}
+    {unityHost&&<UnityMatchHost/>}
   </main>;
 }

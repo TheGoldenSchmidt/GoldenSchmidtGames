@@ -364,6 +364,7 @@ hub.onPeer((socket) => {
     if(payload.phaseId!==g.phaseId)return callback({ok:false,error:"Der Spielzug hat sich geändert. Bitte erneut wählen."});
     if((payload.action.type==="resume"||payload.action.type==="abort")&&room.hostId!==member.playerId)return callback({ok:false,error:"Nur der Host kann fortsetzen oder abbrechen."});
     if(g.competition&&payload.action.type==="next"&&room.hostId!==member.playerId)return callback({ok:false,error:"Nur der Host startet das nächste Minispiel."});
+    if(payload.action.type==="look"&&room.hostId!==member.playerId)return callback({ok:false,error:"Nur der Host wählt Darstellung und Ansicht."});
     try {room.partyGame=applyPartyAction(g,member.playerId,payload.action);room.partyGame.seq[member.playerId]=payload.seq!;broadcast(room);callback({ok:true,data:publicRoom(room,member.playerId)});closePartyRoom(room);}
     catch(error){callback({ok:false,error:error instanceof Error?error.message:"Aktion nicht möglich."});}
   });

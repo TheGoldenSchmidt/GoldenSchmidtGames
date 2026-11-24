@@ -15,7 +15,7 @@ Gemeinsame Technik und gültige Regeln aller Match-Minispiele. Ursprüngliche An
 
 ## Auswahl
 
-`shared/minigameCatalog.ts`: Pool je Spielerzahl; `classic` (Standard an) nimmt die erste Generation (14 Arenen, Hook Wars, Chaos Run, Wippenwerk) hinzu. Gezogen wird aus einem Beutel mit einem Eintrag je Spielfamilie (`miniFamily`: Varianten wie Turmsicht/Survival/Kippen zählen zur Familie, alle Hindernisläufe sind eine Familie mit zwei Einträgen); dieselbe Familie kommt nie zweimal hintereinander. Wettbewerbe wiederholen kein Spiel. Proberaum ist nie im Pool.
+`shared/minigameCatalog.ts`: Pool je Spielerzahl; `classic` (Standard an) nimmt die erste Generation (14 Arenen, Hook Wars, Chaos Run, Wippenwerk) hinzu. Gezogen wird aus einem Beutel mit einem Eintrag je Spielfamilie (`miniFamily`: Varianten wie Survival/Kippen zählen zur Familie, alle Hindernisläufe sind eine Familie mit zwei Einträgen); dieselbe Familie kommt nie zweimal hintereinander. Wettbewerbe wiederholen kein Spiel. Proberaum ist nie im Pool.
 
 ## Bausteine
 
@@ -45,7 +45,7 @@ Nur Abweichungen von der [Spezifikation](spezifikation.md); Werte stehen als Kon
 | Quick Draw | Duell höchstens 9 Runden, Gruppenstechen höchstens 3 Durchgänge, danach Rundenstand bzw. geteilter Platz. |
 | Light Trails | Feld 30 × 48, konstante Fahrt, stufenlose Lenkung (Stick = Richtung, ⟲/⟳ halten = voll). Startplätze auf einem inneren Ring, im Uhrzeigersinn, Zuordnung rotiert je Durchgang. Schrumpfen ab 14 s, Durchgang höchstens 45 s; Überlebende teilen ohne Bonus. |
 | Tank Trouble | Labyrinth 7 × 11, Ziegel halten 2 Treffer und schlucken die Kugel. Rechts ziehen = zielen, loslassen = schießen, kurz tippen = letzte Richtung. Stechen höchstens 30 s. 2.5D mit gewählter Figur in der Luke; eigener Ziellaser nur bis zur ersten Wand, keine Abprallvorhersage; 132 px Steuerreserve. |
-| Turmsicht (`tankview`) | Tank-Regeln; Sicht = von der Panzermitte ausgeleuchtete Fläche (Strahlen bis 6, enden an der ersten Mauer). Objekte zählen dazu, sobald ein Teil ihres Umrisses darin liegt; wer sie verlässt, hinterlässt 2 s „zuletzt gesehen“. Zuschauer sehen alles, Bots dieselbe Sicht. Kamera oben rechts wischen. |
+| Tank Trouble in 3rd/1st Person (`tankview`) | Ansicht, kein eigenes Minispiel (nicht im Pool). Tank-Regeln; Sicht = von der Panzermitte ausgeleuchtete Fläche (Strahlen bis 6, enden an der ersten Mauer). Objekte zählen dazu, sobald ein Teil ihres Umrisses darin liegt; wer sie verlässt, hinterlässt 2 s „zuletzt gesehen“. Zuschauer sehen alles, Bots dieselbe Sicht. Kamera oben rechts wischen. |
 | Bomb Arena | K.o. = letztes Leben durch fremde Bombe (+2). Kettenreaktion = eine Explosion (höchstens 1 Schaden je Spieler). Spirale ab 25 s (1 Feld je 0,35 s); geteilter Rundenbonus anteilig. Sudden Death nur Punktgleiche: 1 Leben, Schließen ab 8 s, höchstens 30 s. Feste geneigte 3D-Kamera, ganzes Feld sichtbar, 132 px Steuerreserve. |
 | Floor is Lava | 3 Etagen à 9 × 13 Platten; über einem Loch fällt man in 0,45 s eine Etage tiefer, nur ein Loch der untersten führt in die Lava. Kein Respawn: Lava = raus für den Durchgang. 0,5 s Startschutz, Rand bricht bei 16 s und 23 s. Sprung 0,55 s (× 1,4), Hechten, Schubser 0,22 s (Abklingzeit 2,5 s; Getroffene rutschen 0,35 s mit 6,5/s; nur dieselbe Etage, nicht im Fall). Überleben +3, je früher gefallene Person +1. Durchgänge bis 30 s, Stechrunde nur Punktgleiche bis 25 s. Kamera folgt der eigenen Etage. |
 | Sumo Smash, Bumper Mayhem | Gemeinsamer Kern `ringCore.ts`: Ring-Out gilt für die Person, die in den letzten 3 s am stärksten geschoben hat (+2). Rangfolge Sieger, Ausscheidezeit, Leben, Ring-Outs. Sudden Death nur Gleichauf (1 Leben, kleiner Ring, höchstens 20 s). Neustart aller nur, wenn zwei übrig sind. |
@@ -74,7 +74,9 @@ Nur Abweichungen von der [Spezifikation](spezifikation.md); Werte stehen als Kon
 
 ## Proberaum und Unity
 
-`shared/proberaum.ts` + `proberaumCourse.ts`: lokale Übungsinsel mit demselben Parcours-Kern, nicht in `MATCH_IDS`, `COURSE_IDS` oder im Pool; `practice` unterdrückt Rennende und Ausscheiden. Einstieg `PracticeWorldScreen` (nur Entwicklung/Admin). Unity-Fassungen laufen getrennt ohne `roomCore`: [Unity-Minispiele](../../UnityGames.md).
+`shared/proberaum.ts` + `proberaumCourse.ts`: lokale Übungsinsel mit demselben Parcours-Kern, nicht in `MATCH_IDS`, `COURSE_IDS` oder im Pool; `practice` unterdrückt Rennende und Ausscheiden. Einstieg `PracticeWorldScreen` (nur Entwicklung/Admin).
+
+**Darstellung und Ansicht:** Der Host wählt im Spielmenü vor „Ich bin bereit“ für alle Darstellung (Unity/Web) und Ansicht (Draufsicht, 3rd, 1st Person) des nächsten Minispiels (`shared/minigameLooks.ts`, Aktion `look`; Übungen folgen der Ansicht in der Web-Darstellung). Mit Unity rechnet weiter die Raumautorität, Unity zeichnet nur. Die Einträge im Unity-Untermenü laufen dagegen lokal ohne `roomCore`. Beides: [Unity-Minispiele](../../UnityGames.md).
 
 ## Leistung
 

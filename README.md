@@ -10,7 +10,7 @@ Installierbare Smartphone-PWA für eine Freundesrunde: lokale Tischspiele, Brett
 | Inselparty, Roll It Up! | Brettspiele auf getrennten Handys; allein mit 1–5 Bots |
 | Freies Minispiel | Passendes Minispiel direkt wählen |
 | Schlag den GoldenSchmidt | Wettbewerb mit einmaligen verdeckten Einsätzen |
-| Unity-Minispiele | Unity-Fassungen gegen Bots unter **Lokal spielen → Unity-Minispiele**; Internet beim ersten Start ([Liste und Stand](UnityGames.md)) |
+| Unity-Minispiele | Unity-Fassungen gegen Bots unter **Lokal spielen → Unity-Minispiele**; Tank Trouble läuft zusätzlich mit Unity-Darstellung und Ansichtswahl als normales Minispiel in Räumen; Internet beim ersten Start ([Liste und Stand](UnityGames.md)) |
 | Proberaum | Lokale Übungsinsel für Entwickler und Admins im selben Untermenü; Verbindung zum Öffnen erforderlich |
 | Rich’s Universe | Eigener Bereich für lokale Experimente |
 

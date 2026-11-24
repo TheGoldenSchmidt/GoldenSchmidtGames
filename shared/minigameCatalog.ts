@@ -1,6 +1,7 @@
 import { ACTION_MINI_IDS, ARENA_META, isArenaId, type ArenaId } from "./partyArena";
 import { MATCH_IDS, MATCH_MODULES, isMatchId, matchEligible, playerRange, type MatchId } from "./matches/framework";
 import { COURSE_IDS } from "./matches/parcoursCourses";
+import { VIEW_VARIANT_IDS } from "./minigameLooks";
 
 /**
  * All digital minigames that rooms can draw. The "1st Generation Minigames"
@@ -14,10 +15,11 @@ export const FIRST_GEN_MATCH_IDS: readonly MatchId[] = ["hooks", "chaosrun", "wi
 /** The obstacle runs; each one is a standalone minigame with its own entry in every pool. */
 export const PARCOURS_RUN_IDS: readonly MatchId[] = COURSE_IDS;
 export const isParcoursRun = (id: unknown): id is MatchId => typeof id === "string" && (PARCOURS_RUN_IDS as readonly string[]).includes(id);
-export const NEW_MATCH_IDS: readonly MatchId[] = MATCH_IDS.filter(id => !FIRST_GEN_MATCH_IDS.includes(id));
+/** Match games that are only a view of another minigame (Turmsicht = Tank Trouble in 3rd/1st person) are left out. */
+export const NEW_MATCH_IDS: readonly MatchId[] = MATCH_IDS.filter(id => !FIRST_GEN_MATCH_IDS.includes(id) && !VIEW_VARIANT_IDS.includes(id));
 export const FIRST_GEN_MINI_IDS: readonly PlayableMiniId[] = [...FIRST_GEN_MATCH_IDS, ...ACTION_MINI_IDS];
 export const PLAYABLE_MINI_IDS: readonly PlayableMiniId[] = [...NEW_MATCH_IDS, ...FIRST_GEN_MINI_IDS];
-export const isPlayableMini = (id: unknown): id is PlayableMiniId => typeof id === "string" && (isArenaId(id) || isMatchId(id));
+export const isPlayableMini = (id: unknown): id is PlayableMiniId => typeof id === "string" && (isArenaId(id) || (isMatchId(id) && !VIEW_VARIANT_IDS.includes(id)));
 export const isClassicMini = (id: unknown): id is PlayableMiniId => typeof id === "string" && (FIRST_GEN_MINI_IDS as readonly string[]).includes(id);
 
 export function miniName(id: PlayableMiniId) { return isMatchId(id) ? MATCH_MODULES[id].meta.name : ARENA_META[id].name; }

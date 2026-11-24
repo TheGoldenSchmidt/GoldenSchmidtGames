@@ -1,4 +1,5 @@
 import { MINIS, partyMiniResults, type PartyAction, type PartyGame } from "../../shared/party";
+import { lookChoices, lookLabel } from "../../shared/minigameLooks";
 import { isArenaId } from "../../shared/partyArena";
 import { CharacterAvatar } from "./CharacterAvatar";
 import { Celebration, MINI_LOOK, MiniPreview } from "./PartyArt";
@@ -7,7 +8,8 @@ import { PartyCoinReward, type MiniReward } from "./PartyProgress";
 interface ViewProps { game: PartyGame; viewer: string; busy: boolean; send: (action: PartyAction) => void }
 
 /** Minigame intro: short goal, controls, optional full rules, practice and readiness. */
-export function PartyMiniIntro({ game: g, viewer, busy, send, onPractice }: ViewProps & { onPractice: () => void }) {
+/** `onLook` opens the game menu, where the host chooses the view of minigames that offer one. */
+export function PartyMiniIntro({ game: g, viewer, busy, send, onPractice, onLook }: ViewProps & { onPractice: () => void; onLook?: () => void }) {
   const m = g.mini!, meta = MINIS[m.id], own = g.players.find(p => p.id === viewer)!, competition = g.competition;
   const watching = Boolean(g.duel && viewer !== g.duel.challenger && viewer !== g.duel.opponent);
   const reward = competition ? (g.mode === "goldenschmidt" ? `Dein Einsatz: ${competition.bets[viewer] ?? "–"} Punkte` : "Ein Spiel · ein Ergebnis")
@@ -19,6 +21,7 @@ export function PartyMiniIntro({ game: g, viewer, busy, send, onPractice }: View
     <p className="party-mini-tagline">{MINI_LOOK[m.id].action}</p>
     {g.duel && <DuelLine game={g} viewer={viewer} />}
     <p>{meta.instruction}</p>
+    {m.look && lookChoices(m.id) && <p className="party-mini-look"><span>Ansicht: <b>{lookLabel(m.look)}</b></span>{onLook && <button type="button" className="text-button" onClick={onLook}>Ändern</button>}</p>}
     {meta.rules && <details className="party-mini-rules"><summary>Alle Regeln</summary><p>{meta.rules}</p></details>}
     <div className="party-mini-facts"><span>{MINI_LOOK[m.id].goal}</span><span>{reward}</span></div>
     <button className="button button--secondary button--wide" onClick={onPractice}>Erst kurz üben</button>

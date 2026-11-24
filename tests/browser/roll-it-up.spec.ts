@@ -103,6 +103,7 @@ for(const motion of ["no-preference","reduce"] as const)test(`Bauschale: ruhende
 test("Ergebnisse bleiben bis zur Bestätigung aller Teilnehmer sichtbar",async({page})=>{
  const session=await onlineSession(page,false,undefined,false,"roll-it-up");
  try{
+  await expect.poll(async()=>(await session.state()).partyGame!.phase).toBe("mini-intro");
   for(const id of session.ids)await session.action({type:"ready"},id);
   for(const id of session.ids)if((await session.state()).partyGame!.phase==="mini-play")await session.action({type:"finish"},id);
   await page.getByRole("button",{name:"Weiter zur Bauschale",exact:true}).tap();
