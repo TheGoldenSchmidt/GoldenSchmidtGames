@@ -7,6 +7,7 @@ import { PartyArena } from "./PartyArena";
 import { MatchStage, type MatchUi } from "../matches/MatchStage";
 import type { MatchInput } from "../../shared/matches/types";
 import { PartyBotDriver } from "../../shared/partyBots";
+import type { MiniLook } from "../../shared/minigameLooks";
 import { MINI_LOOK, Shell, Treasure } from "./PartyArt";
 
 function useMarkerClock(now:number,enabled:boolean) {
@@ -67,13 +68,13 @@ function ClassicPartyMini({game,id,now,send,busy=false}:MiniProps) {
   </section>;
 }
 
-export function PartyPractice({miniId,onClose,characterId}:{miniId:MiniId;onClose:()=>void;characterId?:CharacterId}) {
-  const [game,setGame]=useState(()=>createPartyPractice(miniId,Date.now(),characterId)),[now,setNow]=useState(Date.now()),[error,setError]=useState(""),[attempt,setAttempt]=useState(0);
+export function PartyPractice({miniId,onClose,characterId,look}:{miniId:MiniId;onClose:()=>void;characterId?:CharacterId;look?:MiniLook}) {
+  const [game,setGame]=useState(()=>createPartyPractice(miniId,Date.now(),characterId,look)),[now,setNow]=useState(Date.now()),[error,setError]=useState(""),[attempt,setAttempt]=useState(0);
   const dialog=useRef<HTMLDivElement>(null),close=useRef(onClose),controlSeq=useRef(0),bots=useRef(new PartyBotDriver());close.current=onClose;
   useEffect(()=>{const previous=document.activeElement as HTMLElement|null,overflow=document.body.style.overflow;document.body.style.overflow="hidden";document.body.dataset.partyPractice="true";dialog.current?.focus();const timer=setInterval(()=>{const time=Date.now();setNow(time);setGame(g=>tickParty(g.mini?.match?bots.current.step(g,time):g,time));},50);return()=>{clearInterval(timer);document.body.style.overflow=overflow;delete document.body.dataset.partyPractice;previous?.focus();};},[]);
   const control=(input:ArenaInput|MatchInput)=>setGame(g=>{try{return applyPartyControl(g,"practice",input,++controlSeq.current,Date.now());}catch{return g;}});
   const send=(action:PartyAction)=>{try{setGame(applyPartyAction(game,"practice",action,Date.now()));setError("");}catch(e){setError(e instanceof Error?e.message:"Bitte erneut versuchen.");}};
-  const restart=()=>{bots.current=new PartyBotDriver();controlSeq.current=0;setGame(createPartyPractice(miniId,Date.now(),characterId));setAttempt(n=>n+1);setError("");};
+  const restart=()=>{bots.current=new PartyBotDriver();controlSeq.current=0;setGame(createPartyPractice(miniId,Date.now(),characterId,look));setAttempt(n=>n+1);setError("");};
   return <div className="party-overlay"><div className="party-practice" role="dialog" aria-modal="true" aria-label={`Übung: ${MINIS[miniId].name}`} tabIndex={-1} ref={dialog} onKeyDown={e=>{
     if(e.key==="Escape"){e.stopPropagation();close.current();}
     if(e.key==="Tab"){const buttons=dialog.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)');if(!buttons?.length)return;const first=buttons[0],last=buttons[buttons.length-1];if(e.shiftKey&&(document.activeElement===first||document.activeElement===dialog.current)){e.preventDefault();last.focus();}else if(!e.shiftKey&&(document.activeElement===last||document.activeElement===dialog.current)){e.preventDefault();first.focus();}}

@@ -163,6 +163,9 @@ namespace GSG.Tanks
             else if (roll < 0.62) w.Kind = 2;
         }
 
+        /// <summary>Online rendering: the room authority's clock (shield and power timers compare against it).</summary>
+        public void SetTime(int time) => Time = time;
+
         public bool Protected(Tank t) => Time < t.ShieldUntil || t.Bonus == Power.Shield && Time < t.PowerUntil;
         public int ShotCooldown(Tank t) => t.Bonus == Power.Rapid && Time < t.PowerUntil ? RapidCooldown : Cooldown;
 

@@ -70,6 +70,7 @@ namespace GSG
         public static readonly Color TankCracked = Hex("#7d3b2a");
         public static readonly Color TankLaser = Hex("#e3263b");
         public static readonly Color TankTrace = Hex("#ffb52e");
+        public static readonly Color TankNight = Hex("#2c2a1e");
 
         // UI materials of the island world (designregeln.md).
         public static readonly Color Gold = Hex("#ffd777");

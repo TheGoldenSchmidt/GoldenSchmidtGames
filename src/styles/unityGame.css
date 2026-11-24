@@ -59,3 +59,27 @@
 .party-screen--board:has(> .unity-roll:not(.is-hidden)) > .party-test-tools {
   top: calc(var(--party-top, 12px) + 178px);
 }
+
+/* Unity as the rendering of a room's match: loaded during the intro, shown under the match
+   stage (z-index 30) while it draws; the app's controls and HUD stay on top and get every touch. */
+.unity-match {
+  position: fixed;
+  inset: 0;
+  z-index: 29;
+  background: #2c2a1e;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.unity-match.is-shown {
+  visibility: visible;
+}
+
+.unity-match .unity-game__frame {
+  pointer-events: none;
+}
+
+.match-game.is-unity,
+.match-game.is-unity .match-stage {
+  background: transparent;
+}

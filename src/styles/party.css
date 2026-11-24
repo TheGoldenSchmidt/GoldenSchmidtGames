@@ -179,3 +179,11 @@
 .party-duel-headline strong { font-size:.95rem; }
 .party-duel-headline span { font-size:.72rem; }
 .party-duel-result .party-awards li > b { color:#2e1a5c; }
+/* Rendering and view of the coming minigame: chosen by the host in the game menu before "Ich bin bereit". */
+.party-mini-intro .party-mini-look { display:flex; justify-content:center; align-items:center; gap:4px 12px; flex-wrap:wrap; margin:12px auto 0; font-size:.85rem; }
+.party-mini-look .text-button { min-height:44px; padding:0 8px; }
+.party-game-options .mini-look { display:grid; gap:8px; margin:0 0 4px; padding:12px; border:1px solid #c8d9c7; border-radius:12px; }
+.party-game-options .mini-look legend { padding:0 6px; font-weight:800; }
+.party-game-options .mini-look label { display:grid; grid-template-columns:7.5rem 1fr; gap:10px; }
+.party-game-options .mini-look select { min-height:44px; }
+.mini-look__note { margin:0; font-size:.75rem; color:#4d6961; }

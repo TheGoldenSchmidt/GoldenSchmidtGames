@@ -7,6 +7,7 @@ import { playerColor, type MatchIO, type MatchWorld } from "./client";
 import { preloadFigures } from "../figures/catalog";
 import { playSfx, setSoundEnabled, soundEnabled, unlockSound, vibrate } from "./sfx";
 import { measureEnabled, MeasurePanel } from "./MeasurePanel";
+import { hasUnityMatch } from "../unityMatch";
 
 /** True when this browser can create a WebGL context (checked once). */
 let webgl: boolean | undefined;
@@ -122,22 +123,31 @@ export function MatchStage({ game, id, now, control, busy = false, menu, doneAct
   };
   const frameRef = useRef(frameData); frameRef.current = frameData;
 
+  // Unity rendering (chosen by the host): the persistent Unity frame draws the snapshots; if it fails, the web view takes over.
+  const look = game.mini!.look, [unityFailed, setUnityFailed] = useState(false);
+  const unity = look?.renderer === "unity" && hasUnityMatch(matchId) && !unityFailed && webglAvailable();
+  const loadWorld = unity
+    ? () => import("./unityWorld").then(m => (host: HTMLElement, read: Parameters<typeof m.createUnityWorld>[2], onError: () => void) => m.createUnityWorld(look!.view, host, read, onError))
+    : client.world;
   // 2.5D/3D world: loaded on demand; without WebGL or on any error the canvas takes over.
-  const [world, setWorld] = useState<"loading" | "ready" | "off">(() => client.world && webglAvailable() ? "loading" : "off");
+  const [world, setWorld] = useState<"loading" | "ready" | "off">(() => loadWorld && webglAvailable() ? "loading" : "off");
   const worldHost = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (world === "off" || !client.world || !worldHost.current) return;
+    if (world === "off" || !loadWorld || !worldHost.current) return;
     let cancelled = false, scene: MatchWorld | undefined;
     const names = Object.fromEntries(game.players.map(p => [p.id, p.name]));
     const characters = Object.fromEntries(game.players.map(p => [p.id, p.characterId]));
-    const fail = () => { if (!cancelled) setWorld("off"); };
-    void Promise.all([client.world(), preloadFigures(match.players.map(p => characters[p.id]))]).then(([factory]) => {
+    const fail = () => {
+      if (cancelled) return;
+      if (unity) { setUnityFailed(true); setWorld(client.world ? "loading" : "off"); } else setWorld("off");
+    };
+    void Promise.all([loadWorld(), unity ? Promise.resolve() : preloadFigures(match.players.map(p => characters[p.id]))]).then(([factory]) => {
       if (cancelled || !worldHost.current) return;
       try { scene = factory(worldHost.current, () => ({ ...frameRef.current(performance.now()), names, characters }), fail); setWorld("ready"); }
       catch { fail(); }
     }).catch(fail);
     return () => { cancelled = true; scene?.dispose(); };
-  }, [matchId, id, startAt, world === "off"]);
+  }, [matchId, id, startAt, world === "off", unity]);
 
   // Canvas loop: draws continuously, independent of the 10/20 Hz snapshots.
   useEffect(() => {
@@ -173,12 +183,12 @@ export function MatchStage({ game, id, now, control, busy = false, menu, doneAct
   const count = Math.ceil((startAt - now) / 1000);
   const Controls = client.Controls;
   const status = client.status?.(match, id) ?? meta.look.hint;
-  return <section className={`match-game match-game--${matchId}`} aria-label={meta.name} style={{ ["--match-top" as string]: `${top}px` }}>
+  return <section className={`match-game match-game--${matchId}${unity && world !== "off" ? " is-unity" : ""}`} aria-label={meta.name} style={{ ["--match-top" as string]: `${top}px` }}>
     <div className="match-stage">
       {world === "off"
         ? <canvas ref={canvas} className="match-canvas" role="img" aria-label={`Spielfeld: ${meta.name}`} />
         : <div ref={worldHost} className="match-world" role="img" aria-label={`3D-Spielfeld: ${meta.name}`} />}
-      {world === "loading" && <div className="match-world-loading" role="status">Arena wird gebaut …</div>}
+      {world === "loading" && <div className="match-world-loading" role="status">{unity ? "Unity wird geladen …" : "Arena wird gebaut …"}</div>}
       {world !== "off" && (() => { const banner = client.banner?.(match, id); return banner && <div className="match-banner" role="status"><b>{banner.title}</b><span>{banner.text}</span></div>; })()}
       <div className="match-controls"><Controls io={io} view={match} viewer={id} active={active} world={world === "ready"} /></div>
       {count > 0 && <div className="match-countdown" role="status"><b key={count}>{count}</b><span>{meta.controls}</span></div>}
