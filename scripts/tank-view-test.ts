@@ -4,7 +4,10 @@ import { TT, type TankGame } from "../shared/matches/tankTrouble";
 import { canSee, sightPolygon, TV } from "../shared/matches/tankView";
 import { wallRects } from "../shared/matches/tankTrouble";
 import type { MatchState } from "../shared/matches/types";
-import { createPartyGame, partyMiniResults, tickParty } from "../shared/party";
+import { applyPartyAction, createPartyGame, partyMiniResults, tickParty } from "../shared/party";
+import { NEW_MATCH_IDS, isPlayableMini, miniPool } from "../shared/minigameCatalog";
+import { defaultLook, isMiniLook, matchIdForLook } from "../shared/minigameLooks";
+import { minigameOptions } from "../shared/minigameModes";
 import { PartyBotDriver } from "../shared/partyBots";
 
 type TS = MatchState<TankGame>;
@@ -88,13 +91,40 @@ const cell = (c: number) => (c + .5) * TT.cell;
   assert.equal(intent.ca, s.players[0].usedA, "Kein Schuss ins Blaue");
 }
 
-// Komplette Partien mit Bots über die Party: 2, 4, 6 Spieler, Neustart, Determinismus.
+// Turmsicht ist eine Ansicht von Tank Trouble, kein eigenes Minispiel: nicht wählbar, nicht im Zufallspool.
+assert.ok(!NEW_MATCH_IDS.includes("tankview") && !isPlayableMini("tankview") && !miniPool(4, true).includes("tankview"), "Turmsicht nicht als eigenes Minispiel");
+assert.throws(() => minigameOptions({ miniId: "tankview" as never }), /Minispiel/);
+assert.deepEqual(defaultLook("tanks"), { renderer: "unity", view: "top" });
+assert.ok(isMiniLook("tanks", { renderer: "unity", view: "first" }) && isMiniLook("tanks", { renderer: "web", view: "third" }));
+assert.ok(!isMiniLook("tanks", { renderer: "web", view: "first" }) && !isMiniLook("tanks", { renderer: "unity", view: "side" }) && !isMiniLook("sumo", { renderer: "web", view: "top" }));
+assert.equal(matchIdForLook("tanks", { renderer: "unity", view: "top" }), "tanks");
+assert.equal(matchIdForLook("tanks", { renderer: "web", view: "third" }), "tankview");
+assert.equal(matchIdForLook("tanks", { renderer: "unity", view: "first" }), "tankview");
+{
+  // Der Host wählt vor „Ich bin bereit“; die Ansicht entscheidet über die Regeln der Runde.
+  const people = [{ id: "a", name: "A" }, { id: "b", name: "B" }];
+  let g = createPartyGame(people, undefined, true, 9, 0, "free-minigame", { miniId: "tanks" });
+  assert.equal(g.phase, "mini-intro"); assert.deepEqual(g.mini!.look, { renderer: "unity", view: "top" });
+  assert.throws(() => applyPartyAction(g, "a", { type: "look", renderer: "web", view: "first" }, 1), /Ansicht/);
+  g = applyPartyAction(g, "a", { type: "look", renderer: "unity", view: "first" }, 1);
+  assert.deepEqual(g.mini!.look, { renderer: "unity", view: "first" });
+  for (const p of people) g = applyPartyAction(g, p.id, { type: "ready" }, 2);
+  assert.equal(g.phase, "mini-play"); assert.equal(g.mini!.id, "tanks"); assert.equal(g.mini!.match!.id, "tankview");
+  assert.throws(() => applyPartyAction(g, "a", { type: "look", renderer: "unity", view: "top" }, 3), /nicht möglich|Phase|Aktion|gerade/);
+  let top = createPartyGame(people, undefined, true, 9, 0, "free-minigame", { miniId: "tanks" });
+  for (const p of people) top = applyPartyAction(top, p.id, { type: "ready" }, 2);
+  assert.equal(top.mini!.match!.id, "tanks");
+}
+
+// Komplette Partien mit Bots über die Party (Tank Trouble in 3rd Person): 2, 4, 6 Spieler, Neustart, Determinismus.
 for (const count of [2, 4, 6]) {
   const players = Array.from({ length: count }, (_, i) => ({ id: `b${i}`, name: `Bot ${i}`, bot: true }));
-  let g = createPartyGame(players, undefined, true, 70 + count, 0, "free-minigame", { miniId: "tankview" });
+  let g = createPartyGame(players, undefined, true, 70 + count, 0, "free-minigame", { miniId: "tanks" });
+  g = applyPartyAction(g, "b0", { type: "look", renderer: "web", view: "third" }, 0);
   const driver = new PartyBotDriver(); let now = 0;
   for (let i = 0; i < 3000 && g.phase !== "finished"; i++) { now += 50; if (i === 200) g = JSON.parse(JSON.stringify(g)); g = tickParty(driver.step(g, now), now); }
   assert.equal(g.phase, "finished", `${count} Bots`);
+  assert.equal(g.mini!.match!.id, "tankview");
   assert.ok(partyMiniResults(g).every(r => r.participated));
 }
 {
@@ -103,4 +133,4 @@ for (const count of [2, 4, 6]) {
   assert.deepEqual(a.game.kills, b.game.kills); assert.equal(a.time, b.time);
   assert.ok(Object.values(a.game.kills).reduce((x, y) => x + y, 0) > 0, "Bots finden sich und schießen");
 }
-console.log("Tank Trouble – Turmsicht erfolgreich: gleiche Regeln, Sichtlinie durch alle Mauerarten, Reichweite, Kugel- und Wrackfilter, Zuschauer, Streife der Bots, Partien mit Bots und Determinismus.");
+console.log("Tank Trouble – Turmsicht erfolgreich: Ansicht statt eigenes Minispiel, Host-Wahl vor dem Start, gleiche Regeln, Sichtlinie durch alle Mauerarten, Reichweite, Kugel- und Wrackfilter, Zuschauer, Streife der Bots, Partien mit Bots und Determinismus.");

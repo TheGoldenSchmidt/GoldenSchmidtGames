@@ -223,3 +223,33 @@ body:has(.match-game) { overflow:hidden; }
 .match-game--snowball .snow-aim-half { top:45%; }
 .snow-form { position:absolute; left:12px; bottom:136px; pointer-events:auto; }
 .snow-form .match-action { width:72px; height:72px; }
+
+/* Unity as the rendering of a room's match: loaded during the intro, shown under the match
+   stage (z-index 30) while it draws; the app's controls and HUD stay on top and get every touch. */
+.unity-match {
+  position: fixed;
+  inset: 0;
+  z-index: 29;
+  background: #2c2a1e;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.unity-match.is-shown {
+  visibility: visible;
+}
+
+.unity-match iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+  pointer-events: none;
+}
+
+.match-game.is-unity,
+.match-game.is-unity .match-stage {
+  background: transparent;
+}

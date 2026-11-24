@@ -82,7 +82,10 @@ console.log("Unity-Brücke Roll It Up! erfolgreich: Brett, Zustand, Bewegung, Ga
   const root = new URL("../unity/GoldenSchmidtUnity/", import.meta.url);
   const switchSource = readFileSync(new URL("Assets/GSG/Scripts/Runtime/Common/GameSwitch.cs", root), "utf8");
   const buildSettings = readFileSync(new URL("ProjectSettings/EditorBuildSettings.asset", root), "utf8").replaceAll("\r\n", "\n");
+  const { UNITY_MATCH_SCENES } = await import("../src/unityMatch");
   const ids = [...UNITY_GAME_CATALOG.map(game => game.id), "rollitup"];
+  // Unity renderings of room matches need their scene in the build too.
+  for (const id of new Set(Object.values(UNITY_MATCH_SCENES))) if (!ids.includes(id)) ids.push(id);
   assert.equal(new Set(ids).size, ids.length, "Unity-IDs eindeutig");
   for (const id of ids) {
     const match = switchSource.match(new RegExp(`\\{ "${id}", "([A-Za-z]+)" \\}`));

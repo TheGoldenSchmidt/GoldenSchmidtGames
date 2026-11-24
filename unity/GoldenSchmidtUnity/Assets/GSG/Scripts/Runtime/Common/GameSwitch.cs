@@ -24,6 +24,8 @@ namespace GSG
         {
             AppLink.Apply();
             var id = AppLink.Param("spiel", "");
+            // Rendering of a room's match: wait for the app's setup, which names the game.
+            if (id == "online") { MatchBridge.Create(); return; }
             if (Scenes.TryGetValue(id, out var scene) && Application.CanStreamedLevelBeLoaded(scene)) { SceneManager.LoadScene(scene); return; }
             Debug.LogError("[GSG] Unbekanntes Spiel: " + id);
             var hud = Hud.Create();
