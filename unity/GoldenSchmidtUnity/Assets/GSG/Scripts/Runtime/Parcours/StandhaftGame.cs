@@ -142,8 +142,13 @@ namespace GSG.Parcours
 
         void Update()
         {
-            // Keep the rotating square inside the playfield on narrow or short phones.
-            if (rig) rig.orbit.Radius = Mathf.Max(23f, 9.8f / (0.47f * Camera.main.aspect));
+            // Frame the square at rest while playing (like the app's arena shot); spectators can turn
+            // the camera, so then the diagonal has to fit on narrow or short phones as well.
+            if (rig)
+            {
+                float radius = Mathf.Max(23f, (ControlsVisible ? 7.4f : 9.8f) / (0.47f * Camera.main.aspect));
+                rig.orbit.Radius = Playing ? Mathf.Lerp(rig.orbit.Radius, radius, 1f - Mathf.Exp(-3f * Time.deltaTime)) : radius;
+            }
             if (!Playing) return;
             if (!ControlsVisible) rig.Swipe(hud.Look);
             SetBars();
