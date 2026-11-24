@@ -19,7 +19,8 @@ namespace GSG
         public static Material Toon(Color c, float edge = 1.3f, float rim = 0.2f, Color? emission = null)
         {
             string key = $"{ColorUtility.ToHtmlStringRGBA(c)}/{edge}/{rim}/{(emission.HasValue ? ColorUtility.ToHtmlStringRGBA(emission.Value) : "")}";
-            if (cache.TryGetValue(key, out var m)) return m;
+            // Play Mode without domain reload keeps the cache while ending Play Mode destroys its materials.
+            if (cache.TryGetValue(key, out var m) && m) return m;
             if (!baseToon) baseToon = Resources.Load<Material>("GSG/Materials/Flag");
             m = new Material(baseToon) { name = "Bauschale " + key };
             m.SetColor("_BaseColor", c);

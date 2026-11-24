@@ -263,7 +263,7 @@ namespace GSG.Tanks
             float start = Mathf.Min(TankSim.Muzzle, length);
             laser.position = At(p + aim * ((length + start) / 2f), BulletHeight);
             laser.rotation = Quaternion.LookRotation(new Vector3(aim.X, 0f, -aim.Y));
-            laser.localScale = new Vector3(0.035f, 0.025f, length - start);
+            laser.localScale = new Vector3(0.07f, 0.03f, length - start);
         }
 
         static Color PowerColor(TankSim.Power power) => power switch

@@ -18,8 +18,8 @@ Alle Minispiele, die nicht zur ersten Generation gehören (`NEW_MATCH_IDS` in `s
 | Tower Tumble – Survival (`towersurvival`) | Gleiche Szene-Logik mit `survival`: keine Ziellinie, drei verlorene Steine = raus, Fallen bis × 1,8 schneller in 180 s, vorsichtigere Bots. | Szene `TowerSurvival` |
 | Türenlotto (`tuerenlotto`) | Parcours-Lauf aus den App-Streckendaten (`Resources/GSG/Courses/tuerenlotto.json`, erzeugt aus `parcoursCourses.ts`): Türreihen, Gassen mit Sackgasse/Falltür, Schieber, Graben, Drehbalken. Läufer und Hindernisse des Probelevels; eigener Kontrollpunkt je Läufer, Zielreihenfolge, Zielschluss 20 s nach dem Ersten, Zeitlimit 120 s. Bots nach `parcoursBot` (gemeinsames Wissen über probierte Türen/Gassen, springen/ducken an Balken, springen über Lücken, warten auf Inseln und Schieber). | Szene `Tuerenlotto` |
 | Kreiselkurs (`kreiselkurs`) | Gleicher Lauf-Rahmen: Drehbalken unten/oben/Kreuz, fahrende Inseln, zwei Wippen, Rührwerk. Bots scheitern gelegentlich an den Inseln (wie in der App). | Szene `Kreiselkurs` |
-| Standhaft (`standhaft`) | Ausscheidungsfinale aus `standhaft.json`. 25 Fallklappen öffnen sich von außen nach innen, zwei Drehbalken starten zeitversetzt. Spieler und drei Bots weichen über die Plattform aus. Letzte Überlebende gewinnen, nach 90 s auch gemeinsam. Unitys Parcours-Läufer verwendet Rigidbody-Kollisionen, die Balken folgen dem App-Kontaktmodell. | Szene `Standhaft` im Projekt. Editor-Prüfung und WebGL-Build offen. |
-| Tank Trouble (`tanks`) | C#-Port von `tankTrouble.ts` in 50-ms-Schritten. 7 × 11 Zellen, Abpraller, zerstörbare Ziegel, Extras, Respawn mit Schild und drei Bots mit Labyrinth-Pfadsuche. Übersicht auf das ganze Feld, links fahren, rechts ziehen und zum Schießen loslassen. Der Ziellaser reicht bis zur ersten Mauer. Sieben Abschüsse oder Zeitwertung mit höchstens 30 s Stechen. | Szene `TankTrouble` im Projekt, C#-Regelkern geprüft. Editor-Prüfung und WebGL-Build offen. |
+| Standhaft (`standhaft`) | Ausscheidungsfinale aus `standhaft.json`. 25 Fallklappen öffnen sich von außen nach innen, zwei Drehbalken starten zeitversetzt. Spieler und drei Bots weichen über die Plattform aus. Letzte Überlebende gewinnen, nach 90 s auch gemeinsam. Unitys Parcours-Läufer verwendet Rigidbody-Kollisionen, die Balken folgen dem App-Kontaktmodell. Die Kamera rahmt beim Spielen die ruhende Arena wie die App; ausgeschieden lässt sie Platz zum Drehen per Wischen. | Szene `Standhaft` |
+| Tank Trouble (`tanks`) | C#-Port von `tankTrouble.ts` in 50-ms-Schritten. 7 × 11 Zellen, Abpraller, zerstörbare Ziegel, Extras, Respawn mit Schild und drei Bots mit Labyrinth-Pfadsuche. Übersicht auf das ganze Feld, links fahren, rechts ziehen und zum Schießen loslassen. Der Ziellaser reicht bis zur ersten Mauer. Sieben Abschüsse oder Zeitwertung mit höchstens 30 s Stechen. | Szene `TankTrouble` |
 
 Dazu kommt **Roll It Up! (Unity)** (`rollitup`, Szene `RollItUp`): die Bauschale als Unity-Brett. Nur für Admin/Entwicklung sichtbar (`canDevelop`) unter **Frei ausprobieren**; startet eine Testpartie mit Bots am lokalen Tisch. Regeln, Bots, Items, Inventar/Menü und die Minispiele zwischen den Runden bleiben unverändert in der App (`shared/party.ts` über die Raumautorität); Unity zeichnet nur Schale, Felder, Stationen, Figuren, Würfel und die Brett-Entscheidungen.
 
@@ -40,10 +40,10 @@ Begründung: zuerst Spiele, die am meisten von 3D/Physik gewinnen und eine gemei
 | 7 | Türenlotto | umgesetzt (Nov. 2026) |
 | 8 | Kreiselkurs | umgesetzt (Nov. 2026) |
 | 9–13 | Parcours-Läufe Geisterpfad, Fallklappen, Windkanal, Kletterwand, Glibberflut | offen; Streckendaten liegen schon als JSON vor, es fehlen Geisterplatten-, Klappen-, Wind-, Griff- und Glibber-Aufbau im `CourseBuilder` sowie die zugehörigen Bot-Regeln |
-| 14 | Standhaft | Unity-Szene im Projekt, WebGL-Build offen |
+| 14 | Standhaft | umgesetzt (Nov. 2026) |
 | 15 | Arrow Masters | offen |
 | 16–17 | Neon Racer, Neon Racer – Kippen | offen |
-| 18–19 | Tank Trouble, Turmsicht | Unity-Szene für Tank Trouble im Projekt, WebGL-Build offen. Turmsicht offen. |
+| 18–19 | Tank Trouble, Turmsicht | Tank Trouble umgesetzt (Nov. 2026), Turmsicht offen |
 | 20–22 | Light Trails, Neon Pong, Quick Draw | offen |
 
 Floor is Lava ist bereits umgesetzt; Wippenwerk, Hook Wars, Chaos Run und die klassischen Arenen gehören zur ersten Generation und werden nicht umgestellt.
@@ -113,7 +113,8 @@ Eigene Meshes (Drehkörper, Hügel, Steine) brauchen UV-Koordinaten: `GSG/Toon` 
   ```
 
   Bereitschaft: `unity status --until-ready --project-path <Pfad>`. Steuerung: `unity command script eval`, `unity recompile`, `unity command editor.playmode start|stop`, `unity command capture game_view`. Vor dem Play Mode `unity command editor set_auto_tick`; Handy-Auflösung über `UnityEditor.PlayModeWindow.SetCustomRenderingResolution(540, 1080, "Handy")`. Hintergrundprozesse einer Agenten-Sitzung enden nach höchstens 2 Stunden – dann Editor neu starten.
-- Am Ende `unity close <Pfad>` (schreibt Projekteinstellungen sauber). Die Personal-Lizenz belegt einen Aktivierungsplatz; bei Bedarf `unity license return`.
+- Jeder neue Container beginnt ohne CLI, Editor, Anmeldung und Lizenz (Einrichtung ≈ 20 Min. plus Anmeldelink). Unity-Aufgaben und Rückmeldungen deshalb möglichst in einer Sitzung bündeln. .NET 8 für den Tank-Regeltest: `apt-get install -y dotnet-sdk-8.0`.
+- Am Ende `unity close <Pfad>` (schreibt Projekteinstellungen sauber) und `unity license return --yes`: Der Container verschwindet, die Aktivierung würde sonst einen Platz belegen.
 
 ## Bauen und ausliefern
 
@@ -131,7 +132,7 @@ Eigene Meshes (Drehkörper, Hügel, Steine) brauchen UV-Koordinaten: `GSG/Toon` 
 6. Streckendaten nach Änderungen an `shared/matches/parcoursCourses.ts` neu exportieren: `npx tsx scripts/unity-export-courses.ts` (flaches JSON nach `Resources/GSG/Courses/<id>.json`; nicht gesetzte Indizes = −1). `npm run test:rules` schlägt fehl, solange die Dateien veraltet sind.
 7. `RollDemo.json` nach Änderungen an `src/unityRollItUp.ts` neu erzeugen (Felder müssen zu `RollModels.cs` passen); die Brücke selbst prüft `npm run test:rules` (`scripts/unity-roll-it-up-test.ts`).
 
-Auslieferung: Der Server erlaubt **nur unter `/unity/`** WebAssembly (`'wasm-unsafe-eval'`), `blob:`-Skripte und das Einbetten im eigenen App-Rahmen (`frame-ancestors 'self'`, `X-Frame-Options: SAMEORIGIN`); die App selbst bleibt streng. `Build/`-Dateien sind ein Jahr cachebar. `.unityweb`-Dateien gehen mit `Content-Encoding: gzip` (und `application/wasm` für den Code) hinaus: Der Browser entpackt selbst und übersetzt WebAssembly schon während des Downloads. Der Service Worker nimmt `unity/**` nicht in den Offline-Cache und leitet Navigationen nach `/unity/` nicht auf die App um. Andere Hoster brauchen dieselben Header ([Deployment](DEPLOYMENT.md#node-starten)). Der erste Start lädt ca. 12 MB für alle Spiele zusammen (Engine-Code ≈ 7,2 MB, Daten ≈ 4,4 MB; neue Szenen sind klein, weil ihre Welt zur Laufzeit entsteht); weitere Spiele kommen danach aus dem Browser-Cache. Jeder Neubau legt den ganzen Build neu im Repository ab, deshalb Spiele gesammelt bauen und nicht für Kleinigkeiten. Startzeit bis spielbereit (Chromium-Emulation, 4× gedrosselte CPU, 30 Mbit/s, 40 ms): Parcours 8,4 s → 6,4–7,1 s, Floor is Lava 7,4 s → 6,2–6,4 s, Bauschale 6 s. Die Bauschale lädt verdeckt schon während des Auftakt-Minispiels.
+Auslieferung: Der Server erlaubt **nur unter `/unity/`** WebAssembly (`'wasm-unsafe-eval'`), `blob:`-Skripte und das Einbetten im eigenen App-Rahmen (`frame-ancestors 'self'`, `X-Frame-Options: SAMEORIGIN`); die App selbst bleibt streng. `Build/`-Dateien sind ein Jahr cachebar. `.unityweb`-Dateien gehen mit `Content-Encoding: gzip` (und `application/wasm` für den Code) hinaus: Der Browser entpackt selbst und übersetzt WebAssembly schon während des Downloads. Der Service Worker nimmt `unity/**` nicht in den Offline-Cache und leitet Navigationen nach `/unity/` nicht auf die App um. Andere Hoster brauchen dieselben Header ([Deployment](DEPLOYMENT.md#node-starten)). Der erste Start lädt ca. 12 MB für alle Spiele zusammen (Engine-Code ≈ 7,3 MB, Daten ≈ 4,4 MB; neue Szenen sind klein, weil ihre Welt zur Laufzeit entsteht); weitere Spiele kommen danach aus dem Browser-Cache. Jeder Neubau legt den ganzen Build neu im Repository ab, deshalb Spiele gesammelt bauen und nicht für Kleinigkeiten. Startzeit bis spielbereit (Chromium-Emulation, 4× gedrosselte CPU, 30 Mbit/s, 40 ms): Parcours 8,4 s → 6,4–7,1 s, Floor is Lava 7,4 s → 6,2–6,4 s, Bauschale 6 s. Die Bauschale lädt verdeckt schon während des Auftakt-Minispiels.
 
 ## Prüfungen
 
@@ -157,12 +158,13 @@ dotnet .artifacts/unity-tank-sim-test/bin/TankSim.Tests/debug/TankSim.Tests.dll
 
 ## Stolpersteine
 
-- **Play Mode ohne Domain-Reload:** statische Felder überleben zwischen Play-Mode-Starts.
+- **Play Mode ohne Domain-Reload:** statische Felder überleben zwischen Play-Mode-Starts. Zur Laufzeit erzeugte Objekte darin (z. B. Materialien im `Kit`-Cache) sind nach dem Beenden zerstört; Caches prüfen deshalb vor der Rückgabe, ob das Objekt noch lebt (sonst erscheinen Teile magenta).
 - **Editor-Skripte** lassen sich im Play Mode nicht als Komponente anhängen; Prüfabläufe als Coroutine auf einem Laufzeitobjekt starten (wie `GSGPlaytest`).
 - **Figuren:** Die Clips aus `anims.glb` adressieren Knochen als `Node-0/root/…`; die Prefabs haben deshalb eine `Node-0`-Ebene unter `Armature`. Nach dem Neubau eines Prefabs kann der Editor eine veraltete Kopie halten – `AssetDatabase.ImportAsset(..., ForceUpdate)`.
 - **Bewegungseinflüsse** (Wind, Förderband, Plattformen) als Zusatz auf die eigene Geschwindigkeit legen und vor dem nächsten Schritt wieder abziehen, sonst summieren sie sich auf.
 - **Gelenkfedern** (`HingeJoint.spring`) im Play Mode nachmessen: Die Wippen brauchen Feder/Dämpfer 6500/900, damit sie unter einer Figur am Rand ≈ 14° kippen statt bis zum Anschlag.
 - **Touch:** Ein kurzer Tipp kann zwischen zwei Bildern beginnen und enden – das HUD wertet ihn trotzdem. Ebenen über dem Canvas (`#gsg-loading`) müssen wirklich verschwinden (`[hidden] { display: none }`), sonst kommt keine Berührung an.
+- **Frischer Editor (Cloud-Sitzung):** Die WebGL-Codeoptimierung ist eine Benutzereinstellung (nicht eingecheckt) und steht dann auf „Build Times“; der Build wird so ≈ 1 MB größer. Vor dem Bauen `GSGSetup.Project()` ausführen oder nur die Codeoptimierung setzen (`SetWebGLCodeOptimization("DiskSizeLTO")`) und mit `UserBuildSettings.codeOptimization` prüfen.
 - **Template:** keine Inline-Skripte (CSP); Build-Dateinamen über `data-`-Attribute an `TemplateData/boot.js` geben.
 
 ## Offen
