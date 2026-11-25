@@ -91,7 +91,7 @@ export function PartyGameScreen({profile,initialRoom,onExit,onLobby,unityBoard=f
   const projected=g,own=g.players.find(q=>q.id===viewer)!,canAct=p.id===profile.id,host=room.hostId===profile.id;
   // The Unity frame starts loading with the first minigame that uses Unity and then stays for the whole match.
   const [unityHost,setUnityHost]=useState(false);
-  useEffect(()=>{if(g.mini?.look?.renderer==="unity")setUnityHost(true);},[g.mini?.look?.renderer]);
+  useEffect(()=>{if(g.mini?.look?.renderer==="unity"||g.mini?.look?.renderer==="unity-host")setUnityHost(true);},[g.mini?.look?.renderer]);
   const m=projected.mini,standings=partyStanding(g),busy=pending;
   const competition=g.competition;
   // Online rooms return to their lobby after the end; leaving the room happens there.
