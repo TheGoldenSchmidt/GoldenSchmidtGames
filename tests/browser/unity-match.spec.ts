@@ -166,3 +166,48 @@ for (const [miniId, name, key] of [["bombs", "Bomb Arena", "bombs"], ["snowball"
     void key;
   } finally { session.close(); }
 });
+
+// Floor is Lava in Unity (3rd person by default): stick, jump ("a") and the dive command reach the room.
+test("Floor is Lava mit Unity-Darstellung: Springen und Hechten aus dem Unity-HUD", async ({ page }, info) => {
+  test.skip(info.project.name !== "phone", "Nur Smartphone");
+  test.setTimeout(240000);
+  const errors: string[] = [];
+  page.on("pageerror", e => errors.push(e.message));
+  const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "lava" });
+  try {
+    await expect(page.getByRole("group", { name: "Variante" }).getByRole("button", { name: /Unity/ })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("group", { name: "Ansicht" }).getByRole("button", { name: /3rd Person/ })).toHaveAttribute("aria-pressed", "true");
+    await unityLoaded(page);
+    await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
+    await session.action({ type: "ready" }, session.ids[1]);
+    await matchStarted(page);
+    await expect(page.locator(".match-world")).toHaveAttribute("data-ready", "true", { timeout: 150000 });
+    await expect(page.locator(".match-game")).toHaveClass(/is-unity-hud/, { timeout: 30000 });
+    // The software-rendered test browser may stall while Unity loads the scene; the app's socket then reconnects.
+    await expect(page.locator(".party-connection")).toHaveCount(0, { timeout: 30000 });
+    // Unity counts 3-2-1 itself (the app's countdown is hidden): wait for the room's start signal.
+    await expect.poll(async () => (await session.state()).partyGame!.mini!.match!.time, { timeout: 15000 }).toBeGreaterThan(300);
+    const own = async () => (await session.state()).partyGame!.mini!.match!.players.find(p => p.id === session.ids[0])!;
+    const cdp = await page.context().newCDPSession(page);
+    const touch = (type: "touchStart" | "touchMove" | "touchEnd", points: [number, number][]) =>
+      cdp.send("Input.dispatchTouchEvent", { type, touchPoints: points.map(([x, y], id) => ({ x, y, id: id + 1 })) });
+    // Unity shows its buttons only while the own runner is in play: not between rounds and not after a fall
+    // (standing still, that takes about three seconds). The software-rendered test browser draws Unity at a few
+    // frames per second, so a touch is repeated until the room has it; the room counts every tap Unity sends.
+    const tapUntil = (point: [number, number], count: () => Promise<number>) => expect(async () => {
+      const start = await count();
+      await touch("touchStart", [point]); await page.waitForTimeout(80); await touch("touchEnd", []);
+      await expect.poll(count, { timeout: 1500 }).toBeGreaterThan(start);
+    }).toPass({ timeout: 30000 });
+    await expect(async () => {
+      await touch("touchStart", [[80, 740]]);
+      for (const dy of [15, 30, 45, 60]) await touch("touchMove", [[80, 740 - dy]]);
+      try { await expect.poll(async () => { const input = (await own()).input; return Math.hypot(input.x, input.y); }, { timeout: 1500 }).toBeGreaterThan(.5); }
+      finally { await page.screenshot({ path: info.outputPath("unity-lava.png") }); await touch("touchEnd", []); }
+    }).toPass({ timeout: 30000 });
+    // Jump above, dive (a game command, sent with the stick of the same moment) bottom right.
+    await tapUntil([330, 682], async () => (await own()).usedA);
+    await tapUntil([330, 780], async () => (await own()).usedN);
+    expect(errors).toEqual([]);
+  } finally { session.close(); }
+});

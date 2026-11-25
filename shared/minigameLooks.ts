@@ -22,7 +22,8 @@ export const MINI_LOOKS: Readonly<Record<string, Partial<Record<MiniRenderer, re
   sumo: { unity: ["top", "third"], web: ["top"] },
   bumpercars: { unity: ["top", "third"], web: ["top"] },
   bombs: { unity: ["top"], web: ["top"] },
-  snowball: { unity: ["third", "top"], web: ["third"] }
+  snowball: { unity: ["third", "top"], web: ["third"] },
+  lava: { unity: ["third", "top"], web: ["third"] }
 };
 
 /** Match modules that only are a view of another minigame: never drawn or chosen on their own. */

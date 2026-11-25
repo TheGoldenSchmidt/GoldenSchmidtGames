@@ -45,6 +45,19 @@ namespace GSG.Lava
 
         public Rigidbody Body => body;
 
+        /// <summary>Online: placed from the room's snapshots, no physics body of its own.</summary>
+        public bool remote;
+        public Vector3 remoteVelocity;
+
+        public void Remote()
+        {
+            remote = true;
+            body.isKinematic = true;
+            body.interpolation = RigidbodyInterpolation.None;
+            body.detectCollisions = false;
+            capsule.enabled = false;
+        }
+
         void Awake()
         {
             body = GetComponent<Rigidbody>();
@@ -161,7 +174,7 @@ namespace GSG.Lava
             float t = Time.time;
             faceYaw = Mathf.LerpAngle(faceYaw, Mathf.Atan2(facing.x, facing.z) * Mathf.Rad2Deg, 1f - Mathf.Exp(-14f * Time.deltaTime));
             figure.transform.rotation = Quaternion.Euler(0f, faceYaw, 0f);
-            var v = body.linearVelocity; var h = new Vector3(v.x, 0f, v.z);
+            var v = remote ? remoteVelocity : body.linearVelocity; var h = new Vector3(v.x, 0f, v.z);
             if (t < diveUntil) figure.Loop("slide", 0.08f);
             else if (t < proneUntil) figure.Loop("slide", 0.1f);
             else if (t < shoveUntil) figure.Loop("push", 0.05f, 1.6f);

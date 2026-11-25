@@ -19,6 +19,7 @@ namespace GSG
     [Serializable] class OnlineSound { public bool on; }
     [Serializable] class OnlineInput { public string type = "input"; public float x, y, ax, ay; public bool ha, hb; }
     [Serializable] class OnlinePress { public string type = "press"; public string kind; }
+    [Serializable] class OnlineCommand { public string type = "command"; public int value; }
 
     /// <summary>A game scene that draws the room's match (<c>?spiel=online</c>).</summary>
     public interface IOnlineMatch
@@ -140,6 +141,9 @@ namespace GSG
 
         /// <summary>A tap of button "a" or "b" at this moment (counted by the room like the app's buttons).</summary>
         public static void Press(string kind) => GSG_Post(JsonUtility.ToJson(new OnlinePress { kind = kind }));
+
+        /// <summary>A game command (e.g. Floor is Lava's dive = 1), like the app's own command buttons.</summary>
+        public static void Command(int value) => GSG_Post(JsonUtility.ToJson(new OnlineCommand { value = value }));
 
         /// <summary>Heading of the chase camera (0 = up on the overview), so the app keeps the stick relative to it.</summary>
         public static void Camera(float yaw) => GSG_Post(JsonUtility.ToJson(new OnlineCam { yaw = yaw }));

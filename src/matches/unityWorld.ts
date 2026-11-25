@@ -35,6 +35,8 @@ export function createUnityWorld(view: MiniView, host: HTMLElement, read: () => 
     else if (message.type === "playing") { host.dataset.controls = "unity"; unityStage.interactive(true); hooks.onControls(true); }
     else if (message.type === "input") hooks.io.set(unityInput(message), true);
     else if (message.type === "press" && (message.kind === "a" || message.kind === "b")) hooks.io.press(message.kind);
+    // A game command (e.g. Floor is Lava's dive = 1); the rules check it like the app's own button.
+    else if (message.type === "command" && Number.isInteger(message.value) && message.value! >= 0 && message.value! <= 9) hooks.io.command(message.value!);
     else if (message.type === "error") fail();
   });
   const fail = () => { if (disposed) return; dispose(); onError(); };
