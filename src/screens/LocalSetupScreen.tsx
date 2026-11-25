@@ -108,7 +108,7 @@ export function LocalSetupScreen({
         <p className="iw-note game-shelf__note">{UNITY_LOAD_NOTE}</p>
         {onUnity&&UNITY_GAMES.map(entry=><button key={entry.id} className="practice-entry iw-card" onClick={()=>onUnity(entry.id)}><strong>{entry.name}</strong><span>{entry.text}</span><small>{entry.note}</small></button>)}
         {(onPractice||onUnityRollItUp)&&<h2 className="iw-plank game-shelf__group">Entwicklung</h2>}
-        {onUnityRollItUp&&<button className="practice-entry iw-card" onClick={onUnityRollItUp}><strong>Roll It Up! (Unity)</strong><span>Die Bauschale als Unity-Brett gegen Bots; Regeln und Minispiele wie im Original.</span><small>Nur Admin/Entwicklung</small></button>}
+        {onUnityRollItUp&&<button className="practice-entry iw-card" onClick={onUnityRollItUp}><strong>Roll It Up! (Unity)</strong><span>Bauschale oder Grinder als Unity-Brett gegen Bots; Regeln und Minispiele wie im Original.</span><small>Nur Admin/Entwicklung</small></button>}
         {onPractice&&<button className="practice-entry iw-card" onClick={onPractice}><strong>Proberaum</strong><span>Eine Insel für Bewegung, Hindernisse und Animationen.</span><small>Ohne Zeitlimit · auch offline</small></button>}
       </nav> : <nav className="page__content game-shelf" aria-label="Spiel auswählen">
         <h2 className="iw-plank game-shelf__group">Allein mit Bots</h2>

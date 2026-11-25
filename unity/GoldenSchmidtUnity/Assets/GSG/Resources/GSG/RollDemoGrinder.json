@@ -1,0 +1,1351 @@
+{
+ "board": {
+  "type": "board",
+  "board": "grinder",
+  "name": "Der Grinder",
+  "tunnels": [
+   7,
+   19,
+   33,
+   39
+  ],
+  "fields": [
+   {
+    "id": 0,
+    "x": 0,
+    "z": -0.8,
+    "type": "start",
+    "next": [
+     1
+    ],
+    "station": "",
+    "price": 0,
+    "name": "Start",
+    "help": "Beim Passieren bekommst du 3 Münzen."
+   },
+   {
+    "id": 1,
+    "x": 0.2070552360820166,
+    "z": -0.7727406610312546,
+    "type": "gift",
+    "next": [
+     2
+    ],
+    "station": "",
+    "price": 0,
+    "name": "Geschenk",
+    "help": "Hier wartet ein zufälliges Item auf dich."
+   },
+   {
+    "id": 2,
+    "x": 0.4,
+    "z": -0.6928203230275508,
+    "type": "coin",
+    "next": [
+     3
+    ],
+    "station": "",
+    "price": 0,
+    "name": "+3 Münzen",
+    "help": "Beim Landen bekommst du 3 Münzen."
+   },
+   {
+    "id": 3,
+    "x": 0.565685424949238,
+    "z": -0.565685424949238,
+    "type": "station",
+    "next": [
+     4
+    ],
+    "station": "Grinder",
+    "price": 8,
+    "name": "Grinder",
+    "help": "Kaufstelle: Grinder beim Passieren für 8 Münzen kaufen."
+   },
+   {
+    "id": 4,
+    "x": 0.6928203230275511,
+    "z": -0.3999999999999999,
+    "type": "coin",
+    "next": [
+     5
+    ],
+    "station": "",
+    "price": 0,
+    "name": "+3 Münzen",
+    "help": "Beim Landen bekommst du 3 Münzen."
+   },
+   {
+    "id": 5,
+    "x": 0.7727406610312545,
+    "z": -0.2070552360820166,
+    "type": "coin",
+    "next": [
+     6,
+     24
+    ],
+    "station": "",
+    "price": 0,
+    "name": "+3 Münzen",
+    "help": "Beim Landen bekommst du 3 Münzen."
+   },
+   {
+    "id": 6,
+    "x": 0.8,
+    "z": 0,
+    "type": "event",
+    "next": [
+     7
+    ],
+    "station": "",
+    "price": 0,
+    "name": "Ereignis",
+    "help": "Eine Überraschung für dich oder die ganze Gruppe."
+   },
+   {
+    "id": 7,
+    "x": 0.7727406610312545,
+    "z": 0.2070552360820166,
+    "type": "tunnel",
+    "next": [
+     8
+    ],
+    "station": "",
+    "price": 0,
+    "name": "Rohrpost",
+    "help": "Rohrpost: Wer hier landet, saust zum Partnerfeld auf der anderen Seite."
+   },
+   {
+    "id": 8,
+    "x": 0.6928203230275511,
+    "z": 0.4,
+    "type": "coin",
+    "next": [
+     9
+    ],
+    "station": "",
+    "price": 0,
+    "name": "+3 Münzen",
+    "help": "Beim Landen bekommst du 3 Münzen."
+   },
+   {
+    "id": 9,
+    "x": 0.565685424949238,
+    "z": 0.565685424949238,
+    "type": "station",
+    "next": [
+     10
+    ],
+    "station": "Weedbud I",
+    "price": 5,
+    "name": "Weedbud I",
+    "help": "Kaufstelle: Weedbud I beim Passieren für 5 Münzen kaufen."
+   },
+   {
+    "id": 10,
+    "x": 0.4,
+    "z": 0.6928203230275508,
+    "type": "bad",
+    "next": [
+     11
+    ],
+    "station": "",
+    "price": 0,
+    "name": "−3 Münzen",
+    "help": "Beim Landen verlierst du bis zu 3 Münzen. Ein Schild schützt dich."
+   },
+   {
+    "id": 11,
+    "x": 0.2070552360820166,
+    "z": 0.7727406610312545,
+    "type": "event",
+    "next": [
+     12,
+     25
+    ],
+    "station": "",
+    "price": 0,
+    "name": "Ereignis",
+    "help": "Eine Überraschung für dich oder die ganze Gruppe."
+   },
+   {
+    "id": 12,
+    "x": 0,
+    "z": 0.8,
+    "type": "shop",
+    "next": [
+     13
+    ],
+    "station": "",
+    "price": 0,
+    "name": "Shop",
+    "help": "Kaufe ein Item für deinen nächsten Zug."
+   },
+   {
+    "id": 13,
+    "x": -0.20705523608201673,
+    "z": 0.7727406610312545,
+    "type": "gift",
+    "next": [
+     14
+    ],
+    "station": "",
+    "price": 0,
+    "name": "Geschenk",
+    "help": "Hier wartet ein zufälliges Item auf dich."
+   },
+   {
+    "id": 14,
+    "x": -0.39999999999999986,
+    "z": 0.6928203230275511,
+    "type": "coin",
+    "next": [
+     15
+    ],
+    "station": "",
+    "price": 0,
+    "name": "+3 Münzen",
+    "help": "Beim Landen bekommst du 3 Münzen."
+   },
+   {
+    "id": 15,
+    "x": -0.565685424949238,
+    "z": 0.565685424949238,
+    "type": "station",
+    "next": [
+     16
+    ],
+    "station": "Weedbud II",
+    "price": 5,
+    "name": "Weedbud II",
+    "help": "Kaufstelle: Weedbud II beim Passieren für 5 Münzen kaufen."
+   },
+   {
+    "id": 16,
+    "x": -0.692820323027551,
+    "z": 0.4,
+    "type": "coin",
+    "next": [
+     17
+    ],
+    "station": "",
+    "price": 0,
+    "name": "+3 Münzen",
+    "help": "Beim Landen bekommst du 3 Münzen."
+   },
+   {
+    "id": 17,
+    "x": -0.7727406610312545,
+    "z": 0.20705523608201673,
+    "type": "coin",
+    "next": [
+     18,
+     26
+    ],
+    "station": "",
+    "price": 0,
+    "name": "+3 Münzen",
+    "help": "Beim Landen bekommst du 3 Münzen."
+   },
+   {
+    "id": 18,
+    "x": -0.8,
+    "z": 1.4210854715202004e-16,
+    "type": "event",
+    "next": [
+     19
+    ],
+    "station": "",
+    "price": 0,
+    "name": "Ereignis",
+    "help": "Eine Überraschung für dich oder die ganze Gruppe."
+   },
+   {
+    "id": 19,
+    "x": -0.7727406610312548,
+    "z": -0.20705523608201631,
+    "type": "tunnel",
+    "next": [
+     20
+    ],
+    "station": "",
+    "price": 0,
+    "name": "Rohrpost",
+    "help": "Rohrpost: Wer hier landet, saust zum Partnerfeld auf der anderen Seite."
+   },
+   {
+    "id": 20,
+    "x": -0.6928203230275508,
+    "z": -0.4000000000000001,
+    "type": "coin",
+    "next": [
+     21
+    ],
+    "station": "",
+    "price": 0,
+    "name": "+3 Münzen",
+    "help": "Beim Landen bekommst du 3 Münzen."
+   },
+   {
+    "id": 21,
+    "x": -0.5656854249492382,
+    "z": -0.565685424949238,
+    "type": "shop",
+    "next": [
+     22
+    ],
+    "station": "",
+    "price": 0,
+    "name": "Shop",
+    "help": "Kaufe ein Item für deinen nächsten Zug."
+   },
+   {
+    "id": 22,
+    "x": -0.40000000000000036,
+    "z": -0.6928203230275508,
+    "type": "bad",
+    "next": [
+     23
+    ],
+    "station": "",
+    "price": 0,
+    "name": "−3 Münzen",
+    "help": "Beim Landen verlierst du bis zu 3 Münzen. Ein Schild schützt dich."
+   },
+   {
+    "id": 23,
+    "x": -0.20705523608201645,
+    "z": -0.7727406610312546,
+    "type": "bad",
+    "next": [
+     0,
+     27
+    ],
+    "station": "",
+    "price": 0,
+    "name": "−3 Münzen",
+    "help": "Beim Landen verlierst du bis zu 3 Münzen. Ein Schild schützt dich."
+   },
+   {
+    "id": 24,
+    "x": 0.6086088537375517,
+    "z": -0.11830157713345785,
+    "type": "coin",
+    "next": [
+     31
+    ],
+    "station": "",
+    "price": 0,
+    "name": "+3 Münzen",
+    "help": "Beim Landen bekommst du 3 Münzen."
+   },
+   {
+    "id": 25,
+    "x": 0.11830157713345785,
+    "z": 0.6086088537375517,
+    "type": "gift",
+    "next": [
+     34
+    ],
+    "station": "",
+    "price": 0,
+    "name": "Geschenk",
+    "help": "Hier wartet ein zufälliges Item auf dich."
+   },
+   {
+    "id": 26,
+    "x": -0.6086088537375517,
+    "z": 0.11830157713345785,
+    "type": "coin",
+    "next": [
+     37
+    ],
+    "station": "",
+    "price": 0,
+    "name": "+3 Münzen",
+    "help": "Beim Landen bekommst du 3 Münzen."
+   },
+   {
+    "id": 27,
+    "x": -0.11830157713345812,
+    "z": -0.6086088537375516,
+    "type": "event",
+    "next": [
+     28
+    ],
+    "station": "",
+    "price": 0,
+    "name": "Ereignis",
+    "help": "Eine Überraschung für dich oder die ganze Gruppe."
+   },
+   {
+    "id": 28,
+    "x": 0,
+    "z": -0.44,
+    "type": "coin",
+    "next": [
+     39
+    ],
+    "station": "",
+    "price": 0,
+    "name": "+3 Münzen",
+    "help": "Beim Landen bekommst du 3 Münzen."
+   },
+   {
+    "id": 29,
+    "x": 0.22,
+    "z": -0.381051177665153,
+    "type": "safe",
+    "next": [
+     28,
+     40
+    ],
+    "station": "",
+    "price": 0,
+    "name": "Aussicht",
+    "help": "Hier kannst du die Aussicht genießen. Keine weiteren Effekte."
+   },
+   {
+    "id": 30,
+    "x": 0.38105117766515323,
+    "z": -0.22,
+    "type": "event",
+    "next": [
+     29,
+     44
+    ],
+    "station": "",
+    "price": 0,
+    "name": "Ereignis",
+    "help": "Eine Überraschung für dich oder die ganze Gruppe."
+   },
+   {
+    "id": 31,
+    "x": 0.44,
+    "z": 0,
+    "type": "station",
+    "next": [
+     30
+    ],
+    "station": "Pape",
+    "price": 3,
+    "name": "Pape",
+    "help": "Kaufstelle: Pape beim Passieren für 3 Münzen kaufen."
+   },
+   {
+    "id": 32,
+    "x": 0.38105117766515323,
+    "z": 0.22,
+    "type": "bad",
+    "next": [
+     31,
+     41
+    ],
+    "station": "",
+    "price": 0,
+    "name": "−3 Münzen",
+    "help": "Beim Landen verlierst du bis zu 3 Münzen. Ein Schild schützt dich."
+   },
+   {
+    "id": 33,
+    "x": 0.22,
+    "z": 0.3810511776651529,
+    "type": "tunnel",
+    "next": [
+     32
+    ],
+    "station": "",
+    "price": 0,
+    "name": "Rohrpost",
+    "help": "Rohrpost: Wer hier landet, saust zum Partnerfeld auf der anderen Seite."
+   },
+   {
+    "id": 34,
+    "x": 0,
+    "z": 0.44,
+    "type": "station",
+    "next": [
+     33
+    ],
+    "station": "Filter",
+    "price": 3,
+    "name": "Filter",
+    "help": "Kaufstelle: Filter beim Passieren für 3 Münzen kaufen."
+   },
+   {
+    "id": 35,
+    "x": -0.21999999999999986,
+    "z": 0.38105117766515323,
+    "type": "coin",
+    "next": [
+     34,
+     42
+    ],
+    "station": "",
+    "price": 0,
+    "name": "+3 Münzen",
+    "help": "Beim Landen bekommst du 3 Münzen."
+   },
+   {
+    "id": 36,
+    "x": -0.38105117766515306,
+    "z": 0.22,
+    "type": "gift",
+    "next": [
+     35,
+     44
+    ],
+    "station": "",
+    "price": 0,
+    "name": "Geschenk",
+    "help": "Hier wartet ein zufälliges Item auf dich."
+   },
+   {
+    "id": 37,
+    "x": -0.44,
+    "z": 0,
+    "type": "station",
+    "next": [
+     36
+    ],
+    "station": "Weedbud III",
+    "price": 5,
+    "name": "Weedbud III",
+    "help": "Kaufstelle: Weedbud III beim Passieren für 5 Münzen kaufen."
+   },
+   {
+    "id": 38,
+    "x": -0.381051177665153,
+    "z": -0.22,
+    "type": "bad",
+    "next": [
+     37,
+     43
+    ],
+    "station": "",
+    "price": 0,
+    "name": "−3 Münzen",
+    "help": "Beim Landen verlierst du bis zu 3 Münzen. Ein Schild schützt dich."
+   },
+   {
+    "id": 39,
+    "x": -0.22000000000000028,
+    "z": -0.3810511776651529,
+    "type": "tunnel",
+    "next": [
+     38
+    ],
+    "station": "",
+    "price": 0,
+    "name": "Rohrpost",
+    "help": "Rohrpost: Wer hier landet, saust zum Partnerfeld auf der anderen Seite."
+   },
+   {
+    "id": 40,
+    "x": 0.27179011100922806,
+    "z": -0.5572523087054836,
+    "type": "bad",
+    "next": [
+     2
+    ],
+    "station": "",
+    "price": 0,
+    "name": "−3 Münzen",
+    "help": "Beim Landen verlierst du bis zu 3 Münzen. Ein Schild schützt dich."
+   },
+   {
+    "id": 41,
+    "x": 0.5572523087054836,
+    "z": 0.27179011100922795,
+    "type": "coin",
+    "next": [
+     8
+    ],
+    "station": "",
+    "price": 0,
+    "name": "+3 Münzen",
+    "help": "Beim Landen bekommst du 3 Münzen."
+   },
+   {
+    "id": 42,
+    "x": -0.27179011100922806,
+    "z": 0.5572523087054836,
+    "type": "gift",
+    "next": [
+     14
+    ],
+    "station": "",
+    "price": 0,
+    "name": "Geschenk",
+    "help": "Hier wartet ein zufälliges Item auf dich."
+   },
+   {
+    "id": 43,
+    "x": -0.5572523087054837,
+    "z": -0.2717901110092278,
+    "type": "coin",
+    "next": [
+     20
+    ],
+    "station": "",
+    "price": 0,
+    "name": "+3 Münzen",
+    "help": "Beim Landen bekommst du 3 Münzen."
+   },
+   {
+    "id": 44,
+    "x": 0,
+    "z": 0,
+    "type": "jayspot",
+    "next": [],
+    "station": "",
+    "price": 0,
+    "name": "Jayspot",
+    "help": "Mit vollständigem Set gewinnst du bei Ankunft."
+   }
+  ]
+ },
+ "states": [
+  {
+   "type": "state",
+   "serverNow": 100000,
+   "phase": "turn",
+   "phaseId": 4,
+   "round": 1,
+   "turn": 0,
+   "viewer": "me",
+   "active": "me",
+   "canAct": true,
+   "busy": false,
+   "connected": true,
+   "error": "",
+   "deadline": 0,
+   "dice": [],
+   "diceKey": "",
+   "boost": 0,
+   "steps": 0,
+   "itemUsed": false,
+   "moving": false,
+   "moveFrom": -1,
+   "moveTo": -1,
+   "departAt": 0,
+   "arriveAt": 0,
+   "players": [
+    {
+     "id": "me",
+     "name": "Max",
+     "characterId": "rig_jonas",
+     "slot": 0,
+     "position": 1,
+     "coins": 14,
+     "supplies": [],
+     "items": [],
+     "bot": false,
+     "shield": false,
+     "active": true,
+     "me": true
+    },
+    {
+     "id": "b1",
+     "name": "Ada",
+     "characterId": "alpha_morty_smith",
+     "slot": 1,
+     "position": 0,
+     "coins": 14,
+     "supplies": [],
+     "items": [],
+     "bot": true,
+     "shield": false,
+     "active": false,
+     "me": false
+    },
+    {
+     "id": "b2",
+     "name": "Ben",
+     "characterId": "alpha_summer_smith",
+     "slot": 2,
+     "position": 0,
+     "coins": 14,
+     "supplies": [],
+     "items": [],
+     "bot": true,
+     "shield": false,
+     "active": false,
+     "me": false
+    }
+   ],
+   "order": [
+    "me",
+    "b1",
+    "b2"
+   ],
+   "headline": "Max, du bist dran!",
+   "status": "Würfeln und losziehen",
+   "paths": [],
+   "supplyName": "",
+   "supplyPrice": 0,
+   "supplyAffordable": false,
+   "shop": [],
+   "gift": "",
+   "giftName": "",
+   "giftDescription": "",
+   "needsReplace": false,
+   "ownItems": [],
+   "summary": "",
+   "summaryType": "",
+   "objectiveField": 3,
+   "objectiveText": "Grinder · 8 Münzen",
+   "route": [],
+   "log": [
+    "Das Auftakt-Minispiel bestimmt eure feste Zugreihenfolge. Bei Gleichstand entscheidet das Los.",
+    "Feste Zugreihenfolge: Ben → Ada → Max.",
+    "Ben ist am Zug."
+   ],
+   "reduced": false
+  },
+  {
+   "type": "state",
+   "serverNow": 100000,
+   "phase": "moving",
+   "phaseId": 5,
+   "round": 1,
+   "turn": 0,
+   "viewer": "me",
+   "active": "me",
+   "canAct": true,
+   "busy": false,
+   "connected": true,
+   "error": "",
+   "deadline": 0,
+   "dice": [
+    1
+   ],
+   "diceKey": "1:0:1",
+   "boost": 0,
+   "steps": 1,
+   "itemUsed": false,
+   "moving": true,
+   "moveFrom": 1,
+   "moveTo": 2,
+   "departAt": 100700,
+   "arriveAt": 101020,
+   "players": [
+    {
+     "id": "me",
+     "name": "Max",
+     "characterId": "rig_jonas",
+     "slot": 0,
+     "position": 1,
+     "coins": 14,
+     "supplies": [],
+     "items": [],
+     "bot": false,
+     "shield": false,
+     "active": true,
+     "me": true
+    },
+    {
+     "id": "b1",
+     "name": "Ada",
+     "characterId": "alpha_morty_smith",
+     "slot": 1,
+     "position": 0,
+     "coins": 14,
+     "supplies": [],
+     "items": [],
+     "bot": true,
+     "shield": false,
+     "active": false,
+     "me": false
+    },
+    {
+     "id": "b2",
+     "name": "Ben",
+     "characterId": "alpha_summer_smith",
+     "slot": 2,
+     "position": 0,
+     "coins": 14,
+     "supplies": [],
+     "items": [],
+     "bot": true,
+     "shield": false,
+     "active": false,
+     "me": false
+    }
+   ],
+   "order": [
+    "me",
+    "b1",
+    "b2"
+   ],
+   "headline": "Max, du bist dran!",
+   "status": "Du ziehst weiter · noch 1 Schritt",
+   "paths": [],
+   "supplyName": "",
+   "supplyPrice": 0,
+   "supplyAffordable": false,
+   "shop": [],
+   "gift": "",
+   "giftName": "",
+   "giftDescription": "",
+   "needsReplace": false,
+   "ownItems": [],
+   "summary": "",
+   "summaryType": "",
+   "objectiveField": 3,
+   "objectiveText": "Grinder · 8 Münzen",
+   "route": [],
+   "log": [
+    "Das Auftakt-Minispiel bestimmt eure feste Zugreihenfolge. Bei Gleichstand entscheidet das Los.",
+    "Feste Zugreihenfolge: Ben → Ada → Max.",
+    "Ben ist am Zug."
+   ],
+   "reduced": false
+  },
+  {
+   "type": "state",
+   "serverNow": 100000,
+   "phase": "path",
+   "phaseId": 4,
+   "round": 1,
+   "turn": 0,
+   "viewer": "me",
+   "active": "me",
+   "canAct": true,
+   "busy": false,
+   "connected": true,
+   "error": "",
+   "deadline": 0,
+   "dice": [
+    4
+   ],
+   "diceKey": "1:0:4",
+   "boost": 0,
+   "steps": 3,
+   "itemUsed": false,
+   "moving": false,
+   "moveFrom": -1,
+   "moveTo": -1,
+   "departAt": 0,
+   "arriveAt": 0,
+   "players": [
+    {
+     "id": "me",
+     "name": "Max",
+     "characterId": "rig_jonas",
+     "slot": 0,
+     "position": 5,
+     "coins": 14,
+     "supplies": [],
+     "items": [],
+     "bot": false,
+     "shield": false,
+     "active": true,
+     "me": true
+    },
+    {
+     "id": "b1",
+     "name": "Ada",
+     "characterId": "alpha_morty_smith",
+     "slot": 1,
+     "position": 0,
+     "coins": 14,
+     "supplies": [],
+     "items": [],
+     "bot": true,
+     "shield": false,
+     "active": false,
+     "me": false
+    },
+    {
+     "id": "b2",
+     "name": "Ben",
+     "characterId": "alpha_summer_smith",
+     "slot": 2,
+     "position": 0,
+     "coins": 14,
+     "supplies": [],
+     "items": [],
+     "bot": true,
+     "shield": false,
+     "active": false,
+     "me": false
+    }
+   ],
+   "order": [
+    "me",
+    "b1",
+    "b2"
+   ],
+   "headline": "Max, du bist dran!",
+   "status": "Welchen Weg nimmst du? Noch 3 Schritte.",
+   "paths": [
+    {
+     "field": 6,
+     "title": "Außenring weiter",
+     "detail": "Landung: +3 Münzen",
+     "route": [
+      5,
+      6,
+      7,
+      8
+     ]
+    },
+    {
+     "field": 24,
+     "title": "Speiche nach innen",
+     "detail": "Pape in 2 Schritten · 3 Münzen",
+     "route": [
+      5,
+      24,
+      31,
+      30
+     ]
+    }
+   ],
+   "supplyName": "",
+   "supplyPrice": 0,
+   "supplyAffordable": false,
+   "shop": [],
+   "gift": "",
+   "giftName": "",
+   "giftDescription": "",
+   "needsReplace": false,
+   "ownItems": [],
+   "summary": "",
+   "summaryType": "",
+   "objectiveField": 31,
+   "objectiveText": "Pape · 3 Münzen",
+   "route": [],
+   "log": [
+    "Das Auftakt-Minispiel bestimmt eure feste Zugreihenfolge. Bei Gleichstand entscheidet das Los.",
+    "Feste Zugreihenfolge: Ben → Ada → Max.",
+    "Ben ist am Zug."
+   ],
+   "reduced": false
+  },
+  {
+   "type": "state",
+   "serverNow": 100000,
+   "phase": "supply",
+   "phaseId": 4,
+   "round": 1,
+   "turn": 0,
+   "viewer": "me",
+   "active": "me",
+   "canAct": true,
+   "busy": false,
+   "connected": true,
+   "error": "",
+   "deadline": 0,
+   "dice": [
+    3
+   ],
+   "diceKey": "1:0:3",
+   "boost": 0,
+   "steps": 0,
+   "itemUsed": false,
+   "moving": false,
+   "moveFrom": -1,
+   "moveTo": -1,
+   "departAt": 0,
+   "arriveAt": 0,
+   "players": [
+    {
+     "id": "me",
+     "name": "Max",
+     "characterId": "rig_jonas",
+     "slot": 0,
+     "position": 3,
+     "coins": 14,
+     "supplies": [],
+     "items": [],
+     "bot": false,
+     "shield": false,
+     "active": true,
+     "me": true
+    },
+    {
+     "id": "b1",
+     "name": "Ada",
+     "characterId": "alpha_morty_smith",
+     "slot": 1,
+     "position": 0,
+     "coins": 14,
+     "supplies": [],
+     "items": [],
+     "bot": true,
+     "shield": false,
+     "active": false,
+     "me": false
+    },
+    {
+     "id": "b2",
+     "name": "Ben",
+     "characterId": "alpha_summer_smith",
+     "slot": 2,
+     "position": 0,
+     "coins": 14,
+     "supplies": [],
+     "items": [],
+     "bot": true,
+     "shield": false,
+     "active": false,
+     "me": false
+    }
+   ],
+   "order": [
+    "me",
+    "b1",
+    "b2"
+   ],
+   "headline": "Max, du bist dran!",
+   "status": "Grinder für dein Set?",
+   "paths": [],
+   "supplyName": "Grinder",
+   "supplyPrice": 8,
+   "supplyAffordable": true,
+   "shop": [],
+   "gift": "",
+   "giftName": "",
+   "giftDescription": "",
+   "needsReplace": false,
+   "ownItems": [],
+   "summary": "",
+   "summaryType": "",
+   "objectiveField": 3,
+   "objectiveText": "Grinder · 8 Münzen",
+   "route": [],
+   "log": [
+    "Das Auftakt-Minispiel bestimmt eure feste Zugreihenfolge. Bei Gleichstand entscheidet das Los.",
+    "Feste Zugreihenfolge: Ben → Ada → Max.",
+    "Ben ist am Zug."
+   ],
+   "reduced": false
+  },
+  {
+   "type": "state",
+   "serverNow": 100000,
+   "phase": "summary",
+   "phaseId": 4,
+   "round": 1,
+   "turn": 0,
+   "viewer": "me",
+   "active": "me",
+   "canAct": true,
+   "busy": false,
+   "connected": true,
+   "error": "",
+   "deadline": 0,
+   "dice": [
+    2
+   ],
+   "diceKey": "1:0:2",
+   "boost": 0,
+   "steps": 0,
+   "itemUsed": false,
+   "moving": false,
+   "moveFrom": -1,
+   "moveTo": -1,
+   "departAt": 0,
+   "arriveAt": 0,
+   "players": [
+    {
+     "id": "me",
+     "name": "Max",
+     "characterId": "rig_jonas",
+     "slot": 0,
+     "position": 19,
+     "coins": 14,
+     "supplies": [],
+     "items": [],
+     "bot": false,
+     "shield": false,
+     "active": true,
+     "me": true
+    },
+    {
+     "id": "b1",
+     "name": "Ada",
+     "characterId": "alpha_morty_smith",
+     "slot": 1,
+     "position": 0,
+     "coins": 14,
+     "supplies": [],
+     "items": [],
+     "bot": true,
+     "shield": false,
+     "active": false,
+     "me": false
+    },
+    {
+     "id": "b2",
+     "name": "Ben",
+     "characterId": "alpha_summer_smith",
+     "slot": 2,
+     "position": 0,
+     "coins": 14,
+     "supplies": [],
+     "items": [],
+     "bot": true,
+     "shield": false,
+     "active": false,
+     "me": false
+    }
+   ],
+   "order": [
+    "me",
+    "b1",
+    "b2"
+   ],
+   "headline": "Max, du bist dran!",
+   "status": "Max saust durch die Rohrpost zu Feld 19.",
+   "paths": [],
+   "supplyName": "",
+   "supplyPrice": 0,
+   "supplyAffordable": false,
+   "shop": [],
+   "gift": "",
+   "giftName": "",
+   "giftDescription": "",
+   "needsReplace": false,
+   "ownItems": [],
+   "summary": "Max saust durch die Rohrpost zu Feld 19.",
+   "summaryType": "tunnel",
+   "objectiveField": 3,
+   "objectiveText": "Grinder · 8 Münzen",
+   "route": [],
+   "log": [
+    "Feste Zugreihenfolge: Ben → Ada → Max.",
+    "Ben ist am Zug.",
+    "Max saust durch die Rohrpost zu Feld 19."
+   ],
+   "reduced": false
+  },
+  {
+   "type": "state",
+   "serverNow": 100000,
+   "phase": "path",
+   "phaseId": 4,
+   "round": 1,
+   "turn": 0,
+   "viewer": "me",
+   "active": "me",
+   "canAct": true,
+   "busy": false,
+   "connected": true,
+   "error": "",
+   "deadline": 0,
+   "dice": [
+    1
+   ],
+   "diceKey": "1:0:1",
+   "boost": 0,
+   "steps": 1,
+   "itemUsed": false,
+   "moving": false,
+   "moveFrom": -1,
+   "moveTo": -1,
+   "departAt": 0,
+   "arriveAt": 0,
+   "players": [
+    {
+     "id": "me",
+     "name": "Max",
+     "characterId": "rig_jonas",
+     "slot": 0,
+     "position": 30,
+     "coins": 14,
+     "supplies": [
+      3,
+      9,
+      31,
+      15,
+      34,
+      37
+     ],
+     "items": [],
+     "bot": false,
+     "shield": false,
+     "active": true,
+     "me": true
+    },
+    {
+     "id": "b1",
+     "name": "Ada",
+     "characterId": "alpha_morty_smith",
+     "slot": 1,
+     "position": 0,
+     "coins": 14,
+     "supplies": [],
+     "items": [],
+     "bot": true,
+     "shield": false,
+     "active": false,
+     "me": false
+    },
+    {
+     "id": "b2",
+     "name": "Ben",
+     "characterId": "alpha_summer_smith",
+     "slot": 2,
+     "position": 0,
+     "coins": 14,
+     "supplies": [],
+     "items": [],
+     "bot": true,
+     "shield": false,
+     "active": false,
+     "me": false
+    }
+   ],
+   "order": [
+    "me",
+    "b1",
+    "b2"
+   ],
+   "headline": "Max, du bist dran!",
+   "status": "Welchen Weg nimmst du? Noch 1 Schritt.",
+   "paths": [
+    {
+     "field": 29,
+     "title": "Innenring weiter",
+     "detail": "Landung: Aussicht",
+     "route": [
+      30,
+      29
+     ]
+    },
+    {
+     "field": 44,
+     "title": "Zum Jayspot",
+     "detail": "Ziel erreicht",
+     "route": [
+      30,
+      44
+     ]
+    }
+   ],
+   "supplyName": "",
+   "supplyPrice": 0,
+   "supplyAffordable": false,
+   "shop": [],
+   "gift": "",
+   "giftName": "",
+   "giftDescription": "",
+   "needsReplace": false,
+   "ownItems": [],
+   "summary": "",
+   "summaryType": "",
+   "objectiveField": 44,
+   "objectiveText": "Set komplett · auf zum Jayspot",
+   "route": [
+    30,
+    44
+   ],
+   "log": [
+    "Das Auftakt-Minispiel bestimmt eure feste Zugreihenfolge. Bei Gleichstand entscheidet das Los.",
+    "Feste Zugreihenfolge: Ben → Ada → Max.",
+    "Ben ist am Zug."
+   ],
+   "reduced": false
+  },
+  {
+   "type": "state",
+   "serverNow": 100000,
+   "phase": "turn",
+   "phaseId": 4,
+   "round": 1,
+   "turn": 1,
+   "viewer": "me",
+   "active": "b1",
+   "canAct": false,
+   "busy": false,
+   "connected": true,
+   "error": "",
+   "deadline": 0,
+   "dice": [],
+   "diceKey": "",
+   "boost": 0,
+   "steps": 0,
+   "itemUsed": false,
+   "moving": false,
+   "moveFrom": -1,
+   "moveTo": -1,
+   "departAt": 0,
+   "arriveAt": 0,
+   "players": [
+    {
+     "id": "me",
+     "name": "Max",
+     "characterId": "rig_jonas",
+     "slot": 0,
+     "position": 0,
+     "coins": 14,
+     "supplies": [],
+     "items": [],
+     "bot": false,
+     "shield": false,
+     "active": false,
+     "me": true
+    },
+    {
+     "id": "b1",
+     "name": "Ada",
+     "characterId": "alpha_morty_smith",
+     "slot": 1,
+     "position": 33,
+     "coins": 14,
+     "supplies": [],
+     "items": [],
+     "bot": true,
+     "shield": false,
+     "active": true,
+     "me": false
+    },
+    {
+     "id": "b2",
+     "name": "Ben",
+     "characterId": "alpha_summer_smith",
+     "slot": 2,
+     "position": 0,
+     "coins": 14,
+     "supplies": [],
+     "items": [],
+     "bot": true,
+     "shield": false,
+     "active": false,
+     "me": false
+    }
+   ],
+   "order": [
+    "me",
+    "b1",
+    "b2"
+   ],
+   "headline": "Ada ist am Zug",
+   "status": "Ada würfelt gleich.",
+   "paths": [],
+   "supplyName": "",
+   "supplyPrice": 0,
+   "supplyAffordable": false,
+   "shop": [],
+   "gift": "",
+   "giftName": "",
+   "giftDescription": "",
+   "needsReplace": false,
+   "ownItems": [],
+   "summary": "",
+   "summaryType": "",
+   "objectiveField": 3,
+   "objectiveText": "Grinder · 8 Münzen",
+   "route": [],
+   "log": [
+    "Das Auftakt-Minispiel bestimmt eure feste Zugreihenfolge. Bei Gleichstand entscheidet das Los.",
+    "Feste Zugreihenfolge: Ben → Ada → Max.",
+    "Ben ist am Zug."
+   ],
+   "reduced": false
+  }
+ ]
+}

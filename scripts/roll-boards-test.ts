@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { activePartyPlayer, applyPartyAction, createPartyGame, partyOptions, tickParty, type PartyGame } from "../shared/party";
-import { boardDistances, goalField, partyBoard, ROLL_BOARD_IDS, ROLL_BOARDS, rollBoard, shopFields, stationsOf } from "../shared/partyBoard";
+import { boardDistances, goalField, partyBoard, pathTitle, ROLL_BOARD_IDS, ROLL_BOARDS, rollBoard, shopFields, stationsOf } from "../shared/partyBoard";
 import { botBoardAction } from "../shared/partyBots";
 
 // Every board: valid links, everything reachable from the start, the goal only at the end.
@@ -78,5 +78,14 @@ for (const n of [2, 4, 6]) for (let seed = 1; seed <= 8; seed++) {
   assert.equal(winner.position, goalField(game)); assert.equal(winner.supplies!.length, stationsOf(game).length);
   rounds.push(game.round);
 }
+// Path titles: the Grinder names ring and spoke, the Bauschale keeps outer and hill path.
+const grinderState = { mode: "roll-it-up" as const, options: { rounds: 8, board: "grinder" as const } }, bowlState = { mode: "roll-it-up" as const, options: { rounds: 8 } };
+assert.equal(pathTitle(grinderState, 5, 6, 0), "Außenring weiter");
+assert.equal(pathTitle(grinderState, 5, 24, 1), "Speiche nach innen");
+assert.equal(pathTitle(grinderState, 29, 28, 0), "Innenring weiter");
+assert.equal(pathTitle(grinderState, 29, 40, 1), "Speiche nach außen");
+assert.equal(pathTitle(grinderState, 30, goalField(grinderState), 2), "Zum Jayspot");
+assert.equal(pathTitle(bowlState, 8, 9, 0), "Außenweg");
+assert.equal(pathTitle(bowlState, 8, 30, 1), "Hügelweg");
 rounds.sort((a, b) => a - b);
 console.log(`Roll-It-Up-Bretter erfolgreich: Verbindungen, Erreichbarkeit, Zielsperre, ${forks("grinder")} Gabelungen im Grinder (Bauschale ${forks("bauschale")}), Rohrpost, Kompass-Shops und ${rounds.length} Bot-Partien (Runden Median ${rounds[rounds.length >> 1]}).`);

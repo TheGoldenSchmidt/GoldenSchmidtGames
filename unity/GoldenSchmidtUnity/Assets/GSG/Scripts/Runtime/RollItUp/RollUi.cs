@@ -30,6 +30,9 @@ namespace GSG.RollItUp
         class Floater { public Label label; public Vector3 world; public float start; }
         readonly List<Floater> floaters = new();
 
+        /// <summary>Short board name for the header (set when the board arrives).</summary>
+        public string boardName = "Bauschale";
+
         public RollUi(Hud hud, RollGame game)
         {
             this.hud = hud; this.game = game;
@@ -50,7 +53,7 @@ namespace GSG.RollItUp
             var head = Add(bar, new VisualElement(), "roll-title");
             head.pickingMode = PickingMode.Ignore;
             Text(head, "Roll It Up!", "roll-title__name", true);
-            round = Text(head, "Runde 1 · Bauschale", "roll-title__sub");
+            round = Text(head, "Runde 1", "roll-title__sub");
             IconButton(bar, (ctx, r) => DrawSound(ctx, r, Sfx.SfxOn), () => { game.ToggleSound(); bar.MarkDirtyRepaint(); foreach (var e in bar.Query<VisualElement>(className: "roll-icon-btn__glyph").ToList()) e.MarkDirtyRepaint(); });
             var coinBox = Add(bar, new VisualElement(), "roll-glass");
             coinBox.pickingMode = PickingMode.Ignore;
@@ -89,7 +92,7 @@ namespace GSG.RollItUp
             cardHead.pickingMode = PickingMode.Ignore;
             face = Add(cardHead, new VisualElement(), "roll-card__face");
             face.pickingMode = PickingMode.Ignore;
-            cardTitle = Text(cardHead, "Die Bauschale wird vorbereitet …", "roll-card__title", true);
+            cardTitle = Text(cardHead, "Das Brett wird vorbereitet …", "roll-card__title", true);
             timer = Text(cardHead, "", "roll-timer");
             timer.style.display = DisplayStyle.None;
             cardContent = Add(card, new VisualElement());
@@ -187,7 +190,7 @@ namespace GSG.RollItUp
             lastPhase = s.phaseId;
             state = s;
             var me = s.Me;
-            round.text = $"Runde {s.round} · Bauschale";
+            round.text = $"Runde {s.round} · {boardName}";
             coins.text = me != null ? me.coins.ToString() : "0";
             int have = me?.supplies?.Length ?? 0;
             for (int i = 0; i < dots.childCount; i++) dots[i].EnableInClassList("is-on", i < have);

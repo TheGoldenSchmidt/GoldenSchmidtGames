@@ -84,9 +84,10 @@ namespace GSG.RollItUp
         {
             if (fields != null || board?.fields == null || board.fields.Length == 0) return;
             fields = board.fields;
-            world.Build(fields);
+            world.Build(fields, board.board, board.tunnels);
+            ui.boardName = world.Grinder ? "Grinder" : "Bauschale";
             foreach (var f in fields)
-                if (f.type == "station") ui.Marker("station-" + f.id, world.spots[f.id] * 0.76f + Vector3.up * 2.6f, f.station, $"{f.price} Münzen", "", false);
+                if (f.type == "station") ui.Marker("station-" + f.id, world.stationProps[f.id].position + Vector3.up * 2f, f.station, $"{f.price} Münzen", "", false);
             var jay = System.Array.Find(fields, f => f.type == "jayspot");
             if (jay != null) ui.Marker("goal", world.spots[jay.id] + Vector3.up * 2.4f, "Jayspot", "", "goal");
             if (pending != null) { var p = pending; pending = null; OnState(p); }
@@ -494,11 +495,15 @@ namespace GSG.RollItUp
 
         [System.Serializable] class RollDemo { public RollBoardMessage board; public RollState[] states; }
 
+        /// <summary>Board of the editor/demo preview: "grinder" (or ?demo=1&amp;brett=grinder) shows RollDemoGrinder.</summary>
+        public static string DemoBoard;
+
         IEnumerator Demo()
         {
             yield return new WaitForSecondsRealtime(0.8f);
             if (RollBridge.Connected) yield break;
-            var asset = Resources.Load<TextAsset>("GSG/RollDemo");
+            var board = string.IsNullOrEmpty(DemoBoard) ? AppLink.Param("brett") : DemoBoard;
+            var asset = Resources.Load<TextAsset>(board == "grinder" ? "GSG/RollDemoGrinder" : "GSG/RollDemo");
             if (!asset) yield break;
             demoData = JsonUtility.FromJson<RollDemo>(asset.text);
             OnBoard(demoData.board);

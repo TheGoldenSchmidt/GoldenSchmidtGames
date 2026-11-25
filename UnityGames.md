@@ -16,7 +16,7 @@ Reihenfolge: zuerst Spiele, die am meisten von 3D/Physik gewinnen; flache Reakti
 | --- | --- | --- |
 | Parcours-Probelevel (`parcours`, `ParcoursProbe`) | umgesetzt | 15 Stationen mit allen Hindernisarten, allein, Kontrollpunkte und Bestzeit. Stand vor getimtem Festhalten, langen Lücken, Serpentinen-Glibberflut und Ventilatoren mit Anlauf. |
 | Floor is Lava (`lava`, `FloorIsLava`) | umgesetzt | Regeln/Bots aus `floorIsLava.ts`, du gegen drei Bots. |
-| Sumo Smash (`sumo`, `SumoSmash`) | umgesetzt | C#-Port `Ring/RingSim.cs`; Podest über einem See. Kein Stoß, solange man nach einem Treffer rutscht (`CanAct`). Offen: symmetrischer Frontalzusammenstoß aus `sumoSmash.ts` nach `RingSim.cs` übernehmen. |
+| Sumo Smash (`sumo`, `SumoSmash`) | umgesetzt | C#-Port `Ring/RingSim.cs`; Podest über einem See. Kein Stoß, solange man nach einem Treffer rutscht (`CanAct`). Frontalzusammenstoß wie in `sumoSmash.ts`: der schnellere Stoß gewinnt, gleich schnelle prallen beide zurück. |
 | Bumper Mayhem (`bumpercars`, `BumperMayhem`) | umgesetzt | Gleicher Ringkern; Gummi-Elastizität 0,95, jeder Kontakt stößt beide um ≥2,6 m/s auseinander, harte Treffer × 1,3 (≤14), Rammer prallt zurück; kein Turbo im Rutschen. |
 | Bomb Arena (`bombs`, `BombArena`) | umgesetzt | C#-Port `Bombs/BombSim.cs`. |
 | Schneeballschlacht (`snowball`, `Schneeballschlacht`) | umgesetzt | C#-Port `Snow/SnowSim.cs`; eigener Wurf rastet nur ±11° um die Blickrichtung ein, ohne Vorhalt (Bots unverändert); Zielen per Ziehen fehlt noch. |
@@ -35,7 +35,7 @@ Entscheidung „App rechnet, Unity zeigt“: Die Raumautorität rechnet wie bei 
 
 Erste Generation (klassische Arenen, Wippenwerk, Hook Wars, Chaos Run) wird nicht umgestellt.
 
-**Roll It Up! (Unity)** (`rollitup`, Szene `RollItUp`): die Bauschale als Unity-Brett, nur für Admin/Entwicklung (`canDevelop`) im selben Untermenü; startet eine Testpartie mit Bots. Regeln, Bots, Items und Minispiele bleiben in der App (`shared/party.ts`); Unity zeichnet Schale, Felder, Stationen, Figuren, Würfel und Brett-Entscheidungen.
+**Roll It Up! (Unity)** (`rollitup`, Szene `RollItUp`): Bauschale und Grinder (Wahl in der Testlobby) als Unity-Brett, nur für Admin/Entwicklung (`canDevelop`) im selben Untermenü; startet eine Testpartie mit Bots. Die Brücke sendet Brett-ID und Rohrpost-Paare, `RollWorld` baut danach die Szenerie (Grinder: Stahlscheibe, Mahlzähne, Rohrpost-Bögen, Lounge). Regeln, Bots, Items und Minispiele bleiben in der App (`shared/party.ts`); Unity zeichnet Schale, Felder, Stationen, Figuren, Würfel und Brett-Entscheidungen.
 
 ## Regeln
 
@@ -64,7 +64,7 @@ Erste Generation (klassische Arenen, Wippenwerk, Hook Wars, Chaos Run) wird nich
 | `Assets/GSG/Plugins/WebGL` | `GSGBridge.jslib` (`postMessage` zwischen App und Build) |
 | `Assets/GSG/Scripts/Editor` | `GSGSetup` (Materialien, Figuren-Prefabs, Szenen, Projekt-/WebGL-Einstellungen), `GSGPlaytest` (Mechanik-Prüfung im Play Mode) |
 | `Assets/GSG/Shaders` | `GSG/Toon`, `GSG/Outline`, `GSG/Glow` (Lava/Glibber), `GSG/Sky`, `GSG/Particle` |
-| `Assets/GSG/Resources/GSG` | Materialien, Figuren-Prefabs, Schriften, HUD-Stylesheets (`Hud.uss`, `Roll.uss`), Panel-Einstellungen, `RollDemo.json` (vorbereitete Brettzustände für Editor und `?demo=1`) |
+| `Assets/GSG/Resources/GSG` | Materialien, Figuren-Prefabs, Schriften, HUD-Stylesheets (`Hud.uss`, `Roll.uss`), Panel-Einstellungen, `RollDemo.json` und `RollDemoGrinder.json` (vorbereitete Brettzustände für Editor und `?demo=1`, Grinder mit `&brett=grinder` bzw. `RollGame.DemoBoard = "grinder"`) |
 | `Assets/WebGLTemplates/GSG` | Startseite ohne Inline-Skript (CSP), Ladebalken, Pixeldichte ≤ 2 |
 
 Menü **GSG → 1 Alles einrichten** (oder `GSGSetup.All()`) baut Materialien, Figuren, alle Szenen und die WebGL-Einstellungen reproduzierbar neu. Einzelschritte: Menü GSG 2–10 (9 = Startszene, 10 = Szenen der Match-Spiele aus `MatchScenes`).
@@ -108,7 +108,7 @@ Eigene Meshes (Drehkörper, Hügel, Steine) brauchen UV-Koordinaten: `GSG/Toon` 
 4. Die Builds mit dem Quellstand einchecken. CI und Render bauen sie nicht.
 5. Einstellungen (setzt `GSGSetup.Project()`): Gzip mit Entpack-Rückfall, Dateinamen mit Inhalts-Hash, Datencache, keine Ausnahmen, IL2CPP „Optimize Size“, WebGL-Codeoptimierung „Disk Size with LTO“, Managed Stripping „High“, Engine-Code-Stripping, kein Splash-Bildschirm, Qualitätsstufe „Mobile“ mit HDR und Schatten.
 6. Streckendaten nach Änderungen an `shared/matches/parcoursCourses.ts` neu exportieren: `npx tsx scripts/unity-export-courses.ts` (flaches JSON nach `Resources/GSG/Courses/<id>.json`; nicht gesetzte Indizes = −1). `npm run test:rules` schlägt fehl, solange die Dateien veraltet sind.
-7. `RollDemo.json` nach Änderungen an `src/unityRollItUp.ts` neu erzeugen (Felder müssen zu `RollModels.cs` passen); die Brücke selbst prüft `npm run test:rules` (`scripts/unity-roll-it-up-test.ts`).
+7. `RollDemo.json` nach Änderungen an `src/unityRollItUp.ts` neu erzeugen (Felder müssen zu `RollModels.cs` passen), `RollDemoGrinder.json` mit `npx tsx scripts/unity-roll-demo-grinder.ts`; die Brücke selbst prüft `npm run test:rules` (`scripts/unity-roll-it-up-test.ts`).
 
 Auslieferung: Der Server erlaubt **nur unter `/unity/`** WebAssembly (`'wasm-unsafe-eval'`), `blob:`-Skripte und das Einbetten im eigenen App-Rahmen (`frame-ancestors 'self'`, `X-Frame-Options: SAMEORIGIN`); die App selbst bleibt streng. `Build/`-Dateien sind ein Jahr cachebar. `.unityweb`-Dateien gehen mit `Content-Encoding: gzip` (und `application/wasm` für den Code) hinaus: Der Browser entpackt selbst und übersetzt WebAssembly schon während des Downloads. Der Service Worker nimmt `unity/**` nicht in den Offline-Cache und leitet Navigationen nach `/unity/` nicht auf die App um. Andere Hoster brauchen dieselben Header ([Deployment](DEPLOYMENT.md#node-starten)). Der erste Start lädt ca. 12 MB für alle Spiele zusammen (Engine-Code ≈ 7,3 MB, Daten ≈ 4,4 MB; neue Szenen sind klein, weil ihre Welt zur Laufzeit entsteht); weitere Spiele kommen danach aus dem Browser-Cache. Jeder Neubau legt den ganzen Build neu im Repository ab, deshalb Spiele gesammelt bauen und nicht für Kleinigkeiten. Startzeit bis spielbereit (Chromium-Emulation, 4× gedrosselte CPU, 30 Mbit/s, 40 ms): Parcours 8,4 s → 6,4–7,1 s, Floor is Lava 7,4 s → 6,2–6,4 s, Bauschale 6 s. Die Bauschale lädt verdeckt schon während des Auftakt-Minispiels.
 
