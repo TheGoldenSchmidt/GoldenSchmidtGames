@@ -3,6 +3,7 @@ import type { TankGame } from "../shared/matches/tankTrouble";
 import type { RingGame } from "../shared/matches/ringCore";
 import type { BombGame } from "../shared/matches/bombArena";
 import type { SnowGame } from "../shared/matches/snowball";
+import type { LavaGame } from "../shared/matches/floorIsLava";
 
 /**
  * Unity as the rendering of a room's match: the room authority keeps computing with the rules
@@ -13,10 +14,10 @@ import type { SnowGame } from "../shared/matches/snowball";
 export const UNITY_MATCH_URL = "/unity/spiele/index.html?spiel=online";
 
 /** Match modules with a Unity rendering → game id in the Unity build (`GameSwitch`). */
-export const UNITY_MATCH_SCENES: Readonly<Record<string, string>> = { tanks: "tanks", tankview: "tanks", sumo: "sumo", bumpercars: "bumpercars", bombs: "bombs", snowball: "snowball" };
+export const UNITY_MATCH_SCENES: Readonly<Record<string, string>> = { tanks: "tanks", tankview: "tanks", sumo: "sumo", bumpercars: "bumpercars", bombs: "bombs", snowball: "snowball", lava: "lava" };
 export const hasUnityMatch = (matchId: string) => matchId in UNITY_MATCH_SCENES;
 
-export interface UnityMessage { type: string; yaw?: number; kind?: string; x?: number; y?: number; ax?: number; ay?: number; ha?: boolean; hb?: boolean }
+export interface UnityMessage { type: string; yaw?: number; kind?: string; value?: number; x?: number; y?: number; ax?: number; ay?: number; ha?: boolean; hb?: boolean }
 type Listener = (message: UnityMessage) => void;
 
 /** The persistent Unity frame of the current page (mounted by `UnityMatchHost`). */
@@ -132,4 +133,26 @@ export function unitySnowSnapshot(s: MatchState) {
 }
 
 /** Snapshot builder per Unity game id. */
-export const UNITY_SNAPSHOTS: Readonly<Record<string, (s: MatchState) => object>> = { tanks: unityTankSnapshot, sumo: unityRingSnapshot, bumpercars: unityRingSnapshot, bombs: unityBombSnapshot, snowball: unitySnowSnapshot };
+/**
+ * Floor is Lava: tile states of all three floors (digit string, see floorIsLava.ts), the runners in
+ * seat order and the points; Unity animates cracks, falls, returns, jumps, dives and drops from them.
+ */
+export function unityLavaSnapshot(s: MatchState) {
+  const g = s.game as LavaGame, seat = (id: string | undefined) => id ? s.players.findIndex(p => p.id === id) : -1;
+  return {
+    type: "snap", time: s.time, done: s.done, round: g.round, phase: g.phase, tiebreak: g.tiebreak, roundStart: g.roundStart, rings: g.rings, tiles: g.tiles, regen: g.regen,
+    tiebreakWinner: seat(g.tiebreakWinner),
+    runners: s.players.map(p => {
+      const r = g.runners[p.id];
+      return {
+        id: p.id, x: r?.x ?? 0, y: r?.y ?? 0, vx: r?.vx ?? 0, vy: r?.vy ?? 0, fx: r?.fx ?? 0, fy: r?.fy ?? 1, floor: r?.floor ?? 0, alive: r?.alive ?? false,
+        dropUntil: r?.dropUntil ?? 0, airUntil: r?.airUntil ?? 0, shoveUntil: r?.shoveUntil ?? 0, slideUntil: r?.slideUntil ?? 0, diveUntil: r?.diveUntil ?? 0, proneUntil: r?.proneUntil ?? 0,
+        jumpReady: r?.jumpReady ?? 0, shoveReady: r?.shoveReady ?? 0, diveReady: r?.diveReady ?? 0, invulnUntil: r?.invulnUntil ?? 0
+      };
+    }),
+    points: s.players.map(p => g.points[p.id] ?? 0),
+    events: unityEvents(s)
+  };
+}
+
+export const UNITY_SNAPSHOTS: Readonly<Record<string, (s: MatchState) => object>> = { tanks: unityTankSnapshot, sumo: unityRingSnapshot, bumpercars: unityRingSnapshot, bombs: unityBombSnapshot, snowball: unitySnowSnapshot, lava: unityLavaSnapshot };

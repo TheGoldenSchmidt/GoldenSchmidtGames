@@ -12,9 +12,10 @@ namespace GSG.Lava
     /// 9 × 13 temple slabs, 0.8 s until a stepped slab crumbles, rune slabs return after 2.5 s, the
     /// outer ring collapses at 16 s and 23 s, +1 per opponent who falls earlier, +3 shared by the
     /// survivors, three rounds and a tiebreak) played on one phone against three bots. Holes,
-    /// drops and shoves are real physics here instead of a tile grid.
+    /// drops and shoves are real physics here instead of a tile grid. Online (LavaGame.Online.cs)
+    /// the scene only draws the room's match.
     /// </summary>
-    public class LavaGame : MonoBehaviour
+    public partial class LavaGame : MonoBehaviour
     {
         public const int Cols = 9, Rows = 13, Floors = 3;
         const float Tile = LavaRunner.Tile, Gap = 3.2f, Slab = 0.5f;
@@ -50,6 +51,7 @@ namespace GSG.Lava
 
         void Start()
         {
+            if (MatchBridge.Online) { StartOnline(); return; }
             AppLink.Apply();
             Sfx.Ensure();
             Fx.Ensure();
@@ -229,6 +231,7 @@ namespace GSG.Lava
 
         void Update()
         {
+            if (online) { UpdateOnline(); return; }
             if (state == State.Title || state == State.Paused) { Follow(); return; }
             float t = Time.time;
             // Presses are read per frame and consumed by the next fixed step.
@@ -289,6 +292,7 @@ namespace GSG.Lava
 
         void FixedUpdate()
         {
+            if (online) return;
             float t = Time.time, dt = Time.fixedDeltaTime;
             // Before the start the runners stand idle on the top floor (physics still steps).
             if (state == State.Title) { foreach (var r in runners) if (r.alive) { r.stick = Vector2.zero; r.Step(t, dt, Bounds); } return; }
@@ -513,7 +517,7 @@ namespace GSG.Lava
 
         void OnApplicationFocus(bool focused)
         {
-            if (!focused && (state == State.Play || state == State.Countdown)) Pause();
+            if (!focused && !online && (state == State.Play || state == State.Countdown)) Pause();
         }
 
         // ---- bots (port of floorIsLava.bot) ---------------------------------------------------
