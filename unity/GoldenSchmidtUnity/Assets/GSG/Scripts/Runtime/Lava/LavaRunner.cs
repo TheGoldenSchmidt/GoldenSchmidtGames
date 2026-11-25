@@ -48,6 +48,9 @@ namespace GSG.Lava
         /// <summary>Online: placed from the room's snapshots, no physics body of its own.</summary>
         public bool remote;
         public Vector3 remoteVelocity;
+        /// <summary>Player id in a room (pilot "Host rechnet"); driven by this scene's bot logic.</summary>
+        public string id;
+        public bool isBot;
 
         public void Remote()
         {

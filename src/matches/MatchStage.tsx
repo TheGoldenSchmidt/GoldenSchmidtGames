@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import type { PartyGame } from "../../shared/party";
+import type { PartyGame, PartyUnityReport } from "../../shared/party";
 import { MATCH_MODULES, matchStandings, type MatchId } from "../../shared/matches/framework";
 import { NEUTRAL_MATCH_INPUT, type MatchInput, type MatchState } from "../../shared/matches/types";
 import { MATCH_CLIENTS } from "./registry";
@@ -7,7 +7,7 @@ import { playerColor, type MatchIO, type MatchWorld } from "./client";
 import { preloadFigures } from "../figures/catalog";
 import { playSfx, setSoundEnabled, soundEnabled, unlockSound, vibrate } from "./sfx";
 import { measureEnabled, MeasurePanel } from "./MeasurePanel";
-import { hasUnityMatch } from "../unityMatch";
+import { hasUnityMatch, isUnityHost } from "../unityMatch";
 
 /** True when this browser can create a WebGL context (checked once). */
 let webgl: boolean | undefined;
@@ -22,13 +22,17 @@ function webglAvailable() {
  * buttons on the result overlay (practice again); `note`: a small tag next to the title.
  */
 export interface MatchUi { menu?: ReactNode; doneActions?: ReactNode; note?: string }
-interface Props extends MatchUi { game: PartyGame; id: string; now: number; control: (input: MatchInput, reliable: boolean) => void; busy?: boolean }
+interface Props extends MatchUi {
+  game: PartyGame; id: string; now: number; control: (input: MatchInput, reliable: boolean) => void; busy?: boolean;
+  /** "Unity · Host rechnet": reports of this device's Unity simulation to the room. */
+  unityReport?: (report: PartyUnityReport) => void;
+}
 
 /**
  * Shared stage for all match games: canvas with interpolation, HUD,
  * countdown, touch controls and input sending. Game rules stay in `shared/`.
  */
-export function MatchStage({ game, id, now, control, busy = false, menu, doneActions, note }: Props) {
+export function MatchStage({ game, id, now, control, busy = false, menu, doneActions, note, unityReport }: Props) {
   const match = game.mini!.match!, matchId = match.id as MatchId, meta = MATCH_MODULES[matchId].meta, client = MATCH_CLIENTS[matchId];
   // A view may use another rules module (Tank Trouble in 3rd person = Turmsicht rules); the title stays the minigame's.
   const title = (MATCH_MODULES as Record<string, { meta: { name: string } } | undefined>)[game.mini!.id]?.meta.name ?? meta.name;
@@ -128,13 +132,17 @@ export function MatchStage({ game, id, now, control, busy = false, menu, doneAct
 
   // Unity rendering (chosen by the host): the persistent Unity frame draws the snapshots; if it fails, the web view takes over.
   const look = game.mini!.look, [unityFailed, setUnityFailed] = useState(false), [unityUi, setUnityUi] = useState(false);
-  const unity = look?.renderer === "unity" && hasUnityMatch(matchId) && !unityFailed && webglAvailable();
+  const unity = (look?.renderer === "unity" || look?.renderer === "unity-host") && hasUnityMatch(matchId) && !unityFailed && webglAvailable();
+  const reportRef = useRef(unityReport); reportRef.current = unityReport;
+  // "Unity · Host rechnet" needs Unity on the host: without it the room computes with the web rules at once.
+  const hostWithoutUnity = isUnityHost(match, id) && !unity && game.phase === "mini-play";
+  useEffect(() => { if (hostWithoutUnity) reportRef.current?.({ seq: (match.game as { seq?: number }).seq! + 1, fail: true }); }, [hostWithoutUnity]);
   const unityUiRef = useRef(false); unityUiRef.current = unity && unityUi;
   const clock = useRef({ startAt, now }); clock.current = { startAt, now };
   const soundRef = useRef(sound); soundRef.current = sound;
   const loadWorld = unity
     ? () => import("./unityWorld").then(m => (host: HTMLElement, read: Parameters<typeof m.createUnityWorld>[2], onError: () => void) => m.createUnityWorld(look!.view, host, read, onError, {
-      io, startIn: () => clock.current.startAt - clock.current.now, sound: () => soundRef.current, onControls: setUnityUi
+      io, startIn: () => clock.current.startAt - clock.current.now, sound: () => soundRef.current, onControls: setUnityUi, report: r => reportRef.current?.(r)
     }))
     : client.world;
   // 2.5D/3D world: loaded on demand; without WebGL or on any error the canvas takes over.

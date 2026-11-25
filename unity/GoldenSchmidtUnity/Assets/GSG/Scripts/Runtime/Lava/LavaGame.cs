@@ -51,6 +51,7 @@ namespace GSG.Lava
 
         void Start()
         {
+            if (MatchBridge.Host) { StartHost(); return; }
             if (MatchBridge.Online) { StartOnline(); return; }
             AppLink.Apply();
             Sfx.Ensure();
@@ -150,7 +151,7 @@ namespace GSG.Lava
             {
                 var go = new GameObject(i == 0 ? "Du" : "Bot " + i);
                 var r = go.AddComponent<LavaRunner>();
-                r.slot = i; r.isPlayer = i == 0;
+                r.slot = i; r.isPlayer = i == 0; r.isBot = i != 0;
                 string figureId = i == 0 ? own : ids[(i - 1) % ids.Count];
                 r.displayName = i == 0 ? "Du" : char.ToUpperInvariant(figureId[4]) + figureId.Substring(5);
                 var holder = new GameObject("Halter").transform; holder.SetParent(go.transform, false);
@@ -185,7 +186,8 @@ namespace GSG.Lava
         void Hud()
         {
             hud = GSG.Hud.Create();
-            hud.AddRoundButton("pause", GSG.Hud.Icon.Pause, Pause);
+            // In a room the app's menu stays top right; the room keeps running.
+            if (!hostMode) hud.AddRoundButton("pause", GSG.Hud.Icon.Pause, Pause);
             hud.AddChip("round", "Durchgang 1/3");
             hud.AddChip("points", "Punkte 0");
             hud.AddChip("left", "4 im Spiel");
@@ -207,12 +209,13 @@ namespace GSG.Lava
 
         void Begin()
         {
-            hud.Close(panel); panel = null;
+            if (panel != null) hud.Close(panel);
+            panel = null;
             Sfx.Instance.StartLoops();
             hud.SetTopVisible(true);
             foreach (var r in runners) r.points = 0f;
-            history.Clear(); round = 0; tiebreakWinner = null;
-            StartRound(runners.ToList(), false);
+            history.Clear(); round = 0; tiebreakWinner = null; tiebreakSeat = -1;
+            StartRound(Present(runners), false);
         }
 
         void StartRound(List<LavaRunner> who, bool isTiebreak)
@@ -223,7 +226,8 @@ namespace GSG.Lava
             shownFloor = -1;
             PlaceAll(who, round - 1);
             state = State.Countdown; stateUntil = Time.time + 1.3f;
-            hud.SetControlsVisible(who.Contains(player));
+            hud.SetControlsVisible(who.Contains(player) && !spectator);
+            HostEvent("round", isTiebreak ? "Stechrunde!" : $"Durchgang {round} von {Rounds}");
             hud.Toast(isTiebreak ? "Stechrunde!" : $"Durchgang {round} von {Rounds}", Palette.Accent, 0.9f);
             Sfx.Play("sting");
             hud.SetChip("round", isTiebreak ? "Stechrunde" : $"Durchgang {round}/{Rounds}");
@@ -231,11 +235,13 @@ namespace GSG.Lava
 
         void Update()
         {
+            if (hostMode) HostTick();
             if (online) { UpdateOnline(); return; }
             if (state == State.Title || state == State.Paused) { Follow(); return; }
             float t = Time.time;
             // Presses are read per frame and consumed by the next fixed step.
-            if (player.alive && state == State.Play)
+            if (spectator) { }
+            else if (player.alive && state == State.Play)
             {
                 var d = rig.Relative(hud.Stick);
                 player.stick = new Vector2(d.x, d.z);
@@ -275,6 +281,8 @@ namespace GSG.Lava
 
         void Follow()
         {
+            // The simulating host uses the room's camera (3rd person behind the own runner or the angled view).
+            if (hostMode) { FollowOnline(); return; }
             var target = player.alive ? player : active.FirstOrDefault(r => r.alive) ?? player;
             var p = target.transform.position;
             int f = target.alive ? FloorOf(p.y) : FocusFloor;
@@ -299,7 +307,7 @@ namespace GSG.Lava
             if (state != State.Play && state != State.Countdown) return;
             if (state == State.Countdown) { foreach (var r in active) { r.stick = Vector2.zero; r.Step(t, dt, Bounds); } return; }
             float roundTime = t - roundStart;
-            if (t >= nextBot) { nextBot = t + 0.12f; foreach (var r in active) if (!r.isPlayer && r.alive) Bot(r, t); }
+            if (t >= nextBot) { nextBot = t + 0.12f; foreach (var r in active) if (r.isBot && r.alive) Bot(r, t); }
             foreach (var r in active)
             {
                 var evt = r.Step(t, dt, Bounds);
@@ -316,6 +324,7 @@ namespace GSG.Lava
 
         void Answer(LavaRunner r, string evt)
         {
+            if (evt == "jump" || evt == "dive" || evt == "shove") HostEvent(evt == "shove" ? "dash" : evt, "", r);
             bool mine = r.isPlayer;
             switch (evt)
             {
@@ -341,6 +350,7 @@ namespace GSG.Lava
                     {
                         if (t >= hitter.shoveUntil || t < victim.invulnUntil || t < victim.slideUntil) continue;
                         victim.Knock(dir, hitter.displayName, t);
+                        HostEvent("shove", "Schubser!", victim, hitter);
                         hitter.shoveUntil = t;
                         hitter.Body.linearVelocity *= 0.3f;
                         Sfx.Play("hit", hitter.isPlayer || victim.isPlayer ? 1f : 0.4f);
@@ -401,6 +411,7 @@ namespace GSG.Lava
                 rings = due;
                 foreach (var tile in tiles) if (tile.ring < rings) { tile.Drop(); returnAt.Remove(tile); }
                 hud.Toast("Der Rand stürzt ein!", Palette.Hot, 0.9f);
+                HostEvent("shrink", "Der Rand stürzt ein!");
                 Sfx.Play("rumble");
                 Fx.Shake(0.6f);
             }
@@ -409,6 +420,7 @@ namespace GSG.Lava
         void Lava(LavaRunner r, float t)
         {
             bool pushed = r.pushedBy != null && t - r.pushedAt <= PushCredit;
+            HostEvent("out", pushed ? "Reingeschubst!" : "In die Lava!", r, pushed ? runners.FirstOrDefault(o => o.displayName == r.pushedBy) : null);
             var at = r.transform.position;
             r.Out(t);
             Fx.Splash(new Vector3(at.x, lavaY + 0.3f, at.z), Palette.Lava, 24);
@@ -430,8 +442,9 @@ namespace GSG.Lava
             }
             var winners = alive.Count > 0 ? alive : took.Where(r => Mathf.Approximately(r.outAt, took.Max(o => o.outAt))).ToList();
             if (alive.Count > 0) foreach (var w in winners) pts[w] += WinBonus / winners.Count;
-            if (tiebreak) { if (winners.Count == 1) tiebreakWinner = winners[0].displayName; }
+            if (tiebreak) { if (winners.Count == 1) { tiebreakWinner = winners[0].displayName; tiebreakSeat = runners.IndexOf(winners[0]); } }
             else foreach (var (r, n) in pts) r.points = Mathf.Round((r.points + n) * 100f) / 100f;
+            HostEvent("result", winners.Count == 1 ? "Durchgang gewonnen!" : "Geteilte Platzierung", winners.ToArray());
             history.Add((pts, winners, tiebreak));
             state = State.Between; stateUntil = t + PauseTime;
             bool won = winners.Contains(player);
@@ -445,15 +458,17 @@ namespace GSG.Lava
 
         void NextRound()
         {
-            if (!tiebreak && round < Rounds) { StartRound(runners.ToList(), false); return; }
-            float best = runners.Max(r => r.points);
-            var tied = runners.Where(r => Mathf.Approximately(r.points, best)).ToList();
+            var present = Present(runners);
+            if (!tiebreak && round < Rounds && present.Count > 1) { StartRound(present, false); return; }
+            float best = present.Count > 0 ? present.Max(r => r.points) : 0f;
+            var tied = present.Where(r => Mathf.Approximately(r.points, best)).ToList();
             if (!tiebreak && tied.Count > 1) { StartRound(tied, true); return; }
             Finish();
         }
 
         void Finish()
         {
+            if (hostMode) { FinishHost(); return; }
             state = State.Ended;
             hud.SetControlsVisible(false);
             var order = runners.OrderByDescending(r => r.points).ThenByDescending(r => r.displayName == tiebreakWinner ? 1 : 0).ToList();
@@ -517,7 +532,7 @@ namespace GSG.Lava
 
         void OnApplicationFocus(bool focused)
         {
-            if (!focused && !online && (state == State.Play || state == State.Countdown)) Pause();
+            if (!focused && !online && !hostMode && (state == State.Play || state == State.Countdown)) Pause();
         }
 
         // ---- bots (port of floorIsLava.bot) ---------------------------------------------------

@@ -24,16 +24,21 @@ namespace GSG.Lava
         {
             public string id;
             public float x, y, vx, vy, fx, fy, dropUntil, airUntil, shoveUntil, slideUntil, diveUntil, proneUntil, jumpReady, shoveReady, diveReady, invulnUntil;
+            /// <summary>Height above the own floor in metres (only from a simulating host, see `physical`).</summary>
+            public float h;
             public int floor;
             public bool alive;
         }
         [System.Serializable]
         class Snap
         {
+            public string type = "snap";
             public float time, roundStart;
             public int round, rings, tiebreakWinner;
             public string phase, tiles, regen;
             public bool done, tiebreak;
+            /// <summary>Pilot "Host rechnet": heights come from the host's physics (`h`) instead of the jump and drop timers.</summary>
+            public bool physical;
             public SnapRunner[] runners;
             public float[] points;
             public OnlineEvent[] events;
@@ -140,6 +145,8 @@ namespace GSG.Lava
 
         public void OnSnapshot(string json)
         {
+            // The simulating host draws its own physics; the room only echoes its reports.
+            if (hostMode) return;
             var next = JsonUtility.FromJson<Snap>(json);
             if (next?.runners == null || next.runners.Length != runners.Count || next.tiles == null || next.tiles.Length != tiles.Length) return;
             bool newRound = next.round != lastRound;
@@ -303,6 +310,7 @@ namespace GSG.Lava
         float Height(SnapRunner s, float now)
         {
             float y = FloorY(s.floor);
+            if (snap != null && snap.physical) return y + s.h;
             if (now < s.dropUntil)
             {
                 float k = Mathf.Clamp01(1f - (s.dropUntil - now) / DropMs);

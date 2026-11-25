@@ -4,6 +4,7 @@ import type { RingGame } from "../shared/matches/ringCore";
 import type { BombGame } from "../shared/matches/bombArena";
 import type { SnowGame } from "../shared/matches/snowball";
 import type { LavaGame } from "../shared/matches/floorIsLava";
+import type { LavaHostGame } from "../shared/matches/lavaHost";
 import type { ParcoursGame } from "../shared/matches/parcours";
 
 /**
@@ -15,10 +16,10 @@ import type { ParcoursGame } from "../shared/matches/parcours";
 export const UNITY_MATCH_URL = "/unity/spiele/index.html?spiel=online";
 
 /** Match modules with a Unity rendering → game id in the Unity build (`GameSwitch`). */
-export const UNITY_MATCH_SCENES: Readonly<Record<string, string>> = { tanks: "tanks", tankview: "tanks", sumo: "sumo", bumpercars: "bumpercars", bombs: "bombs", snowball: "snowball", lava: "lava", tuerenlotto: "tuerenlotto", kreiselkurs: "kreiselkurs", standhaft: "standhaft" };
+export const UNITY_MATCH_SCENES: Readonly<Record<string, string>> = { tanks: "tanks", tankview: "tanks", sumo: "sumo", bumpercars: "bumpercars", bombs: "bombs", snowball: "snowball", lava: "lava", lavahost: "lava", tuerenlotto: "tuerenlotto", kreiselkurs: "kreiselkurs", standhaft: "standhaft" };
 export const hasUnityMatch = (matchId: string) => matchId in UNITY_MATCH_SCENES;
 
-export interface UnityMessage { type: string; yaw?: number; kind?: string; value?: number; x?: number; y?: number; ax?: number; ay?: number; ha?: boolean; hb?: boolean }
+export interface UnityMessage { type: string; yaw?: number; kind?: string; value?: number; x?: number; y?: number; ax?: number; ay?: number; ha?: boolean; hb?: boolean; snap?: object }
 type Listener = (message: UnityMessage) => void;
 
 /** The persistent Unity frame of the current page (mounted by `UnityMatchHost`). */
@@ -41,11 +42,20 @@ class UnityStage {
 }
 export const unityStage = new UnityStage();
 
-/** Seats for the Unity scene: colour slot, name and the figure chosen in the app (Unity falls back to a base human). */
+/** "Unity · Host rechnet": this device's Unity scene simulates the match for everyone. */
+export const isUnityHost = (s: MatchState, viewer: string) => s.id === "lavahost" && (s.game as LavaHostGame).host === viewer;
+
+/**
+ * Seats for the Unity scene: colour slot, name and the figure chosen in the app (Unity falls back
+ * to a base human). `role` "host" makes the scene simulate (the room's bots included), "view" only
+ * draws; `resume` hands a reloaded host the last reported snapshot (points and round continue).
+ */
 export function unityMatchSetup(s: MatchState, viewer: string, view: string, reduced: boolean, names: Record<string, string>, characters: Record<string, string | undefined>, startIn = 0, sound = true) {
+  const host = isUnityHost(s, viewer), snap = s.id === "lavahost" ? (s.game as LavaHostGame).snap : undefined;
   return {
     type: "setup", game: UNITY_MATCH_SCENES[s.id], view, viewer, reduced, startIn: Math.round(startIn), sound,
-    players: s.players.map(p => ({ id: p.id, slot: p.style, name: names[p.id] ?? "", figure: characters[p.id] ?? "" }))
+    role: host ? "host" : "view", resume: host && snap ? JSON.stringify(snap) : "",
+    players: s.players.map(p => ({ id: p.id, slot: p.style, name: names[p.id] ?? "", figure: characters[p.id] ?? "", bot: !!p.bot }))
   };
 }
 
@@ -138,7 +148,9 @@ export function unitySnowSnapshot(s: MatchState) {
  * Floor is Lava: tile states of all three floors (digit string, see floorIsLava.ts), the runners in
  * seat order and the points; Unity animates cracks, falls, returns, jumps, dives and drops from them.
  */
-export function unityLavaSnapshot(s: MatchState) {
+export function unityLavaSnapshot(s: MatchState): object | undefined {
+  // "Unity · Host rechnet": the host's own report, relayed by the room (same format, physical heights).
+  if (s.id === "lavahost") return (s.game as LavaHostGame).snap;
   const g = s.game as LavaGame, seat = (id: string | undefined) => id ? s.players.findIndex(p => p.id === id) : -1;
   return {
     type: "snap", time: s.time, done: s.done, round: g.round, phase: g.phase, tiebreak: g.tiebreak, roundStart: g.roundStart, rings: g.rings, tiles: g.tiles, regen: g.regen,
@@ -178,7 +190,7 @@ export function unityParcoursSnapshot(s: MatchState) {
   };
 }
 
-export const UNITY_SNAPSHOTS: Readonly<Record<string, (s: MatchState) => object>> = {
+export const UNITY_SNAPSHOTS: Readonly<Record<string, (s: MatchState) => object | undefined>> = {
   tanks: unityTankSnapshot, sumo: unityRingSnapshot, bumpercars: unityRingSnapshot, bombs: unityBombSnapshot, snowball: unitySnowSnapshot, lava: unityLavaSnapshot,
   tuerenlotto: unityParcoursSnapshot, kreiselkurs: unityParcoursSnapshot, standhaft: unityParcoursSnapshot
 };

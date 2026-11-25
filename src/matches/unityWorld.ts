@@ -1,5 +1,7 @@
 import { followCamera, takeCameraTurn, type ChaseLocal, type MatchIO, type MatchWorld, type MatchWorldFrame } from "./client";
-import { UNITY_MATCH_SCENES, UNITY_SNAPSHOTS, unityInput, unityMatchSetup, unityStage } from "../unityMatch";
+import { isUnityHost, UNITY_MATCH_SCENES, UNITY_SNAPSHOTS, unityInput, unityMatchSetup, unityStage } from "../unityMatch";
+import type { LavaHostGame } from "../../shared/matches/lavaHost";
+import type { PartyUnityReport } from "../../shared/party";
 import type { MatchState } from "../../shared/matches/types";
 import type { MiniView } from "../../shared/minigameLooks";
 
@@ -13,6 +15,8 @@ export interface UnityWorldHooks {
   sound: () => boolean;
   /** Unity's own HUD took over (true) – the app hides its controls, countdown and feedback. */
   onControls: (unity: boolean) => void;
+  /** "Unity · Host rechnet": reports of this device's Unity simulation to the room. */
+  report?: (report: PartyUnityReport) => void;
 }
 
 /**
@@ -20,10 +24,14 @@ export interface UnityWorldHooks {
  * the setup and every new snapshot; when its scene is up ("playing") Unity's own HUD takes the touches
  * and sends input and taps back, which go to the room like the app's controls. Until then the app's
  * controls work (aim and camera turns are forwarded, the stick follows Unity's camera heading).
+ *
+ * Pilot "Unity · Host rechnet" (Floor is Lava): on the host's device the scene simulates for the room.
+ * It gets everyone's inputs from the room ("inputs") and its snapshots ("hostsnap", "hostdone") go
+ * to the room through `hooks.report`; if Unity fails there, the room computes with the web rules.
  */
 export function createUnityWorld(view: MiniView, host: HTMLElement, read: () => MatchWorldFrame, onError: () => void, hooks: UnityWorldHooks): MatchWorld {
   const chase = view !== "top";
-  let frame = 0, started = false, disposed = false, camYaw: number | undefined, lastCur: MatchState | undefined, lastAim = "", sound: boolean | undefined;
+  let frame = 0, started = false, disposed = false, camYaw: number | undefined, lastCur: MatchState | undefined, lastAim = "", sound: boolean | undefined, hostRole = false, reportSeq = 0;
   const since = performance.now();
   host.dataset.renderer = "unity";
   host.dataset.ready = "false";
@@ -38,9 +46,22 @@ export function createUnityWorld(view: MiniView, host: HTMLElement, read: () => 
     // A game command (e.g. Floor is Lava's dive = 1); the rules check it like the app's own button.
     else if (message.type === "command" && Number.isInteger(message.value) && message.value! >= 0 && message.value! <= 9) hooks.io.command(message.value!);
     else if (message.type === "error") fail();
+    else if (hostRole && (message.type === "hostsnap" || message.type === "hostdone") && message.snap) {
+      hooks.report?.({ seq: ++reportSeq, snap: message.snap, done: message.type === "hostdone" });
+      host.dataset.hostReports = String(reportSeq);
+    }
   });
-  const fail = () => { if (disposed) return; dispose(); onError(); };
+  const fail = () => {
+    if (disposed) return;
+    // Without Unity on the host, the room computes with the web rules from now on.
+    if (hostRole) hooks.report?.({ seq: ++reportSeq, fail: true });
+    dispose(); onError();
+  };
   const start = (f: MatchWorldFrame) => {
+    hostRole = isUnityHost(f.cur, f.viewer);
+    // A reloaded host continues the report numbers above the room's last accepted one.
+    if (hostRole) reportSeq = (f.cur.game as LavaHostGame).seq;
+    host.dataset.role = hostRole ? "host" : "view";
     sound = hooks.sound();
     unityStage.post(unityMatchSetup(f.cur, f.viewer, view, f.reduced, f.names, f.characters, hooks.startIn(), sound));
     host.dataset.ready = "true";
@@ -55,7 +76,12 @@ export function createUnityWorld(view: MiniView, host: HTMLElement, read: () => 
     }
     if (started) {
       const snapshot = UNITY_SNAPSHOTS[UNITY_MATCH_SCENES[f.cur.id]];
-      if (f.cur !== lastCur && snapshot) { lastCur = f.cur; unityStage.post(snapshot(f.cur)); }
+      if (f.cur !== lastCur && snapshot) {
+        lastCur = f.cur;
+        const snap = snapshot(f.cur);
+        if (snap) unityStage.post(snap);
+        if (hostRole) unityStage.post({ type: "inputs", time: f.cur.time, players: (f.cur.game as LavaHostGame).inputs ?? [] });
+      }
       if (hooks.sound() !== sound) { sound = hooks.sound(); unityStage.post({ type: "sound", on: sound }); }
       if (host.dataset.controls !== "unity") {
         const local = f.local as ChaseLocal;

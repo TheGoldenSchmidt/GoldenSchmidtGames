@@ -5,8 +5,9 @@ using UnityEngine.SceneManagement;
 
 namespace GSG
 {
-    [Serializable] public class OnlinePlayer { public string id, name, figure; public int slot; }
-    [Serializable] public class OnlineSetup { public string type, game, view, viewer; public bool reduced, sound; public int startIn; public OnlinePlayer[] players; }
+    [Serializable] public class OnlinePlayer { public string id, name, figure; public int slot; public bool bot; }
+    /// <summary>`role` "host": this scene simulates for the room (pilot "Unity · Host rechnet"), otherwise it draws. `resume`: last report for a reloaded host.</summary>
+    [Serializable] public class OnlineSetup { public string type, game, view, viewer, role, resume; public bool reduced, sound; public int startIn; public OnlinePlayer[] players; }
     [Serializable] class OnlineEnvelope { public string type; }
     /// <summary>One event of the room (kind, short text, player ids) for sounds, toasts and effects.</summary>
     [Serializable] public class OnlineEvent { public int seq; public string kind, text; public string[] ids; }
@@ -22,6 +23,12 @@ namespace GSG
     [Serializable] class OnlineCommand { public string type = "command"; public int value; }
 
     /// <summary>A game scene that draws the room's match (<c>?spiel=online</c>).</summary>
+    /// <summary>Pilot "Unity · Host rechnet": the simulating scene gets everyone's inputs from the room.</summary>
+    public interface IOnlineInputs
+    {
+        void OnInputs(string json);
+    }
+
     public interface IOnlineMatch
     {
         void OnSnapshot(string json);
@@ -95,6 +102,9 @@ namespace GSG
                 case "snap":
                     if (game != null) game.OnSnapshot(json); else pending = json;
                     break;
+                case "inputs":
+                    (game as IOnlineInputs)?.OnInputs(json);
+                    break;
                 case "aim":
                     var aim = JsonUtility.FromJson<OnlineAim>(json);
                     game?.OnAim(new Vector2(aim.x, aim.y));
@@ -147,5 +157,11 @@ namespace GSG
 
         /// <summary>Heading of the chase camera (0 = up on the overview), so the app keeps the stick relative to it.</summary>
         public static void Camera(float yaw) => GSG_Post(JsonUtility.ToJson(new OnlineCam { yaw = yaw }));
+
+        /// <summary>This scene simulates for the room (pilot "Unity · Host rechnet").</summary>
+        public static bool Host => Setup != null && Setup.role == "host";
+
+        /// <summary>A message to the app (the host's snapshots and end, checked there and by the room).</summary>
+        public static void Post(string json) => GSG_Post(json);
     }
 }
