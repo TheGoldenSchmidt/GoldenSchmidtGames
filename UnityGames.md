@@ -92,7 +92,7 @@ Eigene Meshes (Drehkörper, Hügel, Steine) brauchen UV-Koordinaten: `GSG/Toon` 
 
   Bereitschaft: `unity status --until-ready --project-path <Pfad>`. Steuerung: `unity command script eval`, `unity recompile`, `unity command editor.playmode start|stop`, `unity command capture game_view`. Vor dem Play Mode `unity command editor set_auto_tick`; Handy-Auflösung über `UnityEditor.PlayModeWindow.SetCustomRenderingResolution(540, 1080, "Handy")`. Hintergrundprozesse einer Agenten-Sitzung enden nach höchstens 2 Stunden – dann Editor neu starten.
 - Jeder neue Container beginnt ohne CLI, Editor, Anmeldung und Lizenz (Einrichtung ≈ 20 Min. plus Anmeldelink). Unity-Aufgaben und Rückmeldungen deshalb möglichst in einer Sitzung bündeln. .NET 8 für den Tank-Regeltest: `apt-get install -y dotnet-sdk-8.0`.
-- Am Ende `unity close <Pfad>` (schreibt Projekteinstellungen sauber) und `unity license return --yes`: Der Container verschwindet, die Aktivierung würde sonst einen Platz belegen.
+- Am Ende `unity close <Pfad>` (schreibt Projekteinstellungen sauber) und `unity auth logout` (die Anmeldung liegt sonst unverschlüsselt im Container). Eine Personal-Lizenz lässt sich nicht zurückgeben (`unity license return` meldet das); nur bezahlte Sitze mit `unity license return --yes` freigeben.
 
 ## Bauen und ausliefern
 
