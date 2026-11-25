@@ -8,7 +8,8 @@ import type { PartyAction, PartyGame } from "../../shared/party";
 export function MiniLookSettings({ game, host, busy, send }: { game: PartyGame; host: boolean; busy: boolean; send: (action: PartyAction) => void }) {
   const mini = game.mini, choices = mini && lookChoices(mini.id), look = mini?.look;
   if (game.phase !== "mini-intro" || !choices || !look) return null;
-  const renderers = (Object.keys(choices) as MiniRenderer[]).filter(r => choices[r]?.length);
+  // "Host rechnet" needs separate phones in a room: the host's Unity scene simulates for everyone.
+  const renderers = (Object.keys(choices) as MiniRenderer[]).filter(r => choices[r]?.length && (r !== "unity-host" || game.online));
   const choose = (next: MiniLook) => send({ type: "look", renderer: next.renderer, view: next.view });
   return <fieldset className="settings-fields mini-look" aria-label="Darstellung und Ansicht" disabled={!host || busy}>
     <legend>Nächstes Minispiel</legend>
@@ -30,7 +31,8 @@ export function MiniLookSettings({ game, host, busy, send }: { game: PartyGame; 
 export function MiniLookPicker({ game, host, busy, send }: { game: PartyGame; host: boolean; busy: boolean; send: (action: PartyAction) => void }) {
   const mini = game.mini, choices = mini && lookChoices(mini.id), look = mini?.look;
   if (game.phase !== "mini-intro" || !choices || !look) return null;
-  const renderers = (Object.keys(choices) as MiniRenderer[]).filter(r => choices[r]?.length);
+  // "Host rechnet" needs separate phones in a room: the host's Unity scene simulates for everyone.
+  const renderers = (Object.keys(choices) as MiniRenderer[]).filter(r => choices[r]?.length && (r !== "unity-host" || game.online));
   const views = choices[look.renderer]!;
   const choose = (next: MiniLook) => { if (next.renderer !== look.renderer || next.view !== look.view) send({ type: "look", renderer: next.renderer, view: next.view }); };
   if (!host) return <p className="mini-look-picker__readonly" role="status">Variante: <b>{lookLabel(look)}</b> <small>· wählt der Host</small></p>;
@@ -46,5 +48,6 @@ export function MiniLookPicker({ game, host, busy, send }: { game: PartyGame; ho
       {views.map(v => option(v, VIEW_NAMES[v], v === look.view, () => choose({ renderer: look.renderer, view: v })))}
     </div>}
     {look.renderer === "unity" && <small>Unity lädt beim ersten Mal ca. 12 MB; ohne Internet übernimmt Web.</small>}
+    {look.renderer === "unity-host" && <small>Test: Dein Handy rechnet mit Unity für alle und muss im Vordergrund bleiben. Fällt Unity aus, rechnet der Raum weiter.</small>}
   </div>;
 }

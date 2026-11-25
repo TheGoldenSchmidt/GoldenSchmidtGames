@@ -1,7 +1,7 @@
 import {PartyPracticeGoals} from "./PartyProgress";
 import type {CharacterId} from "../../shared/characters";
 import { useEffect, useRef, useState } from "react";
-import { applyPartyAction, applyPartyControl, createPartyPractice, MINIS, publicParty, tickParty, type MiniId, type PartyAction, type PartyGame } from "../../shared/party";
+import { applyPartyAction, applyPartyControl, createPartyPractice, MINIS, publicParty, tickParty, type MiniId, type PartyAction, type PartyGame, type PartyUnityReport } from "../../shared/party";
 import type { ArenaInput } from "../../shared/partyArena";
 import { PartyArena } from "./PartyArena";
 import { MatchStage, type MatchUi } from "../matches/MatchStage";
@@ -10,9 +10,9 @@ import { PartyBotDriver } from "../../shared/partyBots";
 import { useBackStep } from "../lib/backNavigation";
 import type { MiniLook } from "../../shared/minigameLooks";
 
-interface MiniProps {game:PartyGame;id:string;now:number;send:(action:PartyAction)=>void;control?:(input:ArenaInput|MatchInput,reliable?:boolean)=>void;busy?:boolean;matchUi?:MatchUi}
+interface MiniProps {game:PartyGame;id:string;now:number;send:(action:PartyAction)=>void;control?:(input:ArenaInput|MatchInput,reliable?:boolean)=>void;busy?:boolean;matchUi?:MatchUi;unityReport?:(report:PartyUnityReport)=>void}
 export function PartyMini(props:MiniProps) {
-  if(props.game.mini?.match)return <MatchStage game={props.game} id={props.id} now={props.now} control={props.control??(()=>{})} busy={props.busy} {...props.matchUi}/>;
+  if(props.game.mini?.match)return <MatchStage game={props.game} id={props.id} now={props.now} control={props.control??(()=>{})} busy={props.busy} unityReport={props.unityReport} {...props.matchUi}/>;
   return props.game.mini?.arena?<PartyArena game={props.game} id={props.id} now={props.now} control={props.control??(()=>{})} busy={props.busy} {...props.matchUi}/>:null;
 }
 export function PartyPractice({miniId,onClose,characterId,look}:{miniId:MiniId;onClose:()=>void;characterId?:CharacterId;look?:MiniLook}) {

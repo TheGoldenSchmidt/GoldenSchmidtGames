@@ -1,5 +1,6 @@
 import { advanceArena, ARENA_META, createArena, isArenaId, NEUTRAL_INPUT, publicArena, setArenaControl, type ArenaId, type ArenaInput, type ArenaState } from "./partyArena";
 import { defaultLook, isMiniLook, lookChoices, matchIdForLook, type MiniLook, type MiniRenderer, type MiniView } from "./minigameLooks";
+import { checkedHostSnap, type LavaHostGame } from "./matches/lavaHost";
 import { advanceMatch, createMatch, finishMatch, isMatchId, MATCH_IDS, MATCH_MODULES, matchStandings, neutralizeMatch, publicMatch, removeMatchPlayer, setMatchControl, type MatchId } from "./matches/framework";
 import type { MatchState } from "./matches/types";
 import { miniEligible, miniFamily, miniPool, type PlayableMiniId } from "./minigameCatalog";
@@ -46,7 +47,7 @@ export const MINIS: Record<MiniId, { name: string; seconds: number; instruction:
 export interface PartyPlayer { id: string; name: string; characterId?: CharacterId; bot?: boolean; position: number; supplies?: number[]; coins: number; trophies: number; wins: number; items: Item[]; shield: boolean; passive: boolean; walked?: number; lost?: number; duels?: number; spent?: number; found?: number }
 export interface MiniRun { ready: boolean; done: boolean; score: number; feedback: string; lastInput: number }
 /** `resultReady`: humans who confirmed the result; the game continues once all active humans have. */
-export interface PartyMini { resultReady?: string[]; id: MiniId; startAt: number; runs: Record<string, MiniRun>; arenaSeed?:number; arena?:ArenaState; match?: MatchState; /** Rendering and view chosen by the host (minigames with a choice only). */ look?: MiniLook }
+export interface PartyMini { resultReady?: string[]; id: MiniId; startAt: number; runs: Record<string, MiniRun>; arenaSeed?:number; arena?:ArenaState; match?: MatchState; /** Rendering and view chosen by the host (minigames with a choice only). */ look?: MiniLook; /** "Unity · Host rechnet": the player whose Unity scene simulates (the host who chose it). */ unityHost?: string }
 export type PartyPhase = "turn" | "moving" | "path" | "trophy" | "supply" | "shop" | "gift" | "duel" | "summary" | "mini-bet" | "mini-intro" | "mini-play" | "mini-result" | "finished" | "aborted";
 export interface PartyGame {
   mode?: "party" | "roll-it-up" | MinigameMode;
@@ -278,6 +279,7 @@ function startMini(g:PartyGame,now:number) {
   // In a duel only the two duelists enter the match.
   const contenders=g.duel?g.players.filter(p=>p.id===g.duel!.challenger||p.id===g.duel!.opponent):g.players.filter(p=>!p.passive);
   if(isMatchId(m.id))m.match=createMatch(matchIdForLook(m.id,m.look),contenders.map(p=>({id:p.id,style:g.players.indexOf(p),characterId:p.characterId,bot:p.bot})),m.arenaSeed??1);
+  if(m.match?.id==="lavahost")(m.match.game as LavaHostGame).host=m.unityHost??contenders.find(p=>!p.bot)?.id??"";
   phase(g,"mini-play",now);g.deadline=m.startAt+MINIS[m.id].seconds*1000;
 }
 
@@ -295,6 +297,35 @@ export function applyPartyControl(current:PartyGame,id:string,input:ArenaInput|u
   advanceArena(m.arena!,now-m.startAt);
   setArenaControl(m.arena!,id,input,seq);
   syncArenaRuns(g,now);
+  return g;
+}
+/** What the host's Unity scene reports in "Unity · Host rechnet": a snapshot, the end, or that Unity failed. */
+export interface PartyUnityReport { seq?: number; snap?: unknown; done?: boolean; fail?: boolean }
+/**
+ * A report of the host's Unity simulation (Floor is Lava pilot "Unity · Host rechnet"). Only the
+ * chosen host may report; snapshots are checked and relayed, their points rank the players. If
+ * Unity fails on the host, the room computes with floorIsLava.ts from now on and Unity only draws.
+ */
+export function applyPartyUnity(current:PartyGame,id:string,report:PartyUnityReport,now=Date.now()):PartyGame {
+  const match=current.mini?.match;
+  if(current.pausedAt||current.phase!=="mini-play"||match?.id!=="lavahost"||match.done)throw new Error("Gerade rechnet kein Host-Handy ein Minispiel.");
+  if(id!==(match.game as LavaHostGame).host)throw new Error("Nur das Host-Handy rechnet dieses Minispiel.");
+  if(!Number.isSafeInteger(report?.seq)||report.seq!<=(match.game as LavaHostGame).seq)return current;
+  const g=structuredClone(current),m=g.mini!,relay=m.match!,host=relay.game as LavaHostGame;
+  host.seq=report.seq!;
+  if(report.fail){
+    m.match=createMatch("lava",relay.players.map(p=>({id:p.id,style:p.style,characterId:p.characterId,bot:p.bot})),m.arenaSeed??1);
+    m.look={renderer:"unity",view:m.look?.view??"third"};delete m.unityHost;
+    m.startAt=now;g.deadline=now+MINIS.lava.seconds*1000;
+    return g;
+  }
+  if(report.snap!==undefined){
+    const ids=relay.players.map(p=>p.id),snap=checkedHostSnap(report.snap,ids);host.snap=snap;
+    host.tiebreakWinner=snap.tiebreakWinner>=0?ids[snap.tiebreakWinner]:"";
+    ids.forEach((pid,i)=>{host.points[pid]=snap.points[i];const p=relay.players[i];if(!p.gone)p.played=true;});
+  }
+  if(report.done)host.finished=true;
+  advanceMatch(relay,now-m.startAt);syncMatchRuns(g,now);
   return g;
 }
 function syncMatchRuns(g:PartyGame,now:number) {
@@ -446,7 +477,10 @@ export function applyPartyAction(current:PartyGame,id:string,action:PartyAction,
   }
   else if(action.type==="next"&&g.phase==="summary"){g.turn++;if(g.turn===g.order.length){g.turn=0;selectMini(g,now);}else startTurn(g,now);}
   else if(action.type==="ready"&&g.phase==="mini-intro") {const m=g.mini!;if(!g.online&&id!==g.players[g.localMiniIndex].id)throw new Error("Bitte das Gerät weitergeben.");m.runs[id].ready=true;if(!g.online||g.players.filter(p=>!p.passive).every(p=>m.runs[p.id].ready))startMini(g,now);}
-  else if(action.type==="look"&&g.phase==="mini-intro"){const look={renderer:action.renderer,view:action.view};if(!isMiniLook(g.mini!.id,look))throw new Error("Diese Ansicht gibt es für dieses Minispiel nicht.");g.mini!.look=look;}
+  else if(action.type==="look"&&g.phase==="mini-intro"){const look={renderer:action.renderer,view:action.view};if(!isMiniLook(g.mini!.id,look))throw new Error("Diese Ansicht gibt es für dieses Minispiel nicht.");
+    // The host's Unity scene can only simulate for separate phones in a room.
+    if(look.renderer==="unity-host"&&(!g.online||!g.players.find(p=>p.id===id&&!p.bot)))throw new Error("„Host rechnet“ gibt es nur online auf dem Handy des Hosts.");
+    g.mini!.look=look;if(look.renderer==="unity-host")g.mini!.unityHost=id;else delete g.mini!.unityHost;}
   else if(action.type==="finish"&&g.phase==="mini-play"){if(g.duel&&id!==g.duel.challenger&&id!==g.duel.opponent)throw new Error("Du schaust beim Duell zu.");if(g.mini!.match){
     // Giving up leaves the match for good; the module ranks earlier leavers lower.
     const m=g.mini!;advanceMatch(m.match!,now-m.startAt);removeMatchPlayer(m.match!,id);m.runs[id].done=true;syncMatchRuns(g,now);
