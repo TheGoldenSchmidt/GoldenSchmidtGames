@@ -94,7 +94,7 @@ for (const [miniId, name, action] of [["sumo", "Sumo Smash", "Stoß"], ["bumperc
   page.on("pageerror", e => errors.push(e.message));
   const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId });
   try {
-    await expect(page.getByRole("group", { name: "Variante" }).getByRole("button", { name: /Unity/ })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("group", { name: "Variante" }).getByRole("button", { name: "Unity", exact: true })).toHaveAttribute("aria-pressed", "true");
     await unityLoaded(page);
     await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
     await session.action({ type: "ready" }, session.ids[1]);
@@ -137,7 +137,7 @@ for (const [miniId, name, key] of [["bombs", "Bomb Arena", "bombs"], ["snowball"
   page.on("pageerror", e => errors.push(e.message));
   const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId });
   try {
-    await expect(page.getByRole("group", { name: "Variante" }).getByRole("button", { name: /Unity/ })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("group", { name: "Variante" }).getByRole("button", { name: "Unity", exact: true })).toHaveAttribute("aria-pressed", "true");
     await unityLoaded(page);
     await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
     await session.action({ type: "ready" }, session.ids[1]);
@@ -175,7 +175,7 @@ test("Floor is Lava mit Unity-Darstellung: Springen und Hechten aus dem Unity-HU
   page.on("pageerror", e => errors.push(e.message));
   const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "lava" });
   try {
-    await expect(page.getByRole("group", { name: "Variante" }).getByRole("button", { name: /Unity/ })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("group", { name: "Variante" }).getByRole("button", { name: "Unity", exact: true })).toHaveAttribute("aria-pressed", "true");
     await expect(page.getByRole("group", { name: "Ansicht" }).getByRole("button", { name: /3rd Person/ })).toHaveAttribute("aria-pressed", "true");
     await unityLoaded(page);
     await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
@@ -221,7 +221,7 @@ for (const [miniId, name] of [["tuerenlotto", "Türenlotto"], ["standhaft", "Sta
   const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId });
   let hopping: ReturnType<typeof setInterval> | undefined;
   try {
-    await expect(page.getByRole("group", { name: "Variante" }).getByRole("button", { name: /Unity/ })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("group", { name: "Variante" }).getByRole("button", { name: "Unity", exact: true })).toHaveAttribute("aria-pressed", "true");
     await unityLoaded(page);
     await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
     await session.action({ type: "ready" }, session.ids[1]);

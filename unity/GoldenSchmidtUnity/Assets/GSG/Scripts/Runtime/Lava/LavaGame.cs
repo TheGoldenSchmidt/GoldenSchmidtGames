@@ -443,8 +443,8 @@ namespace GSG.Lava
             var winners = alive.Count > 0 ? alive : took.Where(r => Mathf.Approximately(r.outAt, took.Max(o => o.outAt))).ToList();
             if (alive.Count > 0) foreach (var w in winners) pts[w] += WinBonus / winners.Count;
             if (tiebreak) { if (winners.Count == 1) { tiebreakWinner = winners[0].displayName; tiebreakSeat = runners.IndexOf(winners[0]); } }
-            HostEvent("result", winners.Count == 1 ? "Durchgang gewonnen!" : "Geteilte Platzierung", winners.ToArray());
             else foreach (var (r, n) in pts) r.points = Mathf.Round((r.points + n) * 100f) / 100f;
+            HostEvent("result", winners.Count == 1 ? "Durchgang gewonnen!" : "Geteilte Platzierung", winners.ToArray());
             history.Add((pts, winners, tiebreak));
             state = State.Between; stateUntil = t + PauseTime;
             bool won = winners.Contains(player);

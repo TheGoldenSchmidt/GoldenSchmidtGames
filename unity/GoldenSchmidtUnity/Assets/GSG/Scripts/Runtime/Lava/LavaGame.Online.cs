@@ -32,6 +32,7 @@ namespace GSG.Lava
         [System.Serializable]
         class Snap
         {
+            public string type = "snap";
             public float time, roundStart;
             public int round, rings, tiebreakWinner;
             public string phase, tiles, regen;
