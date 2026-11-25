@@ -1,5 +1,6 @@
 import type { MatchState } from "../shared/matches/types";
 import type { TankGame } from "../shared/matches/tankTrouble";
+import type { RingGame } from "../shared/matches/ringCore";
 
 /**
  * Unity as the rendering of a room's match: the room authority keeps computing with the rules
@@ -10,7 +11,7 @@ import type { TankGame } from "../shared/matches/tankTrouble";
 export const UNITY_MATCH_URL = "/unity/spiele/index.html?spiel=online";
 
 /** Match modules with a Unity rendering → game id in the Unity build (`GameSwitch`). */
-export const UNITY_MATCH_SCENES: Readonly<Record<string, string>> = { tanks: "tanks", tankview: "tanks" };
+export const UNITY_MATCH_SCENES: Readonly<Record<string, string>> = { tanks: "tanks", tankview: "tanks", sumo: "sumo", bumpercars: "bumpercars" };
 export const hasUnityMatch = (matchId: string) => matchId in UNITY_MATCH_SCENES;
 
 export interface UnityMessage { type: string; yaw?: number; kind?: string; x?: number; y?: number; ax?: number; ay?: number; ha?: boolean; hb?: boolean }
@@ -75,5 +76,25 @@ export function unityInput(message: UnityMessage) {
   return { x: clamp(message.x), y: clamp(message.y), ax: clamp(message.ax), ay: clamp(message.ay), ha: message.ha === true, hb: message.hb === true };
 }
 
+/** Sumo Smash and Bumper Mayhem (ringCore.ts): fighters in seat order, arena, posts, items and oil. */
+export function unityRingSnapshot(s: MatchState) {
+  const g = s.game as RingGame;
+  return {
+    type: "snap", time: s.time, radius: g.radius, resetAt: g.resetAt ?? -1, sudden: !!g.sudden, suddenStart: g.sudden?.start ?? 0, done: s.done,
+    fighters: s.players.map(p => {
+      const f = g.fighters[p.id];
+      return {
+        id: p.id, x: f.x, y: f.y, vx: f.vx, vy: f.vy, heading: f.heading, respawnAt: f.respawnAt, shieldUntil: f.shieldUntil,
+        actionAt: f.actionAt, actionUntil: f.actionUntil, stunUntil: f.stunUntil, bigUntil: f.bigUntil ?? 0,
+        lives: f.lives, ringOuts: f.ringOuts, alive: f.alive, isOut: f.out
+      };
+    }),
+    items: (g.items ?? []).map(i => ({ id: i.id, kind: i.kind, x: i.x, y: i.y })),
+    slicks: (g.slicks ?? []).map(o => ({ id: o.id, owner: o.owner, x: o.x, y: o.y, until: o.until, armedAt: o.armedAt })),
+    obstacles: g.obstacles.map(o => ({ id: o.id, x: o.x, y: o.y, r: o.r, angle: o.angle })),
+    events: unityEvents(s)
+  };
+}
+
 /** Snapshot builder per Unity game id. */
-export const UNITY_SNAPSHOTS: Readonly<Record<string, (s: MatchState) => object>> = { tanks: unityTankSnapshot };
+export const UNITY_SNAPSHOTS: Readonly<Record<string, (s: MatchState) => object>> = { tanks: unityTankSnapshot, sumo: unityRingSnapshot, bumpercars: unityRingSnapshot };

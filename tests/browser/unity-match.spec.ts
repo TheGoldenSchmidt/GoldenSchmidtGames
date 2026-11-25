@@ -73,3 +73,38 @@ for (const view of ["3rd Person", "1st Person"] as const) test(`Tank Trouble mit
     expect(errors).toEqual([]);
   } finally { session.close(); }
 });
+
+// The ring games in Unity: stick and action button of Unity's HUD reach the room.
+for (const [miniId, name, action] of [["sumo", "Sumo Smash", "Stoß"], ["bumpercars", "Bumper Mayhem", "Turbo"]] as const) test(`${name} mit Unity-Darstellung: Unity-HUD steuert den Raum`, async ({ page }, info) => {
+  test.skip(info.project.name !== "phone", "Nur Smartphone");
+  test.setTimeout(240000);
+  const errors: string[] = [];
+  page.on("pageerror", e => errors.push(e.message));
+  const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId });
+  try {
+    await expect(page.getByRole("group", { name: "Variante" }).getByRole("button", { name: /Unity/ })).toHaveAttribute("aria-pressed", "true");
+    await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
+    await session.action({ type: "ready" }, session.ids[1]);
+    await matchStarted(page);
+    await expect(page.locator(".match-world")).toHaveAttribute("data-ready", "true", { timeout: 150000 });
+    await expect(page.locator(".match-game")).toHaveClass(/is-unity-hud/, { timeout: 30000 });
+    const fighter = async () => (await session.state()).partyGame!.mini!.match!.game as { fighters: Record<string, { actionAt: number }> };
+    const own = async () => (await session.state()).partyGame!.mini!.match!.players.find(p => p.id === session.ids[0])!.input;
+    const cdp = await page.context().newCDPSession(page);
+    const touch = (type: "touchStart" | "touchMove" | "touchEnd", points: [number, number][]) =>
+      cdp.send("Input.dispatchTouchEvent", { type, touchPoints: points.map(([x, y], id) => ({ x, y, id: id + 1 })) });
+    await page.waitForTimeout(800);
+    await touch("touchStart", [[80, 740]]);
+    for (const dx of [15, 30, 45, 60]) await touch("touchMove", [[80 + dx, 740]]);
+    await expect.poll(async () => { const input = await own(); return Math.hypot(input.x, input.y); }, { timeout: 5000 }).toBeGreaterThan(.7);
+    await page.screenshot({ path: info.outputPath(`unity-${miniId}.png`) });
+    await touch("touchEnd", []);
+    // Action button bottom right (Unity HUD): the room starts the dash/turbo.
+    const before = (await fighter()).fighters[session.ids[0]].actionAt;
+    await touch("touchStart", [[330, 780]]); await page.waitForTimeout(120); await touch("touchEnd", []);
+    await expect.poll(async () => (await fighter()).fighters[session.ids[0]].actionAt, { timeout: 5000 }).toBeGreaterThan(before);
+    expect(errors).toEqual([]);
+    expect(await page.locator(".unity-match").getAttribute("class")).toContain("is-shown");
+    void action;
+  } finally { session.close(); }
+});

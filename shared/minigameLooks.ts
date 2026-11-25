@@ -18,7 +18,9 @@ export const RENDERER_NAMES: Record<MiniRenderer, string> = { unity: "Unity", we
  * Minigames without an entry keep their single web view.
  */
 export const MINI_LOOKS: Readonly<Record<string, Partial<Record<MiniRenderer, readonly MiniView[]>>>> = {
-  tanks: { unity: ["top", "third", "first"], web: ["top", "third"] }
+  tanks: { unity: ["top", "third", "first"], web: ["top", "third"] },
+  sumo: { unity: ["top", "third"], web: ["top"] },
+  bumpercars: { unity: ["top", "third"], web: ["top"] }
 };
 
 /** Match modules that only are a view of another minigame: never drawn or chosen on their own. */

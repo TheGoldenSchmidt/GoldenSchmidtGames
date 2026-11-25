@@ -8,6 +8,8 @@ namespace GSG
     [Serializable] public class OnlinePlayer { public string id, name, figure; public int slot; }
     [Serializable] public class OnlineSetup { public string type, game, view, viewer; public bool reduced, sound; public int startIn; public OnlinePlayer[] players; }
     [Serializable] class OnlineEnvelope { public string type; }
+    /// <summary>One event of the room (kind, short text, player ids) for sounds, toasts and effects.</summary>
+    [Serializable] public class OnlineEvent { public int seq; public string kind, text; public string[] ids; }
     [Serializable] class OnlineAim { public float x, y; }
     [Serializable] class OnlineTurn { public float delta; }
     [Serializable] class OnlineReady { public string type = "ready"; }

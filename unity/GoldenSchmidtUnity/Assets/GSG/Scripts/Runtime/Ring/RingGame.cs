@@ -10,7 +10,7 @@ namespace GSG.Ring
     /// (<see cref="RingSim"/>, 50-ms steps, interpolated drawing); Unity adds the podium over the
     /// lake or the neon rink, figures and bumper cars, falls, effects, sound and camera.
     /// </summary>
-    public class RingGame : MatchGame
+    public class RingGame : MatchGame, IOnlineMatch
     {
         public bool bumper;
         const float StepTime = 0.05f, FigureScale = 1.1f;
@@ -40,30 +40,54 @@ namespace GSG.Ring
         float acc;
         bool pendingPress, shrinkWarned, suddenShown;
         Vector2 playerDir;
+        // Online: the own seat (−1 = watching), the chosen view and the room's snapshot clock.
+        int me;
+        bool chase, built;
+        float snapAt, snapInterval = 0.05f;
+        int lastSnapTime, lastEvent = -1;
 
         protected override string GameName => bumper ? "Bumper Mayhem" : "Sumo Smash";
         protected override string Intro => bumper
             ? "Lenke mit dem Stick, dein Auto fährt von selbst. Turbo (alle 4 s) macht Rammstöße härter. Fahr durch Kisten: Gold = Riesenauto, Schwarz = Ölfleck, Türkis = Schockwelle. Ramme die anderen über den Rand: +2 pro Ring-Out. 3 Leben, ab 45 s schrumpft die Fläche."
             : "Bewege dich mit dem Stick, der Stoß (alle 2,5 s) schleudert getroffene Gegner davon. Wer vom Podest fällt, verliert eines von 3 Leben; wer den Sturz verursacht, bekommt +2. Ab 40 s schrumpft der Ring. Letzter im Ring gewinnt.";
         protected override string ResultText => "+2 für jeden verursachten Ring-Out. Nach 75 Sekunden zählen Leben, dann Ring-Outs.";
-        protected override bool ControlsVisible => sim != null && sim.fighters[0].alive;
+        protected override bool ControlsVisible => sim != null && me >= 0 && sim.fighters[me].alive && (!Online || built);
 
         protected override void Setup()
         {
             rules = bumper ? new BumperRules() : new SumoRules();
             if (bumper) BuildRink(); else BuildPodium();
             foreach (var seat in seats) views.Add(MakeView(seat));
+            me = seats.FindIndex(s => s.isPlayer);
+            chase = Online && me >= 0 && MatchBridge.Setup.view == "third";
             focus = new GameObject("Kamerafokus").transform;
-            rig = CameraRig.Create(focus, bumper ? 24f : 23f, bumper ? 54f : 62f, 54f, Vector3.zero);
-            rig.composer.TargetOffset = Vector3.zero;
-            var comp = rig.composer.Composition; comp.ScreenPosition = new Vector2(0f, 0.06f); comp.DeadZone.Enabled = false; rig.composer.Composition = comp;
-            rig.recenterAfter = 0f;
+            if (chase)
+            {
+                // 3rd person: close behind the own fighter; it starts behind the body, afterwards only a swipe turns it.
+                rig = CameraRig.Create(focus, bumper ? 9f : 8f, bumper ? 30f : 34f, 56f, Vector3.zero);
+                rig.recenterAfter = float.PositiveInfinity;
+            }
+            else
+            {
+                rig = CameraRig.Create(focus, bumper ? 24f : 23f, bumper ? 54f : 62f, 54f, Vector3.zero);
+                rig.recenterAfter = 0f;
+            }
+            rig.composer.TargetOffset = chase ? Vector3.up * 0.8f : Vector3.zero;
+            var comp = rig.composer.Composition; comp.ScreenPosition = new Vector2(0f, chase ? 0.12f : 0.06f); comp.DeadZone.Enabled = false; rig.composer.Composition = comp;
             hud.AddChip("time", "75 s");
             hud.AddAction("a", bumper ? Hud.Icon.Dive : Hud.Icon.Shove, bumper ? "Turbo" : "Stoß", Hud.Tone.Gold);
             NewSim();
+            if (Online)
+            {
+                hud.SetControlsVisible(false);
+                if (chase) { hud.ShowHint("3rd Person", "Oben wischen dreht die Kamera. Der Stick folgt der Blickrichtung."); Invoke(nameof(HideHint), 6f); }
+                MatchBridge.Register(this);
+            }
         }
 
-        protected override void OnBegin() => NewSim();
+        void HideHint() => hud.ShowHint(null, null);
+
+        protected override void OnBegin() { if (!Online) NewSim(); }
 
         void NewSim()
         {
@@ -209,6 +233,22 @@ namespace GSG.Ring
         void Update()
         {
             if (sim == null) return;
+            if (Online)
+            {
+                if (!built) return;
+                if (Playing && me >= 0)
+                {
+                    var self = sim.fighters[me];
+                    var dir = rig.Relative(hud.Stick);
+                    var move = self.alive && !self.isOut ? new Vector2(dir.x, dir.z) : Vector2.zero;
+                    MatchBridge.Input(move.x, move.y, 0f, 0f);
+                    if (hud.Pressed("a")) MatchBridge.Press("a");
+                }
+                if (chase) rig.Swipe(hud.Look);
+                Draw(Fx.Reduced ? 1f : Mathf.Clamp01((Time.unscaledTime - snapAt) / snapInterval));
+                UpdateHud();
+                return;
+            }
             if (phase == Phase.Play)
             {
                 var own = sim.fighters[0];
@@ -252,7 +292,7 @@ namespace GSG.Ring
         void Event(RingEvent e)
         {
             View A = e.a >= 0 ? views[e.a] : null, B = e.b >= 0 ? views[e.b] : null;
-            bool mine = e.a == 0 || e.b == 0;
+            bool mine = me >= 0 && (e.a == me || e.b == me);
             switch (e.kind)
             {
                 case "action":
@@ -283,8 +323,8 @@ namespace GSG.Ring
                 case "out":
                     StartFall(A);
                     if (B != null) Credit(B, "+2");
-                    if (e.a == 0) { hud.Toast(sim.fighters[0].alive ? "Runter vom Ring!" : "Ausgeschieden!", Palette.Warn, 1f); Sfx.Play("lose", 0.8f); }
-                    else if (e.b == 0) { hud.Toast("Ring-Out! +2", Palette.Accent, 0.9f); Sfx.Play("chime"); }
+                    if (me >= 0 && e.a == me) { hud.Toast(sim.fighters[me].alive ? "Runter vom Ring!" : "Ausgeschieden!", Palette.Warn, 1f); Sfx.Play("lose", 0.8f); }
+                    else if (me >= 0 && e.b == me) { hud.Toast("Ring-Out! +2", Palette.Accent, 0.9f); Sfx.Play("chime"); }
                     else Sfx.Play("whoosh", 0.4f, 0.7f);
                     break;
                 case "reset":
@@ -304,7 +344,7 @@ namespace GSG.Ring
                     Fx.Splash(A.root.position + Vector3.up * 0.4f, Palette.Seesaw, 24);
                     if (mine) hud.Toast("Schockwelle!", Palette.Seesaw, 0.8f);
                     break;
-                case "slip": Sfx.Play("splash", e.a == 0 ? 0.9f : 0.4f, 1.3f); if (e.a == 0) hud.Toast("Ausgerutscht!", Palette.Warn, 0.7f); break;
+                case "slip": Sfx.Play("splash", e.a == me ? 0.9f : 0.4f, 1.3f); if (me >= 0 && e.a == me) hud.Toast("Ausgerutscht!", Palette.Warn, 0.7f); break;
             }
         }
 
@@ -387,8 +427,16 @@ namespace GSG.Ring
                     v.figure.Tick(vel, dt);
                 }
             }
+            if (me < 0) { focus.position = Ease.Damp(focus.position, Vector3.zero, 3f, Time.unscaledDeltaTime); return; }
+            var own = views[me];
+            if (chase)
+            {
+                // 3rd person: right behind the own fighter; back to the middle while it is out.
+                var at = own.f.alive && !own.f.isOut && !own.falling ? own.root.position : Vector3.zero;
+                focus.position = Ease.Damp(focus.position, at, 10f, Time.unscaledDeltaTime);
+                return;
+            }
             // Camera: follows the own fighter part of the way, the ring stays in view.
-            var own = views[0];
             var goal = own.f.alive && !own.f.isOut ? new Vector3(own.root.position.x * 0.25f, 0f, own.root.position.z * 0.25f) : Vector3.zero;
             focus.position = Ease.Damp(focus.position, goal, 3f, Time.unscaledDeltaTime);
         }
@@ -428,13 +476,13 @@ namespace GSG.Ring
 
         void UpdateHud()
         {
-            var own = sim.fighters[0];
-            float cool = Mathf.Clamp01((rules.actionCooldown - (sim.time - own.actionAt)) / rules.actionCooldown);
+            var own = sim.fighters[Mathf.Max(0, me)];
+            float cool = me < 0 ? 0f : Mathf.Clamp01((rules.actionCooldown - (sim.time - own.actionAt)) / rules.actionCooldown);
             hud.SetCooldown("a", phase == Phase.Play ? cool : 0f);
             float left = sim.sudden ? (rules.suddenMax - (sim.time - sim.suddenStart)) / 1000f : (rules.regular - sim.time) / 1000f;
             hud.SetChip("time", sim.sudden ? $"Sudden Death {Mathf.CeilToInt(Mathf.Max(0f, left))} s" : $"{Mathf.CeilToInt(Mathf.Max(0f, left))} s");
             SetTimer(sim.sudden ? left * 1000f / rules.suddenMax : left * 1000f / rules.regular);
-            if (phase == Phase.Play) hud.SetControlsVisible(ControlsVisible);
+            if (phase == Phase.Play || Online) hud.SetControlsVisible(ControlsVisible && phase == Phase.Play);
         }
 
         void Strips()
@@ -447,6 +495,102 @@ namespace GSG.Ring
                 Strip(v.seat, text, false, !f.alive);
             }
         }
+
+        // ---- online: snapshots of the room (ringCore.ts, sumoSmash.ts, bumperMayhem.ts) ----------
+
+        [System.Serializable] class SnapFighter { public string id; public float x, y, vx, vy, heading, respawnAt, shieldUntil, actionAt, actionUntil, stunUntil, bigUntil; public int lives, ringOuts; public bool alive, isOut; }
+        [System.Serializable] class SnapItem { public int id; public string kind; public float x, y; }
+        [System.Serializable] class SnapSlick { public int id; public string owner; public float x, y, until, armedAt; }
+        [System.Serializable] class SnapPost { public int id; public float x, y, r, angle; }
+        [System.Serializable] class Snap { public int time; public float radius, resetAt, suddenStart; public bool sudden, done; public SnapFighter[] fighters; public SnapItem[] items; public SnapSlick[] slicks; public SnapPost[] obstacles; public OnlineEvent[] events; }
+
+        public void OnSnapshot(string json)
+        {
+            var snap = JsonUtility.FromJson<Snap>(json);
+            if (snap?.fighters == null || snap.fighters.Length != views.Count) return;
+            var byId = new Dictionary<string, int>();
+            var before = new Vector2[views.Count];
+            for (int i = 0; i < views.Count; i++)
+            {
+                var s = snap.fighters[i];
+                var f = sim.fighters[i];
+                var v = views[i];
+                byId[s.id] = i;
+                before[i] = new Vector2(f.vx, f.vy);
+                f.x = s.x; f.y = s.y; f.vx = s.vx; f.vy = s.vy; f.heading = s.heading;
+                f.lives = s.lives; f.ringOuts = s.ringOuts; f.alive = s.alive; f.isOut = s.isOut;
+                f.respawnAt = s.respawnAt; f.shieldUntil = s.shieldUntil; f.actionAt = s.actionAt; f.actionUntil = s.actionUntil; f.stunUntil = s.stunUntil; f.bigUntil = s.bigUntil;
+                v.prev = built ? v.cur : new Vector3(s.x, 0f, s.y);
+                v.cur = new Vector3(s.x, 0f, s.y);
+                if (!built) { v.yaw = Yaw(s.heading); v.root.SetPositionAndRotation(v.cur, Quaternion.Euler(0f, v.yaw, 0f)); }
+            }
+            bool first = !built;
+            sim.time = snap.time; sim.radius = snap.radius; sim.sudden = snap.sudden; sim.suddenStart = snap.suddenStart; sim.resetAt = snap.resetAt; sim.done = snap.done;
+            sim.items = (snap.items ?? new SnapItem[0]).Select(i => new RingItem { id = i.id, kind = i.kind, x = i.x, y = i.y }).ToList();
+            sim.slicks = (snap.slicks ?? new SnapSlick[0]).Select(o => new Slick { id = o.id, owner = byId.TryGetValue(o.owner ?? "", out var k) ? k : -1, x = o.x, y = o.y, until = o.until, armedAt = o.armedAt }).ToList();
+            if (snap.obstacles != null)
+            {
+                sim.obstacles.Clear();
+                foreach (var o in snap.obstacles) sim.obstacles.Add(new Obstacle { id = o.id, x = o.x, y = o.y, r = o.r, angle = o.angle });
+            }
+            if (lastSnapTime > 0 && snap.time > lastSnapTime) snapInterval = Mathf.Clamp((snap.time - lastSnapTime) / 1000f, 0.03f, 0.25f);
+            lastSnapTime = snap.time;
+            snapAt = Time.unscaledTime;
+            built = true;
+            if (first && chase && me >= 0) rig.Snap(Yaw(sim.fighters[me].heading));
+            RoomEvents(snap.events, byId, before);
+            if (!shrinkWarned && !sim.sudden && sim.time >= rules.shrinkFrom - 1500f && sim.time < rules.shrinkTo)
+            {
+                shrinkWarned = true;
+                hud.Toast(bumper ? "Die Fläche schrumpft!" : "Der Ring schrumpft!", Palette.Warn, 1f);
+                Sfx.Play("warn");
+            }
+            Strips();
+        }
+
+        /// <summary>Room events as the same sounds, toasts and effects as locally; contacts show as bounces by their speed change.</summary>
+        void RoomEvents(OnlineEvent[] events, Dictionary<string, int> byId, Vector2[] before)
+        {
+            var struck = new HashSet<int>();
+            if (events != null)
+            {
+                // The first snapshot only sets the mark: no replay of what happened before this device joined.
+                if (lastEvent < 0) lastEvent = events.Length > 0 ? events.Max(e => e.seq) : 0;
+                foreach (var e in events.OrderBy(e => e.seq))
+                {
+                    if (e.seq <= lastEvent) continue;
+                    lastEvent = e.seq;
+                    int a = e.ids != null && e.ids.Length > 0 && byId.TryGetValue(e.ids[0], out var x) ? x : -1;
+                    int b = e.ids != null && e.ids.Length > 1 && byId.TryGetValue(e.ids[1], out var y) ? y : -1;
+                    if (e.kind == "strike") { struck.Add(a); struck.Add(b); }
+                    if (e.kind == "reset" || e.kind == "sudden") foreach (var v in views) { v.cur = new Vector3(v.f.x, 0f, v.f.y); v.prev = v.cur; }
+                    if ((e.kind == "out" || e.kind == "action" || e.kind == "strike" || e.kind == "mega" || e.kind == "wave" || e.kind == "slip" || e.kind == "bump") && a < 0) continue;
+                    if (e.kind == "strike" && b < 0) continue;
+                    Event(new RingEvent { kind = e.kind, a = a, b = b });
+                }
+            }
+            // Ordinary contacts carry no event: a sudden speed change next to another body reads as a bounce.
+            for (int i = 0; i < views.Count; i++)
+            {
+                var f = sim.fighters[i];
+                if (struck.Contains(i) || !f.alive || f.isOut) continue;
+                float jump = (new Vector2(f.vx, f.vy) - before[i]).magnitude;
+                if (jump < 1.2f) continue;
+                for (int j = i + 1; j < views.Count; j++)
+                {
+                    var o = sim.fighters[j];
+                    if (struck.Contains(j) || !o.alive || o.isOut) continue;
+                    float reach = rules.BodyOf(f, sim.time) + rules.BodyOf(o, sim.time) + 0.25f;
+                    if ((new Vector2(f.x - o.x, f.y - o.y)).magnitude > reach) continue;
+                    Event(new RingEvent { kind = "bounce", a = i, b = j, v = jump });
+                    struck.Add(i); struck.Add(j);
+                    break;
+                }
+            }
+        }
+
+        public void OnAim(Vector2 aim) { }
+        public void OnTurn(float delta) { if (chase) rig.Swipe(new Vector2(delta * Mathf.Rad2Deg / Mathf.Max(0.01f, rig.swipeYaw), 0f)); }
 
         protected override List<(Seat seat, string value)> Ranking() =>
             sim.Standings().Select(f => (views[f.seat].seat, f.alive ? $"{f.lives} Leben · {f.ringOuts} Ring-Outs" : $"raus · {f.ringOuts} Ring-Outs")).ToList();

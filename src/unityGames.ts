@@ -18,8 +18,9 @@ export const UNITY_GAME_CATALOG = [
   { id: "towersurvival", name: "Tower Tumble – Survival", text: "Bauen ohne Ziellinie, immer schneller: drei verlorene Steine und du bist raus.", note: "Gegen Bots" },
   { id: "tuerenlotto", name: "Türenlotto", text: "Parcours-Lauf: echte und falsche Türen, Gassen mit Sackgassen und Falltüren.", note: "Gegen Bots" },
   { id: "kreiselkurs", name: "Kreiselkurs", text: "Parcours-Lauf: Drehbalken, fahrende Inseln, Wippen und das Rührwerk.", note: "Gegen Bots" },
-  { id: "standhaft", name: "Standhaft", text: "Weiche zwei Drehbalken aus und bleib auf den Fallklappen als Letzte stehen.", note: "Gegen Bots" }
-  // Tank Trouble läuft als normales Minispiel mit Unity-Darstellung (src/unityMatch.ts), allein unter „Allein mit Bots“.
+  { id: "standhaft", name: "Standhaft", text: "Weiche zwei Drehbalken aus und bleib auf den Fallklappen als Letzte stehen.", note: "Gegen Bots" },
+  // Im Raum (Partien, Freies Minispiel, „Allein mit Bots“) wählt der Host Unity oder Web; hier die lokalen C#-Fassungen zum Testen.
+  { id: "tanks", name: "Tank Trouble", text: "Nutze Abpraller und spreng Ziegelmauern im Panzerlabyrinth.", note: "Gegen Bots" }
   // Neue Einträge mit `pendingBuild: true` erst zusammen mit dem WebGL-Build freischalten, damit die Galerie keine fehlenden Szenen startet.
 ] as const;
 
