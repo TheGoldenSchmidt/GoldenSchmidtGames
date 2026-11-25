@@ -76,7 +76,7 @@ Nur Abweichungen von der [Spezifikation](spezifikation.md); Werte stehen als Kon
 
 `shared/proberaum.ts` + `proberaumCourse.ts`: lokale Übungsinsel mit demselben Parcours-Kern, nicht in `MATCH_IDS`, `COURSE_IDS` oder im Pool; `practice` unterdrückt Rennende und Ausscheiden. Einstieg `PracticeWorldScreen` (nur Entwicklung/Admin).
 
-**Darstellung und Ansicht:** Der Host wählt im Spielmenü vor „Ich bin bereit“ für alle Darstellung (Unity/Web) und Ansicht (Draufsicht, 3rd, 1st Person) des nächsten Minispiels (`shared/minigameLooks.ts`, Aktion `look`; Übungen folgen der Ansicht in der Web-Darstellung). Mit Unity rechnet weiter die Raumautorität, Unity zeichnet nur. Die Einträge im Unity-Untermenü laufen dagegen lokal ohne `roomCore`. Beides: [Unity-Minispiele](../../UnityGames.md).
+**Darstellung und Ansicht:** Der Host wählt im Spielmenü vor „Ich bin bereit“ für alle Darstellung (Unity/Web) und Ansicht (Draufsicht, 3rd, 1st Person) des nächsten Minispiels (`shared/minigameLooks.ts`, Aktion `look`; Übungen folgen der Ansicht in der Web-Darstellung). Mit Unity rechnet weiter die Raumautorität, Unity zeichnet nur; Ausnahme ist der Pilot „Unity · Host rechnet“ für Floor is Lava (Relais-Modul `lavahost`, Socket-Nachricht `party:unity`). Die Einträge im Unity-Untermenü laufen dagegen lokal ohne `roomCore`. Beides: [Unity-Minispiele](../../UnityGames.md).
 
 ## Leistung
 

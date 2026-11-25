@@ -16,6 +16,7 @@ Architektur und gültige Regeln: [Konzept](konzept.md). Ausgangsregeln: [Spezifi
 | Thema | Nächster Schritt |
 | --- | --- |
 | Echte Geräte | Android/iPhone, möglichst älteres Gerät, Node und Handy-Host bis sechs Geräte nach [Gerätetest](geraetetest.md) prüfen. |
+| Unity-Pilot Floor is Lava | „Unity“ (Raum rechnet) und „Unity · Host rechnet“ auf echten Handys vergleichen: Spielgefühl, Verzögerung der Mitspieler, Wärme des Host-Handys. Danach entscheiden, welcher Weg für weitere Spiele gilt ([Unity-Minispiele](../../UnityGames.md#pilot-floor-is-lava-zwei-wege-im-vergleich)). |
 | Unity im Raum | Tank Trouble läuft mit Unity-Darstellung und Ansichtswahl in Räumen. Nächste Spiele nach demselben Muster umstellen, zuerst Standhaft mit 3rd Person; Ansichten für weitere Minispiele in `MINI_LOOKS` ergänzen. |
 | Unity-Umstellung | Rückmeldungen auf echten Handys einholen, dann die Reihenfolge in [Unity-Minispiele](../../UnityGames.md#spiele-und-stand) weiter abarbeiten. |
 | Handy-Hosting | `nearby.spec.ts` mit Match-Spielen in WebRTC-fähiger Umgebung prüfen. Frühere Cloud-Grenzen sind kein aktueller Laufbeleg. CI nur auf ausdrücklichen Wunsch. |
