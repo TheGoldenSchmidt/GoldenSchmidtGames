@@ -12,6 +12,8 @@ namespace GSG.Parcours
     {
         public float speed = 1.5f;   // rad/s, sign = direction
         public float phase;
+        /// <summary>Start of the turning (seconds of the room's clock; the local tests turn from the start).</summary>
+        public float from;
         public float knock = 8.5f, knockUp = 4.5f, fling = 3f;
 
         Rigidbody body;
@@ -25,7 +27,8 @@ namespace GSG.Parcours
 
         void FixedUpdate()
         {
-            float angle = (phase + speed * (Time.fixedTime + Time.fixedDeltaTime)) * Mathf.Rad2Deg;
+            float t = CourseClock.Room != null ? CourseClock.Room() : Time.fixedTime + Time.fixedDeltaTime;
+            float angle = (phase + speed * Mathf.Max(0f, t - from)) * Mathf.Rad2Deg;
             body.MoveRotation(Quaternion.Euler(0f, -angle, 0f));
         }
 

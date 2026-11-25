@@ -12,9 +12,9 @@ namespace GSG.Parcours
     /// back to it after a fall, finishing order, the race ends 20 s after the first finisher or
     /// after the time limit; unfinished runners rank by distance. Bots follow parcoursBot: shared
     /// knowledge of tried doors and lanes, jumps over low bars and gaps, ducks under high bars,
-    /// waits for moving islands.
+    /// waits for moving islands. Online (<see cref="ParcoursOnline"/>) the scene only draws the room's run.
     /// </summary>
-    public class RunGame : MatchGame, IRaceHost
+    public class RunGame : MatchGame, IRaceHost, IOnlineMatch
     {
         public string course = "tuerenlotto";
         const float FinishGrace = 20f, RespawnDelay = 1.1f;
@@ -33,6 +33,7 @@ namespace GSG.Parcours
         readonly List<Racer> order = new();
         float firstFinish = -1f;
         bool ended;
+        ParcoursOnline online;
 
         protected override string GameName => data != null ? data.name : "Parcours";
         protected override string Intro => course switch
@@ -43,7 +44,7 @@ namespace GSG.Parcours
         };
         protected override string Kicker => "Unity-Test · Parcours-Lauf gegen 3 Bots";
         protected override string ResultText => "Zielreihenfolge zählt; wer nicht ankommt, wird nach der erreichten Strecke gewertet.";
-        protected override bool ControlsVisible => racers.Count > 0 && racers[0].finishAt < 0f && !ended;
+        protected override bool ControlsVisible => online != null ? online.CanAct(Playing) : racers.Count > 0 && racers[0].finishAt < 0f && !ended;
 
         Vector3 StartSpot(int slot) => new Vector3(-3f + slot * 2f, 0.05f, 0f);
 
@@ -53,6 +54,7 @@ namespace GSG.Parcours
             data = CourseData.Load(course);
             var root = new GameObject("Strecke " + data.name).transform;
             built = CourseBuilder.Build(data, root);
+            if (Online) { SetupOnline(); return; }
             foreach (var seat in seats)
             {
                 var go = new GameObject(seat.name);
@@ -72,16 +74,21 @@ namespace GSG.Parcours
             rig = CameraRig.Create(me.transform, 7.4f, 19f, 55f, new Vector3(0f, 1.1f, 0f));
             me.rig = rig;
             focus = me.transform;
+            AddHud();
+            ResetRace();
+        }
+
+        void AddHud()
+        {
             hud.AddChip("time", "120 s");
             hud.AddChip("place", "Platz –");
             hud.AddAction("grab", Hud.Icon.Grab, "Festhalten", Hud.Tone.Cyan);
             hud.AddAction("duck", Hud.Icon.Duck, "Ducken", Hud.Tone.Cyan);
             hud.AddAction("b", Hud.Icon.Dive, "Hechten", Hud.Tone.Pink);
             hud.AddAction("a", Hud.Icon.Jump, "Springen", Hud.Tone.Gold);
-            ResetRace();
         }
 
-        protected override void OnBegin() => ResetRace();
+        protected override void OnBegin() { if (online == null) ResetRace(); }
 
         void ResetRace()
         {
@@ -100,6 +107,52 @@ namespace GSG.Parcours
         {
             foreach (var r in racers) r.runner.Release();
         }
+
+        // ---- online --------------------------------------------------------------------------
+
+        void SetupOnline()
+        {
+            foreach (var (s, i) in data.sweepers.Select((s, i) => (s, i))) built.sweepers[i].from = s.from / 1000f;
+            online = new ParcoursOnline(seats, built, hud, false, (seat, parent) => SpawnFigure(seat, parent, 1f));
+            var own = online.Own ? online.Own : online.racers[0];
+            rig = CameraRig.Create(own.transform, 7.4f, 19f, 55f, new Vector3(0f, 1.1f, 0f));
+            online.rig = rig;
+            focus = own.transform;
+            AddHud();
+            hud.SetControlsVisible(false);
+            hud.ShowHint("3rd Person", "Oben wischen dreht die Kamera. Der Stick folgt der Blickrichtung.");
+            Invoke(nameof(HideHint), 6f);
+            MatchBridge.Register(this);
+        }
+
+        void HideHint() => hud.ShowHint(null, null);
+
+        public void OnSnapshot(string json) => online.Apply(json);
+        public void OnAim(Vector2 aim) { }
+        public void OnTurn(float delta) => rig.Swipe(new Vector2(delta * Mathf.Rad2Deg / Mathf.Max(0.01f, rig.swipeYaw), 0f));
+
+        void UpdateOnline()
+        {
+            online.Frame(Playing);
+            rig.Swipe(hud.Look);
+            hud.SetControlsVisible(ControlsVisible);
+            var snap = online.Snap;
+            if (snap == null) return;
+            float t = online.Now, limit = data.limitMs;
+            float left = snap.firstFinish >= 0f ? Mathf.Min(limit - t, snap.firstFinish + FinishGrace * 1000f - t) : limit - t;
+            hud.SetChip("time", $"{Mathf.CeilToInt(Mathf.Max(0f, left) / 1000f)} s");
+            SetTimer(snap.firstFinish >= 0f ? left / (FinishGrace * 1000f) : left / limit);
+            if (online.me >= 0) hud.SetChip("place", $"Platz {online.PlaceOf(online.me)}/{online.racers.Count}");
+            if (Time.frameCount % 20 != 0) return;
+            var order = snap.order ?? new int[0];
+            for (int i = 0; i < online.racers.Count; i++)
+            {
+                int place = System.Array.IndexOf(order, i) + 1;
+                Strip(seats[i], place > 0 ? $"· Ziel {place}." : $"· {Mathf.RoundToInt(snap.racers[i].best)} m", place == 1, false);
+            }
+        }
+
+        void OnDestroy() { online?.Dispose(); }
 
         Racer Of(ParcoursRunner runner) => racers.FirstOrDefault(r => r.runner == runner);
 
@@ -152,6 +205,7 @@ namespace GSG.Parcours
 
         void Update()
         {
+            if (online != null) { UpdateOnline(); return; }
             if (phase != Phase.Play || ended) return;
             float t = Time.time;
             foreach (var r in racers)

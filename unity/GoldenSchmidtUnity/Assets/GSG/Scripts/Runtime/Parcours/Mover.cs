@@ -33,7 +33,8 @@ namespace GSG.Parcours
 
         void FixedUpdate()
         {
-            float t = Time.fixedTime;
+            // The room's clock when a room's run is drawn, so islands and pushers stand where the room has them.
+            float t = CourseClock.Room != null ? CourseClock.Room() - Time.fixedDeltaTime : Time.fixedTime;
             var next = At(t + Time.fixedDeltaTime);
             velocity = (next - body.position) / Time.fixedDeltaTime;
             body.MovePosition(next);

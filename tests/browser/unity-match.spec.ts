@@ -211,3 +211,58 @@ test("Floor is Lava mit Unity-Darstellung: Springen und Hechten aus dem Unity-HU
     expect(errors).toEqual([]);
   } finally { session.close(); }
 });
+
+// Parcours run and final in Unity (3rd person): stick, jump, dive and "Ducken" held reach the room.
+for (const [miniId, name] of [["tuerenlotto", "Türenlotto"], ["standhaft", "Standhaft"]] as const) test(`${name} mit Unity-Darstellung: Unity-HUD steuert den Lauf`, async ({ page }, info) => {
+  test.skip(info.project.name !== "phone", "Nur Smartphone");
+  test.setTimeout(240000);
+  const errors: string[] = [];
+  page.on("pageerror", e => errors.push(e.message));
+  const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId });
+  let hopping: ReturnType<typeof setInterval> | undefined;
+  try {
+    await expect(page.getByRole("group", { name: "Variante" }).getByRole("button", { name: /Unity/ })).toHaveAttribute("aria-pressed", "true");
+    await unityLoaded(page);
+    await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
+    await session.action({ type: "ready" }, session.ids[1]);
+    await matchStarted(page);
+    await expect(page.locator(".match-world")).toHaveAttribute("data-ready", "true", { timeout: 150000 });
+    await expect(page.locator(".match-game")).toHaveClass(/is-unity-hud/, { timeout: 30000 });
+    // The software-rendered test browser may stall while Unity loads the scene; the app's socket then reconnects.
+    await expect(page.locator(".party-connection")).toHaveCount(0, { timeout: 30000 });
+    // Unity counts 3-2-1 itself (the app's countdown is hidden): wait for the room's start signal.
+    await expect.poll(async () => (await session.state()).partyGame!.mini!.match!.time, { timeout: 15000 }).toBeGreaterThan(300);
+    // In the final the second player keeps jumping over the bar, so the final is not decided while this device acts.
+    let seq = 0;
+    hopping = miniId === "standhaft" ? setInterval(() => { seq++; void session.control(session.ids[1], { x: 0, y: 0, ax: 0, ay: 0, ha: false, hb: false, ca: seq, cb: 0, cn: 0, n: 0 }, seq).catch(() => undefined); }, 350) : undefined;
+    const own = async () => (await session.state()).partyGame!.mini!.match!.players.find(p => p.id === session.ids[0])!;
+    const cdp = await page.context().newCDPSession(page);
+    const touch = (type: "touchStart" | "touchMove" | "touchEnd", points: [number, number][]) =>
+      cdp.send("Input.dispatchTouchEvent", { type, touchPoints: points.map(([x, y], id) => ({ x, y, id: id + 1 })) });
+    // Unity draws at a few frames per second in the test browser: a touch is repeated until the room has it.
+    const tapUntil = (point: [number, number], count: () => Promise<number>) => expect(async () => {
+      const start = await count();
+      await touch("touchStart", [point]); await page.waitForTimeout(80); await touch("touchEnd", []);
+      await expect.poll(count, { timeout: 1500 }).toBeGreaterThan(start);
+    }).toPass({ timeout: 30000 });
+    // Buttons: dive and jump above, "Festhalten" and "Ducken" below.
+    await tapUntil([328, 692], async () => (await own()).usedA);
+    // Stick up: along the course (−y in the room's field) in a run; in the final the camera starts behind the
+    // racer facing the middle, so there only the length counts.
+    await expect(async () => {
+      await touch("touchStart", [[80, 740]]);
+      for (const dy of [15, 30, 45, 60]) await touch("touchMove", [[80, 740 - dy]]);
+      try {
+        await expect.poll(async () => { const input = (await own()).input; return miniId === "standhaft" ? -Math.hypot(input.x, input.y) : input.y; }, { timeout: 1500 }).toBeLessThan(-.4);
+      } finally { await page.screenshot({ path: info.outputPath(`unity-${miniId}.png`) }); await touch("touchEnd", []); }
+    }).toPass({ timeout: 30000 });
+    await tapUntil([230, 692], async () => (await own()).usedB);
+    await expect(async () => {
+      await touch("touchStart", [[328, 790]]);
+      try { await expect.poll(async () => (await own()).input.hb, { timeout: 1500 }).toBe(true); }
+      finally { await touch("touchEnd", []); }
+    }).toPass({ timeout: 30000 });
+    await expect.poll(async () => (await own()).input.hb, { timeout: 5000 }).toBe(false);
+    expect(errors).toEqual([]);
+  } finally { clearInterval(hopping); session.close(); }
+});
