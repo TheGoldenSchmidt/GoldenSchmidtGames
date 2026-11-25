@@ -23,6 +23,8 @@ export const NEUTRAL_MATCH_INPUT: MatchInput = { x: 0, y: 0, ax: 0, ay: 0, ha: f
 export interface MatchPlayer {
   id: string;
   style: number;
+  /** Computer player: rules may give bots help that people do not get (Schneeballschlacht keeps their wide aim assist). */
+  bot?: boolean;
   characterId?: CharacterId;
   team: number;
   input: MatchInput;

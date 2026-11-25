@@ -11,7 +11,7 @@ namespace GSG.Snow
     /// turns with a swipe, balls flying in an arc, splashes and snowmen. A tap on "Werfen" throws at
     /// the nearest opponent in view (marked with a gold ring), like the app's tap throw.
     /// </summary>
-    public class SnowGame : MatchGame
+    public class SnowGame : MatchGame, IOnlineMatch
     {
         const float StepTime = 0.05f;
 
@@ -30,11 +30,17 @@ namespace GSG.Snow
         bool pendingThrow, pendingForm;
         Vector2 playerDir;
         Baller tapTarget;
+        // Online: own seat (−1 = watching), overview instead of the chase camera, event mark and last ball places.
+        int me;
+        bool top, built;
+        int lastEvent = -1;
+        readonly Dictionary<int, Vector2> lastBalls = new();
 
         protected override string GameName => "Schneeballschlacht";
         protected override string Intro => "Du trägst höchstens zwei Schneebälle: „Formen“ tippen und kurz stehen bleiben, oder über einen Schneehaufen laufen. „Werfen“ wirft in Blickrichtung; steht ein Gegner fast genau davor, rastet der Wurf ein (goldener Ring). Wischen dreht die Kamera – laufende Gegner musst du selbst vorhalten. Jeder Treffer macht 10 % langsamer, nach drei Treffern bist du ein Schneemann. Wer zuletzt steht, gewinnt.";
         protected override string ResultText => "Nach zwei Minuten gewinnt, wer am wenigsten getroffen wurde, dann wer mehr getroffen hat.";
-        protected override bool ControlsVisible => sim != null && !sim.players[0].Out;
+        protected override bool ControlsVisible => sim != null && me >= 0 && !sim.players[me].Out && (!Online || built);
+        Baller Own => me >= 0 ? sim.players[me] : null;
 
         static Vector3 World(float x, float y, float h = 0f) => new Vector3(x - SnowSim.Size / 2f, h, SnowSim.Size / 2f - y);
 
@@ -56,19 +62,23 @@ namespace GSG.Snow
             }
             marker = Part(null, "Ziel", Torus(0.7f, 0.07f, 40, 6), Toon(Palette.Accent, 0f, 0f, Palette.Accent * 1.6f), Vector3.zero, null, false).transform;
             marker.gameObject.SetActive(false);
+            me = seats.FindIndex(s => s.isPlayer);
+            top = Online && (MatchBridge.Setup.view == "top" || me < 0);
             focus = new GameObject("Kamerafokus").transform;
-            rig = CameraRig.Create(focus, 9.5f, 34f, 55f, Vector3.zero);
-            rig.composer.TargetOffset = new Vector3(0f, 1f, 0f);
-            var comp = rig.composer.Composition; comp.ScreenPosition = new Vector2(0f, 0.1f); rig.composer.Composition = comp;
-            rig.recenterAfter = 9999f;
+            // Draufsicht: the whole winter arena from above; otherwise the chase camera behind the own player.
+            rig = top ? CameraRig.Create(focus, 34f, 70f, 55f, Vector3.zero) : CameraRig.Create(focus, 9.5f, 34f, 55f, Vector3.zero);
+            rig.composer.TargetOffset = top ? Vector3.zero : new Vector3(0f, 1f, 0f);
+            var comp = rig.composer.Composition; comp.ScreenPosition = new Vector2(0f, top ? 0.04f : 0.1f); rig.composer.Composition = comp;
+            rig.recenterAfter = top ? 0f : 9999f;
             hud.AddChip("time", "120 s");
             hud.AddChip("balls", "Bälle 1/2");
             hud.AddAction("b", Hud.Icon.Grab, "Formen", Hud.Tone.Cyan);
             hud.AddAction("a", Hud.Icon.Dive, "Werfen", Hud.Tone.Gold);
             NewSim();
+            if (Online) { hud.SetControlsVisible(false); MatchBridge.Register(this); }
         }
 
-        protected override void OnBegin() => NewSim();
+        protected override void OnBegin() { if (!Online) NewSim(); }
 
         void NewSim()
         {
@@ -83,8 +93,9 @@ namespace GSG.Snow
                 v.yaw = Mathf.Atan2(v.p.fx, -v.p.fy) * Mathf.Rad2Deg;
                 v.figure.gameObject.SetActive(true); v.snowman.SetActive(false);
             }
-            focus.position = views[0].root.position;
-            rig.Snap(views[0].yaw);
+            var own = views[Mathf.Max(0, me)];
+            focus.position = top ? Vector3.zero : own.root.position;
+            rig.Snap(top ? 0f : own.yaw);
             Strips();
         }
 
@@ -172,9 +183,31 @@ namespace GSG.Snow
         void Update()
         {
             if (sim == null) return;
-            if (phase == Phase.Play || phase == Phase.Countdown)
+            if ((phase == Phase.Play || phase == Phase.Countdown) && !top)
             {
                 if (hud.Look.sqrMagnitude > 0.01f) rig.Swipe(hud.Look);
+            }
+            if (Online)
+            {
+                if (!built) return;
+                var self = Own;
+                tapTarget = self == null || self.Out ? null : sim.Target(self, ViewDir(), SnowSim.PlayerCone);
+                if (Playing && ControlsVisible)
+                {
+                    var dir = rig.Relative(hud.Stick);
+                    if (hud.Pressed("a"))
+                    {
+                        // Tap: at the opponent marked within ±11° of the view, else straight ahead (the room applies the same rule).
+                        var aim = tapTarget != null ? new Vector2(tapTarget.x - self.x, tapTarget.y - self.y).normalized : ViewDir();
+                        MatchBridge.Input(dir.x, -dir.z, aim.x, aim.y, now: true);
+                        MatchBridge.Press("a");
+                    }
+                    else MatchBridge.Input(dir.x, -dir.z, 0f, 0f);
+                    if (hud.Pressed("b")) { MatchBridge.Press("b"); Sfx.Play("click", 0.6f); }
+                }
+                Draw();
+                UpdateHud();
+                return;
             }
             if (phase == Phase.Play)
             {
@@ -222,11 +255,11 @@ namespace GSG.Snow
 
         void Event(SnowEvent e)
         {
-            bool mine = e.a == 0 || e.b == 0;
+            bool mine = me >= 0 && (e.a == me || e.b == me);
             switch (e.kind)
             {
                 case "throw":
-                    Sfx.Play("whoosh", e.a == 0 ? 0.8f : 0.35f, 1.4f);
+                    Sfx.Play("whoosh", e.a == me ? 0.8f : 0.35f, 1.4f);
                     views[e.a].figure.Shot("punch", 0.35f, 0.05f, 1.4f);
                     break;
                 case "splat": Fx.Splash(World(e.x, e.y, 1f), Palette.Paper, 8); Sfx.Play("splash", 0.25f, 1.5f); break;
@@ -234,19 +267,19 @@ namespace GSG.Snow
                     Fx.Splash(World(e.x, e.y, 1.2f), Palette.Paper, 18);
                     Sfx.Play("hit", mine ? 0.9f : 0.4f, 1.2f);
                     views[e.a].figure.Shot("hitLight", 0.5f);
-                    if (e.a == 0) { hud.Toast($"Getroffen! {sim.players[0].hits * 10} % langsamer", Palette.Seesaw, 0.9f); Fx.Shake(0.3f); }
-                    else if (e.b == 0) { hud.Toast("Treffer!", Palette.Accent, 0.6f); Sfx.Play("chime", 0.7f, 1.3f); }
+                    if (e.a == me) { hud.Toast($"Getroffen! {sim.players[me].hits * 10} % langsamer", Palette.Seesaw, 0.9f); Fx.Shake(0.3f); }
+                    else if (me >= 0 && e.b == me) { hud.Toast("Treffer!", Palette.Accent, 0.6f); Sfx.Play("chime", 0.7f, 1.3f); }
                     break;
                 case "frozen":
                     var v = views[e.a];
                     Fx.Splash(v.root.position + Vector3.up, Palette.Paper, 40);
                     Sfx.Play("crack", 0.9f);
                     v.figure.gameObject.SetActive(false); v.snowman.SetActive(true);
-                    if (e.a == 0) hud.Toast("Du bist ein Schneemann!", Palette.Seesaw, 1.3f);
-                    else if (e.b == 0) { hud.Toast("Schneemann! Erwischt", Palette.Accent, 1f); Sfx.Play("fanfare", 0.6f); }
+                    if (e.a == me) hud.Toast("Du bist ein Schneemann!", Palette.Seesaw, 1.3f);
+                    else if (me >= 0 && e.b == me) { hud.Toast("Schneemann! Erwischt", Palette.Accent, 1f); Sfx.Play("fanfare", 0.6f); }
                     break;
-                case "formed": if (e.a == 0) { Sfx.Play("chime", 0.6f, 1.5f); Fx.Sparks(views[0].root.position + Vector3.up * 2f, Palette.Paper, 6); } break;
-                case "pickup": if (e.a == 0) { hud.Toast("Schneeball aufgehoben!", Palette.Paper, 0.6f); Sfx.Play("chime", 0.6f, 1.2f); } break;
+                case "formed": if (e.a == me) { Sfx.Play("chime", 0.6f, 1.5f); Fx.Sparks(views[me].root.position + Vector3.up * 2f, Palette.Paper, 6); } break;
+                case "pickup": if (e.a == me) { hud.Toast("Schneeball aufgehoben!", Palette.Paper, 0.6f); Sfx.Play("chime", 0.6f, 1.2f); } break;
             }
         }
 
@@ -290,19 +323,20 @@ namespace GSG.Snow
             }
             marker.gameObject.SetActive(tapTarget != null && phase == Phase.Play);
             if (tapTarget != null) { marker.position = views[tapTarget.seat].root.position + Vector3.up * 0.05f; marker.localScale = Vector3.one * (1f + Mathf.Sin(Time.time * 6f) * 0.08f); }
-            focus.position = views[0].root.position;
+            if (top) focus.position = Ease.Damp(focus.position, me >= 0 && !views[me].p.Out ? views[me].root.position * 0.2f : Vector3.zero, 3f, Time.unscaledDeltaTime);
+            else focus.position = views[Mathf.Max(0, me)].root.position;
         }
 
         void UpdateHud()
         {
-            var me = sim.players[0];
+            var me = sim.players[Mathf.Max(0, this.me)];
             hud.SetChip("time", $"{Mathf.CeilToInt(Mathf.Max(0f, (SnowSim.MaxMs - sim.time) / 1000f))} s");
             hud.SetChip("balls", $"Bälle {me.balls}/{SnowSim.MaxBalls}");
             SetTimer(1f - sim.time / SnowSim.MaxMs);
             hud.SetActionEnabled("a", me.balls > 0);
             hud.SetActionEnabled("b", me.balls < SnowSim.MaxBalls);
             hud.SetCooldown("b", me.form > 0f ? 1f - me.form / SnowSim.FormMs : 0f);
-            if (phase == Phase.Play) hud.SetControlsVisible(ControlsVisible);
+            if (phase == Phase.Play || Online) hud.SetControlsVisible(ControlsVisible && phase == Phase.Play);
         }
 
         void Strips()
@@ -310,6 +344,70 @@ namespace GSG.Snow
             foreach (var v in views)
                 Strip(v.seat, v.p.Out ? "· Schneemann" : $"· {v.p.hits}/3 · {v.p.dealt} Treffer", false, v.p.Out);
         }
+
+        // ---- online: snapshots of the room (snowball.ts) ----------------------------------------
+
+        [System.Serializable] class SnapPlayer { public string id; public float x, y, fx, fy, form, lastThrow, hitAt, outAt; public int balls, hits, dealt; public bool forming; }
+        [System.Serializable] class SnapBall { public int id, owner; public float x, y, vx, vy, sx, sy, born; }
+        [System.Serializable] class SnapPile { public float x, y, readyAt; }
+        [System.Serializable] class Snap { public int time; public bool done; public SnapPlayer[] players; public SnapBall[] balls; public SnapPile[] piles; public OnlineEvent[] events; }
+
+        public void OnSnapshot(string json)
+        {
+            var snap = JsonUtility.FromJson<Snap>(json);
+            if (snap?.players == null || snap.players.Length != views.Count) return;
+            var byId = new Dictionary<string, int>();
+            for (int i = 0; i < views.Count; i++)
+            {
+                var s = snap.players[i];
+                var p = sim.players[i];
+                byId[s.id] = i;
+                bool wasOut = p.Out;
+                p.x = s.x; p.y = s.y; p.fx = s.fx; p.fy = s.fy; p.form = s.form; p.forming = s.forming; p.lastThrow = s.lastThrow; p.hitAt = s.hitAt; p.outAt = s.outAt;
+                p.balls = s.balls; p.hits = s.hits; p.dealt = s.dealt;
+                if (!built) { views[i].root.position = World(p.x, p.y); views[i].yaw = Mathf.Atan2(p.fx, -p.fy) * Mathf.Rad2Deg; }
+                if (built && wasOut && !p.Out) { views[i].figure.gameObject.SetActive(true); views[i].snowman.SetActive(false); }
+            }
+            sim.time = snap.time; sim.done = snap.done;
+            var current = new HashSet<int>();
+            sim.balls = (snap.balls ?? new SnapBall[0]).Select(b => { current.Add(b.id); return new Ball { id = b.id, owner = b.owner, x = b.x, y = b.y, vx = b.vx, vy = b.vy, sx = b.sx, sy = b.sy, born = b.born }; }).ToList();
+            var gone = lastBalls.Where(kv => !current.Contains(kv.Key)).Select(kv => kv.Value).ToList();
+            lastBalls.Clear();
+            foreach (var b in sim.balls) lastBalls[b.id] = new Vector2(b.x, b.y);
+            if (snap.piles != null) for (int i = 0; i < sim.piles.Count && i < snap.piles.Length; i++) sim.piles[i].readyAt = snap.piles[i].readyAt;
+            bool first = !built;
+            built = true;
+            if (first && me >= 0 && !top) { focus.position = views[me].root.position; rig.Snap(views[me].yaw); }
+            RoomEvents(snap.events, byId, gone);
+            Strips();
+        }
+
+        void RoomEvents(OnlineEvent[] events, Dictionary<string, int> byId, List<Vector2> gone)
+        {
+            if (events == null) return;
+            // The first snapshot only sets the mark: no replay of what happened before this device joined.
+            if (lastEvent < 0) { lastEvent = events.Length > 0 ? events.Max(e => e.seq) : 0; return; }
+            foreach (var e in events.OrderBy(e => e.seq))
+            {
+                if (e.seq <= lastEvent) continue;
+                lastEvent = e.seq;
+                int a = e.ids != null && e.ids.Length > 0 && byId.TryGetValue(e.ids[0], out var x) ? x : -1;
+                int b = e.ids != null && e.ids.Length > 1 && byId.TryGetValue(e.ids[1], out var y) ? y : -1;
+                if (e.kind == "splat")
+                {
+                    var at = gone.Count > 0 ? gone[0] : Vector2.zero;
+                    if (gone.Count > 0) gone.RemoveAt(0);
+                    Event(new SnowEvent { kind = "splat", x = at.x, y = at.y });
+                    continue;
+                }
+                if (a < 0) continue;
+                var p = sim.players[a];
+                Event(new SnowEvent { kind = e.kind, a = a, b = b, x = p.x, y = p.y });
+            }
+        }
+
+        public void OnAim(Vector2 aim) { }
+        public void OnTurn(float delta) { if (!top) rig.Swipe(new Vector2(delta * Mathf.Rad2Deg / Mathf.Max(0.01f, rig.swipeYaw), 0f)); }
 
         protected override List<(Seat seat, string value)> Ranking() =>
             sim.Standings().Select(p => (seats[p.seat], $"{(p.Out ? "Schneemann" : sim.winner == p.seat ? "Letzter im Schnee" : "steht noch")} · {p.dealt} Treffer")).ToList();

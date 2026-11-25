@@ -20,7 +20,12 @@ export const SB = {
   /** Aim assist: an opponent in clear sight within this angle (radians) of the aim draws the throw, leading its run. */
   assist: .38,
   /** A tap on a device with a chase camera throws at the nearest opponent within this angle of the view (one it can see). */
-  tapCone: 1.15
+  tapCone: 1.15,
+  /**
+   * People's throws only lock onto an opponent within ±11° of their aim or view and do not lead a
+   * running target (feedback Nov. 2026: "man trifft zu einfach"); bots keep `assist` with leading.
+   */
+  playerCone: .2
 } as const;
 
 export interface Snowballer {
@@ -189,9 +194,13 @@ export const snowball: MatchModule<SnowGame> = {
     const aim = Math.hypot(p.input.ax, p.input.ay), recent = me.aimAt !== undefined && s.time - me.aimAt <= SB.aimMemory;
     const ax = aim > .2 ? p.input.ax / aim : recent ? me.aimX : undefined, ay = aim > .2 ? p.input.ay / aim : recent ? me.aimY : undefined;
     me.aimAt = undefined;
-    const target = throwTarget(s.game, me, ax, ay);
+    const target = throwTarget(s.game, me, ax, ay, p.bot ? SB.assist : SB.playerCone);
     let dx = ax ?? me.fx, dy = ay ?? me.fy;
-    if (target) {
+    if (target && !p.bot) {
+      // People: straight at the locked opponent's current place, no leading.
+      const lx = target.x - me.x, ly = target.y - me.y, n = Math.hypot(lx, ly) || 1;
+      dx = lx / n; dy = ly / n;
+    } else if (target) {
       // Lead a running target by its stick for the ball's flight time.
       const tp = s.players.find(q => q.id === target.id), run = tp ? inputOfPlayer(s, tp) : undefined, stick = run ? Math.hypot(run.x, run.y) : 0;
       const v = stick > .15 ? SB.speed * slowFactor(target) * Math.min(1, stick) / stick : 0, fly = dist(me.x, me.y, target.x, target.y) / SB.ballSpeed;

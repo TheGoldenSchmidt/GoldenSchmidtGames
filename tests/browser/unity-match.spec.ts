@@ -108,3 +108,36 @@ for (const [miniId, name, action] of [["sumo", "Sumo Smash", "Stoß"], ["bumperc
     void action;
   } finally { session.close(); }
 });
+
+// Bomb Arena and Schneeballschlacht in Unity: Unity's buttons reach the room (bomb, throw/form).
+for (const [miniId, name, key] of [["bombs", "Bomb Arena", "bombs"], ["snowball", "Schneeballschlacht", "players"]] as const) test(`${name} mit Unity-Darstellung: Unity-HUD steuert den Raum`, async ({ page }, info) => {
+  test.skip(info.project.name !== "phone", "Nur Smartphone");
+  test.setTimeout(240000);
+  const errors: string[] = [];
+  page.on("pageerror", e => errors.push(e.message));
+  const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId });
+  try {
+    await expect(page.getByRole("group", { name: "Variante" }).getByRole("button", { name: /Unity/ })).toHaveAttribute("aria-pressed", "true");
+    await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
+    await session.action({ type: "ready" }, session.ids[1]);
+    await matchStarted(page);
+    await expect(page.locator(".match-world")).toHaveAttribute("data-ready", "true", { timeout: 150000 });
+    await expect(page.locator(".match-game")).toHaveClass(/is-unity-hud/, { timeout: 30000 });
+    const own = async () => (await session.state()).partyGame!.mini!.match!.players.find(p => p.id === session.ids[0])!;
+    const cdp = await page.context().newCDPSession(page);
+    const touch = (type: "touchStart" | "touchMove" | "touchEnd", points: [number, number][]) =>
+      cdp.send("Input.dispatchTouchEvent", { type, touchPoints: points.map(([x, y], id) => ({ x, y, id: id + 1 })) });
+    await page.waitForTimeout(800);
+    await touch("touchStart", [[80, 740]]);
+    for (const dy of [15, 30, 45, 60]) await touch("touchMove", [[80, 740 - dy]]);
+    await expect.poll(async () => { const input = (await own()).input; return Math.hypot(input.x, input.y); }, { timeout: 5000 }).toBeGreaterThan(.7);
+    await page.screenshot({ path: info.outputPath(`unity-${miniId}.png`) });
+    await touch("touchEnd", []);
+    // Main button bottom right: bomb or throw; the room counts the tap.
+    const before = (await own()).usedA;
+    await touch("touchStart", [[330, 780]]); await page.waitForTimeout(120); await touch("touchEnd", []);
+    await expect.poll(async () => (await own()).usedA, { timeout: 5000 }).toBeGreaterThan(before);
+    expect(errors).toEqual([]);
+    void key;
+  } finally { session.close(); }
+});

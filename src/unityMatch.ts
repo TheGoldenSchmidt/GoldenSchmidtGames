@@ -2,6 +2,7 @@ import type { MatchState } from "../shared/matches/types";
 import type { TankGame } from "../shared/matches/tankTrouble";
 import type { RingGame } from "../shared/matches/ringCore";
 import type { BombGame } from "../shared/matches/bombArena";
+import type { SnowGame } from "../shared/matches/snowball";
 
 /**
  * Unity as the rendering of a room's match: the room authority keeps computing with the rules
@@ -12,7 +13,7 @@ import type { BombGame } from "../shared/matches/bombArena";
 export const UNITY_MATCH_URL = "/unity/spiele/index.html?spiel=online";
 
 /** Match modules with a Unity rendering → game id in the Unity build (`GameSwitch`). */
-export const UNITY_MATCH_SCENES: Readonly<Record<string, string>> = { tanks: "tanks", tankview: "tanks", sumo: "sumo", bumpercars: "bumpercars", bombs: "bombs" };
+export const UNITY_MATCH_SCENES: Readonly<Record<string, string>> = { tanks: "tanks", tankview: "tanks", sumo: "sumo", bumpercars: "bumpercars", bombs: "bombs", snowball: "snowball" };
 export const hasUnityMatch = (matchId: string) => matchId in UNITY_MATCH_SCENES;
 
 export interface UnityMessage { type: string; yaw?: number; kind?: string; x?: number; y?: number; ax?: number; ay?: number; ha?: boolean; hb?: boolean }
@@ -115,5 +116,20 @@ export function unityBombSnapshot(s: MatchState) {
   };
 }
 
+/** Schneeballschlacht (snowball.ts): players in seat order, balls (owner as seat index) and pile timers. */
+export function unitySnowSnapshot(s: MatchState) {
+  const g = s.game as SnowGame, seat = (id: string) => s.players.findIndex(p => p.id === id);
+  return {
+    type: "snap", time: s.time, done: s.done,
+    players: s.players.map(p => {
+      const b = g.players[p.id];
+      return { id: p.id, x: b.x, y: b.y, fx: b.fx, fy: b.fy, form: b.form, forming: !!b.forming, lastThrow: b.lastThrow, hitAt: b.hitAt, outAt: b.outAt ?? -1, balls: b.balls, hits: b.hits, dealt: b.dealt };
+    }),
+    balls: g.balls.map(b => ({ id: b.id, owner: seat(b.owner), x: b.x, y: b.y, vx: b.vx, vy: b.vy, sx: b.sx, sy: b.sy, born: b.born })),
+    piles: g.piles.map(p => ({ x: p.x, y: p.y, readyAt: p.readyAt })),
+    events: unityEvents(s)
+  };
+}
+
 /** Snapshot builder per Unity game id. */
-export const UNITY_SNAPSHOTS: Readonly<Record<string, (s: MatchState) => object>> = { tanks: unityTankSnapshot, sumo: unityRingSnapshot, bumpercars: unityRingSnapshot, bombs: unityBombSnapshot };
+export const UNITY_SNAPSHOTS: Readonly<Record<string, (s: MatchState) => object>> = { tanks: unityTankSnapshot, sumo: unityRingSnapshot, bumpercars: unityRingSnapshot, bombs: unityBombSnapshot, snowball: unitySnowSnapshot };
