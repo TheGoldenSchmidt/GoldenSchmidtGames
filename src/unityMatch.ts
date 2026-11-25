@@ -1,6 +1,7 @@
 import type { MatchState } from "../shared/matches/types";
 import type { TankGame } from "../shared/matches/tankTrouble";
 import type { RingGame } from "../shared/matches/ringCore";
+import type { BombGame } from "../shared/matches/bombArena";
 
 /**
  * Unity as the rendering of a room's match: the room authority keeps computing with the rules
@@ -11,7 +12,7 @@ import type { RingGame } from "../shared/matches/ringCore";
 export const UNITY_MATCH_URL = "/unity/spiele/index.html?spiel=online";
 
 /** Match modules with a Unity rendering → game id in the Unity build (`GameSwitch`). */
-export const UNITY_MATCH_SCENES: Readonly<Record<string, string>> = { tanks: "tanks", tankview: "tanks", sumo: "sumo", bumpercars: "bumpercars" };
+export const UNITY_MATCH_SCENES: Readonly<Record<string, string>> = { tanks: "tanks", tankview: "tanks", sumo: "sumo", bumpercars: "bumpercars", bombs: "bombs" };
 export const hasUnityMatch = (matchId: string) => matchId in UNITY_MATCH_SCENES;
 
 export interface UnityMessage { type: string; yaw?: number; kind?: string; x?: number; y?: number; ax?: number; ay?: number; ha?: boolean; hb?: boolean }
@@ -96,5 +97,23 @@ export function unityRingSnapshot(s: MatchState) {
   };
 }
 
+/** Bomb Arena (bombArena.ts): cells, bombers in seat order, bombs, flames, items and points (owners as seat indices). */
+export function unityBombSnapshot(s: MatchState) {
+  const g = s.game as BombGame, seat = (id: string) => s.players.findIndex(p => p.id === id);
+  return {
+    type: "snap", time: s.time, round: g.round, phase: g.phase, sudden: g.sudden, roundStart: g.roundStart, cells: g.cells, shrunk: g.shrunk, done: s.done,
+    suddenWinner: g.suddenWinner ? seat(g.suddenWinner) : -1,
+    bombers: s.players.map(p => {
+      const b = g.bombers[p.id];
+      return { id: p.id, cx: b.cx, cy: b.cy, tx: b.tx, ty: b.ty, progress: b.progress, dir: b.dir, lives: b.lives, alive: b.alive, invulnUntil: b.invulnUntil, maxBombs: b.maxBombs, range: b.range, speed: b.speed, kick: b.kick };
+    }),
+    bombs: g.bombs.map(b => ({ id: b.id, x: b.x, y: b.y, owner: seat(b.owner), range: b.range, at: b.at, sliding: !!b.slide })),
+    flames: g.flames.map(f => ({ x: f.x, y: f.y, group: f.group, owner: seat(f.owner), until: f.until, center: f.center })),
+    items: g.items.map(i => ({ x: i.x, y: i.y, kind: i.kind })),
+    points: s.players.map(p => g.points[p.id] ?? 0),
+    events: unityEvents(s)
+  };
+}
+
 /** Snapshot builder per Unity game id. */
-export const UNITY_SNAPSHOTS: Readonly<Record<string, (s: MatchState) => object>> = { tanks: unityTankSnapshot, sumo: unityRingSnapshot, bumpercars: unityRingSnapshot };
+export const UNITY_SNAPSHOTS: Readonly<Record<string, (s: MatchState) => object>> = { tanks: unityTankSnapshot, sumo: unityRingSnapshot, bumpercars: unityRingSnapshot, bombs: unityBombSnapshot };

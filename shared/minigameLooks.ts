@@ -20,7 +20,8 @@ export const RENDERER_NAMES: Record<MiniRenderer, string> = { unity: "Unity", we
 export const MINI_LOOKS: Readonly<Record<string, Partial<Record<MiniRenderer, readonly MiniView[]>>>> = {
   tanks: { unity: ["top", "third", "first"], web: ["top", "third"] },
   sumo: { unity: ["top", "third"], web: ["top"] },
-  bumpercars: { unity: ["top", "third"], web: ["top"] }
+  bumpercars: { unity: ["top", "third"], web: ["top"] },
+  bombs: { unity: ["top"], web: ["top"] }
 };
 
 /** Match modules that only are a view of another minigame: never drawn or chosen on their own. */

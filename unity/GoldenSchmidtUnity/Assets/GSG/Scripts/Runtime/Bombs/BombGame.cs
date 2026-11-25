@@ -11,7 +11,7 @@ namespace GSG.Bombs
     /// fizzing bombs, flame crosses with glow and camera shake, power-up tokens and the closing
     /// walls that drop from above.
     /// </summary>
-    public class BombGame : MatchGame
+    public class BombGame : MatchGame, IOnlineMatch
     {
         const float C = 1.2f, StepTime = 0.05f;
 
@@ -30,11 +30,16 @@ namespace GSG.Bombs
         bool pendingPress;
         Vector2 playerDir;
         int shownRound;
+        // Online: own seat (−1 = watching) and what the last snapshot showed (for effects from changes).
+        int me;
+        bool built;
+        int lastEvent = -1;
+        readonly HashSet<int> boomGroups = new();
 
         protected override string GameName => "Bomb Arena";
         protected override string Intro => "Lauf durch die Bombenfabrik und lege Bomben: Nach 2 s explodieren sie kreuzförmig, sprengen Kisten und zünden andere Bomben. Kisten lassen Extras fallen (Reichweite, Extra-Bombe, Tempo, Kick). 2 Leben pro Durchgang, K.o. +2, Durchgangssieg +3. Ab 25 s schließt sich die Arena.";
         protected override string ResultText => "K.o. eines Gegners +2, Durchgangssieg +3 (bei Gleichstand geteilt). Zwei Durchgänge, bei Gleichstand Sudden Death.";
-        protected override bool ControlsVisible => sim != null && sim.bombers[0].alive;
+        protected override bool ControlsVisible => sim != null && me >= 0 && sim.bombers[me].alive && (!Online || built);
 
         public static Vector3 World(float x, float y) => new Vector3((x - (BombSim.Cols - 1) / 2f) * C, 0f, ((BombSim.Rows - 1) / 2f - y) * C);
 
@@ -61,10 +66,12 @@ namespace GSG.Bombs
             hud.AddChip("round", "Durchgang 1/2");
             hud.AddChip("time", "40 s");
             hud.AddAction("a", Hud.Icon.Grab, "Bombe", Hud.Tone.Gold);
+            me = seats.FindIndex(s => s.isPlayer);
             NewSim();
+            if (Online) { hud.SetControlsVisible(false); MatchBridge.Register(this); }
         }
 
-        protected override void OnBegin() => NewSim();
+        protected override void OnBegin() { if (!Online) NewSim(); }
 
         void NewSim()
         {
@@ -148,6 +155,19 @@ namespace GSG.Bombs
         void Update()
         {
             if (sim == null) return;
+            if (Online)
+            {
+                if (!built) return;
+                if (Playing && ControlsVisible)
+                {
+                    var dir = rig.Relative(hud.Stick);
+                    MatchBridge.Input(dir.x, -dir.z, 0f, 0f);
+                    if (hud.Pressed("a")) MatchBridge.Press("a");
+                }
+                Draw();
+                UpdateHud();
+                return;
+            }
             if (phase == Phase.Play)
             {
                 var d = rig.Relative(hud.Stick);
@@ -181,7 +201,7 @@ namespace GSG.Bombs
 
         void Event(BombEvent e)
         {
-            bool mine = e.a == 0 || e.b == 0;
+            bool mine = me >= 0 && (e.a == me || e.b == me);
             switch (e.kind)
             {
                 case "round":
@@ -190,13 +210,13 @@ namespace GSG.Bombs
                     hud.Toast(sim.sudden ? "Sudden Death!" : $"Durchgang {sim.round} von {BombSim.RoundsTotal}", sim.sudden ? Palette.Warn : Palette.Accent, 1f);
                     Sfx.Play("sting");
                     break;
-                case "bomb": Sfx.Play("click", e.a == 0 ? 0.9f : 0.4f, 0.8f); break;
+                case "bomb": Sfx.Play("click", e.a == me ? 0.9f : 0.4f, 0.8f); break;
                 case "boom":
                     var at = World(e.x, e.y) + Vector3.up * 0.5f;
                     Sfx.Play("break", 0.9f, Random.Range(0.75f, 0.95f));
                     Fx.Sparks(at, Palette.Accent, 16);
                     Fx.Glow(at, Palette.Warn, 10);
-                    Fx.Shake(e.a == 0 ? 0.35f : 0.2f);
+                    Fx.Shake(e.a == me ? 0.35f : 0.2f);
                     break;
                 case "crate":
                     int key = e.y * BombSim.Cols + e.x;
@@ -209,29 +229,29 @@ namespace GSG.Bombs
                 case "shrink": hud.Toast("Die Arena schließt sich!", Palette.Warn, 1.2f); Sfx.Play("warn"); break;
                 case "hit":
                     views[e.a].figure.Shot("hit", 0.6f, 0.05f, 1.2f);
-                    if (e.a == 0) { hud.Toast("Getroffen!", Palette.Warn, 0.8f); Sfx.Play("hit"); Fx.HitStop(0.06f); }
+                    if (e.a == me) { hud.Toast("Getroffen!", Palette.Warn, 0.8f); Sfx.Play("hit"); Fx.HitStop(0.06f); }
                     break;
                 case "out":
                     var view = views[e.a];
                     view.deadT = 0f;
                     view.figure.Loop("death", 0.1f);
-                    Sfx.Play("lose", e.a == 0 ? 0.9f : 0.4f);
-                    if (e.a == 0) hud.Toast("K.o.!", Palette.Warn, 1f);
-                    else if (e.b == 0) { hud.Toast("K.o.! +2", Palette.Accent, 0.9f); Sfx.Play("chime"); }
+                    Sfx.Play("lose", e.a == me ? 0.9f : 0.4f);
+                    if (e.a == me) hud.Toast("K.o.!", Palette.Warn, 1f);
+                    else if (me >= 0 && e.b == me) { hud.Toast("K.o.! +2", Palette.Accent, 0.9f); Sfx.Play("chime"); }
                     break;
-                case "kick": Sfx.Play("shove", e.a == 0 ? 0.8f : 0.4f, 1.2f); break;
+                case "kick": Sfx.Play("shove", e.a == me ? 0.8f : 0.4f, 1.2f); break;
                 case "result":
-                    bool won = e.a == 0;
+                    bool won = me >= 0 && e.a == me;
                     hud.Toast(e.a >= 0 ? (won ? "Durchgang gewonnen!" : $"{seats[e.a].name} gewinnt den Durchgang") : e.b > 1 ? "Geteilter Sieg" : "Niemand übrig", won ? Palette.Accent : Palette.Paper, 1.6f);
-                    if (won) { Sfx.Play("fanfare"); Fx.Confetti(views[0].root.position + Vector3.up * 2f, 40); }
+                    if (won) { Sfx.Play("fanfare"); Fx.Confetti(views[me].root.position + Vector3.up * 2f, 40); }
                     break;
                 default:
                     if (e.kind.StartsWith("power:"))
                     {
                         string kind = e.kind.Substring(6);
-                        Sfx.Play("chime", e.a == 0 ? 0.8f : 0.3f, 1.3f);
+                        Sfx.Play("chime", e.a == me ? 0.8f : 0.3f, 1.3f);
                         Fx.Glow(World(e.x, e.y) + Vector3.up, PowerColor(kind), 10);
-                        if (e.a == 0) hud.Toast(kind == "range" ? "Mehr Reichweite!" : kind == "bomb" ? "Extra-Bombe!" : kind == "speed" ? "Schneller!" : "Bombenkick!", PowerColor(kind), 0.8f);
+                        if (e.a == me) hud.Toast(kind == "range" ? "Mehr Reichweite!" : kind == "bomb" ? "Extra-Bombe!" : kind == "speed" ? "Schneller!" : "Bombenkick!", PowerColor(kind), 0.8f);
                     }
                     break;
             }
@@ -336,22 +356,22 @@ namespace GSG.Bombs
                 if (k >= 1f) { Fx.Dust(target, Palette.Paper, 4); if (Random.value < 0.3f) Sfx.Play("thud", 0.4f, 0.9f); }
                 closing[key] = (t, k);
             }
-            var own = views[0];
-            var goal = own.b.alive ? new Vector3(own.root.position.x * 0.15f, 0f, own.root.position.z * 0.15f) : Vector3.zero;
+            var own = me >= 0 ? views[me] : null;
+            var goal = own != null && own.b.alive ? new Vector3(own.root.position.x * 0.15f, 0f, own.root.position.z * 0.15f) : Vector3.zero;
             focus.position = Ease.Damp(focus.position, goal, 3f, Time.unscaledDeltaTime);
         }
 
         void UpdateHud()
         {
-            var own = sim.bombers[0];
-            int mine = sim.bombs.Count(b => b.owner == 0);
+            var own = sim.bombers[Mathf.Max(0, me)];
+            int mine = sim.bombs.Count(b => b.owner == me);
             hud.SetActionEnabled("a", own.alive && mine < own.maxBombs);
             hud.SetChip("round", sim.sudden ? "Sudden Death" : $"Durchgang {Mathf.Max(1, sim.round)}/{BombSim.RoundsTotal}");
             float limit = sim.sudden ? BombSim.SuddenMax : BombSim.RoundMax;
             float left = sim.phase == "play" ? (limit - (sim.time - sim.roundStart)) / 1000f : limit / 1000f;
             hud.SetChip("time", $"{Mathf.CeilToInt(Mathf.Max(0f, left))} s");
             SetTimer(left * 1000f / limit);
-            if (phase == Phase.Play) hud.SetControlsVisible(ControlsVisible);
+            if (phase == Phase.Play || Online) hud.SetControlsVisible(ControlsVisible && phase == Phase.Play);
         }
 
         void Strips()
@@ -359,10 +379,92 @@ namespace GSG.Bombs
             foreach (var v in views)
             {
                 var b = v.b;
-                string pts = sim.points[v.seat.slot] % 1f == 0f ? ((int)sim.points[v.seat.slot]).ToString() : sim.points[v.seat.slot].ToString("0.#");
+                float p = sim.points[v.seat.index];
+                string pts = p % 1f == 0f ? ((int)p).ToString() : p.ToString("0.#");
                 Strip(v.seat, b.alive ? $"· {pts} P · {b.lives} Leben" : $"· {pts} P · raus", false, !b.alive);
             }
         }
+
+        // ---- online: snapshots of the room (bombArena.ts) ---------------------------------------
+
+        [System.Serializable] class SnapBomber { public string id; public int cx, cy, tx, ty, dir, lives, maxBombs, range, speed; public float progress, invulnUntil; public bool alive, kick; }
+        [System.Serializable] class SnapBomb { public int id, x, y, owner, range; public float at; public bool sliding; }
+        [System.Serializable] class SnapFlame { public int x, y, group, owner; public float until; public bool center; }
+        [System.Serializable] class SnapItem { public int x, y; public string kind; }
+        [System.Serializable] class Snap { public int time, round, shrunk, suddenWinner; public float roundStart; public string phase, cells; public bool sudden, done; public SnapBomber[] bombers; public SnapBomb[] bombs; public SnapFlame[] flames; public SnapItem[] items; public float[] points; public OnlineEvent[] events; }
+
+        public void OnSnapshot(string json)
+        {
+            var snap = JsonUtility.FromJson<Snap>(json);
+            if (snap?.bombers == null || snap.bombers.Length != views.Count || snap.cells == null || snap.cells.Length != sim.cells.Length) return;
+            var byId = new Dictionary<string, int>();
+            bool newRound = built && snap.round != sim.round;
+            // Changed cells: a crate bursts, a closing wall drops in.
+            if (built && !newRound)
+                for (int i = 0; i < sim.cells.Length; i++)
+                {
+                    char was = sim.cells[i], now = snap.cells[i];
+                    if (was == now) continue;
+                    if (was == '2' && now == '0') Event(new BombEvent { kind = "crate", x = i % BombSim.Cols, y = i / BombSim.Cols });
+                    else if (now == '1') Event(new BombEvent { kind = "wall", x = i % BombSim.Cols, y = i / BombSim.Cols });
+                }
+            sim.cells = snap.cells.ToCharArray();
+            var removedItems = sim.items.Where(o => !(snap.items ?? new SnapItem[0]).Any(n => n.x == o.x && n.y == o.y)).ToList();
+            for (int i = 0; i < views.Count; i++)
+            {
+                var s = snap.bombers[i];
+                var b = sim.bombers[i];
+                byId[s.id] = i;
+                b.cx = s.cx; b.cy = s.cy; b.tx = s.tx; b.ty = s.ty; b.progress = s.progress; b.dir = s.dir; b.lives = s.lives; b.alive = s.alive;
+                b.invulnUntil = s.invulnUntil; b.maxBombs = s.maxBombs; b.range = s.range; b.speed = s.speed; b.kick = s.kick;
+            }
+            sim.time = snap.time; sim.round = snap.round; sim.phase = snap.phase; sim.sudden = snap.sudden; sim.roundStart = snap.roundStart; sim.shrunk = snap.shrunk; sim.done = snap.done;
+            sim.suddenWinner = snap.suddenWinner;
+            if (snap.points != null) for (int i = 0; i < views.Count && i < snap.points.Length; i++) sim.points[i] = snap.points[i];
+            sim.bombs = (snap.bombs ?? new SnapBomb[0]).Select(b => new Bomb { id = b.id, x = b.x, y = b.y, owner = b.owner, range = b.range, at = b.at, sliding = b.sliding }).ToList();
+            sim.flames = (snap.flames ?? new SnapFlame[0]).Select(f => new Flame { x = f.x, y = f.y, group = f.group, owner = f.owner, until = f.until, center = f.center }).ToList();
+            sim.items = (snap.items ?? new SnapItem[0]).Select(o => new Power { x = o.x, y = o.y, kind = o.kind }).ToList();
+            bool first = !built;
+            built = true;
+            if (first || newRound) { boomGroups.Clear(); foreach (var f in sim.flames) boomGroups.Add(f.group); Cells(); }
+            // A new blast group with its centre: the explosion.
+            foreach (var f in sim.flames)
+                if (f.center && boomGroups.Add(f.group)) Event(new BombEvent { kind = "boom", a = f.owner, x = f.x, y = f.y });
+            RoomEvents(snap.events, byId, removedItems);
+            Strips();
+        }
+
+        void RoomEvents(OnlineEvent[] events, Dictionary<string, int> byId, List<Power> removedItems)
+        {
+            if (events == null) return;
+            // The first snapshot only sets the mark: no replay of what happened before this device joined.
+            if (lastEvent < 0) { lastEvent = events.Length > 0 ? events.Max(e => e.seq) : 0; return; }
+            foreach (var e in events.OrderBy(e => e.seq))
+            {
+                if (e.seq <= lastEvent) continue;
+                lastEvent = e.seq;
+                int a = e.ids != null && e.ids.Length > 0 && byId.TryGetValue(e.ids[0], out var x) ? x : -1;
+                int b = e.ids != null && e.ids.Length > 1 && byId.TryGetValue(e.ids[1], out var y) ? y : -1;
+                switch (e.kind)
+                {
+                    case "round": Event(new BombEvent { kind = "round" }); break;
+                    case "result": Event(new BombEvent { kind = "result", a = e.ids != null && e.ids.Length == 1 ? a : -1, b = e.ids?.Length ?? 0 }); break;
+                    case "power":
+                        if (a < 0) break;
+                        var (cx, cy) = sim.bombers[a].Cell;
+                        var item = removedItems.FirstOrDefault(o => o.x == cx && o.y == cy) ?? removedItems.FirstOrDefault();
+                        Event(new BombEvent { kind = "power:" + (item?.kind ?? "range"), a = a, x = item?.x ?? cx, y = item?.y ?? cy });
+                        break;
+                    case "hit": case "out": case "kick": case "bomb":
+                        if (a >= 0) Event(new BombEvent { kind = e.kind, a = a, b = b });
+                        break;
+                    case "shrink": Event(new BombEvent { kind = "shrink" }); break;
+                }
+            }
+        }
+
+        public void OnAim(Vector2 aim) { }
+        public void OnTurn(float delta) { }
 
         protected override List<(Seat seat, string value)> Ranking() =>
             sim.Standings().Select(i =>
