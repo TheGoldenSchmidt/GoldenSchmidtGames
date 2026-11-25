@@ -187,3 +187,12 @@
 .party-game-options .mini-look label { display:grid; grid-template-columns:7.5rem 1fr; gap:10px; }
 .party-game-options .mini-look select { min-height:44px; }
 .mini-look__note { margin:0; font-size:.75rem; color:#4d6961; }
+/* Variant (Unity/Web) and view of the coming minigame, picked by the host in the intro. */
+.mini-look-picker { display:grid; gap:8px; justify-items:center; margin:14px auto 4px; max-width:30rem; }
+.mini-look-picker > div { display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:8px; }
+.mini-look-picker > div > span { font-size:.75rem; font-weight:800; color:#4d6961; min-width:4.5rem; text-align:right; }
+.mini-look-picker button { min-height:44px; min-width:44px; padding:0 14px; border-radius:999px; border:2px solid #c8d9c7; background:#fff; color:var(--deep); font-family:inherit; font-size:.85rem; font-weight:600; line-height:1; cursor:pointer; touch-action:manipulation; }
+.mini-look-picker button[aria-pressed="true"] { border-color:var(--deep); background:#ffd777; }
+.mini-look-picker button:disabled { opacity:.6; }
+.mini-look-picker small, .mini-look-picker__readonly small { font-size:.72rem; color:#4d6961; }
+.mini-look-picker__readonly { margin:12px auto 0; font-size:.85rem; }

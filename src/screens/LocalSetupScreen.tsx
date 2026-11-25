@@ -100,7 +100,7 @@ export function LocalSetupScreen({
             setSettingUp(true);
           }}/>
         )}
-        {(onPractice||onUnity||onUnityRollItUp)&&<h2 className="iw-plank game-shelf__group">Frei ausprobieren</h2>}
+        {(onPractice||onUnity||onUnityRollItUp)&&<><h2 className="iw-plank game-shelf__group">Frei ausprobieren</h2><p className="iw-note game-shelf__note">Testbereich für Admin und Entwicklung: Unity-Fassungen gegen Bots auf diesem Handy. In Partien und Minispielen wählt der Host vor dem Start zwischen Unity und Web.</p></>}
         {onPractice&&<button className="practice-entry iw-card" onClick={onPractice}><strong>Proberaum</strong><span>Eine Insel für Bewegung, Hindernisse und Animationen.</span><small>Ohne Zeitlimit · auch offline</small></button>}
         {onUnityRollItUp&&<button className="practice-entry iw-card" onClick={onUnityRollItUp}><strong>Roll It Up! (Unity)</strong><span>Die Bauschale als Unity-Brett gegen Bots; Regeln und Minispiele wie im Original.</span><small>Unity-Test · nur Admin/Entwicklung</small></button>}
         {onUnity&&UNITY_GAMES.map(entry=><button key={entry.id} className="practice-entry iw-card" onClick={()=>onUnity(entry.id)}><strong>{entry.name}</strong><span>{entry.text}</span><small>Unity-Test · {entry.note}</small></button>)}

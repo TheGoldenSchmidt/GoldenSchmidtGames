@@ -15,14 +15,17 @@ for (const view of ["3rd Person", "1st Person"] as const) test(`Tank Trouble mit
   const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "tanks" });
   try {
     // Default: Unity in the overview; the Unity build already loads during the intro.
-    await expect(page.locator(".party-mini-look")).toContainText("Unity · Draufsicht");
+    const variant = page.getByRole("group", { name: "Variante" }), views = page.getByRole("group", { name: "Ansicht" });
+    await expect(variant.getByRole("button", { name: /Unity/ })).toHaveAttribute("aria-pressed", "true");
+    await expect(views.getByRole("button", { name: /Draufsicht/ })).toHaveAttribute("aria-pressed", "true");
     await expect(page.locator(".unity-match iframe")).toHaveAttribute("src", /^\/unity\/spiele\/index\.html\?spiel=online/);
-    await page.locator(".party-mini-look").getByRole("button", { name: "Ändern" }).tap();
+    // The host picks in the intro (the game menu offers the same choice).
+    await views.getByRole("button", { name: new RegExp(view) }).tap();
+    await expect(views.getByRole("button", { name: new RegExp(view) })).toHaveAttribute("aria-pressed", "true");
+    await page.getByRole("button", { name: "Spielmenü öffnen" }).tap();
     const menu = page.getByRole("dialog", { name: "Spielmenü" });
-    await menu.getByLabel("Ansicht", { exact: true }).selectOption({ label: view });
     await expect(menu.getByLabel("Ansicht", { exact: true })).toHaveValue(view === "3rd Person" ? "third" : "first");
     await menu.getByRole("button", { name: "Spielmenü schließen" }).tap();
-    await expect(page.locator(".party-mini-look")).toContainText(`Unity · ${view}`);
     // Only the host chooses.
     await expect(session.action({ type: "look", renderer: "web", view: "top" }, session.ids[1])).rejects.toThrow(/Host/);
 
