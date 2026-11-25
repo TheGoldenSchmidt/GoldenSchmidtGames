@@ -8,8 +8,7 @@ test("Unity-Testbereich: ohne Entwicklerkonto keine Unity-Testeinträge", async 
   await page.goto("/");
   await page.getByRole("button", { name: /Lokal spielen/ }).tap();
   await expect(page.getByRole("button", { name: /^Inselparty/ })).toBeVisible();
-  for (const game of UNITY_GAMES) await expect(page.getByRole("button", { name: new RegExp(`^${game.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} `) })).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Frei ausprobieren" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^Unity-Minispiele/ })).toHaveCount(0);
 });
 
 for (const game of UNITY_GAMES) test(`Unity-Test ${game.name}: Eintrag, Start im App-Rahmen unter der CSP, Rückkehr`, async ({ page }, info) => {

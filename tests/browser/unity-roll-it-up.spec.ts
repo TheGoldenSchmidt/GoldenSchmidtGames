@@ -14,8 +14,8 @@ test("Roll It Up! (Unity): nur für Admin/Entwicklung, Unity-Brett lädt und nim
   await page.goto("/");
   await page.getByRole("button", { name: /Lokal spielen/ }).tap();
   await expect(page.getByRole("button", { name: /^Inselparty/ })).toBeVisible();
-  await page.getByRole("button", { name: /^Unity-Minispiele/ }).tap();
-  await expect(page.getByRole("button", { name: /^Roll It Up! \(Unity\)/ })).toHaveCount(0);
+  // The Unity test area (and the Unity board) is for admin and development only.
+  await expect(page.getByRole("button", { name: /^Unity-Minispiele/ })).toHaveCount(0);
 
   await loginTestOwner(page.request);
   await page.goto("/");
