@@ -7,7 +7,7 @@ import { MinigameBetting, MinigameResults, MinigameScoreboard, RoundTrack } from
 import {PartyTrophyGoal,PartyCoinReward,type MiniReward} from "../components/PartyProgress";
 import {CharacterAvatar} from "../components/CharacterAvatar";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
-import { activePartyPlayer, type PartyGame, fieldLabel, isFinalStretch, ITEMS, ITEM_IDS, MAX_TROPHIES_PER_VISIT, partyMiniResults, partyStanding, TROPHY_PRICE, type MiniId, type PartyAction } from "../../shared/party";
+import { activePartyPlayer, type PartyGame, fieldLabel, isFinalStretch, ITEMS, ITEM_IDS, MAX_TROPHIES_PER_VISIT, partyMiniResults, partyStanding, TROPHY_PRICE, type MiniId, type PartyAction, type PartyUnityReport } from "../../shared/party";
 import { PartyFinalStretchCall, PartyIslandFinale } from "../components/PartyFinale";
 import { NEUTRAL_INPUT, type ArenaInput, type ArenaState } from "../../shared/partyArena";
 import type { MatchInput, MatchState } from "../../shared/matches/types";
@@ -119,6 +119,8 @@ export function PartyGameScreen({profile,initialRoom,onExit,onLobby,unityBoard=f
     if(wait>0){controlTimer.current=window.setTimeout(()=>latestControl.current(input,reliable),wait);return;}
     controlAt.current=performance.now();controlSeq.current=Math.max(controlSeq.current,g.mini?.arena?.actors.find(a=>a.id===viewer)?.inputSeq??g.mini?.match?.players.find(p=>p.id===viewer)?.inputSeq??0)+1;(reliable?socket:socket.volatile).emit("party:control",{phaseId:g.phaseId,token:room.partyToken,seq:controlSeq.current,input});}
   latestControl.current=control;
+  // "Unity · Host rechnet": this phone's Unity scene reports snapshots (may be dropped), the end and failures (reliable).
+  function unityReport(report:PartyUnityReport){if(!socket.connected||g.phase!=="mini-play")return;(report.done||report.fail?socket:socket.volatile).emit("party:unity",{phaseId:g.phaseId,token:room.partyToken,report});}
   const replaceControl=<label>Welches Item möchtest du ersetzen?<select value={replace} onChange={e=>setReplace(Number(e.target.value))}>{p.items.map((item,i)=><option value={i} key={i}>{ITEMS[item].name}</option>)}</select></label>;
   const roster=<div className={`party-standings ${boardPhase?"party-board-roster":""}`} aria-label={boardPhase?"Feste Zugreihenfolge und Punktestand":"Punktestand"}>{(boardPhase?g.order.map(id=>g.players.find(player=>player.id===id)!):standings).map((player,rank)=>{
     const index=g.players.indexOf(player);
@@ -181,7 +183,7 @@ export function PartyGameScreen({profile,initialRoom,onExit,onLobby,unityBoard=f
         {g.phase==="mini-bet"&&<MinigameBetting key={g.phaseId} game={g} viewer={viewer} busy={busy||Boolean(g.pausedAt)} send={send}/>}
         {competition&&["mini-result","finished"].includes(g.phase)&&<MinigameResults game={g} viewer={viewer} host={host} busy={busy||Boolean(g.pausedAt)} send={send} onExit={onLobby??onExit} exitLabel={onLobby?"Zurück zur Lobby":"Zurück zu GSG"}/>}
         {g.phase==="mini-intro"&&m&&<PartyMiniIntro game={g} viewer={viewer} busy={busy} send={send} onPractice={()=>setPractice(m.id)} onLook={host||!g.online?()=>setPanel("menu"):undefined}/>}
-        {g.phase==="mini-play"&&m&&<><div className="party-mini-player"><CharacterAvatar id={own.characterId}/>{own.name}<small>{g.duel?(viewer===g.duel.challenger||viewer===g.duel.opponent?`Duell um ${g.duel.stake*2} Münzen`:"Du schaust beim Duell zu"):"Alle spielen gleichzeitig"}</small></div><PartyMini game={projected} id={viewer} now={g.pausedAt||now} send={send} control={control} busy={!socket.connected||own.passive||Boolean(g.pausedAt)||Boolean(panel)} matchUi={{note:g.duel?(viewer===g.duel.challenger||viewer===g.duel.opponent?`Duell um ${g.duel.stake*2} Münzen`:"Du schaust beim Duell zu"):undefined,
+        {g.phase==="mini-play"&&m&&<><div className="party-mini-player"><CharacterAvatar id={own.characterId}/>{own.name}<small>{g.duel?(viewer===g.duel.challenger||viewer===g.duel.opponent?`Duell um ${g.duel.stake*2} Münzen`:"Du schaust beim Duell zu"):"Alle spielen gleichzeitig"}</small></div><PartyMini game={projected} id={viewer} now={g.pausedAt||now} send={send} control={control} unityReport={unityReport} busy={!socket.connected||own.passive||Boolean(g.pausedAt)||Boolean(panel)} matchUi={{note:g.duel?(viewer===g.duel.challenger||viewer===g.duel.opponent?`Duell um ${g.duel.stake*2} Münzen`:"Du schaust beim Duell zu"):undefined,
           menu:<>{!m.runs[viewer]?.done&&(m.match?<><p>Du scheidest aus diesem Spiel aus und landest hinter allen, die noch spielen.</p><button type="button" disabled={busy} onClick={()=>send({type:"finish"})}>Jetzt aufgeben</button></>:<><p>Deine bisher erspielten Punkte zählen.</p><button type="button" disabled={busy} onClick={()=>send({type:"finish"})}>Versuch beenden</button></>)}<button type="button" className="is-quiet" onClick={()=>setPanel("menu")} aria-haspopup="dialog">Spielmenü öffnen</button></>}}/></>}
         {g.phase==="mini-result"&&g.duel&&m&&<DuelResult game={g} viewer={viewer} busy={busy} send={send}/>}
         {!competition&&!g.duel&&g.phase==="mini-result"&&m&&<PartyMiniResults game={g} viewer={viewer} busy={busy} send={send} reward={miniReward}/>}

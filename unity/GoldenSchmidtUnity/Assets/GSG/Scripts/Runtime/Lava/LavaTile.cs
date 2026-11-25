@@ -66,6 +66,14 @@ namespace GSG.Lava
             if (rune) rune.gameObject.SetActive(false);
         }
 
+        /// <summary>Gone at once (a drawing scene catching up with the room's state).</summary>
+        public void Vanish()
+        {
+            state = State.Gone; timer = 0f;
+            collider.enabled = false; renderer.enabled = false;
+            if (rune) rune.gameObject.SetActive(false);
+        }
+
         public void Rise(float seconds)
         {
             state = State.Rising; timer = seconds;

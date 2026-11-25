@@ -1,5 +1,8 @@
 import type { MatchState } from "../shared/matches/types";
 import type { TankGame } from "../shared/matches/tankTrouble";
+import type { LavaGame } from "../shared/matches/floorIsLava";
+import type { LavaHostGame } from "../shared/matches/lavaHost";
+import { lavaSnapshot, type LavaSnap } from "../shared/matches/lavaSnap";
 
 /**
  * Unity as the rendering of a room's match: the room authority keeps computing with the rules
@@ -10,10 +13,10 @@ import type { TankGame } from "../shared/matches/tankTrouble";
 export const UNITY_MATCH_URL = "/unity/spiele/index.html?spiel=online";
 
 /** Match modules with a Unity rendering → game id in the Unity build (`GameSwitch`). */
-export const UNITY_MATCH_SCENES: Readonly<Record<string, string>> = { tanks: "tanks", tankview: "tanks" };
+export const UNITY_MATCH_SCENES: Readonly<Record<string, string>> = { tanks: "tanks", tankview: "tanks", lava: "lava", lavahost: "lava" };
 export const hasUnityMatch = (matchId: string) => matchId in UNITY_MATCH_SCENES;
 
-export interface UnityMessage { type: string; yaw?: number }
+export interface UnityMessage { type: string; yaw?: number; seq?: number; snap?: LavaSnap; text?: string }
 type Listener = (message: UnityMessage) => void;
 
 /** The persistent Unity frame of the current page (mounted by `UnityMatchHost`). */
@@ -34,11 +37,19 @@ class UnityStage {
 }
 export const unityStage = new UnityStage();
 
-/** Seats for the Unity scene: colour slot, name and the figure chosen in the app (Unity falls back to a base human). */
-export function unityMatchSetup(s: MatchState, viewer: string, view: string, reduced: boolean, names: Record<string, string>, characters: Record<string, string | undefined>) {
+/** "Unity · Host rechnet": this device's Unity scene simulates the match for everyone. */
+export const isUnityHost = (s: MatchState, viewer: string) => s.id === "lavahost" && (s.game as LavaHostGame).host === viewer;
+
+/**
+ * Seats for the Unity scene: colour slot, name and the figure chosen in the app (Unity falls back
+ * to a base human). `role` "host" makes the scene simulate (bots included), "view" only draws;
+ * `resume` hands a reloaded host the last reported snapshot (points and round continue).
+ */
+export function unityMatchSetup(s: MatchState, viewer: string, view: string, reduced: boolean, names: Record<string, string>, characters: Record<string, string | undefined>, bots: Record<string, boolean> = {}) {
+  const host = isUnityHost(s, viewer), snap = s.id === "lavahost" ? (s.game as LavaHostGame).snap : undefined;
   return {
-    type: "setup", game: UNITY_MATCH_SCENES[s.id], view, viewer, reduced,
-    players: s.players.map(p => ({ id: p.id, slot: p.style, name: names[p.id] ?? "", figure: characters[p.id] ?? "" }))
+    type: "setup", game: UNITY_MATCH_SCENES[s.id], view, viewer, reduced, role: host ? "host" : "view", resume: host && snap ? JSON.stringify(snap) : "",
+    players: s.players.map(p => ({ id: p.id, slot: p.style, name: names[p.id] ?? "", figure: characters[p.id] ?? "", bot: !!bots[p.id] }))
   };
 }
 
@@ -63,5 +74,13 @@ export function unityTankSnapshot(s: MatchState) {
   };
 }
 
+/**
+ * Floor is Lava for Unity: Variant A builds the snapshot from the room's rules, Variant B relays
+ * what the host's Unity scene reported (nothing until its first report).
+ */
+export function unityLavaSnapshot(s: MatchState): object | undefined {
+  return s.id === "lavahost" ? (s.game as LavaHostGame).snap : lavaSnapshot(s as MatchState<LavaGame>);
+}
+
 /** Snapshot builder per Unity game id. */
-export const UNITY_SNAPSHOTS: Readonly<Record<string, (s: MatchState) => object>> = { tanks: unityTankSnapshot };
+export const UNITY_SNAPSHOTS: Readonly<Record<string, (s: MatchState) => object | undefined>> = { tanks: unityTankSnapshot, lava: unityLavaSnapshot };

@@ -5,14 +5,22 @@ using UnityEngine.SceneManagement;
 
 namespace GSG
 {
-    [Serializable] public class OnlinePlayer { public string id, name, figure; public int slot; }
-    [Serializable] public class OnlineSetup { public string type, game, view, viewer; public bool reduced; public OnlinePlayer[] players; }
+    [Serializable] public class OnlinePlayer { public string id, name, figure; public int slot; public bool bot; }
+    /// <summary>`role` "host": this scene simulates for the room ("Unity · Host rechnet"), "view": it only draws. `resume`: last reported snapshot for a reloaded host.</summary>
+    [Serializable] public class OnlineSetup { public string type, game, view, viewer, role, resume; public bool reduced; public OnlinePlayer[] players; }
     [Serializable] class OnlineEnvelope { public string type; }
     [Serializable] class OnlineAim { public float x, y; }
     [Serializable] class OnlineTurn { public float delta; }
     [Serializable] class OnlineReady { public string type = "ready"; }
     [Serializable] class OnlineError { public string type = "error"; public string text; }
     [Serializable] class OnlineCam { public string type = "cam"; public float yaw; }
+
+    /// <summary>Scenes that also take the own input every frame ("own") and, as host, everyone's inputs ("inputs").</summary>
+    public interface IOnlineInputs
+    {
+        void OnOwn(string json);
+        void OnInputs(string json);
+    }
 
     /// <summary>A game scene that draws the room's match (<c>?spiel=online</c>).</summary>
     public interface IOnlineMatch
@@ -29,6 +37,8 @@ namespace GSG
     /// computes with the rules from shared/, Unity draws its snapshots. "setup" loads the game scene,
     /// "snap" carries the newest snapshot, "aim"/"turn" the own aim and camera turns, "idle" parks the
     /// hidden build between rounds. Back to the app: "ready" once, "cam" with the chase camera heading.
+    /// Pilot "Unity · Host rechnet" (Floor is Lava): the host's scene gets "own" and "inputs" and
+    /// answers with "hostsnap"/"hostdone"; every other scene draws those snapshots as usual.
     /// </summary>
     public class MatchBridge : MonoBehaviour
     {
@@ -92,6 +102,12 @@ namespace GSG
                 case "turn":
                     game?.OnTurn(JsonUtility.FromJson<OnlineTurn>(json).delta);
                     break;
+                case "own":
+                    (game as IOnlineInputs)?.OnOwn(json);
+                    break;
+                case "inputs":
+                    (game as IOnlineInputs)?.OnInputs(json);
+                    break;
                 case "idle":
                     game = null;
                     pending = null;
@@ -109,5 +125,11 @@ namespace GSG
 
         /// <summary>Heading of the chase camera (0 = up on the overview), so the app keeps the stick relative to it.</summary>
         public static void Camera(float yaw) => GSG_Post(JsonUtility.ToJson(new OnlineCam { yaw = yaw }));
+
+        /// <summary>This scene simulates for the room ("Unity · Host rechnet").</summary>
+        public static bool Host => Setup != null && Setup.role == "host";
+
+        /// <summary>A message to the app (the host's snapshots and end, checked there and by the room).</summary>
+        public static void Post(string json) => GSG_Post(json);
     }
 }

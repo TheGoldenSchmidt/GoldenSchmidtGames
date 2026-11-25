@@ -8,7 +8,8 @@ import type { PartyAction, PartyGame } from "../../shared/party";
 export function MiniLookSettings({ game, host, busy, send }: { game: PartyGame; host: boolean; busy: boolean; send: (action: PartyAction) => void }) {
   const mini = game.mini, choices = mini && lookChoices(mini.id), look = mini?.look;
   if (game.phase !== "mini-intro" || !choices || !look) return null;
-  const renderers = (Object.keys(choices) as MiniRenderer[]).filter(r => choices[r]?.length);
+  // "Host rechnet" needs separate phones in a room: the host's Unity scene simulates for everyone.
+  const renderers = (Object.keys(choices) as MiniRenderer[]).filter(r => choices[r]?.length && (r !== "unity-host" || game.online));
   const choose = (next: MiniLook) => send({ type: "look", renderer: next.renderer, view: next.view });
   return <fieldset className="settings-fields mini-look" aria-label="Darstellung und Ansicht" disabled={!host || busy}>
     <legend>Nächstes Minispiel</legend>
@@ -20,5 +21,6 @@ export function MiniLookSettings({ game, host, busy, send }: { game: PartyGame; 
       {choices[look.renderer]!.map(v => <option key={v} value={v}>{VIEW_NAMES[v]}</option>)}
     </select></label>
     <p className="mini-look__note">{host ? "Gilt für alle Mitspielenden. Unity braucht Internet und lädt beim ersten Mal ca. 12 MB." : `Der Host hat ${lookLabel(look)} gewählt.`}</p>
+    {look.renderer === "unity-host" && <p className="mini-look__note">Test: Das Handy des Hosts rechnet mit Unity für alle. Es muss dafür im Vordergrund bleiben; fällt Unity dort aus, rechnet der Raum weiter.</p>}
   </fieldset>;
 }

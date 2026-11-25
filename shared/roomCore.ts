@@ -2,7 +2,7 @@ import { getGame, isPartyMode } from "./games";
 import { checkMinigameSetup, isMinigameMode, minigameOptions, type MinigameOptions } from "./minigameModes";
 import { isPlayableMini, miniPool, type PlayableMiniId } from "./minigameCatalog";
 import { MATCH_MODULES, publicMatch, type MatchId } from "./matches/framework";
-import { applyPartyAction, applyPartyControl, createPartyGame, neutralizePartyInputs, PARTY_DEFAULTS, partyOptions, publicParty, selectPartyTestMini, shiftPartyClock, startPartyTestDuel, tickParty, type PartyAction, type PartyOptions } from "./party";
+import { applyPartyAction, applyPartyControl, applyPartyUnity, createPartyGame, neutralizePartyInputs, PARTY_DEFAULTS, partyOptions, publicParty, selectPartyTestMini, shiftPartyClock, startPartyTestDuel, tickParty, type PartyAction, type PartyOptions, type PartyUnityReport } from "./party";
 import { CHARACTERS, characterId, isCharacterId } from "./characters";
 import { PartyBotDriver } from "./partyBots";
 import { publicArena, type ArenaInput } from "./partyArena";
@@ -356,6 +356,21 @@ hub.onPeer((socket) => {
     try{room.partyGame=applyPartyControl(g,member.playerId,payload.input!,payload.seq!,now);lastPartyControl=now;if(acknowledged)transactions.dirty(room.code);callback({ok:true,data:{accepted:true}});}
     catch(error){fail(error instanceof Error?error.message:"Steuerung nicht möglich.");}
   }, true); // Arena controls are also sent without acknowledgements.
+  // "Unity · Host rechnet" (Floor is Lava pilot): the host's Unity scene reports snapshots, the end or a failure.
+  // Checked in applyPartyUnity; the room relays the snapshots with the normal party:match views.
+  withPayload("party:unity",(payload:{phaseId?:number;token?:string;report?:PartyUnityReport},callback:(ack:Ack<{accepted:boolean}>)=>void)=>{
+    const member=socketMembership.get(socket.id),room=member?rooms.get(member.roomCode):undefined,g=room?.partyGame;
+    const fail=(error:string)=>callback?.({ok:false,error});
+    if(!member||!room||!g||!validSession(room.code, member.playerId, payload.token))return fail("Die Inselparty-Sitzung ist nicht gültig.");
+    if(payload.phaseId!==g.phaseId)return fail("Die Minispielrunde hat sich geändert.");
+    try{
+      const before=g.mini?.match?.id;
+      room.partyGame=applyPartyUnity(g,member.playerId,payload.report??{},Date.now());
+      const report=payload.report??{};
+      if(report.done||report.fail||room.partyGame.mini?.match?.id!==before)transactions.dirty(room.code);
+      callback?.({ok:true,data:{accepted:true}});
+    }catch(error){fail(error instanceof Error?error.message:"Unity-Meldung nicht möglich.");}
+  }, true);
   withPayload("party:action", (payload: { seq?: number; phaseId?: number; token?: string; action?: PartyAction }, callback: (ack: Ack<RoomState>) => void) => {
     const member=socketMembership.get(socket.id),room=member?rooms.get(member.roomCode):undefined,g=room?.partyGame;
     if(!member||!room||!g||!validSession(room.code, member.playerId, payload.token))return callback({ok:false,error:"Die Inselparty-Sitzung ist nicht gültig."});
