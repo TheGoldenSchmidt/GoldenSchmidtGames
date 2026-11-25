@@ -78,18 +78,15 @@ namespace GSG
             Fx.Ensure();
             seats = Online ? Seat.FromSetup(MatchBridge.Setup) : Seat.Roster(PlayerCount);
             hud = Hud.Create();
-            hud.AddRoundButton("pause", Hud.Icon.Pause, Pause);
+            // Online the room keeps running: no pause; the app's menu (give up) stays top right.
+            if (!Online) hud.AddRoundButton("pause", Hud.Icon.Pause, Pause);
             Setup();
             timerFill = hud.Bar();
             if (Online)
             {
-                // The app draws HUD, controls, countdown and result above the Unity frame.
-                hud.Root.style.display = DisplayStyle.None;
-                hud.InputEnabled = false;
+                // Unity's own HUD, controls, countdown, sounds and effects; the room computes and the app shows the result.
                 OnBegin();
-                phase = Phase.Play;
-                playStart = Time.time;
-                OnPlay();
+                StartCoroutine(OnlineCountdown(MatchBridge.Setup.startIn / 1000f));
                 return;
             }
             ShowTitle();
@@ -139,6 +136,28 @@ namespace GSG
         }
 
         protected virtual void OnPlay() { }
+
+        /// <summary>Online: the room's start signal (3-2-1 like the local games; late joiners start at once).</summary>
+        IEnumerator OnlineCountdown(float seconds)
+        {
+            phase = Phase.Countdown;
+            hud.SetTopVisible(true);
+            hud.SetControlsVisible(ControlsVisible);
+            float start = Time.realtimeSinceStartup + seconds;
+            for (int n = 3; n >= 1; n--)
+            {
+                float at = start - n * 0.8f;
+                if (Time.realtimeSinceStartup > at) continue;
+                yield return new WaitForSecondsRealtime(at - Time.realtimeSinceStartup);
+                hud.Toast(n.ToString(), Palette.Paper, 0.45f);
+                Sfx.Play("tick");
+            }
+            if (Time.realtimeSinceStartup < start) yield return new WaitForSecondsRealtime(start - Time.realtimeSinceStartup);
+            if (seconds > -1f) { hud.Toast("Los!", Palette.Accent, 0.5f); Sfx.Play("sting"); }
+            phase = Phase.Play;
+            playStart = Time.time;
+            OnPlay();
+        }
 
         /// <summary>Ends the match and shows the result table.</summary>
         protected void Finish()

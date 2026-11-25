@@ -16,8 +16,8 @@ Architektur und gültige Regeln: [Konzept](konzept.md). Ausgangsregeln: [Spezifi
 | Thema | Nächster Schritt |
 | --- | --- |
 | Echte Geräte | Android/iPhone, möglichst älteres Gerät, Node und Handy-Host bis sechs Geräte nach [Gerätetest](geraetetest.md) prüfen. |
-| Unity-Pilot Floor is Lava | „Unity“ (Raum rechnet) und „Unity · Host rechnet“ auf echten Handys vergleichen: Spielgefühl, Verzögerung der Mitspieler, Wärme des Host-Handys. Danach entscheiden, welcher Weg für weitere Spiele gilt ([Unity-Minispiele](../../UnityGames.md#pilot-floor-is-lava-zwei-wege-im-vergleich)). |
-| Unity im Raum | Tank Trouble läuft mit Unity-Darstellung und Ansichtswahl in Räumen. Nächste Spiele nach demselben Muster umstellen, zuerst Standhaft mit 3rd Person; Ansichten für weitere Minispiele in `MINI_LOOKS` ergänzen. |
+| Unity im Raum | Weitere Unity-Spiele nach demselben Muster auf die Darstellung im Raum umstellen; Stand und offene Spiele: [UnityGames.md](../../UnityGames.md#spiele-und-stand). Ansichten in `MINI_LOOKS` ergänzen. |
+| Pilot „Host rechnet“ | Floor is Lava mit „Unity“ und „Unity · Host rechnet“ auf echten Handys vergleichen (Spielgefühl, Verzögerung der Mitspieler, Wärme des Host-Handys); danach entscheiden, welcher Weg für weitere Spiele gilt. |
 | Unity-Umstellung | Rückmeldungen auf echten Handys einholen, dann die Reihenfolge in [Unity-Minispiele](../../UnityGames.md#spiele-und-stand) weiter abarbeiten. |
 | Handy-Hosting | `nearby.spec.ts` mit Match-Spielen in WebRTC-fähiger Umgebung prüfen. Frühere Cloud-Grenzen sind kein aktueller Laufbeleg. CI nur auf ausdrücklichen Wunsch. |
 | Tower Tumble | Hohe Türme, Pfeilsteuerung und Leistung auf Handy-Host/Render Free messen. Bots nur zum Üben. |

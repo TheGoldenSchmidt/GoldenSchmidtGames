@@ -364,9 +364,8 @@ hub.onPeer((socket) => {
     if(!member||!room||!g||!validSession(room.code, member.playerId, payload.token))return fail("Die Inselparty-Sitzung ist nicht gültig.");
     if(payload.phaseId!==g.phaseId)return fail("Die Minispielrunde hat sich geändert.");
     try{
-      const before=g.mini?.match?.id;
-      room.partyGame=applyPartyUnity(g,member.playerId,payload.report??{},Date.now());
-      const report=payload.report??{};
+      const report=payload.report??{},before=g.mini?.match?.id;
+      room.partyGame=applyPartyUnity(g,member.playerId,report,Date.now());
       if(report.done||report.fail||room.partyGame.mini?.match?.id!==before)transactions.dirty(room.code);
       callback?.({ok:true,data:{accepted:true}});
     }catch(error){fail(error instanceof Error?error.message:"Unity-Meldung nicht möglich.");}

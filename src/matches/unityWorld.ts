@@ -1,52 +1,70 @@
-import { followCamera, takeCameraTurn, type ChaseLocal, type MatchWorld, type MatchWorldFrame } from "./client";
-import { isUnityHost, UNITY_MATCH_SCENES, UNITY_SNAPSHOTS, unityMatchSetup, unityStage } from "../unityMatch";
-import type { MatchState } from "../../shared/matches/types";
+import { followCamera, takeCameraTurn, type ChaseLocal, type MatchIO, type MatchWorld, type MatchWorldFrame } from "./client";
+import { isUnityHost, UNITY_MATCH_SCENES, UNITY_SNAPSHOTS, unityInput, unityMatchSetup, unityStage } from "../unityMatch";
 import type { LavaHostGame } from "../../shared/matches/lavaHost";
-import type { MiniView } from "../../shared/minigameLooks";
 import type { PartyUnityReport } from "../../shared/party";
+import type { MatchState } from "../../shared/matches/types";
+import type { MiniView } from "../../shared/minigameLooks";
 
 /** How long the stage waits for a Unity build that is still loading before the web view takes over. */
 const READY_TIMEOUT = 25000;
 
+export interface UnityWorldHooks {
+  io: MatchIO;
+  /** Milliseconds until the room's start signal. */
+  startIn: () => number;
+  sound: () => boolean;
+  /** Unity's own HUD took over (true) – the app hides its controls, countdown and feedback. */
+  onControls: (unity: boolean) => void;
+  /** "Unity · Host rechnet": reports of this device's Unity simulation to the room. */
+  report?: (report: PartyUnityReport) => void;
+}
+
 /**
- * Match world drawn by the persistent Unity frame (see `unityMatch.ts`): posts the setup once
- * Unity is ready, every new snapshot and the own aim, forwards hand turns of the camera and
- * keeps chase controls relative to the camera heading that Unity reports back.
+ * Match world drawn by the persistent Unity frame (see `unityMatch.ts`). Once Unity is ready it gets
+ * the setup and every new snapshot; when its scene is up ("playing") Unity's own HUD takes the touches
+ * and sends input and taps back, which go to the room like the app's controls. Until then the app's
+ * controls work (aim and camera turns are forwarded, the stick follows Unity's camera heading).
  *
- * Floor is Lava also gets the own input every frame ("own"): Unity moves the own figure at once
- * and blends it into the room's positions. With "Unity · Host rechnet" the host's scene also gets
- * everyone's inputs ("inputs") and its reports go to the room through `report`.
+ * Pilot "Unity · Host rechnet" (Floor is Lava): on the host's device the scene simulates for the room.
+ * It gets everyone's inputs from the room ("inputs") and its snapshots ("hostsnap", "hostdone") go
+ * to the room through `hooks.report`; if Unity fails there, the room computes with the web rules.
  */
-export function createUnityWorld(view: MiniView, host: HTMLElement, read: () => MatchWorldFrame, onError: () => void, report?: (r: PartyUnityReport) => void): MatchWorld {
+export function createUnityWorld(view: MiniView, host: HTMLElement, read: () => MatchWorldFrame, onError: () => void, hooks: UnityWorldHooks): MatchWorld {
   const chase = view !== "top";
-  let frame = 0, started = false, disposed = false, camYaw: number | undefined, lastCur: MatchState | undefined, lastAim = "", lastOwn = "", reportSeq = 0, hostRole = false;
+  let frame = 0, started = false, disposed = false, camYaw: number | undefined, lastCur: MatchState | undefined, lastAim = "", sound: boolean | undefined, hostRole = false, reportSeq = 0;
   const since = performance.now();
   host.dataset.renderer = "unity";
   host.dataset.ready = "false";
   // Shown at once: while the build still loads, its own loading bar is visible under the countdown.
   unityStage.show(true);
   const off = unityStage.listen(message => {
+    if (!started) return;
     if (message.type === "cam" && typeof message.yaw === "number" && Number.isFinite(message.yaw)) { camYaw = message.yaw; host.dataset.yaw = camYaw.toFixed(3); }
+    else if (message.type === "playing") { host.dataset.controls = "unity"; unityStage.interactive(true); hooks.onControls(true); }
+    else if (message.type === "input") hooks.io.set(unityInput(message), true);
+    else if (message.type === "press" && (message.kind === "a" || message.kind === "b")) hooks.io.press(message.kind);
+    // A game command (e.g. Floor is Lava's dive = 1); the rules check it like the app's own button.
+    else if (message.type === "command" && Number.isInteger(message.value) && message.value! >= 0 && message.value! <= 9) hooks.io.command(message.value!);
     else if (message.type === "error") fail();
-    // The host's simulation: snapshots and the end go to the room (checked there).
     else if (hostRole && (message.type === "hostsnap" || message.type === "hostdone") && message.snap) {
-      report?.({ seq: ++reportSeq, snap: message.snap, done: message.type === "hostdone" });
+      hooks.report?.({ seq: ++reportSeq, snap: message.snap, done: message.type === "hostdone" });
       host.dataset.hostReports = String(reportSeq);
     }
   });
   const fail = () => {
     if (disposed) return;
     // Without Unity on the host, the room computes with the web rules from now on.
-    if (hostRole) report?.({ seq: ++reportSeq, fail: true });
+    if (hostRole) hooks.report?.({ seq: ++reportSeq, fail: true });
     dispose(); onError();
   };
   const start = (f: MatchWorldFrame) => {
     hostRole = isUnityHost(f.cur, f.viewer);
     // A reloaded host continues the report numbers above the room's last accepted one.
     if (hostRole) reportSeq = (f.cur.game as LavaHostGame).seq;
-    unityStage.post(unityMatchSetup(f.cur, f.viewer, view, f.reduced, f.names, f.characters, f.bots));
-    host.dataset.ready = "true";
     host.dataset.role = hostRole ? "host" : "view";
+    sound = hooks.sound();
+    unityStage.post(unityMatchSetup(f.cur, f.viewer, view, f.reduced, f.names, f.characters, hooks.startIn(), sound));
+    host.dataset.ready = "true";
     started = true;
   };
   const tick = () => {
@@ -57,24 +75,23 @@ export function createUnityWorld(view: MiniView, host: HTMLElement, read: () => 
       else if (performance.now() - since > READY_TIMEOUT) { fail(); return; }
     }
     if (started) {
-      const game = UNITY_MATCH_SCENES[f.cur.id], snapshot = UNITY_SNAPSHOTS[game];
-      if (f.cur !== lastCur) {
+      const snapshot = UNITY_SNAPSHOTS[UNITY_MATCH_SCENES[f.cur.id]];
+      if (f.cur !== lastCur && snapshot) {
         lastCur = f.cur;
-        const snap = snapshot?.(f.cur);
+        const snap = snapshot(f.cur);
         if (snap) unityStage.post(snap);
         if (hostRole) unityStage.post({ type: "inputs", time: f.cur.time, players: (f.cur.game as LavaHostGame).inputs ?? [] });
       }
-      const local = f.local as ChaseLocal;
-      if (chase) {
-        takeCameraTurn(local, delta => unityStage.post({ type: "turn", delta }));
-        if (camYaw !== undefined) followCamera(local, f.input, camYaw);
-      }
-      // The own aim (field direction) shows at once: laser and turret do not wait for the next snapshot.
-      const aim = `${f.input.ax.toFixed(2)},${f.input.ay.toFixed(2)}`;
-      if (aim !== lastAim) { lastAim = aim; unityStage.post({ type: "aim", x: f.input.ax, y: f.input.ay }); }
-      if (game === "lava") {
-        const own = `${f.input.x.toFixed(2)},${f.input.y.toFixed(2)},${f.input.ca},${f.input.cb},${f.input.cn}`;
-        if (own !== lastOwn) { lastOwn = own; unityStage.post({ type: "own", x: f.input.x, y: f.input.y, ca: f.input.ca, cb: f.input.cb, cn: f.input.cn }); }
+      if (hooks.sound() !== sound) { sound = hooks.sound(); unityStage.post({ type: "sound", on: sound }); }
+      if (host.dataset.controls !== "unity") {
+        const local = f.local as ChaseLocal;
+        if (chase) {
+          takeCameraTurn(local, delta => unityStage.post({ type: "turn", delta }));
+          if (camYaw !== undefined) followCamera(local, f.input, camYaw);
+        }
+        // The app's aim (field direction) shows at once in Unity: laser and turret do not wait for the next snapshot.
+        const aim = `${f.input.ax.toFixed(2)},${f.input.ay.toFixed(2)}`;
+        if (aim !== lastAim) { lastAim = aim; unityStage.post({ type: "aim", x: f.input.ax, y: f.input.ay }); }
       }
     }
     frame = requestAnimationFrame(tick);
@@ -87,7 +104,9 @@ export function createUnityWorld(view: MiniView, host: HTMLElement, read: () => 
     off();
     if (started) unityStage.post({ type: "idle" });
     unityStage.show(false);
+    hooks.onControls(false);
     delete host.dataset.renderer;
+    delete host.dataset.controls;
   }
   return { dispose };
 }

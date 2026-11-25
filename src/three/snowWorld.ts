@@ -158,8 +158,8 @@ export function createSnowWorld(host: HTMLElement, read: () => MatchWorldFrame, 
     const ready = mine && mine.outAt === undefined && mine.balls > 0 && !s.done;
     // Not aiming: what a tap would hit, the nearest opponent in view of the camera.
     const aimLen = Math.hypot(f.input.ax, f.input.ay);
-    const locked = !ready ? undefined : aiming ? throwTarget(g, mine, f.input.ax / aimLen, f.input.ay / aimLen)
-      : chase ? throwTarget(g, mine, Math.sin(chaseCam.yaw), -Math.cos(chaseCam.yaw), SB.tapCone) : throwTarget(g, mine);
+    const locked = !ready ? undefined : aiming ? throwTarget(g, mine, f.input.ax / aimLen, f.input.ay / aimLen, SB.playerCone)
+      : chase ? throwTarget(g, mine, Math.sin(chaseCam.yaw), -Math.cos(chaseCam.yaw), SB.playerCone) : throwTarget(g, mine);
     lock.visible = !!locked;
     if (locked) {
       const [lx, ly] = pose(locked, prev.players?.[locked.id], f.alpha);

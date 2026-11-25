@@ -96,7 +96,7 @@ assert.ok(!NEW_MATCH_IDS.includes("tankview") && !isPlayableMini("tankview") && 
 assert.throws(() => minigameOptions({ miniId: "tankview" as never }), /Minispiel/);
 assert.deepEqual(defaultLook("tanks"), { renderer: "unity", view: "top" });
 assert.ok(isMiniLook("tanks", { renderer: "unity", view: "first" }) && isMiniLook("tanks", { renderer: "web", view: "third" }));
-assert.ok(!isMiniLook("tanks", { renderer: "web", view: "first" }) && !isMiniLook("tanks", { renderer: "unity", view: "side" }) && !isMiniLook("sumo", { renderer: "web", view: "top" }));
+assert.ok(!isMiniLook("tanks", { renderer: "web", view: "first" }) && !isMiniLook("tanks", { renderer: "unity", view: "side" }) && !isMiniLook("quickdraw", { renderer: "web", view: "top" }) && isMiniLook("sumo", { renderer: "unity", view: "third" }));
 assert.equal(matchIdForLook("tanks", { renderer: "unity", view: "top" }), "tanks");
 assert.equal(matchIdForLook("tanks", { renderer: "web", view: "third" }), "tankview");
 assert.equal(matchIdForLook("tanks", { renderer: "unity", view: "first" }), "tankview");

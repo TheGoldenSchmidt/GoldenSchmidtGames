@@ -6,23 +6,29 @@ using UnityEngine.SceneManagement;
 namespace GSG
 {
     [Serializable] public class OnlinePlayer { public string id, name, figure; public int slot; public bool bot; }
-    /// <summary>`role` "host": this scene simulates for the room ("Unity · Host rechnet"), "view": it only draws. `resume`: last reported snapshot for a reloaded host.</summary>
-    [Serializable] public class OnlineSetup { public string type, game, view, viewer, role, resume; public bool reduced; public OnlinePlayer[] players; }
+    /// <summary>`role` "host": this scene simulates for the room (pilot "Unity · Host rechnet"), otherwise it draws. `resume`: last report for a reloaded host.</summary>
+    [Serializable] public class OnlineSetup { public string type, game, view, viewer, role, resume; public bool reduced, sound; public int startIn; public OnlinePlayer[] players; }
     [Serializable] class OnlineEnvelope { public string type; }
+    /// <summary>One event of the room (kind, short text, player ids) for sounds, toasts and effects.</summary>
+    [Serializable] public class OnlineEvent { public int seq; public string kind, text; public string[] ids; }
     [Serializable] class OnlineAim { public float x, y; }
     [Serializable] class OnlineTurn { public float delta; }
     [Serializable] class OnlineReady { public string type = "ready"; }
     [Serializable] class OnlineError { public string type = "error"; public string text; }
     [Serializable] class OnlineCam { public string type = "cam"; public float yaw; }
+    [Serializable] class OnlinePlaying { public string type = "playing"; }
+    [Serializable] class OnlineSound { public bool on; }
+    [Serializable] class OnlineInput { public string type = "input"; public float x, y, ax, ay; public bool ha, hb; }
+    [Serializable] class OnlinePress { public string type = "press"; public string kind; }
+    [Serializable] class OnlineCommand { public string type = "command"; public int value; }
 
-    /// <summary>Scenes that also take the own input every frame ("own") and, as host, everyone's inputs ("inputs").</summary>
+    /// <summary>A game scene that draws the room's match (<c>?spiel=online</c>).</summary>
+    /// <summary>Pilot "Unity · Host rechnet": the simulating scene gets everyone's inputs from the room.</summary>
     public interface IOnlineInputs
     {
-        void OnOwn(string json);
         void OnInputs(string json);
     }
 
-    /// <summary>A game scene that draws the room's match (<c>?spiel=online</c>).</summary>
     public interface IOnlineMatch
     {
         void OnSnapshot(string json);
@@ -37,8 +43,6 @@ namespace GSG
     /// computes with the rules from shared/, Unity draws its snapshots. "setup" loads the game scene,
     /// "snap" carries the newest snapshot, "aim"/"turn" the own aim and camera turns, "idle" parks the
     /// hidden build between rounds. Back to the app: "ready" once, "cam" with the chase camera heading.
-    /// Pilot "Unity · Host rechnet" (Floor is Lava): the host's scene gets "own" and "inputs" and
-    /// answers with "hostsnap"/"hostdone"; every other scene draws those snapshots as usual.
     /// </summary>
     public class MatchBridge : MonoBehaviour
     {
@@ -55,6 +59,8 @@ namespace GSG
         static IOnlineMatch game;
         static MatchBridge instance;
         string pending;
+        static readonly OnlineInput lastInput = new();
+        static float lastInputAt = -1f;
 
         public static void Create()
         {
@@ -87,13 +93,17 @@ namespace GSG
                     game = null;
                     pending = null;
                     Fx.Reduced = setup.reduced || AppLink.ReducedMotion;
-                    // The app plays the sounds of the match.
-                    Sfx.SfxOn = Sfx.MusicOn = false;
+                    // Unity plays the match sounds (the app stays quiet); no music, like the app's matches.
+                    Sfx.SfxOn = setup.sound;
+                    Sfx.MusicOn = false;
                     Application.targetFrameRate = 60;
                     SceneManager.LoadScene(scene);
                     break;
                 case "snap":
                     if (game != null) game.OnSnapshot(json); else pending = json;
+                    break;
+                case "inputs":
+                    (game as IOnlineInputs)?.OnInputs(json);
                     break;
                 case "aim":
                     var aim = JsonUtility.FromJson<OnlineAim>(json);
@@ -102,11 +112,9 @@ namespace GSG
                 case "turn":
                     game?.OnTurn(JsonUtility.FromJson<OnlineTurn>(json).delta);
                     break;
-                case "own":
-                    (game as IOnlineInputs)?.OnOwn(json);
-                    break;
-                case "inputs":
-                    (game as IOnlineInputs)?.OnInputs(json);
+                case "sound":
+                    Sfx.SfxOn = JsonUtility.FromJson<OnlineSound>(json).on;
+                    if (Sfx.Instance) Sfx.Instance.ApplyGain();
                     break;
                 case "idle":
                     game = null;
@@ -120,13 +128,37 @@ namespace GSG
         public static void Register(IOnlineMatch match)
         {
             game = match;
+            lastInputAt = -1f;
+            // From now on Unity's own HUD takes the touches; the app hides its controls.
+            GSG_Post(JsonUtility.ToJson(new OnlinePlaying()));
             if (instance && instance.pending != null) { var json = instance.pending; instance.pending = null; match.OnSnapshot(json); }
         }
+
+        /// <summary>
+        /// Held input for the room (field directions: x right, y down; aim zero when not aiming). Sent on change,
+        /// at most every 33 ms; the app repeats it every 100 ms so the authority keeps it alive.
+        /// </summary>
+        public static void Input(float x, float y, float ax, float ay, bool ha = false, bool hb = false, bool now = false)
+        {
+            x = Mathf.Round(x * 100f) / 100f; y = Mathf.Round(y * 100f) / 100f;
+            ax = Mathf.Round(ax * 100f) / 100f; ay = Mathf.Round(ay * 100f) / 100f;
+            bool same = lastInput.x == x && lastInput.y == y && lastInput.ax == ax && lastInput.ay == ay && lastInput.ha == ha && lastInput.hb == hb;
+            if (same || (!now && Time.unscaledTime - lastInputAt < 0.033f)) return;
+            lastInput.x = x; lastInput.y = y; lastInput.ax = ax; lastInput.ay = ay; lastInput.ha = ha; lastInput.hb = hb;
+            lastInputAt = Time.unscaledTime;
+            GSG_Post(JsonUtility.ToJson(lastInput));
+        }
+
+        /// <summary>A tap of button "a" or "b" at this moment (counted by the room like the app's buttons).</summary>
+        public static void Press(string kind) => GSG_Post(JsonUtility.ToJson(new OnlinePress { kind = kind }));
+
+        /// <summary>A game command (e.g. Floor is Lava's dive = 1), like the app's own command buttons.</summary>
+        public static void Command(int value) => GSG_Post(JsonUtility.ToJson(new OnlineCommand { value = value }));
 
         /// <summary>Heading of the chase camera (0 = up on the overview), so the app keeps the stick relative to it.</summary>
         public static void Camera(float yaw) => GSG_Post(JsonUtility.ToJson(new OnlineCam { yaw = yaw }));
 
-        /// <summary>This scene simulates for the room ("Unity · Host rechnet").</summary>
+        /// <summary>This scene simulates for the room (pilot "Unity · Host rechnet").</summary>
         public static bool Host => Setup != null && Setup.role == "host";
 
         /// <summary>A message to the app (the host's snapshots and end, checked there and by the room).</summary>

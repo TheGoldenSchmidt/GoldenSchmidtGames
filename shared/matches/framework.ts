@@ -41,12 +41,12 @@ export function playerRange(id: MatchId) {
   return counts.length > 1 && counts.every((n, i) => i === 0 || n === counts[i - 1] + 1) ? `${counts[0]}–${counts.at(-1)}` : counts.join(" oder ");
 }
 
-export function createMatch(id: MatchId, players: { id: string; style: number; characterId?: CharacterId }[], seed: number): MatchState {
+export function createMatch(id: MatchId, players: { id: string; style: number; characterId?: CharacterId; bot?: boolean }[], seed: number): MatchState {
   const module = MATCH_MODULES[id];
   if (!matchEligible(id, players.length)) throw new Error(`${module.meta.name} braucht ${playerRange(id)} Spieler.`);
   const teams = module.teams?.(players.length) ?? players.map((_, i) => i);
   const s: MatchState = { id, seed, rng: (seed ^ 0x9e3779b9) >>> 0, time: 0, done: false, events: [], eventSeq: 0, game: undefined,
-    players: players.map((p, i) => ({ id: p.id, style: p.style, ...(p.characterId ? { characterId: p.characterId } : {}), team: teams[i], input: { ...NEUTRAL_MATCH_INPUT },
+    players: players.map((p, i) => ({ id: p.id, style: p.style, ...(p.characterId ? { characterId: p.characterId } : {}), ...(p.bot ? { bot: true } : {}), team: teams[i], input: { ...NEUTRAL_MATCH_INPUT },
       inputUntil: 0, inputSeq: 0, usedA: 0, usedB: 0, usedN: 0, played: false, gone: false, rtt: 120 })) };
   s.game = module.create(s);
   return s;

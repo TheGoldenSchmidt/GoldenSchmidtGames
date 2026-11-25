@@ -20,16 +20,8 @@ namespace GSG.Lava
         public float radius = 0.4f, height = 1.6f;
 
         public string displayName;
-        /// <summary>Player id in a room (online) or the seat name (alone against bots).</summary>
-        public string id;
         public int slot;
         public bool isPlayer;
-        /// <summary>Driven by the bot logic of this scene (alone, or bots of the room on the simulating host).</summary>
-        public bool isBot;
-        /// <summary>Drawing only: the position comes from the room's snapshots, no own physics.</summary>
-        public bool viewMode;
-        /// <summary>Speed of a drawn runner (for its animation).</summary>
-        public Vector3 viewVelocity;
         public Figure figure;
         public bool alive;
         public float outAt;
@@ -52,6 +44,22 @@ namespace GSG.Lava
         float faceYaw;
 
         public Rigidbody Body => body;
+
+        /// <summary>Online: placed from the room's snapshots, no physics body of its own.</summary>
+        public bool remote;
+        public Vector3 remoteVelocity;
+        /// <summary>Player id in a room (pilot "Host rechnet"); driven by this scene's bot logic.</summary>
+        public string id;
+        public bool isBot;
+
+        public void Remote()
+        {
+            remote = true;
+            body.isKinematic = true;
+            body.interpolation = RigidbodyInterpolation.None;
+            body.detectCollisions = false;
+            capsule.enabled = false;
+        }
 
         void Awake()
         {
@@ -76,7 +84,6 @@ namespace GSG.Lava
             facing = face; faceYaw = Mathf.Atan2(face.x, face.z) * Mathf.Rad2Deg;
             if (figure) figure.transform.rotation = Quaternion.Euler(0f, faceYaw, 0f);
             alive = true; outAt = 0f; pushedBy = null; pushedAt = -99f;
-            if (viewMode) body.isKinematic = true;
             jumpReady = shoveReady = diveReady = time;
             invulnUntil = time + grace;
             shoveUntil = slideUntil = diveUntil = proneUntil = 0f;
@@ -170,7 +177,7 @@ namespace GSG.Lava
             float t = Time.time;
             faceYaw = Mathf.LerpAngle(faceYaw, Mathf.Atan2(facing.x, facing.z) * Mathf.Rad2Deg, 1f - Mathf.Exp(-14f * Time.deltaTime));
             figure.transform.rotation = Quaternion.Euler(0f, faceYaw, 0f);
-            var v = viewMode ? viewVelocity : body.linearVelocity; var h = new Vector3(v.x, 0f, v.z);
+            var v = remote ? remoteVelocity : body.linearVelocity; var h = new Vector3(v.x, 0f, v.z);
             if (t < diveUntil) figure.Loop("slide", 0.08f);
             else if (t < proneUntil) figure.Loop("slide", 0.1f);
             else if (t < shoveUntil) figure.Loop("push", 0.05f, 1.6f);

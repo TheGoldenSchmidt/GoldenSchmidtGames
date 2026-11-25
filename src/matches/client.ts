@@ -26,8 +26,6 @@ export interface MatchFrame {
 export interface MatchWorldFrame extends Omit<MatchFrame, "w" | "h" | "top"> {
   /** Figure per player id (as chosen in the lobby). */
   characters: Record<string, string | undefined>;
-  /** Bot seats (a Unity scene that simulates drives them itself). */
-  bots?: Record<string, boolean>;
 }
 export interface MatchWorld { dispose(): void }
 /** Builds a WebGL scene in `host`; `read` returns the current frame, `onError` falls back to the canvas. */

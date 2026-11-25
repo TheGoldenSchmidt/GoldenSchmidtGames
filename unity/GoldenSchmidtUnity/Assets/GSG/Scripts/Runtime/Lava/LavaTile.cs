@@ -66,11 +66,12 @@ namespace GSG.Lava
             if (rune) rune.gameObject.SetActive(false);
         }
 
-        /// <summary>Gone at once (a drawing scene catching up with the room's state).</summary>
+        /// <summary>Gone at once, without the fall (online: holes that fell before this device joined).</summary>
         public void Vanish()
         {
             state = State.Gone; timer = 0f;
-            collider.enabled = false; renderer.enabled = false;
+            collider.enabled = false;
+            renderer.enabled = false;
             if (rune) rune.gameObject.SetActive(false);
         }
 

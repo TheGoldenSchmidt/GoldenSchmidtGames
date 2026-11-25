@@ -11,14 +11,15 @@ namespace GSG.Tanks
     [Serializable] class TankSnapTank { public string id, power; public int slot, hp, respawnAt, shieldUntil, powerUntil, kills, deaths; public bool seen, gone, alive; public float x, y, angle, aim; }
     [Serializable] class TankSnapBullet { public int id, slot; public float x, y; }
     [Serializable] class TankSnapPower { public int id; public string kind; public float x, y; }
-    [Serializable] class TankSnap { public int time; public bool done, overtime; public string h, v; public TankSnapTank[] tanks; public TankSnapBullet[] bullets; public TankSnapPower[] powers; }
+    [Serializable] class TankSnapEvent { public int seq; public string kind, text; public string[] ids; }
+    [Serializable] class TankSnap { public int time; public bool done, overtime; public string h, v; public TankSnapTank[] tanks; public TankSnapBullet[] bullets; public TankSnapPower[] powers; public TankSnapEvent[] events; }
 
     /// <summary>
-    /// Tank Trouble in Unity. Locally (Frei ausprobieren) the C# port <see cref="TankSim"/> runs the
-    /// match against bots. Online the room authority computes with tankTrouble.ts/tankView.ts and this
-    /// scene only draws its snapshots: top-down overview, or in 3rd/1st person a camera behind or in
-    /// the own turret with everything outside the own sight in the dark (the room only sends what the
-    /// own tank can see).
+    /// Tank Trouble in Unity. Locally (test area) the C# port <see cref="TankSim"/> runs the match
+    /// against bots. Online the room authority computes with tankTrouble.ts/tankView.ts and this scene
+    /// draws its snapshots with Unity's own HUD, controls, sounds and effects: top-down overview, or in
+    /// 3rd/1st person a camera behind or in the own turret with everything outside the own sight in
+    /// the dark (the room only sends what the own tank can see). Inputs go back to the room.
     /// </summary>
     public class TankGame : MatchGame, IOnlineMatch
     {
@@ -27,34 +28,39 @@ namespace GSG.Tanks
         const int Rays = 160;
         sealed class View
         {
-            public Transform root, hull, turret;
-            public GameObject shield;
+            public Transform root, hull, body, turret, barrel;
+            public GameObject shield, wreck, own;
             public readonly GameObject[] pips = new GameObject[TankSim.Hp];
+            public float recoil, dustAt, tilt;
+            public Vector3 lastPos;
+            /// <summary>Was drawn alive since it came into sight (a wreck only shows where it really fell); down = waiting for respawn.</summary>
+            public bool wasAlive, down;
         }
 
         TankSim sim;
         Transform world, laser;
         Camera cam;
-        Material steel, brick, cracked, tracer, laserMaterial;
+        Material steel, brick, cracked, tracer, laserMaterial, scorched;
         readonly List<View> views = new();
         GameObject[] walls;
         readonly Dictionary<int, Transform> bullets = new(), pickups = new();
         readonly HashSet<int> activeProps = new();
         readonly List<int> staleProps = new();
-        float accumulator;
+        float accumulator, shake;
         bool shotPending;
         NVector2 shotAim;
+        Vector3 camBase;
 
         // Online rendering.
         string view = "top";
         int me;
-        bool chase, built;
+        bool chase, built, snapOvertime;
         bool[] seen = Array.Empty<bool>();
         float snapAt, snapInterval = 0.1f;
-        int lastSnapTime;
-        NVector2 onlineAim;
+        int lastSnapTime, lastEvent = -1;
+        NVector2 appAim;
         float camYaw, manualPause, sentYaw = float.NaN, lastCamPost;
-        bool camFresh = true, wasAlive;
+        bool camFresh = true, wasAlive, controlsShown;
         Vector3 eye, look;
         bool eyeReady;
         Mesh dark;
@@ -63,8 +69,9 @@ namespace GSG.Tanks
         protected override string GameName => "Tank Trouble";
         protected override string Intro => "Fahre links und ziehe rechts zum Zielen. Lass zum Schießen los oder tippe kurz für einen Schuss in die letzte Richtung. Kugeln prallen zweimal von festen Mauern ab. Ziegelmauern zerbrechen nach zwei Treffern. Sieben Abschüsse oder die beste Bilanz nach 90 Sekunden gewinnen.";
         protected override string ResultText => "Mehr Abschüsse und weniger Verluste entscheiden. Bei Gleichstand folgt ein Stechen.";
-        protected override bool ControlsVisible => !Online && sim.Tanks[0].Alive;
+        protected override bool ControlsVisible => me >= 0 && sim != null && sim.Tanks[me].Alive && seen[me];
         bool Mine(int i) => i == me;
+        bool InOvertime => Online ? snapOvertime : sim.InOvertime;
 
         protected override void Setup()
         {
@@ -76,6 +83,7 @@ namespace GSG.Tanks
             steel = Toon(Palette.TankWall);
             brick = Toon(Palette.TankBrick);
             cracked = Toon(Palette.TankCracked);
+            scorched = Toon(Palette.TankScorch);
             tracer = Toon(Palette.TankTrace, 0f, 0f, Palette.TankTrace * 1.8f);
             laserMaterial = Toon(Palette.TankLaser, 0f, 0f, Palette.TankLaser * 1.6f);
             BuildFloor();
@@ -92,22 +100,31 @@ namespace GSG.Tanks
             {
                 cam.orthographic = true;
                 cam.transform.rotation = Quaternion.Euler(74f, 0f, 0f);
-                cam.transform.position = -cam.transform.forward * 26f;
+                cam.transform.position = camBase = -cam.transform.forward * 26f;
             }
             hud.AddChip("time", "90 s");
             hud.AddChip("score", "0 / 7");
             hud.UseAim();
             hud.AimReleased += QueueShot;
             Render(1f);
-            if (Online) MatchBridge.Register(this);
-            else UpdateHud();
+            UpdateHud();
+            if (Online)
+            {
+                hud.SetControlsVisible(false);
+                if (chase)
+                {
+                    hud.ShowHint(view == "first" ? "1st Person" : "3rd Person", "Oben wischen dreht die Kamera. Stick und Zielen folgen der Blickrichtung.");
+                    Invoke(nameof(HideHint), 6f);
+                }
+                MatchBridge.Register(this);
+            }
         }
 
         protected override void OnBegin()
         {
             accumulator = 0f;
             shotPending = false;
-            if (!Online) UpdateHud();
+            UpdateHud();
         }
 
         static Vector3 At(NVector2 p, float y = 0f) => new(p.X - TankSim.Width / 2f, y, TankSim.Height / 2f - p.Y);
@@ -115,6 +132,15 @@ namespace GSG.Tanks
         static NVector2 Input(Vector2 vector) => new(vector.x, -vector.y);
         /// <summary>World forward of a camera heading (0 = up on the overview, like the app's chase cameras).</summary>
         static Vector3 YawForward(float yaw) => new(Mathf.Sin(yaw), 0f, Mathf.Cos(yaw));
+
+        /// <summary>Screen direction of the stick or aim (up = +y) as a field direction: overview or relative to the chase camera.</summary>
+        NVector2 Field(Vector2 screen)
+        {
+            if (!chase) return Input(screen);
+            var forward = new NVector2(Mathf.Sin(camYaw), -Mathf.Cos(camYaw));
+            var right = new NVector2(Mathf.Cos(camYaw), Mathf.Sin(camYaw));
+            return right * screen.x + forward * screen.y;
+        }
 
         void BuildFloor()
         {
@@ -161,35 +187,62 @@ namespace GSG.Tanks
             root.SetParent(world, false);
             var hull = new GameObject("Fahrgestell").transform;
             hull.SetParent(root, false);
+            var body = new GameObject("Wanne").transform;
+            body.SetParent(hull, false);
             foreach (float side in new[] { -1f, 1f })
             {
-                Box(hull, Palette.Ink, new Vector3(side * 0.29f, 0.11f, 0f), new Vector3(0.17f, 0.22f, 0.86f));
+                Box(body, Palette.Ink, new Vector3(side * 0.29f, 0.11f, 0f), new Vector3(0.17f, 0.22f, 0.86f));
                 for (int i = -1; i <= 1; i++)
-                    Box(hull, Palette.TankWall, new Vector3(side * 0.29f, 0.23f, i * 0.21f), new Vector3(0.16f, 0.035f, 0.08f), 0f);
+                    Box(body, Palette.TankWall, new Vector3(side * 0.29f, 0.23f, i * 0.21f), new Vector3(0.16f, 0.035f, 0.08f), 0f);
             }
-            Box(hull, seat.Color, new Vector3(0f, 0.23f, 0f), new Vector3(0.49f, 0.24f, 0.76f));
+            Box(body, seat.Color, new Vector3(0f, 0.23f, 0f), new Vector3(0.49f, 0.24f, 0.76f));
+            // Front glacis plate: the hull's heading reads at a glance, also from the side.
+            var glacis = Box(body, Color.Lerp(seat.Color, Palette.Ink, 0.25f), new Vector3(0f, 0.27f, 0.4f), new Vector3(0.45f, 0.1f, 0.12f), 0f);
+            glacis.transform.localRotation = Quaternion.Euler(-28f, 0f, 0f);
             var turret = new GameObject("Turm").transform;
             turret.SetParent(root, false);
             Cyl(turret, seat.Color, new Vector3(0f, 0.39f, 0f), 0.23f, 0.21f);
-            Box(turret, seat.Color, new Vector3(0f, BulletHeight, 0.31f), new Vector3(0.105f, 0.105f, 0.43f));
+            var barrel = new GameObject("Rohr").transform;
+            barrel.SetParent(turret, false);
+            Box(barrel, seat.Color, new Vector3(0f, BulletHeight, 0.31f), new Vector3(0.105f, 0.105f, 0.43f));
+            Box(barrel, Palette.Ink, new Vector3(0f, BulletHeight, 0.53f), new Vector3(0.13f, 0.13f, 0.05f), 0f);
             Cyl(turret, Palette.Ink, new Vector3(0f, 0.5f, -0.12f), 0.13f, 0.05f);
             var driver = SpawnFigure(seat, turret, 0.33f);
             driver.transform.localPosition = new Vector3(0f, 0.22f, -0.12f);
             driver.Loop("idle");
             var ring = Torus(0.49f, 0.035f, 24, 6);
             var shield = Part(root, "Schild", ring, Toon(Palette.Rune, 0f, 0f, Palette.Rune), Vector3.up * 0.05f, shadows: false);
+            GameObject own = null;
             if (seat.isPlayer)
-                Part(root, "Dein Panzer", ring, Toon(Palette.Own, 0f, 0f, Palette.Own), Vector3.up * 0.025f,
-                    new Vector3(1.24f, 1f, 1.24f), false);
-            var view = new View { root = root, hull = hull, turret = turret, shield = shield };
-            for (int i = 0; i < view.pips.Length; i++)
-                view.pips[i] = Box(root, Palette.Accent, new Vector3((i - 1) * 0.17f, 0.93f, -0.5f), new Vector3(0.12f, 0.055f, 0.095f), 0f);
-            return view;
+                own = Part(root, "Dein Panzer", ring, Toon(Palette.Own, 0f, 0f, Palette.Own), Vector3.up * 0.025f, new Vector3(1.24f, 1f, 1.24f), false);
+            // Wreck: scorched hull with a tilted turret, shown while the tank waits for its respawn.
+            var wreck = new GameObject("Wrack");
+            wreck.transform.SetParent(root, false);
+            Box(wreck.transform, Palette.TankScorch, new Vector3(0f, 0.13f, 0f), new Vector3(0.62f, 0.22f, 0.82f)).GetComponent<Renderer>().sharedMaterial = scorched;
+            var stub = Cyl(wreck.transform, Palette.TankScorch, new Vector3(0.08f, 0.3f, -0.05f), 0.2f, 0.16f);
+            stub.GetComponent<Renderer>().sharedMaterial = scorched;
+            stub.transform.localRotation = Quaternion.Euler(14f, 0f, 22f);
+            wreck.SetActive(false);
+            var v = new View { root = root, hull = hull, body = body, turret = turret, barrel = barrel, shield = shield, wreck = wreck, own = own };
+            for (int i = 0; i < v.pips.Length; i++)
+                v.pips[i] = Box(root, Palette.Accent, new Vector3((i - 1) * 0.17f, 0.93f, -0.5f), new Vector3(0.12f, 0.055f, 0.095f), 0f);
+            return v;
         }
 
         void QueueShot(Vector2 aim)
         {
-            if (Online || !Playing || !sim.Tanks[0].Alive) return;
+            if (Online)
+            {
+                if (!Playing || !ControlsVisible) return;
+                // A short tap (zero aim) shoots in the last direction, like the app.
+                var d = aim.sqrMagnitude > 0.01f ? Field(aim) : NVector2.Zero;
+                var move = Field(hud.Stick);
+                MatchBridge.Input(move.X, move.Y, d.X, d.Y, now: true);
+                MatchBridge.Press("a");
+                Kick(me);
+                return;
+            }
+            if (!Playing || !sim.Tanks[0].Alive) return;
             shotAim = Input(aim);
             shotPending = true;
         }
@@ -201,10 +254,24 @@ namespace GSG.Tanks
                 float width = (TankSim.Width + 0.8f) / (2f * cam.aspect * 0.92f);
                 float height = (TankSim.Height + 0.8f) / (2f * 0.72f);
                 cam.orthographicSize = Mathf.Max(width, height);
+                ApplyShake(camBase);
             }
             if (Online)
             {
                 if (!built) return;
+                if (controlsShown != ControlsVisible && phase != Phase.Ended)
+                {
+                    controlsShown = ControlsVisible;
+                    hud.ReleaseAll();
+                    hud.SetControlsVisible(controlsShown);
+                }
+                if (Playing && ControlsVisible)
+                {
+                    var move = Field(hud.Stick);
+                    var aim = hud.Aiming && hud.Aim.sqrMagnitude > 0.1f ? Field(hud.Aim) : NVector2.Zero;
+                    MatchBridge.Input(move.X, move.Y, aim.X, aim.Y);
+                }
+                if (chase && hud.Look.sqrMagnitude > 0f) { camYaw += hud.Look.x * 0.006f; manualPause = 1.6f; }
                 float blend = Fx.Reduced ? 1f : Mathf.Clamp01((Time.unscaledTime - snapAt) / snapInterval);
                 Render(blend);
                 return;
@@ -219,11 +286,11 @@ namespace GSG.Tanks
             while (accumulator >= StepTime && !sim.Done)
             {
                 accumulator -= StepTime;
-                bool wasAlive = ControlsVisible;
+                bool alive = ControlsVisible;
                 sim.Step(Input(hud.Stick), shotPending ? shotAim : Input(hud.Aim), shotPending);
                 shotPending = false;
                 foreach (var e in sim.Events) Feedback(e);
-                if (wasAlive != ControlsVisible)
+                if (alive != ControlsVisible)
                 {
                     hud.ReleaseAll();
                     hud.SetControlsVisible(ControlsVisible);
@@ -234,35 +301,74 @@ namespace GSG.Tanks
             if (sim.Done) Finish();
         }
 
-        /// <summary>Own aim as a field direction while aiming (local: the Unity HUD, online: the app's aim pad).</summary>
+        /// <summary>Own aim as a field direction while aiming (Unity's aim zone; online also the app's aim pad as fallback).</summary>
         NVector2? OwnAim()
         {
-            if (Online) return onlineAim.LengthSquared() > 0.01f ? NVector2.Normalize(onlineAim) : null;
-            if (hud.Aim.sqrMagnitude > 0.1f) return Input(hud.Aim);
+            if (hud.Aiming && hud.Aim.sqrMagnitude > 0.1f) return Field(hud.Aim);
+            if (Online) return appAim.LengthSquared() > 0.01f ? NVector2.Normalize(appAim) : hud.Aiming && me >= 0 ? TankSim.Direction(sim.Tanks[me].Aim) : null;
             return hud.Aiming ? TankSim.Direction(sim.Tanks[0].Aim) : null;
         }
 
         void Render(float blend)
         {
             var aim = OwnAim();
+            float dt = Time.deltaTime;
             for (int i = 0; i < views.Count; i++)
             {
                 var t = sim.Tanks[i];
-                var view = views[i];
+                var v = views[i];
+                bool alive = t.Alive && seen[i];
                 // 1st person sits in the own hatch: the own tank is not drawn.
-                bool visible = t.Alive && seen[i] && !(Mine(i) && chase && this.view == "first");
-                view.root.gameObject.SetActive(visible);
-                if (!t.Alive || !seen[i]) continue;
-                view.root.position = At(NVector2.Lerp(t.Previous, t.Position, blend));
-                view.hull.rotation = Quaternion.LookRotation(Heading(t.Heading));
+                bool hidden = Mine(i) && chase && view == "first";
+                bool wreck = !t.Alive && seen[i] && v.wasAlive;
+                v.root.gameObject.SetActive(!hidden && (alive || wreck));
+                v.hull.gameObject.SetActive(alive);
+                v.turret.gameObject.SetActive(alive);
+                v.wreck.SetActive(wreck);
+                if (v.own) v.own.SetActive(alive);
+                if (!alive)
+                {
+                    v.down = wreck || v.down;
+                    if (wreck && Time.time > v.dustAt) { v.dustAt = Time.time + 0.35f; Fx.Dust(v.root.position + Vector3.up * 0.4f, Palette.Ink, 1); }
+                    for (int j = 0; j < v.pips.Length; j++) v.pips[j].SetActive(false);
+                    v.shield.SetActive(false);
+                    continue;
+                }
+                // Back after a respawn: a short glow at the start place.
+                if (v.down && !hidden) { Fx.Glow(At(t.Position, 0.1f), seats[i].Color, 10); if (Mine(i)) Sfx.Play("blip", 0.4f); }
+                v.down = false;
+                v.wasAlive = true;
+                var pos = At(NVector2.Lerp(t.Previous, t.Position, blend));
+                float speed = dt > 0f ? (pos - v.lastPos).magnitude / dt : 0f;
+                v.lastPos = pos;
+                v.root.position = pos;
+                v.hull.rotation = Quaternion.LookRotation(Heading(t.Heading));
+                // Driving: the hull leans back a little and the tracks kick up sand.
+                v.tilt = Mathf.Lerp(v.tilt, Mathf.Clamp01(speed / 3f), 1f - Mathf.Exp(-8f * dt));
+                v.body.localRotation = Quaternion.Euler(Fx.Reduced ? 0f : -3f * v.tilt, 0f, 0f);
+                if (speed > 1f && Time.time > v.dustAt && !hidden) { v.dustAt = Time.time + 0.12f; Fx.Dust(pos - Heading(t.Heading) * 0.42f + Vector3.up * 0.05f, Palette.TankSandDark, 1); }
                 float angle = Mine(i) && aim.HasValue ? MathF.Atan2(aim.Value.Y, aim.Value.X) : t.Aim;
-                view.turret.rotation = Quaternion.LookRotation(Heading(angle));
-                view.shield.SetActive(sim.Protected(t));
-                for (int j = 0; j < view.pips.Length; j++) view.pips[j].SetActive(j < t.Life);
+                v.turret.rotation = Quaternion.LookRotation(Heading(angle));
+                v.recoil = Mathf.MoveTowards(v.recoil, 0f, dt * 1.4f);
+                v.barrel.localPosition = Vector3.back * (Fx.Reduced ? 0f : v.recoil);
+                v.shield.SetActive(sim.Protected(t));
+                for (int j = 0; j < v.pips.Length; j++) v.pips[j].SetActive(j < t.Life);
             }
             SyncProjectiles(blend);
             SyncPickups();
             DrawLaser(aim);
+        }
+
+        /// <summary>Recoil and muzzle flash of a shot.</summary>
+        void Kick(int i)
+        {
+            if (i < 0 || i >= views.Count) return;
+            var v = views[i];
+            if (v.recoil > 0.06f) return;
+            v.recoil = 0.12f;
+            var muzzle = v.turret.position + v.turret.forward * 0.58f + Vector3.up * (BulletHeight - v.turret.position.y);
+            Fx.Glow(muzzle, Palette.TankTrace, 4);
+            Fx.Sparks(muzzle, Palette.TankTrace, 3);
         }
 
         void SyncProjectiles(float blend)
@@ -276,6 +382,16 @@ namespace GSG.Tanks
                     model = Prim(PrimitiveType.Sphere, world, Palette.TankTrace, Vector3.zero, Vector3.one * (2 * TankSim.BulletRadius), 0f).transform;
                     model.GetComponent<Renderer>().sharedMaterial = tracer;
                     model.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                    model.position = At(NVector2.Lerp(b.Previous, b.Position, blend), BulletHeight);
+                    // Tracer trail: shows the path of a shot, so bounces read at a glance.
+                    var trail = model.gameObject.AddComponent<TrailRenderer>();
+                    trail.time = Fx.Reduced ? 0.08f : 0.16f;
+                    trail.widthMultiplier = 0.11f;
+                    trail.widthCurve = AnimationCurve.Linear(0f, 1f, 1f, 0f);
+                    trail.minVertexDistance = 0.05f;
+                    trail.sharedMaterial = Resources.Load<Material>("GSG/Materials/ParticleGlow");
+                    trail.colorGradient = new Gradient { colorKeys = new[] { new GradientColorKey(Palette.TankTrace, 0f), new GradientColorKey(Palette.TankLaser, 1f) }, alphaKeys = new[] { new GradientAlphaKey(0.9f, 0f), new GradientAlphaKey(0f, 1f) } };
+                    trail.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                     bullets.Add(b.Id, model);
                 }
                 model.position = At(NVector2.Lerp(b.Previous, b.Position, blend), BulletHeight);
@@ -289,21 +405,29 @@ namespace GSG.Tanks
             foreach (var item in sim.Pickups)
             {
                 activeProps.Add(item.id);
-                if (pickups.ContainsKey(item.id)) continue;
+                if (pickups.TryGetValue(item.id, out var shown))
+                {
+                    // Spin and bob so extras stand out from the maze.
+                    if (!Fx.Reduced) shown.GetChild(0).localRotation = Quaternion.Euler(0f, Time.time * 90f, 0f);
+                    continue;
+                }
                 var color = PowerColor(item.kind);
                 var model = Cyl(world, Palette.Wall, At(item.at, 0.06f), 0.32f, 0.12f);
+                var spinner = new GameObject("Dreh").transform;
+                spinner.SetParent(model.transform, false);
                 if (item.kind == TankSim.Power.Shield)
-                    Part(model.transform, "Schild", Torus(0.63f, 0.13f, 16, 6), Toon(color, 0f, 0f, color), Vector3.up * 1.5f);
+                    Part(spinner, "Schild", Torus(0.63f, 0.13f, 16, 6), Toon(color, 0f, 0f, color), Vector3.up * 1.5f);
                 else
                 {
                     int bars = item.kind == TankSim.Power.Triple ? 3 : 1;
                     for (int i = 0; i < bars; i++)
                     {
-                        var token = Box(model.transform, color, new Vector3((i - (bars - 1) / 2f) * 0.5f, 1.5f, 0f),
+                        var token = Box(spinner, color, new Vector3((i - (bars - 1) / 2f) * 0.5f, 1.5f, 0f),
                             new Vector3(0.22f, 0.45f, 1.05f), 0f);
                         token.transform.localRotation = Quaternion.Euler(0f, bars == 1 ? 40f : 0f, 0f);
                     }
                 }
+                Fx.Glow(At(item.at, 0.2f), color, 6);
                 pickups.Add(item.id, model.transform);
             }
             RemoveStale(pickups);
@@ -318,7 +442,7 @@ namespace GSG.Tanks
 
         void DrawLaser(NVector2? aim)
         {
-            bool aiming = me >= 0 && aim.HasValue && sim.Tanks[me].Alive && seen[me] && (Online ? !sim.Done : Playing && !sim.Done && hud.Aiming);
+            bool aiming = me >= 0 && aim.HasValue && sim.Tanks[me].Alive && seen[me] && !sim.Done && (Online || (Playing && hud.Aiming));
             laser.gameObject.SetActive(aiming);
             if (!aiming) return;
             var root = views[me].root.position;
@@ -338,14 +462,26 @@ namespace GSG.Tanks
             _ => Palette.Rune
         };
 
+        static string PowerName(TankSim.Power power) => power == TankSim.Power.Rapid ? "Schnellschuss!" : power == TankSim.Power.Triple ? "Dreifachschuss!" : "Schutzschild!";
+
+        /// <summary>Camera shake of this scene (its camera is placed by hand, not by Cinemachine).</summary>
+        void Bump(float force) { if (!Fx.Reduced) shake = Mathf.Max(shake, force); }
+
+        void ApplyShake(Vector3 basePosition)
+        {
+            shake = Mathf.MoveTowards(shake, 0f, Time.unscaledDeltaTime * 1.6f);
+            var offset = shake > 0f ? (Vector3)(UnityEngine.Random.insideUnitCircle * shake * 0.35f) : Vector3.zero;
+            cam.transform.position = basePosition + cam.transform.rotation * offset;
+        }
+
         void Feedback((TankSim.Effect kind, NVector2 at, int seat, int by, TankSim.Power power) e)
         {
             var point = At(e.at, BulletHeight);
             switch (e.kind)
             {
                 case TankSim.Effect.Shot:
-                    Fx.Sparks(point, Palette.TankTrace, 3);
-                    Sfx.Play("thud", e.seat == 0 ? 0.55f : 0.2f);
+                    Kick(e.seat);
+                    Sfx.Play("thud", e.seat == 0 ? 0.55f : 0.2f, 1.6f);
                     break;
                 case TankSim.Effect.Bounce:
                     Fx.Sparks(point, Palette.TankTrace, 4);
@@ -360,7 +496,7 @@ namespace GSG.Tanks
                         break;
                     }
                     Fx.Shards(point, Palette.TankBrick, e.kind == TankSim.Effect.Crack ? 4 : 12);
-                    Sfx.Play("thud", 0.45f);
+                    Sfx.Play(e.kind == TankSim.Effect.Crack ? "crack" : "break", 0.45f);
                     break;
                 case TankSim.Effect.Block:
                     Fx.Sparks(point, Palette.Rune, 6);
@@ -369,25 +505,37 @@ namespace GSG.Tanks
                 case TankSim.Effect.Hit:
                     Fx.Sparks(point, Palette.TankTrace, 8);
                     Sfx.Play("hit", 0.5f);
-                    if (e.seat == 0) hud.Toast(e.by == 0 ? "Eigener Abpraller!" : "Treffer!", Palette.Warn, 0.65f);
+                    if (e.seat == 0) { hud.Toast(e.by == 0 ? "Eigener Abpraller!" : "Treffer!", Palette.Warn, 0.65f); Bump(0.25f); }
                     break;
                 case TankSim.Effect.Destroyed:
-                    Fx.Shards(point, seats[e.seat].Color, 18);
-                    Sfx.Play("thud", 0.65f);
-                    if (e.seat == 0) hud.Toast("Zerstört · zurück in 2 s", Palette.Warn);
-                    else if (e.by == 0) hud.Toast("Abschuss!", Palette.Accent);
+                    Explode(point, seats[e.seat].Color, e.seat == 0 || e.by == 0);
+                    if (e.seat == 0) { hud.Toast("Zerstört · zurück in 2 s", Palette.Warn); Sfx.Play("lose", 0.5f); }
+                    else if (e.by == 0) { hud.Toast("Abschuss!", Palette.Accent); Sfx.Play("chime", 0.6f); }
                     break;
                 case TankSim.Effect.Pickup:
                     Fx.Glow(point, PowerColor(e.power), 8);
                     Sfx.Play("chime", 0.5f);
-                    if (e.seat == 0) hud.Toast(e.power == TankSim.Power.Rapid ? "Schnellschuss!" :
-                        e.power == TankSim.Power.Triple ? "Dreifachschuss!" : "Schutzschild!", PowerColor(e.power));
+                    if (e.seat == 0) hud.Toast(PowerName(e.power), PowerColor(e.power));
                     break;
                 case TankSim.Effect.Tiebreak:
                     hud.Toast("Stechen! Der nächste Abschuss der Führenden entscheidet.", Palette.Accent, 2f);
                     Sfx.Play("sting");
                     break;
             }
+        }
+
+        /// <summary>Destroyed tank: debris, a flash, a thump and (if it concerns the player) shake and hit-stop.</summary>
+        void Explode(Vector3 point, Color color, bool personal)
+        {
+            Fx.Shards(point, color, 18);
+            Fx.Shards(point, Palette.Ink, 8);
+            Fx.Glow(point, Palette.TankTrace, 10);
+            Fx.Dust(point, Palette.Ink, 8);
+            Sfx.Play("break", 0.6f, 0.7f);
+            Sfx.Play("rumble", personal ? 0.5f : 0.25f);
+            if (!personal) return;
+            Bump(0.6f);
+            Fx.HitStop(0.07f);
         }
 
         /// <summary>A wall after a hit: cracked brickwork or gone.</summary>
@@ -420,13 +568,14 @@ namespace GSG.Tanks
             }
             if (!built) { BuildWalls(); built = true; }
 
+            var byId = new Dictionary<string, int>();
             for (int i = 0; i < seats.Count; i++)
             {
                 var s = snap.tanks[i];
                 var t = sim.Tanks[i];
+                byId[s.id] = i;
                 bool before = seen[i] && t.Alive;
                 var old = t.Position;
-                int life = t.Life;
                 t.Position = new NVector2(s.x, s.y);
                 t.Previous = before && s.seen && s.alive && NVector2.Distance(old, t.Position) < 2f ? old : t.Position;
                 t.Heading = s.angle;
@@ -438,8 +587,7 @@ namespace GSG.Tanks
                 t.ShieldUntil = s.shieldUntil;
                 t.PowerUntil = s.powerUntil;
                 t.Bonus = s.power == "rapid" ? TankSim.Power.Rapid : s.power == "triple" ? TankSim.Power.Triple : s.power == "shield" ? TankSim.Power.Shield : TankSim.Power.None;
-                if (before && s.seen && !s.alive) Fx.Shards(At(old, BulletHeight), seats[i].Color, 18);
-                else if (before && s.seen && s.alive && s.hp < life) Fx.Sparks(At(t.Position, BulletHeight), Palette.TankTrace, 8);
+                if (!s.seen || s.gone) views[i].wasAlive = false;
                 seen[i] = s.seen && !s.gone;
             }
 
@@ -450,7 +598,6 @@ namespace GSG.Tanks
                 var p = new NVector2(b.x, b.y);
                 bool known = previous.TryGetValue(b.id, out var from);
                 sim.Bullets.Add(new TankSim.Bullet { Id = b.id, Owner = b.slot, Position = p, Previous = known ? from : p });
-                if (!known) Fx.Sparks(At(p, BulletHeight), Palette.TankTrace, 3);
             }
             sim.Pickups.Clear();
             foreach (var p in snap.powers ?? Array.Empty<TankSnapPower>())
@@ -459,10 +606,67 @@ namespace GSG.Tanks
             if (lastSnapTime > 0 && snap.time > lastSnapTime) snapInterval = Mathf.Clamp((snap.time - lastSnapTime) / 1000f, 0.03f, 0.25f);
             lastSnapTime = snap.time;
             snapAt = Time.unscaledTime;
+            snapOvertime = snap.overtime;
             sim.SetTime(snap.time);
+            RoomEvents(snap.events, byId);
+            UpdateHud();
         }
 
-        public void OnAim(Vector2 aim) => onlineAim = new NVector2(aim.x, aim.y);
+        /// <summary>Sounds, toasts and effects for the room's new events (the app stays quiet while Unity draws).</summary>
+        void RoomEvents(TankSnapEvent[] events, Dictionary<string, int> byId)
+        {
+            if (events == null) return;
+            // The first snapshot only sets the mark: no replay of what happened before this device joined.
+            if (lastEvent < 0) { lastEvent = events.Length > 0 ? events.Max(e => e.seq) : 0; return; }
+            foreach (var e in events.OrderBy(e => e.seq))
+            {
+                if (e.seq <= lastEvent) continue;
+                lastEvent = e.seq;
+                int a = e.ids != null && e.ids.Length > 0 && byId.TryGetValue(e.ids[0], out var x) ? x : -1;
+                int b = e.ids != null && e.ids.Length > 1 && byId.TryGetValue(e.ids[1], out var y) ? y : -1;
+                bool mine = a == me, mineBy = b == me && me >= 0;
+                switch (e.kind)
+                {
+                    case "shot":
+                        if (a >= 0 && seen[a]) Kick(a);
+                        Sfx.Play("thud", mine ? 0.55f : 0.2f, 1.6f);
+                        break;
+                    case "bounce":
+                        Sfx.Play("tick", 0.3f);
+                        break;
+                    case "crack":
+                    case "break":
+                        Sfx.Play(e.kind, 0.45f);
+                        break;
+                    case "block":
+                        if (a >= 0 && seen[a]) Fx.Sparks(views[a].root.position + Vector3.up * BulletHeight, Palette.Rune, 6);
+                        if (mine) hud.Toast(e.text, Palette.Rune, 0.55f);
+                        break;
+                    case "hit":
+                        if (a >= 0 && seen[a]) Fx.Sparks(views[a].root.position + Vector3.up * BulletHeight, Palette.TankTrace, 8);
+                        Sfx.Play("hit", mine ? 0.6f : 0.35f);
+                        if (mine) { hud.Toast(e.text, Palette.Warn, 0.65f); Bump(0.25f); }
+                        break;
+                    case "dead":
+                        if (a >= 0 && (seen[a] || views[a].wasAlive)) Explode(views[a].root.position + Vector3.up * BulletHeight, seats[a].Color, mine || mineBy);
+                        if (mine) { hud.Toast("Zerstört · zurück in 2 s", Palette.Warn); Sfx.Play("lose", 0.5f); }
+                        else if (mineBy) { hud.Toast("Abschuss!", Palette.Accent); Sfx.Play("chime", 0.6f); }
+                        break;
+                    case "power":
+                        if (mine) { hud.Toast(e.text, Palette.Accent); Sfx.Play("chime", 0.5f); }
+                        else Sfx.Play("blip", 0.25f);
+                        break;
+                    case "overtime":
+                        hud.Toast(e.text, Palette.Accent, 2f);
+                        Sfx.Play("sting");
+                        break;
+                }
+            }
+        }
+
+        void HideHint() => hud.ShowHint(null, null);
+
+        public void OnAim(Vector2 aim) => appAim = new NVector2(aim.x, aim.y);
 
         public void OnTurn(float delta)
         {
@@ -545,7 +749,8 @@ namespace GSG.Tanks
             eyeReady = true;
             cam.transform.position = eye;
             cam.transform.LookAt(look);
-            // The app keeps the stick and the aim relative to this heading.
+            ApplyShake(eye);
+            // The app's fallback controls (while Unity's HUD is not up yet) follow this heading.
             if ((float.IsNaN(sentYaw) || Mathf.Abs(Mathf.DeltaAngle(sentYaw * Mathf.Rad2Deg, camYaw * Mathf.Rad2Deg)) > 0.2f) && Time.unscaledTime - lastCamPost > 0.03f)
             {
                 sentYaw = camYaw;
@@ -569,21 +774,23 @@ namespace GSG.Tanks
             dark.vertices = darkVertices;
         }
 
-        // ---- local HUD and result -----------------------------------------------------------
+        // ---- HUD and local result -----------------------------------------------------------
 
         void UpdateHud()
         {
-            int limit = sim.InOvertime ? TankSim.Regular + TankSim.Overtime : TankSim.Regular;
-            int duration = sim.InOvertime ? TankSim.Overtime : TankSim.Regular;
+            int limit = InOvertime ? TankSim.Regular + TankSim.Overtime : TankSim.Regular;
+            int duration = InOvertime ? TankSim.Overtime : TankSim.Regular;
             int remaining = Mathf.Max(0, limit - sim.Time);
             int seconds = Mathf.CeilToInt(remaining / 1000f);
-            hud.SetChip("time", sim.InOvertime ? $"Stechen · {seconds} s" : $"{seconds} s");
-            hud.SetChip("score", $"{sim.Tanks[0].Kills} / {TankSim.KillsToWin}");
+            hud.SetChip("time", InOvertime ? $"Stechen · {seconds} s" : $"{seconds} s");
+            hud.SetChip("score", me >= 0 ? $"{sim.Tanks[me].Kills} / {TankSim.KillsToWin}" : "Zuschauen");
             if (timerFill != null) SetTimer(remaining / (float)duration);
             foreach (var seat in seats)
             {
                 var t = sim.Tanks[seat.index];
-                Strip(seat, t.Alive ? $"· {t.Kills} · {t.Life} HP" : $"· {t.Kills} · zurück in {Mathf.CeilToInt((t.RespawnAt - sim.Time) / 1000f)} s", seat.isPlayer, !t.Alive);
+                bool known = !Online || seen[seat.index] || t.Alive;
+                string state = t.Alive ? $"· {t.Kills} · {t.Life} HP" : !known ? $"· {t.Kills}" : $"· {t.Kills} · zurück in {Mathf.Max(0, Mathf.CeilToInt((t.RespawnAt - sim.Time) / 1000f))} s";
+                Strip(seat, state, seat.isPlayer, Online ? !t.Alive && seen[seat.index] : !t.Alive);
             }
         }
 

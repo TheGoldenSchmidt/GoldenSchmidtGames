@@ -20,11 +20,15 @@ export const RENDERER_NAMES: Record<MiniRenderer, string> = { unity: "Unity", "u
  */
 export const MINI_LOOKS: Readonly<Record<string, Partial<Record<MiniRenderer, readonly MiniView[]>>>> = {
   tanks: { unity: ["top", "third", "first"], web: ["top", "third"] },
-  // Pilot: Unity draws the room's rules (unity) or the host's Unity scene simulates (unity-host).
-  lava: { web: ["third"], unity: ["third"], "unity-host": ["third"] }
+  sumo: { unity: ["top", "third"], web: ["top"] },
+  bumpercars: { unity: ["top", "third"], web: ["top"] },
+  bombs: { unity: ["top"], web: ["top"] },
+  snowball: { unity: ["third", "top"], web: ["third"] },
+  lava: { unity: ["third", "top"], web: ["third"], "unity-host": ["third", "top"] },
+  tuerenlotto: { unity: ["third"], web: ["third"] },
+  kreiselkurs: { unity: ["third"], web: ["third"] },
+  standhaft: { unity: ["third", "top"], web: ["third"] }
 };
-/** Minigames whose default stays the web view while their Unity rendering is a pilot. */
-const WEB_FIRST: readonly string[] = ["lava"];
 
 /** Match modules that only are a view of another minigame: never drawn or chosen on their own. */
 export const VIEW_VARIANT_IDS: readonly MatchId[] = ["tankview", "lavahost"];
@@ -34,7 +38,7 @@ export const lookChoices = (id: string) => MINI_LOOKS[id];
 export function defaultLook(id: string): MiniLook | undefined {
   const choices = MINI_LOOKS[id];
   if (!choices) return undefined;
-  const renderer: MiniRenderer = choices.unity?.length && !WEB_FIRST.includes(id) ? "unity" : "web";
+  const renderer: MiniRenderer = choices.unity?.length ? "unity" : "web";
   return { renderer, view: choices[renderer]![0] };
 }
 
@@ -45,7 +49,7 @@ export function isMiniLook(id: string, value: unknown): value is MiniLook {
   return (renderer === "unity" || renderer === "unity-host" || renderer === "web") && typeof view === "string" && (choices[renderer]?.includes(view as MiniView) ?? false);
 }
 
-/** The rules module that plays a minigame in the chosen view (Tank Trouble's own-sight views use the Turmsicht rules; Floor is Lava simulated by the host's Unity scene the relay module). */
+/** The rules module that plays a minigame in the chosen view (Tank Trouble's own-sight views use the Turmsicht rules). */
 export function matchIdForLook(id: MatchId, look: MiniLook | undefined): MatchId {
   if (id === "lava" && look?.renderer === "unity-host") return "lavahost";
   return id === "tanks" && look && look.view !== "top" ? "tankview" : id;

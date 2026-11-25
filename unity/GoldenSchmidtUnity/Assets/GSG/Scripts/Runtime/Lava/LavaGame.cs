@@ -12,15 +12,10 @@ namespace GSG.Lava
     /// 9 × 13 temple slabs, 0.8 s until a stepped slab crumbles, rune slabs return after 2.5 s, the
     /// outer ring collapses at 16 s and 23 s, +1 per opponent who falls earlier, +3 shared by the
     /// survivors, three rounds and a tiebreak) played on one phone against three bots. Holes,
-    /// drops and shoves are real physics here instead of a tile grid.
-    ///
-    /// In a room (pilot, <c>?spiel=online</c>): in "view" role the scene only draws the room's
-    /// snapshots (Variant A: the app computes with floorIsLava.ts; Variant B: the host's reports),
-    /// with the own figure moving at once from the own input. In "host" role ("Unity · Host
-    /// rechnet") this scene simulates for the whole room: the inputs of all phones drive their
-    /// runners, the room's bots use the bot logic below, and the state goes back as snapshots.
+    /// drops and shoves are real physics here instead of a tile grid. Online (LavaGame.Online.cs)
+    /// the scene only draws the room's match.
     /// </summary>
-    public class LavaGame : MonoBehaviour, IOnlineMatch, IOnlineInputs
+    public partial class LavaGame : MonoBehaviour
     {
         public const int Cols = 9, Rows = 13, Floors = 3;
         const float Tile = LavaRunner.Tile, Gap = 3.2f, Slab = 0.5f;
@@ -45,23 +40,8 @@ namespace GSG.Lava
         bool tiebreak;
         float roundStart, stateUntil, lavaY, nextBot;
         State before;
-        string tiebreakWinner, tiebreakWinnerId = "";
+        string tiebreakWinner;
         readonly List<(Dictionary<LavaRunner, float> points, List<LavaRunner> winners, bool tiebreak)> history = new();
-
-        // Online (pilot): role, the room's player ids and, for the host, inputs and its own clock.
-        bool online, host, spectator, started;
-        readonly Dictionary<string, LavaRunner> byId = new();
-        readonly Dictionary<string, Vector3Int> counters = new();
-        readonly HashSet<string> left = new();
-        Vector2 ownStick;
-        Vector3Int ownCounters = new(-1, -1, -1);
-        float beganAt, nextSnap, sentYaw = float.NaN, lastCamPost;
-        LavaSnap resume;
-        // Drawing: the two newest snapshots, their spacing and the predicted own position.
-        LavaSnap prevSnap, curSnap;
-        float curAt, interval = 0.05f;
-        Vector3 ownPos, ownVel;
-        bool ownReady;
 
         static float FloorY(int f) => -f * Gap;
         static Vector3 TileCenter(int c, int r, int f) => new Vector3((c - (Cols - 1) / 2f) * Tile, FloorY(f), (r - (Rows - 1) / 2f) * Tile);
@@ -71,13 +51,14 @@ namespace GSG.Lava
 
         void Start()
         {
+            if (MatchBridge.Host) { StartHost(); return; }
+            if (MatchBridge.Online) { StartOnline(); return; }
             AppLink.Apply();
             Sfx.Ensure();
             Fx.Ensure();
             Physics.gravity = new Vector3(0f, -22f, 0f);
-            online = MatchBridge.Online; host = MatchBridge.Host;
             Build();
-            if (online) OnlineRunners(); else Runners();
+            Runners();
             focus = new GameObject("Kamerafokus").transform;
             rig = CameraRig.Create(focus, 13.5f, 58f, 50f, Vector3.zero);
             rig.composer.TargetOffset = Vector3.zero;
@@ -86,12 +67,7 @@ namespace GSG.Lava
             Hud();
             ResetBoard();
             PlaceAll(runners, 0);
-            if (!online) { ShowTitle(); return; }
-            hud.SetControlsVisible(false);
-            hud.SetTopVisible(false);
-            active = runners.ToList();
-            if (host && !string.IsNullOrEmpty(MatchBridge.Setup.resume)) resume = JsonUtility.FromJson<LavaSnap>(MatchBridge.Setup.resume);
-            MatchBridge.Register(this);
+            ShowTitle();
         }
 
         // ---- world ---------------------------------------------------------------------------
@@ -175,7 +151,7 @@ namespace GSG.Lava
             {
                 var go = new GameObject(i == 0 ? "Du" : "Bot " + i);
                 var r = go.AddComponent<LavaRunner>();
-                r.slot = i; r.isPlayer = i == 0; r.isBot = i != 0; r.id = i == 0 ? "du" : "bot-" + i;
+                r.slot = i; r.isPlayer = i == 0; r.isBot = i != 0;
                 string figureId = i == 0 ? own : ids[(i - 1) % ids.Count];
                 r.displayName = i == 0 ? "Du" : char.ToUpperInvariant(figureId[4]) + figureId.Substring(5);
                 var holder = new GameObject("Halter").transform; holder.SetParent(go.transform, false);
@@ -210,8 +186,8 @@ namespace GSG.Lava
         void Hud()
         {
             hud = GSG.Hud.Create();
-            // In a room the app shows menu, controls and countdown.
-            if (!online) hud.AddRoundButton("pause", GSG.Hud.Icon.Pause, Pause);
+            // In a room the app's menu stays top right; the room keeps running.
+            if (!hostMode) hud.AddRoundButton("pause", GSG.Hud.Icon.Pause, Pause);
             hud.AddChip("round", "Durchgang 1/3");
             hud.AddChip("points", "Punkte 0");
             hud.AddChip("left", "4 im Spiel");
@@ -236,24 +212,11 @@ namespace GSG.Lava
             if (panel != null) hud.Close(panel);
             panel = null;
             Sfx.Instance.StartLoops();
-            if (!online) hud.SetTopVisible(true);
+            hud.SetTopVisible(true);
             foreach (var r in runners) r.points = 0f;
-            history.Clear(); round = 0; tiebreakWinner = null; tiebreakWinnerId = "";
-            beganAt = Time.time;
-            if (resume != null)
-            {
-                // A reloaded host continues with the points and the round of its last report.
-                foreach (var rr in resume.runners ?? new LavaSnapRunner[0]) if (byId.TryGetValue(rr.id ?? "", out var r)) r.points = rr.points;
-                round = Mathf.Max(0, resume.phase == "play" ? resume.round - 1 : resume.round);
-                beganAt = Time.time - resume.time / 1000f;
-                resume = null;
-                if (round >= Rounds) { NextRound(); return; }
-            }
+            history.Clear(); round = 0; tiebreakWinner = null; tiebreakSeat = -1;
             StartRound(Present(runners), false);
         }
-
-        /// <summary>Runners still in the room (players who left for good sit out the next rounds).</summary>
-        List<LavaRunner> Present(IEnumerable<LavaRunner> who) => who.Where(r => !left.Contains(r.id ?? "")).ToList();
 
         void StartRound(List<LavaRunner> who, bool isTiebreak)
         {
@@ -263,7 +226,8 @@ namespace GSG.Lava
             shownFloor = -1;
             PlaceAll(who, round - 1);
             state = State.Countdown; stateUntil = Time.time + 1.3f;
-            hud.SetControlsVisible(!online && who.Contains(player));
+            hud.SetControlsVisible(who.Contains(player) && !spectator);
+            HostEvent("round", isTiebreak ? "Stechrunde!" : $"Durchgang {round} von {Rounds}");
             hud.Toast(isTiebreak ? "Stechrunde!" : $"Durchgang {round} von {Rounds}", Palette.Accent, 0.9f);
             Sfx.Play("sting");
             hud.SetChip("round", isTiebreak ? "Stechrunde" : $"Durchgang {round}/{Rounds}");
@@ -271,11 +235,12 @@ namespace GSG.Lava
 
         void Update()
         {
-            if (online && !host) { UpdateView(); return; }
+            if (hostMode) HostTick();
+            if (online) { UpdateOnline(); return; }
             if (state == State.Title || state == State.Paused) { Follow(); return; }
             float t = Time.time;
             // Presses are read per frame and consumed by the next fixed step.
-            if (online) player.stick = state == State.Play && player.alive && !spectator ? ownStick : Vector2.zero;
+            if (spectator) { }
             else if (player.alive && state == State.Play)
             {
                 var d = rig.Relative(hud.Stick);
@@ -285,7 +250,6 @@ namespace GSG.Lava
                 if (hud.Pressed("n")) player.wantDive = true;
             }
             else player.stick = Vector2.zero;
-            if (host && started && Time.unscaledTime >= nextSnap) { nextSnap = Time.unscaledTime + 0.075f; PostHost("hostsnap"); }
             hud.SetCooldown("a", Mathf.Clamp01((player.jumpReady - t) / player.jumpCooldown));
             hud.SetCooldown("b", Mathf.Clamp01((player.shoveReady - t) / player.shoveCooldown));
             hud.SetCooldown("n", Mathf.Clamp01((player.diveReady - t) / player.diveCooldown));
@@ -317,6 +281,8 @@ namespace GSG.Lava
 
         void Follow()
         {
+            // The simulating host uses the room's camera (3rd person behind the own runner or the angled view).
+            if (hostMode) { FollowOnline(); return; }
             var target = player.alive ? player : active.FirstOrDefault(r => r.alive) ?? player;
             var p = target.transform.position;
             int f = target.alive ? FloorOf(p.y) : FocusFloor;
@@ -334,7 +300,7 @@ namespace GSG.Lava
 
         void FixedUpdate()
         {
-            if (online && !host) return;
+            if (online) return;
             float t = Time.time, dt = Time.fixedDeltaTime;
             // Before the start the runners stand idle on the top floor (physics still steps).
             if (state == State.Title) { foreach (var r in runners) if (r.alive) { r.stick = Vector2.zero; r.Step(t, dt, Bounds); } return; }
@@ -358,6 +324,7 @@ namespace GSG.Lava
 
         void Answer(LavaRunner r, string evt)
         {
+            if (evt == "jump" || evt == "dive" || evt == "shove") HostEvent(evt == "shove" ? "dash" : evt, "", r);
             bool mine = r.isPlayer;
             switch (evt)
             {
@@ -383,6 +350,7 @@ namespace GSG.Lava
                     {
                         if (t >= hitter.shoveUntil || t < victim.invulnUntil || t < victim.slideUntil) continue;
                         victim.Knock(dir, hitter.displayName, t);
+                        HostEvent("shove", "Schubser!", victim, hitter);
                         hitter.shoveUntil = t;
                         hitter.Body.linearVelocity *= 0.3f;
                         Sfx.Play("hit", hitter.isPlayer || victim.isPlayer ? 1f : 0.4f);
@@ -443,6 +411,7 @@ namespace GSG.Lava
                 rings = due;
                 foreach (var tile in tiles) if (tile.ring < rings) { tile.Drop(); returnAt.Remove(tile); }
                 hud.Toast("Der Rand stürzt ein!", Palette.Hot, 0.9f);
+                HostEvent("shrink", "Der Rand stürzt ein!");
                 Sfx.Play("rumble");
                 Fx.Shake(0.6f);
             }
@@ -451,6 +420,7 @@ namespace GSG.Lava
         void Lava(LavaRunner r, float t)
         {
             bool pushed = r.pushedBy != null && t - r.pushedAt <= PushCredit;
+            HostEvent("out", pushed ? "Reingeschubst!" : "In die Lava!", r, pushed ? runners.FirstOrDefault(o => o.displayName == r.pushedBy) : null);
             var at = r.transform.position;
             r.Out(t);
             Fx.Splash(new Vector3(at.x, lavaY + 0.3f, at.z), Palette.Lava, 24);
@@ -472,8 +442,9 @@ namespace GSG.Lava
             }
             var winners = alive.Count > 0 ? alive : took.Where(r => Mathf.Approximately(r.outAt, took.Max(o => o.outAt))).ToList();
             if (alive.Count > 0) foreach (var w in winners) pts[w] += WinBonus / winners.Count;
-            if (tiebreak) { if (winners.Count == 1) { tiebreakWinner = winners[0].displayName; tiebreakWinnerId = winners[0].id ?? ""; } }
+            if (tiebreak) { if (winners.Count == 1) { tiebreakWinner = winners[0].displayName; tiebreakSeat = runners.IndexOf(winners[0]); } }
             else foreach (var (r, n) in pts) r.points = Mathf.Round((r.points + n) * 100f) / 100f;
+            HostEvent("result", winners.Count == 1 ? "Durchgang gewonnen!" : "Geteilte Platzierung", winners.ToArray());
             history.Add((pts, winners, tiebreak));
             state = State.Between; stateUntil = t + PauseTime;
             bool won = winners.Contains(player);
@@ -497,10 +468,9 @@ namespace GSG.Lava
 
         void Finish()
         {
+            if (hostMode) { FinishHost(); return; }
             state = State.Ended;
             hud.SetControlsVisible(false);
-            // In a room the app shows the result; the host reports the final state.
-            if (online) { if (host) PostHost("hostdone"); return; }
             var order = runners.OrderByDescending(r => r.points).ThenByDescending(r => r.displayName == tiebreakWinner ? 1 : 0).ToList();
             bool first = order[0] == player;
             Sfx.Play(first ? "fanfare" : "sting");
@@ -562,242 +532,7 @@ namespace GSG.Lava
 
         void OnApplicationFocus(bool focused)
         {
-            if (!focused && !online && (state == State.Play || state == State.Countdown)) Pause();
-        }
-
-        // ---- online (pilot): players of the room -------------------------------------------------
-
-        void OnlineRunners()
-        {
-            var setup = MatchBridge.Setup;
-            foreach (var p in setup.players)
-            {
-                var go = new GameObject(p.name);
-                var r = go.AddComponent<LavaRunner>();
-                r.slot = p.slot; r.id = p.id; r.isPlayer = p.id == setup.viewer; r.isBot = host && p.bot; r.viewMode = !host;
-                r.displayName = r.isPlayer ? "Du" : p.name;
-                var holder = new GameObject("Halter").transform; holder.SetParent(go.transform, false);
-                r.figure = Figure.Spawn(p.figure, p.slot, holder);
-                r.figure.transform.SetParent(go.transform, true);
-                Destroy(holder.gameObject);
-                runners.Add(r);
-                byId[p.id] = r;
-            }
-            player = runners.FirstOrDefault(r => r.isPlayer);
-            // Watching (e.g. a duel of others): the camera follows the first runner, the own input drives nothing.
-            spectator = player == null;
-            if (spectator) player = runners[0];
-        }
-
-        public void OnAim(Vector2 aim) { }
-
-        public void OnTurn(float delta) => rig.Turn(-delta * Mathf.Rad2Deg);
-
-        /// <summary>Own input every frame: the simulating host drives its runner, a drawing scene predicts the own figure.</summary>
-        public void OnOwn(string json)
-        {
-            var own = JsonUtility.FromJson<LavaOwnInput>(json);
-            if (own == null || spectator) return;
-            ownStick = Vector2.ClampMagnitude(new Vector2(own.x, own.y), 1f);
-            if (!host) return;
-            if (ownCounters.x >= 0 && state == State.Play && player.alive)
-            {
-                if (own.ca > ownCounters.x) player.wantJump = true;
-                if (own.cb > ownCounters.y) player.wantShove = true;
-                if (own.cn > ownCounters.z) player.wantDive = true;
-            }
-            ownCounters = new Vector3Int(own.ca, own.cb, own.cn);
-        }
-
-        /// <summary>Host: everyone's inputs as the room holds them. The first one starts the match (the app's countdown is over).</summary>
-        public void OnInputs(string json)
-        {
-            if (!host) return;
-            var inputs = JsonUtility.FromJson<LavaInputs>(json);
-            if (inputs?.players == null) return;
-            if (!started) { started = true; Begin(); }
-            foreach (var p in inputs.players)
-            {
-                if (p == null || !byId.TryGetValue(p.id ?? "", out var r) || r.isPlayer || r.isBot) continue;
-                if (p.gone) { left.Add(r.id); if (r.alive) { r.Out(Time.time); } continue; }
-                bool live = state == State.Play && r.alive;
-                r.stick = live ? Vector2.ClampMagnitude(new Vector2(p.x, p.y), 1f) : Vector2.zero;
-                if (counters.TryGetValue(r.id, out var c) && live)
-                {
-                    if (p.ca > c.x) r.wantJump = true;
-                    if (p.cb > c.y) r.wantShove = true;
-                    if (p.cn > c.z) r.wantDive = true;
-                }
-                counters[r.id] = new Vector3Int(p.ca, p.cb, p.cn);
-            }
-        }
-
-        /// <summary>Host: the state of this simulation for the room (tiles 0 gone, 1 intact, 2 cracking, 3 gone but returning).</summary>
-        void PostHost(string type)
-        {
-            float t = Time.time;
-            var tilesText = new System.Text.StringBuilder(tiles.Length);
-            var regenText = new System.Text.StringBuilder(tiles.Length);
-            foreach (var tile in tiles)
-            {
-                tilesText.Append(tile.state switch
-                {
-                    LavaTile.State.Intact or LavaTile.State.Rising => '1',
-                    LavaTile.State.Cracking => '2',
-                    _ => returnAt.ContainsKey(tile) ? '3' : '0'
-                });
-                regenText.Append(tile.regen ? '1' : '0');
-            }
-            var last = state == State.Between || state == State.Ended ? history.LastOrDefault() : default;
-            var snap = new LavaSnap
-            {
-                phase = state == State.Ended ? "done" : state == State.Between ? "pause" : "play",
-                time = (t - beganAt) * 1000f, round = round, tiebreak = tiebreak, rings = rings, done = state == State.Ended,
-                roundTime = state == State.Play ? (t - roundStart) * 1000f : state == State.Between ? (t - (stateUntil - PauseTime)) * 1000f : 0f,
-                tiles = tilesText.ToString(), regen = regenText.ToString(), tiebreakWinner = tiebreakWinnerId,
-                runners = runners.Select(r =>
-                {
-                    var p = r.transform.position;
-                    int f = FloorOf(p.y);
-                    var v = r.alive && r.Body && !r.Body.isKinematic ? r.Body.linearVelocity : Vector3.zero;
-                    string act = t < r.diveUntil ? "dive" : t < r.proneUntil ? "prone" : t < r.slideUntil ? "slide" : t < r.shoveUntil ? "shove" : !r.grounded && v.y < -4f ? "drop" : "";
-                    return new LavaSnapRunner
-                    {
-                        id = r.id, x = p.x / Tile + Cols / 2f, y = p.z / Tile + Rows / 2f, floor = f, h = (p.y - FloorY(f)) / Gap,
-                        vx = v.x / Tile, vy = v.z / Tile, fx = r.facing.x, fy = r.facing.z, alive = r.alive, air = !r.grounded, act = act,
-                        points = r.points, gain = last.points != null && last.points.TryGetValue(r, out var g) ? g : 0f, won = last.winners != null && last.winners.Contains(r),
-                        jump = Mathf.Clamp01((r.jumpReady - t) / r.jumpCooldown), shove = Mathf.Clamp01((r.shoveReady - t) / r.shoveCooldown), dive = Mathf.Clamp01((r.diveReady - t) / r.diveCooldown)
-                    };
-                }).ToArray()
-            };
-            MatchBridge.Post(JsonUtility.ToJson(new LavaHostMessage { type = type, snap = snap }));
-        }
-
-        // ---- online (pilot): drawing the room's snapshots -----------------------------------------
-
-        public void OnSnapshot(string json)
-        {
-            if (host) return;
-            var s = JsonUtility.FromJson<LavaSnap>(json);
-            if (s?.runners == null || s.tiles == null || s.regen == null || s.tiles.Length != tiles.Length || s.regen.Length != tiles.Length) return;
-            if (curSnap != null && s.time <= curSnap.time && s.round == curSnap.round) return;
-            float now = Time.unscaledTime;
-            if (curSnap != null) interval = Mathf.Lerp(interval, Mathf.Clamp(now - curAt, 0.03f, 0.25f), 0.2f);
-            bool fresh = curSnap == null || s.round != curSnap.round;
-            for (int i = 0; i < tiles.Length; i++)
-            {
-                var tile = tiles[i];
-                char b = s.tiles[i];
-                if (fresh)
-                {
-                    // A new round (or the first snapshot): the board as the room has it, without animation.
-                    tile.Reset(s.regen[i] == '1');
-                    if (b == '0' || b == '3') tile.Vanish();
-                    else if (b == '2') tile.Crack(CrackTime);
-                    continue;
-                }
-                char a = curSnap.tiles[i];
-                if (a == b) continue;
-                if (b == '2') tile.Crack(CrackTime);
-                else if (b == '0' || b == '3') tile.Drop();
-                else if (b == '1' && !tile.Solid) { tile.Rise(0.6f); tile.SetVisible(tile.floor >= shownFloor); }
-            }
-            if (fresh) { shownFloor = -1; ownReady = false; }
-            rings = s.rings;
-            prevSnap = fresh ? s : curSnap; curSnap = s; curAt = now;
-        }
-
-        static LavaSnapRunner Of(LavaSnap s, string id) { if (s?.runners != null) foreach (var r in s.runners) if (r.id == id) return r; return null; }
-        static Vector3 WorldOf(LavaSnapRunner r) => new Vector3((r.x - Cols / 2f) * Tile, FloorY(r.floor) + r.h * Gap, (r.y - Rows / 2f) * Tile);
-
-        void UpdateView()
-        {
-            float dt = Time.deltaTime, now = Time.time;
-            foreach (var tile in tiles)
-            {
-                if (tile.Tick(dt, Fx.Reduced) && Near(tile.floor)) Fx.Splash(new Vector3(tile.Center.x, lavaY + 0.2f, tile.Center.z), Palette.LavaGlow, 6);
-                if (tile.RiseDone) tile.Settle();
-            }
-            if (curSnap == null) { Follow(); return; }
-            // Interpolated between the two newest snapshots, like the web stage.
-            float alpha = Fx.Reduced ? 1f : Mathf.Clamp01((Time.unscaledTime - curAt) / Mathf.Max(0.03f, interval));
-            foreach (var r in runners)
-            {
-                var c = Of(curSnap, r.id);
-                if (c == null) continue;
-                if (!c.alive)
-                {
-                    if (r.alive)
-                    {
-                        var at = r.transform.position;
-                        r.Out(now);
-                        Fx.Splash(new Vector3(at.x, lavaY + 0.3f, at.z), Palette.Lava, 24);
-                        if (r.isPlayer) hud.Toast("In die Lava!", Palette.Hot, 1.2f);
-                    }
-                    continue;
-                }
-                var p = Of(prevSnap, r.id) ?? c;
-                if (!p.alive) p = c;
-                var target = Vector3.Lerp(WorldOf(p), WorldOf(c), alpha);
-                if (!r.alive) { r.Place(target, new Vector3(c.fx, 0f, c.fy), now, 0f); ownReady = false; }
-                r.grounded = !c.air;
-                var face = new Vector3(c.fx, 0f, c.fy);
-                if (face.sqrMagnitude > 0.01f) r.facing = face.normalized;
-                r.viewVelocity = new Vector3(c.vx, 0f, c.vy) * Tile;
-                // Animation timers follow the room's action of the runner.
-                r.diveUntil = c.act == "dive" ? now + 0.1f : 0f;
-                r.proneUntil = c.act == "dive" || c.act == "prone" ? now + 0.1f : 0f;
-                r.slideUntil = c.act == "slide" ? now + 0.1f : 0f;
-                r.shoveUntil = c.act == "shove" ? now + 0.1f : 0f;
-                if (r.isPlayer && !spectator) target = PredictOwn(r, c, target, dt);
-                r.transform.position = target;
-            }
-            // The edge glows 1.5 s before it collapses (the room decides when).
-            float roundTime = curSnap.roundTime / 1000f + (Time.unscaledTime - curAt);
-            float nextAt = rings < RingAt.Length ? RingAt[rings] : float.MaxValue;
-            float warn = curSnap.phase == "play" ? Mathf.Clamp01(1f - (nextAt - roundTime) / 1.5f) : 0f;
-            if (warn > 0f) foreach (var tile in tiles) if (tile.ring == rings) tile.Warn(warn);
-            Follow();
-        }
-
-        /// <summary>
-        /// The own figure runs at once with the own stick (same speed and inertia as the rules) and is
-        /// pulled softly towards where the room has it, a little ahead by its speed (the snapshot is
-        /// older than the input). Jumps, dives, shoves and falls come from the room alone.
-        /// </summary>
-        Vector3 PredictOwn(LavaRunner r, LavaSnapRunner c, Vector3 room, float dt)
-        {
-            bool free = c.act == "" && !c.air && curSnap.phase == "play";
-            if (!ownReady) { ownPos = room; ownVel = Vector3.zero; ownReady = true; }
-            if (free)
-            {
-                var input = new Vector3(ownStick.x, 0f, ownStick.y);
-                float k = 1f - Mathf.Pow(1f - r.inertia, dt * 20f);
-                ownVel += (input * r.speed - ownVel) * k;
-                ownPos += ownVel * dt;
-                var lead = room + new Vector3(c.vx, 0f, c.vy) * Tile * 0.1f;
-                var error = lead - ownPos; error.y = 0f;
-                if (error.magnitude > 1.5f * Tile) ownPos = new Vector3(lead.x, ownPos.y, lead.z);
-                else ownPos += error * (1f - Mathf.Exp(-4f * dt));
-                if (ownStick.sqrMagnitude > 0.04f) r.facing = input.normalized;
-                r.viewVelocity = ownVel;
-            }
-            else { ownPos = Vector3.Lerp(ownPos, room, 1f - Mathf.Exp(-14f * dt)); ownVel = r.viewVelocity; }
-            ownPos.y = room.y;
-            return ownPos;
-        }
-
-        void LateUpdate()
-        {
-            if (!online || rig == null) return;
-            // Heading for the app (0 = up on the field, the app's convention): the stick stays relative to the camera.
-            float yaw = Mathf.PI - rig.Yaw * Mathf.Deg2Rad;
-            yaw = Mathf.Repeat(yaw + Mathf.PI, Mathf.PI * 2f) - Mathf.PI;
-            if ((float.IsNaN(sentYaw) || Mathf.Abs(Mathf.DeltaAngle(sentYaw * Mathf.Rad2Deg, yaw * Mathf.Rad2Deg)) > 0.3f) && Time.unscaledTime - lastCamPost > 0.03f)
-            {
-                sentYaw = yaw; lastCamPost = Time.unscaledTime;
-                MatchBridge.Camera(yaw);
-            }
+            if (!focused && !online && !hostMode && (state == State.Play || state == State.Countdown)) Pause();
         }
 
         // ---- bots (port of floorIsLava.bot) ---------------------------------------------------

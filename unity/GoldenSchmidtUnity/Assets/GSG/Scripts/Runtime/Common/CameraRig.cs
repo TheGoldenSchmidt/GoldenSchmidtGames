@@ -69,14 +69,6 @@ namespace GSG
             var v = orbit.VerticalAxis; v.Value = Mathf.Clamp(v.Value + delta.y * swipePitch, v.Range.x, v.Range.y); orbit.VerticalAxis = v;
         }
 
-        /// <summary>Turns the orbit by hand (degrees), e.g. from the app's swipe area; pauses the recentring like a swipe.</summary>
-        public void Turn(float degrees)
-        {
-            if (!orbit) return;
-            lastSwipe = Time.unscaledTime;
-            var h = orbit.HorizontalAxis; h.Value = Mathf.Repeat(h.Value + degrees + 180f, 360f) - 180f; orbit.HorizontalAxis = h;
-        }
-
         public void Snap(float yaw)
         {
             homeYaw = yaw;

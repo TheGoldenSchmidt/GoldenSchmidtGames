@@ -253,3 +253,15 @@ body:has(.match-game) { overflow:hidden; }
 .match-game.is-unity .match-stage {
   background: transparent;
 }
+
+/* Unity's own HUD runs (Unity draws timer, players, controls and countdown): the app keeps only its
+   sound toggle and menu top right, where the Unity HUD leaves room. */
+.match-game.is-unity-hud .match-hud__info,
+.match-game.is-unity-hud .match-score { display: none; }
+.match-game.is-unity-hud .match-hud { justify-content: flex-end; }
+.match-game.is-unity-hud,
+.match-game.is-unity-hud .match-hud,
+.match-game.is-unity-hud .match-stage { pointer-events: none; }
+.match-game.is-unity-hud .match-hud__side,
+.match-game.is-unity-hud .match-done { pointer-events: auto; }
+.unity-match.is-interactive iframe { pointer-events: auto; }

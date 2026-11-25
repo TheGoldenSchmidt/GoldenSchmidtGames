@@ -1,7 +1,6 @@
 import { advanceArena, ARENA_META, createArena, isArenaId, NEUTRAL_INPUT, publicArena, setArenaControl, type ArenaId, type ArenaInput, type ArenaState } from "./partyArena";
 import { defaultLook, isMiniLook, lookChoices, matchIdForLook, type MiniLook, type MiniRenderer, type MiniView } from "./minigameLooks";
-import type { LavaHostGame } from "./matches/lavaHost";
-import { checkedLavaSnap } from "./matches/lavaSnap";
+import { checkedHostSnap, type LavaHostGame } from "./matches/lavaHost";
 import { advanceMatch, createMatch, finishMatch, isMatchId, MATCH_IDS, MATCH_MODULES, matchStandings, neutralizeMatch, publicMatch, removeMatchPlayer, setMatchControl, type MatchId } from "./matches/framework";
 import type { MatchState } from "./matches/types";
 import { miniEligible, miniFamily, miniPool, type PlayableMiniId } from "./minigameCatalog";
@@ -279,7 +278,7 @@ function startMini(g:PartyGame,now:number) {
   if(isArenaId(m.id))m.arena=createArena(m.id,g.players.filter((p,i)=>!p.passive&&(g.online||i===g.localMiniIndex)).map(p=>({id:p.id,style:g.players.indexOf(p),characterId:p.characterId})),m.arenaSeed??1);
   // In a duel only the two duelists enter the match.
   const contenders=g.duel?g.players.filter(p=>p.id===g.duel!.challenger||p.id===g.duel!.opponent):g.players.filter(p=>!p.passive);
-  if(isMatchId(m.id))m.match=createMatch(matchIdForLook(m.id,m.look),contenders.map(p=>({id:p.id,style:g.players.indexOf(p),characterId:p.characterId})),m.arenaSeed??1);
+  if(isMatchId(m.id))m.match=createMatch(matchIdForLook(m.id,m.look),contenders.map(p=>({id:p.id,style:g.players.indexOf(p),characterId:p.characterId,bot:p.bot})),m.arenaSeed??1);
   if(m.match?.id==="lavahost")(m.match.game as LavaHostGame).host=m.unityHost??contenders.find(p=>!p.bot)?.id??"";
   phase(g,"mini-play",now);g.deadline=m.startAt+MINIS[m.id].seconds*1000;
 }
@@ -303,9 +302,9 @@ export function applyPartyControl(current:PartyGame,id:string,input:ArenaInput|u
 /** What the host's Unity scene reports in "Unity · Host rechnet": a snapshot, the end, or that Unity failed. */
 export interface PartyUnityReport { seq?: number; snap?: unknown; done?: boolean; fail?: boolean }
 /**
- * A report of the host's Unity simulation (Floor is Lava pilot, Variant B). Only the chosen host
- * may report; snapshots are checked and relayed, their points rank the players. If Unity fails on
- * the host, the room computes with the floorIsLava.ts rules from now on and Unity only draws.
+ * A report of the host's Unity simulation (Floor is Lava pilot "Unity · Host rechnet"). Only the
+ * chosen host may report; snapshots are checked and relayed, their points rank the players. If
+ * Unity fails on the host, the room computes with floorIsLava.ts from now on and Unity only draws.
  */
 export function applyPartyUnity(current:PartyGame,id:string,report:PartyUnityReport,now=Date.now()):PartyGame {
   const match=current.mini?.match;
@@ -315,14 +314,15 @@ export function applyPartyUnity(current:PartyGame,id:string,report:PartyUnityRep
   const g=structuredClone(current),m=g.mini!,relay=m.match!,host=relay.game as LavaHostGame;
   host.seq=report.seq!;
   if(report.fail){
-    m.match=createMatch("lava",relay.players.map(p=>({id:p.id,style:p.style,characterId:p.characterId})),m.arenaSeed??1);
-    m.look={renderer:"unity",view:"third"};delete m.unityHost;
+    m.match=createMatch("lava",relay.players.map(p=>({id:p.id,style:p.style,characterId:p.characterId,bot:p.bot})),m.arenaSeed??1);
+    m.look={renderer:"unity",view:m.look?.view??"third"};delete m.unityHost;
     m.startAt=now;g.deadline=now+MINIS.lava.seconds*1000;
     return g;
   }
   if(report.snap!==undefined){
-    const snap=checkedLavaSnap(report.snap,relay.players.map(p=>p.id));host.snap=snap;host.tiebreakWinner=snap.tiebreakWinner;
-    for(const r of snap.runners){host.points[r.id]=r.points;const p=relay.players.find(q=>q.id===r.id);if(p&&!p.gone)p.played=true;}
+    const ids=relay.players.map(p=>p.id),snap=checkedHostSnap(report.snap,ids);host.snap=snap;
+    host.tiebreakWinner=snap.tiebreakWinner>=0?ids[snap.tiebreakWinner]:"";
+    ids.forEach((pid,i)=>{host.points[pid]=snap.points[i];const p=relay.players[i];if(!p.gone)p.played=true;});
   }
   if(report.done)host.finished=true;
   advanceMatch(relay,now-m.startAt);syncMatchRuns(g,now);

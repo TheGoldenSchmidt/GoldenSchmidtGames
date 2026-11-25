@@ -120,18 +120,24 @@ const LANE = 8.3;
   run(tapForm, SB.formMs * 2 + 200, () => send(tapForm, "p0"));
   assert.equal(tapForm.game.players.p0.balls, SB.maxBalls, "Im Stand ohne Halten bis zu zwei Bälle");
   assert.equal(tapForm.game.players.p0.forming, false, "Danach hört es auf");
-  const shot = (p1: [number, number], aim: Partial<MatchInput>, p1Input: Partial<MatchInput> = {}) => {
+  const shot = (p1: [number, number], aim: Partial<MatchInput>, p1Input: Partial<MatchInput> = {}, bot = false) => {
     const s = make(3); put(s, "p0", 2, LANE); put(s, "p1", ...p1); put(s, "p2", 20, 20);
+    if (bot) s.players[0].bot = true;
     s.game.players.p0.balls = 1; s.game.players.p0.fx = 0; s.game.players.p0.fy = 1;
     send(s, "p1", p1Input); advanceMatch(s, s.time + 50);
     send(s, "p1", p1Input); send(s, "p0", aim, true); advanceMatch(s, s.time + 50);
     run(s, 900, () => { send(s, "p0"); send(s, "p1", p1Input); });
     return s.game.players.p1.hits;
   };
-  assert.equal(shot([7, LANE + 1.2], { ax: 1, ay: 0 }), 1, "Zielhilfe: knapp daneben gezielt trifft trotzdem");
-  assert.equal(shot([7, LANE + 3], { ax: 1, ay: 0 }), 0, "Weit daneben bleibt daneben");
+  // Bots: weite Zielhilfe mit Vorhalt.
+  assert.equal(shot([7, LANE + 1.2], { ax: 1, ay: 0 }, {}, true), 1, "Bot-Zielhilfe: knapp daneben gezielt trifft trotzdem");
+  assert.equal(shot([7, LANE + 3], { ax: 1, ay: 0 }, {}, true), 0, "Weit daneben bleibt daneben");
+  assert.equal(shot([9, LANE - 1.8], { ax: 1, ay: -.25 }, { y: 1 }, true), 1, "Bots halten laufende Ziele vor");
+  // Menschen (Rückmeldung Nov. 2026): rastet nur bis ±11° ein und hält nicht vor.
+  assert.equal(shot([7, LANE + .8], { ax: 1, ay: 0 }), 1, "Innerhalb von ±11° rastet der Wurf ein");
+  assert.equal(shot([7, LANE + 1.2], { ax: 1, ay: 0 }), 0, "Knapp außerhalb von ±11° bleibt daneben");
+  assert.equal(shot([9, LANE - 1.8], { ax: 1, ay: -.25 }, { y: 1 }), 0, "Kein Vorhalt auf laufende Ziele");
   assert.equal(shot([7, LANE], {}), 1, "Antippen ohne Zielen: Wurf auf den Nächsten in Sicht, nicht in Blickrichtung");
-  assert.equal(shot([9, LANE - 1.8], { ax: 1, ay: -.25 }, { y: 1 }), 1, "Laufendes Ziel wird vorgehalten");
   const g = make(3).game; put({ game: g } as SS, "p0", 2, LANE);
   assert.equal(throwTarget(g, g.players.p0, 1, 0)?.id, undefined, "Kein Gegner in Reichweite und Sicht: keine Markierung");
 }
@@ -161,4 +167,4 @@ for (const count of [2, 4, 6]) {
   assert.deepEqual(a.game, b.game, "Neustart aus JSON setzt exakt fort");
   assert.ok(Object.values(a.game.players).some(p => p.dealt > 0), "Bots treffen");
 }
-console.log("Schneeballschlacht erfolgreich: Pool, Startplätze, Laufen und 10 % Verlangsamung je Treffer, Formen (Stillstand, Abbruch, höchstens zwei, Antippen statt Halten), Zielhilfe mit Vorhalt, Antippen wirft auf den Nächsten, Schneehaufen, Werfen nur mit Ball, Treffer mit Schutzzeit, Schneemann nach drei Treffern, Mauerschutz, Zeitablauf, Aufgeben, Bots und JSON-Neustart.");
+console.log("Schneeballschlacht erfolgreich: Pool, Startplätze, Laufen und 10 % Verlangsamung je Treffer, Formen (Stillstand, Abbruch, höchstens zwei, Antippen statt Halten), Zielhilfe mit Vorhalt nur für Bots, Menschen ±11° ohne Vorhalt, Antippen wirft auf den Nächsten, Schneehaufen, Werfen nur mit Ball, Treffer mit Schutzzeit, Schneemann nach drei Treffern, Mauerschutz, Zeitablauf, Aufgeben, Bots und JSON-Neustart.");
