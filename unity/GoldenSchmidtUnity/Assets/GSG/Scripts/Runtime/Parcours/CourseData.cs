@@ -59,6 +59,8 @@ namespace GSG.Parcours
             public readonly List<Checkpoint> checkpoints = new();
             public readonly Dictionary<int, BreakDoor> doors = new();
             public readonly Dictionary<int, GhostTile> tiles = new();
+            public readonly Dictionary<int, Rigidbody> seesaws = new();
+            public readonly List<Sweeper> sweepers = new();
         }
 
         static string Material(string look) => look switch
@@ -99,6 +101,7 @@ namespace GSG.Parcours
                 if (b.seesaw >= 0)
                 {
                     var rb = go.AddComponent<Rigidbody>();
+                    built.seesaws[b.seesaw] = rb;
                     rb.mass = 45f; rb.angularDamping = 2.5f; rb.linearDamping = 0f;
                     rb.constraints = RigidbodyConstraints.FreezePosition | RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY;
                     rb.interpolation = RigidbodyInterpolation.Interpolate;
@@ -130,7 +133,7 @@ namespace GSG.Parcours
                 lr.through = row.through; lr.dead = row.dead; lr.trap = row.trap;
                 go.SetActive(true);
             }
-            foreach (var s in c.sweepers) ParcoursLevel.Bar(s.x, s.z, 0f, s.y0, s.y1, s.length, s.speed, s.phase);
+            foreach (var s in c.sweepers) built.sweepers.Add(ParcoursLevel.Bar(s.x, s.z, 0f, s.y0, s.y1, s.length, s.speed, s.phase));
             for (int i = 0; i < c.checkpoints.Length; i++) built.checkpoints.Add(ParcoursLevel.Check(i, c.checkpoints[i].z, c.checkpoints[i].y, c.width / 2f));
             var finish = new GameObject("Ziel");
             finish.transform.SetParent(root, false);

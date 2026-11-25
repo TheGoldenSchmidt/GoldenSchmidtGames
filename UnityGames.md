@@ -22,9 +22,9 @@ Reihenfolge: zuerst Spiele, die am meisten von 3D/Physik gewinnen; flache Reakti
 | Schneeballschlacht (`snowball`, `Schneeballschlacht`) | im Raum + Testbereich | C#-Port `Snow/SnowSim.cs`. Menschen werfen nur bis ±11° um Ziel bzw. Blick eingerastet und ohne Vorhalt, Bots mit Zielhilfe und Vorhalt – auch in `snowball.ts` (`MatchPlayer.bot`). Im Raum 3rd Person oder Draufsicht; Zielen per Ziehen fehlt in Unity noch (Tipp-Wurf). |
 | Tower Tumble (`tower`, `TowerTumble`) | umgesetzt | Unitys 2D-Physik (Box2D, 60 Hz, 12/6 Iterationen, Reibung 0,9, Schwerkraft 18) statt `physics2d.ts`; Steine setzen 2 cm über dem Kontakt auf, höchstens 4 m/s. |
 | Tower Tumble – Survival (`towersurvival`, `TowerSurvival`) | umgesetzt | Wie Tower Tumble mit Survival-Regeln, vorsichtigere Bots. |
-| Türenlotto (`tuerenlotto`, `Tuerenlotto`) | umgesetzt | Strecke aus `Resources/GSG/Courses/tuerenlotto.json`; Bots nach `parcoursBot`. |
-| Kreiselkurs (`kreiselkurs`, `Kreiselkurs`) | umgesetzt | Gleicher Lauf-Rahmen; Bots scheitern gelegentlich an den Inseln. |
-| Standhaft (`standhaft`, `Standhaft`) | umgesetzt | 25 Fallklappen von außen nach innen, zwei zeitversetzte Drehbalken; Läufer mit Rigidbody-Kollision, Balken nach App-Kontaktmodell. |
+| Türenlotto (`tuerenlotto`, `Tuerenlotto`) | im Raum + Testbereich | Strecke aus `Resources/GSG/Courses/tuerenlotto.json`; Bots nach `parcoursBot`. Im Raum 3rd Person: `ParcoursOnline` setzt die Läufer (`RemoteRacer`) aus dem Schnappschuss, Türen und Geheimböden folgen den öffentlichen Zuständen (die Geheimnisse bleiben bei der Raumautorität), Schieber, Inseln und Drehbalken der Raumzeit (`CourseClock`). |
+| Kreiselkurs (`kreiselkurs`, `Kreiselkurs`) | im Raum + Testbereich | Gleicher Lauf-Rahmen; Bots scheitern gelegentlich an den Inseln. Im Raum wie Türenlotto; Wippen neigen sich nach dem Raum. |
+| Standhaft (`standhaft`, `Standhaft`) | im Raum + Testbereich | 25 Fallklappen von außen nach innen, zwei zeitversetzte Drehbalken; im Testbereich Läufer mit Rigidbody-Kollision, Balken nach App-Kontaktmodell. Im Raum 3rd Person (Kamera hinter dem eigenen Läufer, nach dem Ausscheiden über der Fläche) oder Draufsicht; Klappen und Balken nach der Raumzeit. |
 | Tank Trouble (`tanks`, `TankTrouble`) | im Raum + Testbereich | Normales Minispiel mit Unity-Darstellung (siehe unten). Draufsicht; 3rd Person (Kamera hinter dem eigenen Panzer) und 1st Person (aus der Luke) mit den Turmsicht-Regeln: jedes Gerät sieht nur den eigenen Sichtbereich. |
 | Geisterpfad, Fallklappen, Windkanal, Kletterwand, Glibberflut | offen | Streckendaten liegen als JSON vor; im `CourseBuilder` fehlen Geisterplatten, Klappen, Wind, Griffe, Glibber und die Bot-Regeln. |
 | Arrow Masters; Neon Racer (+ Kippen); Light Trails, Neon Pong, Quick Draw | offen | in dieser Reihenfolge |
@@ -55,7 +55,7 @@ Erste Generation (klassische Arenen, Wippenwerk, Hook Wars, Chaos Run) wird nich
 | Ort | Inhalt |
 | --- | --- |
 | `Assets/GSG/Scripts/Runtime/Common` | `Palette`, `Hud` (UI Toolkit + Touch, Spielerleiste, Tasten links), `CameraRig` (Cinemachine), `Figure`, `Sfx` (Synthese), `Fx` (Partikel, Shake, Hit-Stop), `SceneLook`, `AppLink` (URL-Parameter), `GameSwitch` (Startszene, `?spiel=`), `MatchGame` + `Seat` (Spielhülle: Titel, Countdown, Pause, Endtafel, Spieler gegen Bots), `Kit` (Toon-Materialien, Grundkörper, erzeugte Meshes mit neutraler UV) |
-| `Assets/GSG/Scripts/Runtime/Parcours` (Läufe) | `CourseData` (JSON-Spiegel von `parcoursCourses.ts`) + `CourseBuilder` (Strecke aus den Daten mit den Probelevel-Hindernissen), `RunGame` (Lauf gegen Bots, `IRaceHost`); `ParcoursRunner` lässt sich per `bot` von außen steuern |
+| `Assets/GSG/Scripts/Runtime/Parcours` (Läufe) | `CourseData` (JSON-Spiegel von `parcoursCourses.ts`) + `CourseBuilder` (Strecke aus den Daten mit den Probelevel-Hindernissen), `RunGame` (Lauf gegen Bots, `IRaceHost`); `ParcoursRunner` lässt sich per `bot` von außen steuern; online `ParcoursOnline` + `RemoteRacer` (Läufe und Standhaft) |
 | `Assets/GSG/Resources/GSG/Courses` | Streckendaten aller Läufe als JSON; nach Änderungen an `parcoursCourses.ts` neu erzeugen (`npx tsx scripts/unity-export-courses.ts`; `npm run test:rules` meldet veraltete Dateien) |
 | `Assets/GSG/Scripts/Runtime/Ring`, `Bombs`, `Snow`, `Tower` | Regel-Ports (`RingSim`, `BombSim`, `SnowSim`) und Spiele (`RingGame` für Sumo/Bumper, `BombGame`, `SnowGame`, `TowerGame`) |
 | `Assets/GSG/Scripts/Runtime/Parcours` | `ParcoursRunner`, Hindernisse (je Datei ein MonoBehaviour), `ParcoursLevel` (Aufbau aller Stationen), `ParcoursGame` (Ablauf) |
@@ -149,7 +149,7 @@ dotnet .artifacts/unity-tank-sim-test/bin/TankSim.Tests/debug/TankSim.Tests.dll
 ## Offen
 
 - Auf echten Handys Bildrate, Ladezeit, Akku/Wärme und Touch-Gefühl beurteilen; danach Schatten, MSAA oder Renderauflösung anpassen.
-- Weitere Spiele auf die Darstellung im Raum umstellen (je Spiel: Schnappschuss in `UNITY_SNAPSHOTS`, `IOnlineMatch` in der Szene, Ansichten in `MINI_LOOKS`, Fall in `tests/browser/unity-match.spec.ts`). Offen: Tower Tumble (+ Survival; Box2D-Verhalten muss vorher in `physics2d.ts`), Türenlotto, Kreiselkurs, Standhaft (3rd Person).
+- Weitere Spiele auf die Darstellung im Raum umstellen (je Spiel: Schnappschuss in `UNITY_SNAPSHOTS`, `IOnlineMatch` in der Szene, Ansichten in `MINI_LOOKS`, Fall in `tests/browser/unity-match.spec.ts`). Offen: Tower Tumble (+ Survival; Box2D-Verhalten muss vorher in `physics2d.ts`).
 - Parcours-Probelevel: getimtes Festhalten, Lücken länger als Sprung + Hechten, Serpentinen-Glibberflut und Ventilatoren mit Anlauf nachziehen.
 - Kein Offline-Betrieb; ohne Internet übernimmt im Raum die Web-Darstellung.
 - Roll It Up! (Unity): nur Testpartie mit Bots am lokalen Tisch; Online-Räume, Wiederbeitritt und Handy-Hosting mit Unity-Brett sind nicht geprüft. Kameradrehen per Wischen, Zoomen mit zwei Fingern, Feldinfo per Tipp; die Feldliste/Regeltafel der Web-Bauschale fehlt noch.

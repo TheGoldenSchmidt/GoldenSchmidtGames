@@ -4,8 +4,13 @@ using UnityEngine;
 
 namespace GSG.Parcours
 {
+    /// <summary>
+    /// Standhaft, the final: stay on the trapdoor square while two bars sweep across it; the last one
+    /// standing wins. Locally against bots with <see cref="ParcoursRunner"/> physics; online
+    /// (<see cref="ParcoursOnline"/>) the scene draws the room's final in 3rd person or from above.
+    /// </summary>
     [DefaultExecutionOrder(-20)]
-    public class StandhaftGame : MatchGame, IRaceHost
+    public class StandhaftGame : MatchGame, IRaceHost, IOnlineMatch
     {
         const float BarReach = 0.48f;
         CourseData course;
@@ -18,11 +23,13 @@ namespace GSG.Parcours
         ParcoursRunner[] grabbed;
         float elapsed, nextThink;
         Vector3 center;
+        ParcoursOnline online;
+        bool chase, watching;
 
         protected override string GameName => "Standhaft";
         protected override string Intro => "Spring über den rosa Balken und duck dich unter dem gelben. Orange Klappen öffnen sich gleich. Wer zuletzt auf der Plattform steht, gewinnt. Nach 90 Sekunden teilen sich alle Übrigen den Sieg.";
         protected override string ResultText => "Wer später gestürzt ist, platziert sich höher.";
-        protected override bool ControlsVisible => !fellAt.ContainsKey(runners[0]);
+        protected override bool ControlsVisible => online != null ? online.CanAct(Playing) : !fellAt.ContainsKey(runners[0]);
 
         protected override void Setup()
         {
@@ -48,6 +55,14 @@ namespace GSG.Parcours
 
             focus = new GameObject("Arenamitte").transform;
             focus.position = center;
+            if (Online) { SetupOnline(); return; }
+            Overview();
+            Runners();
+        }
+
+        /// <summary>The square from above (local test and the online "top" view).</summary>
+        void Overview()
+        {
             rig = CameraRig.Create(focus, 25f, 66f, 52f, Vector3.zero);
             rig.recenterAfter = float.PositiveInfinity;
             rig.swipePitch = 0f;
@@ -56,6 +71,10 @@ namespace GSG.Parcours
             composition.DeadZone.Enabled = false;
             composition.ScreenPosition = new Vector2(0f, -0.04f);
             rig.composer.Composition = composition;
+        }
+
+        void Runners()
+        {
             foreach (var seat in seats)
             {
                 var runner = new GameObject(seat.name).AddComponent<ParcoursRunner>();
@@ -108,6 +127,7 @@ namespace GSG.Parcours
 
         protected override void OnBegin()
         {
+            if (online != null) return;
             elapsed = nextThink = 0f;
             fellAt.Clear();
             contactStart = Enumerable.Repeat(-1f, runners.Count).ToArray();
@@ -140,8 +160,91 @@ namespace GSG.Parcours
                 bars[i].rotation = Quaternion.Euler(0f, -Angle(course.sweepers[i], elapsed) * Mathf.Rad2Deg, 0f);
         }
 
+        // ---- online --------------------------------------------------------------------------
+
+        void SetupOnline()
+        {
+            online = new ParcoursOnline(seats, null, hud, true, (seat, parent) => SpawnFigure(seat, parent, 1f));
+            chase = online.Own && MatchBridge.Setup.view == "third";
+            if (online.Own)
+            {
+                var marker = Kit.Prim(PrimitiveType.Cylinder, online.Own.transform, Palette.Own, Vector3.up * 0.025f, new Vector3(0.9f, 0.02f, 0.9f), 0f);
+                marker.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            }
+            if (!chase) Overview();
+            else
+            {
+                // 3rd person: behind the own racer, high enough to see the plates and both bars coming.
+                rig = CameraRig.Create(online.Own.transform, 8.5f, 30f, 56f, new Vector3(0f, 1.1f, 0f));
+                rig.recenterAfter = float.PositiveInfinity;
+                hud.ShowHint("3rd Person", "Oben wischen dreht die Kamera. Der Stick folgt der Blickrichtung.");
+                Invoke(nameof(HideHint), 6f);
+            }
+            online.rig = rig;
+            hud.AddChip("time", "90 s");
+            hud.AddChip("standing", seats.Count + " im Spiel");
+            hud.AddAction("grab", Hud.Icon.Grab, "Festhalten", Hud.Tone.Cyan);
+            hud.AddAction("duck", Hud.Icon.Duck, "Ducken", Hud.Tone.Cyan);
+            hud.AddAction("b", Hud.Icon.Dive, "Hechten", Hud.Tone.Pink);
+            hud.AddAction("a", Hud.Icon.Jump, "Springen", Hud.Tone.Gold);
+            hud.SetControlsVisible(false);
+            SetBars();
+            MatchBridge.Register(this);
+        }
+
+        void HideHint() => hud.ShowHint(null, null);
+
+        public void OnSnapshot(string json)
+        {
+            bool first = online.Snap == null;
+            online.Apply(json);
+            // The racers start facing the middle: the camera starts behind the own one.
+            if (first && chase && online.Mine != null) rig.Snap(online.Mine.face * Mathf.Rad2Deg);
+        }
+
+        public void OnAim(Vector2 aim) { }
+        public void OnTurn(float delta) => rig.Swipe(new Vector2(delta * Mathf.Rad2Deg / Mathf.Max(0.01f, rig.swipeYaw), 0f));
+
+        void UpdateOnline()
+        {
+            if (online.Snap != null) elapsed = Mathf.Min(course.limitMs / 1000f, online.Now / 1000f);
+            online.Frame(Playing);
+            SetBars();
+            hud.SetControlsVisible(ControlsVisible);
+            // After the own fall the 3rd-person camera rises over the square to watch the rest.
+            if (chase && !watching && online.Mine?.pose == "out") { watching = true; rig.cam.Target.TrackingTarget = focus; rig.composer.TargetOffset = Vector3.zero; }
+            if (watching)
+            {
+                rig.orbit.Radius = Mathf.Lerp(rig.orbit.Radius, 24f, 1f - Mathf.Exp(-2f * Time.deltaTime));
+                var v = rig.orbit.VerticalAxis; v.Center = 62f; rig.orbit.VerticalAxis = v;
+                rig.recenterAfter = 0.5f;
+                rig.Swipe(hud.Look);
+            }
+            else if (chase) rig.Swipe(hud.Look);
+            else
+            {
+                float radius = Mathf.Max(23f, (ControlsVisible ? 7.4f : 9.8f) / (0.47f * Camera.main.aspect));
+                rig.orbit.Radius = Mathf.Lerp(rig.orbit.Radius, radius, 1f - Mathf.Exp(-3f * Time.deltaTime));
+                if (!ControlsVisible) rig.Swipe(hud.Look);
+            }
+            var snap = online.Snap;
+            if (snap == null || Time.frameCount % 6 != 0) return;
+            float limit = course.limitMs / 1000f;
+            hud.SetChip("time", $"{Mathf.CeilToInt(limit - elapsed)} s");
+            hud.SetChip("standing", $"{snap.racers.Count(r => r.pose != "out")} im Spiel");
+            if (timerFill != null) SetTimer(1f - elapsed / limit);
+            for (int i = 0; i < seats.Count; i++)
+            {
+                bool outOfPlay = snap.racers[i].pose == "out";
+                Strip(seats[i], outOfPlay ? "raus" : "steht", seats[i].isPlayer, outOfPlay);
+            }
+        }
+
+        void OnDestroy() { online?.Dispose(); }
+
         void Update()
         {
+            if (online != null) { UpdateOnline(); return; }
             // Frame the square at rest while playing (like the app's arena shot); spectators can turn
             // the camera, so then the diagonal has to fit on narrow or short phones as well.
             if (rig)
@@ -156,7 +259,7 @@ namespace GSG.Parcours
 
         void FixedUpdate()
         {
-            if (!Playing) return;
+            if (!Playing || online != null) return;
             elapsed = Mathf.Min(course.limitMs / 1000f, PlayTime);
             foreach (var plate in plates) plate.SyncCollider(elapsed);
             for (int i = 0; i < runners.Count; i++)

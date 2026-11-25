@@ -32,6 +32,25 @@ namespace GSG.Parcours
             else StartCoroutine(Fall());
         }
 
+        /// <summary>
+        /// Online: the room's public tile state ('1' carries, '2' gave way). <paramref name="loud"/> for the own
+        /// racer's surroundings; <paramref name="instant"/> for tiles known before this device joined.
+        /// </summary>
+        public void Show(char state, bool loud, bool instant)
+        {
+            if (known || (state != '1' && state != '2')) return;
+            known = true;
+            carries = state == '1';
+            byBot = !loud;
+            if (carries)
+            {
+                look.material.SetColor("_BaseColor", Palette.TileSafe);
+                if (loud && !instant) { Sfx.Play("blip"); Fx.Glow(transform.position + Vector3.up * 0.3f, Palette.TileSafe, 6); }
+            }
+            else if (instant) { GetComponent<Collider>().enabled = false; look.enabled = false; }
+            else StartCoroutine(Fall());
+        }
+
         IEnumerator Fall()
         {
             look.material.SetColor("_BaseColor", Palette.Warn);

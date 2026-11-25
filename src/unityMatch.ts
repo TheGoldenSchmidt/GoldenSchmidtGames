@@ -4,6 +4,7 @@ import type { RingGame } from "../shared/matches/ringCore";
 import type { BombGame } from "../shared/matches/bombArena";
 import type { SnowGame } from "../shared/matches/snowball";
 import type { LavaGame } from "../shared/matches/floorIsLava";
+import type { ParcoursGame } from "../shared/matches/parcours";
 
 /**
  * Unity as the rendering of a room's match: the room authority keeps computing with the rules
@@ -14,7 +15,7 @@ import type { LavaGame } from "../shared/matches/floorIsLava";
 export const UNITY_MATCH_URL = "/unity/spiele/index.html?spiel=online";
 
 /** Match modules with a Unity rendering → game id in the Unity build (`GameSwitch`). */
-export const UNITY_MATCH_SCENES: Readonly<Record<string, string>> = { tanks: "tanks", tankview: "tanks", sumo: "sumo", bumpercars: "bumpercars", bombs: "bombs", snowball: "snowball", lava: "lava" };
+export const UNITY_MATCH_SCENES: Readonly<Record<string, string>> = { tanks: "tanks", tankview: "tanks", sumo: "sumo", bumpercars: "bumpercars", bombs: "bombs", snowball: "snowball", lava: "lava", tuerenlotto: "tuerenlotto", kreiselkurs: "kreiselkurs", standhaft: "standhaft" };
 export const hasUnityMatch = (matchId: string) => matchId in UNITY_MATCH_SCENES;
 
 export interface UnityMessage { type: string; yaw?: number; kind?: string; value?: number; x?: number; y?: number; ax?: number; ay?: number; ha?: boolean; hb?: boolean }
@@ -155,4 +156,29 @@ export function unityLavaSnapshot(s: MatchState) {
   };
 }
 
-export const UNITY_SNAPSHOTS: Readonly<Record<string, (s: MatchState) => object>> = { tanks: unityTankSnapshot, sumo: unityRingSnapshot, bumpercars: unityRingSnapshot, bombs: unityBombSnapshot, snowball: unitySnowSnapshot, lava: unityLavaSnapshot };
+/**
+ * Parcours runs and the Standhaft final (parcours.ts): racers in seat order, the public door and
+ * secret-floor states (the secrets themselves never leave the authority), seesaw tilts and the
+ * finishing order as seat indices. Moving parts follow the room's clock (`time`).
+ */
+export function unityParcoursSnapshot(s: MatchState) {
+  const g = s.game as ParcoursGame, seat = (id: string | undefined) => id ? s.players.findIndex(p => p.id === id) : -1;
+  return {
+    type: "snap", time: s.time, done: s.done, course: g.course, doors: g.doors, tiles: g.tiles, tilt: g.tilt, firstFinish: g.firstFinish ?? -1,
+    order: g.order.map(seat),
+    racers: s.players.map(p => {
+      const r = g.racers[p.id];
+      return {
+        id: p.id, pose: r?.pose ?? "out", x: r?.x ?? 0, y: r?.y ?? 0, z: r?.z ?? 0, vx: r?.vx ?? 0, vy: r?.vy ?? 0, vz: r?.vz ?? 0, face: r?.face ?? 0,
+        best: r?.best ?? 0, finishAt: r?.finishAt ?? -1, outAt: r?.outAt ?? -1, checkpoint: r?.checkpoint ?? 0, falls: r?.falls ?? 0, grab: seat(r?.grab),
+        duck: !!r?.duck, grounded: !!r?.grounded
+      };
+    }),
+    events: unityEvents(s)
+  };
+}
+
+export const UNITY_SNAPSHOTS: Readonly<Record<string, (s: MatchState) => object>> = {
+  tanks: unityTankSnapshot, sumo: unityRingSnapshot, bumpercars: unityRingSnapshot, bombs: unityBombSnapshot, snowball: unitySnowSnapshot, lava: unityLavaSnapshot,
+  tuerenlotto: unityParcoursSnapshot, kreiselkurs: unityParcoursSnapshot, standhaft: unityParcoursSnapshot
+};

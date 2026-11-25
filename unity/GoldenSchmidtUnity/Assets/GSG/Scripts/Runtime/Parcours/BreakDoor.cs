@@ -26,7 +26,7 @@ namespace GSG.Parcours
             var v = c.relativeVelocity; v.y = 0f;
             if (v.magnitude < 1.2f && !runner.IsDiving) return;
             done = true;
-            if (real) StartCoroutine(Burst(runner));
+            if (real) StartCoroutine(Burst(runner.Heading, !runner.bot));
             else if (runner.bot) { look.material.SetColor("_BaseColor", Palette.DoorSolid); StartCoroutine(Wobble()); runner.Bounce(-runner.Heading * 3.5f); }
             else
             {
@@ -38,11 +38,28 @@ namespace GSG.Parcours
             }
         }
 
-        IEnumerator Burst(ParcoursRunner runner)
+        /// <summary>
+        /// Online: the room's public door state ('1' broken open, '2' tried and solid). <paramref name="loud"/>
+        /// near the own racer; <paramref name="instant"/> for doors opened before this device joined.
+        /// </summary>
+        public void Show(char state, Vector3 heading, bool loud, bool instant)
+        {
+            if (done || (state != '1' && state != '2')) return;
+            done = true;
+            real = state == '1';
+            if (real && instant) { GetComponent<Collider>().enabled = false; look.enabled = false; return; }
+            if (real) { StartCoroutine(Burst(heading, loud)); return; }
+            look.material.SetColor("_BaseColor", Palette.DoorSolid);
+            if (instant) return;
+            if (loud) { Sfx.Play("thud"); Fx.Dust(transform.position, Palette.DoorSolid, 5); }
+            StartCoroutine(Wobble());
+        }
+
+        IEnumerator Burst(Vector3 heading, bool loud)
         {
             GetComponent<Collider>().enabled = false;
-            Sfx.Play("break", runner.bot ? 0.45f : 1f);
-            if (!runner.bot) { Fx.Shake(0.5f); Fx.HitStop(0.06f); }
+            Sfx.Play("break", loud ? 1f : 0.45f);
+            if (loud) { Fx.Shake(0.5f); Fx.HitStop(0.06f); }
             var b = look.bounds;
             Fx.Shards(b.center, Palette.Door, 18);
             Fx.Sparks(b.center, Palette.Accent, 8);
@@ -57,7 +74,7 @@ namespace GSG.Parcours
                 s.GetComponent<Renderer>().sharedMaterial = look.sharedMaterial;
                 var rb = s.AddComponent<Rigidbody>();
                 rb.mass = 0.4f;
-                rb.AddForce((runner.Heading * Random.Range(4f, 7f) + Vector3.up * Random.Range(1f, 3f)), ForceMode.VelocityChange);
+                rb.AddForce((heading * Random.Range(4f, 7f) + Vector3.up * Random.Range(1f, 3f)), ForceMode.VelocityChange);
                 rb.AddTorque(Random.insideUnitSphere * 8f, ForceMode.VelocityChange);
             }
             look.enabled = false;
