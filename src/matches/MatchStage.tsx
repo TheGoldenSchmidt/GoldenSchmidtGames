@@ -95,13 +95,14 @@ export function MatchStage({ game, id, now, control, busy = false, menu, doneAct
     if (!fresh.length) return;
     lastEvent.current = match.eventSeq;
     for (const event of fresh) {
-      const sfx = client.sound?.(event, id);
+      // Unity plays its own sounds and toasts while its HUD runs; vibration stays with the app.
+      const sfx = unityUiRef.current ? undefined : client.sound?.(event, id);
       if (sfx) playSfx(sfx);
       if (event.ids.includes(id) && /false|hit|out|dead|lost/.test(event.kind)) vibrate(60);
     }
     const visible = fresh.filter(e => e.text && !client.quiet?.includes(e.kind));
     const mine = [...visible].reverse().find(e => e.ids.includes(id)) ?? visible.at(-1);
-    if (mine) setFeedback({ text: mine.text, key: mine.seq, good: !/false|hit|out|dead|lost/.test(mine.kind) || !mine.ids.includes(id) });
+    if (mine && !unityUiRef.current) setFeedback({ text: mine.text, key: mine.seq, good: !/false|hit|out|dead|lost/.test(mine.kind) || !mine.ids.includes(id) });
   }, [match.eventSeq]);
 
   // The HUD floats over the full-screen stage; its height keeps canvas fields and overview cameras clear of it.
@@ -126,10 +127,15 @@ export function MatchStage({ game, id, now, control, busy = false, menu, doneAct
   const frameRef = useRef(frameData); frameRef.current = frameData;
 
   // Unity rendering (chosen by the host): the persistent Unity frame draws the snapshots; if it fails, the web view takes over.
-  const look = game.mini!.look, [unityFailed, setUnityFailed] = useState(false);
+  const look = game.mini!.look, [unityFailed, setUnityFailed] = useState(false), [unityUi, setUnityUi] = useState(false);
   const unity = look?.renderer === "unity" && hasUnityMatch(matchId) && !unityFailed && webglAvailable();
+  const unityUiRef = useRef(false); unityUiRef.current = unity && unityUi;
+  const clock = useRef({ startAt, now }); clock.current = { startAt, now };
+  const soundRef = useRef(sound); soundRef.current = sound;
   const loadWorld = unity
-    ? () => import("./unityWorld").then(m => (host: HTMLElement, read: Parameters<typeof m.createUnityWorld>[2], onError: () => void) => m.createUnityWorld(look!.view, host, read, onError))
+    ? () => import("./unityWorld").then(m => (host: HTMLElement, read: Parameters<typeof m.createUnityWorld>[2], onError: () => void) => m.createUnityWorld(look!.view, host, read, onError, {
+      io, startIn: () => clock.current.startAt - clock.current.now, sound: () => soundRef.current, onControls: setUnityUi
+    }))
     : client.world;
   // 2.5D/3D world: loaded on demand; without WebGL or on any error the canvas takes over.
   const [world, setWorld] = useState<"loading" | "ready" | "off">(() => loadWorld && webglAvailable() ? "loading" : "off");
@@ -185,19 +191,20 @@ export function MatchStage({ game, id, now, control, busy = false, menu, doneAct
   const count = Math.ceil((startAt - now) / 1000);
   const Controls = client.Controls;
   const status = client.status?.(match, id) ?? meta.look.hint;
-  return <section className={`match-game match-game--${matchId}${unity && world !== "off" ? " is-unity" : ""}`} aria-label={title} style={{ ["--match-top" as string]: `${top}px` }}>
+  const unityHud = unity && unityUi && world === "ready";
+  return <section className={`match-game match-game--${matchId}${unity && world !== "off" ? " is-unity" : ""}${unityHud ? " is-unity-hud" : ""}`} aria-label={title} style={{ ["--match-top" as string]: `${top}px` }}>
     <div className="match-stage">
       {world === "off"
         ? <canvas ref={canvas} className="match-canvas" role="img" aria-label={`Spielfeld: ${title}`} />
         : <div ref={worldHost} className="match-world" role="img" aria-label={`3D-Spielfeld: ${title}`} />}
       {world === "loading" && <div className="match-world-loading" role="status">{unity ? "Unity wird geladen …" : "Arena wird gebaut …"}</div>}
-      {world !== "off" && (() => { const banner = client.banner?.(match, id); return banner && <div className="match-banner" role="status"><b>{banner.title}</b><span>{banner.text}</span></div>; })()}
-      <div className="match-controls"><Controls io={io} view={match} viewer={id} active={active} world={world === "ready"} /></div>
-      {count > 0 && <div className="match-countdown" role="status"><b key={count}>{count}</b><span>{meta.controls}</span></div>}
+      {world !== "off" && !unityHud && (() => { const banner = client.banner?.(match, id); return banner && <div className="match-banner" role="status"><b>{banner.title}</b><span>{banner.text}</span></div>; })()}
+      {!unityHud && <div className="match-controls"><Controls io={io} view={match} viewer={id} active={active} world={world === "ready"} /></div>}
+      {count > 0 && !unityHud && <div className="match-countdown" role="status"><b key={count}>{count}</b><span>{meta.controls}</span></div>}
       {measuring && <MeasurePanel gameId={matchId} name={meta.name} local={local.current} arrivals={arrivals} rtt={own?.rtt} chase={!!client.chase && world === "ready"} />}
       {match.done && <div className="match-countdown match-done"><div className="match-done__note" role="status"><b>✓</b><span>Das Ergebnis steht fest!</span></div>{doneActions && <div className="match-done__actions">{doneActions}</div>}</div>}
       {!own && <div className="match-countdown" role="status"><span>Du schaust zu.</span></div>}
-      {feedback.text && count <= 0 && !match.done && <p className={`match-feedback ${feedback.good ? "is-good" : "is-bad"}`} key={feedback.key} role="status">{feedback.text}</p>}
+      {feedback.text && count <= 0 && !match.done && !unityHud && <p className={`match-feedback ${feedback.good ? "is-good" : "is-bad"}`} key={feedback.key} role="status">{feedback.text}</p>}
     </div>
     {/* Floating HUD: title, status and players on the left, own score, sound and menu on the right. */}
     <div className="match-hud" ref={hud}>
