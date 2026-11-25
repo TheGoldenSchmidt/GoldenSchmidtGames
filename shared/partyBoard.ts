@@ -99,6 +99,18 @@ export function partyPaths(game: PartyBoardState, p: Collector, position = p.pos
   const paths = partyBoard(game)[position].next, goal = game.mode === "roll-it-up" ? goalField(game) : -1;
   return paths.includes(goal) && !hasFullSet(game, p) ? paths.filter(id => id !== goal) : paths;
 }
+/**
+ * Title of a path choice (Roll It Up!). Bauschale: outer path and hill path. Grinder: staying on the
+ * ring or taking a spoke, read from the distance to the centre.
+ */
+export function pathTitle(game: PartyBoardState, from: number, to: number, index: number) {
+  if (to === goalField(game)) return "Zum Jayspot";
+  if (rollBoard(game).id !== "grinder") return index === 0 ? "Außenweg" : "Hügelweg";
+  const board = partyBoard(game), radius = (id: number) => Math.hypot(board[id].x - 50, board[id].y - 50);
+  const change = radius(to) - radius(from);
+  if (Math.abs(change) < 4) return radius(from) > 30 ? "Außenring weiter" : "Innenring weiter";
+  return change < 0 ? "Speiche nach innen" : "Speiche nach außen";
+}
 export function fieldName(game: PartyBoardState, id: number) {
   if (game.mode === "roll-it-up") {
     if (id === goalField(game)) return "Jayspot";

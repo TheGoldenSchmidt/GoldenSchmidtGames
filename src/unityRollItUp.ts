@@ -1,5 +1,5 @@
 import { activePartyPlayer, ITEMS, ITEM_IDS, type Item, type PartyAction, type PartyGame } from "../shared/party";
-import { boardDistances, boardPathTo, boardRoute, FIELD_LABELS, fieldName, goalField, hasFullSet, partyBoard, partyPaths, stationAt, stationsOf, type PartyBoardState } from "../shared/partyBoard";
+import { boardDistances, boardPathTo, boardRoute, FIELD_LABELS, fieldName, goalField, hasFullSet, partyBoard, partyPaths, pathTitle, rollBoard, stationAt, stationsOf, type PartyBoardState } from "../shared/partyBoard";
 import { FIELD_HELP } from "./lib/partyFieldVisuals";
 import { unityGameUrl } from "./unityGames";
 
@@ -34,11 +34,17 @@ export interface UnityRollState {
   log: string[]; reduced: boolean;
 }
 
-/** Static board: positions in [-1, 1] across the bowl, field types, links and stations. */
-export function unityRollBoard(game: PartyBoardState = { mode: "roll-it-up" }): { type: "board"; fields: UnityRollField[] } {
-  const board = partyBoard(game), goal = goalField(game);
+export interface UnityRollBoard { type: "board"; board: string; name: string; tunnels: number[]; fields: UnityRollField[] }
+
+/**
+ * Static board: which board (scenery), positions in [-1, 1] across the bowl, field types, links and
+ * stations. `tunnels` lists each pneumatic tube once as a flat pair (from, to) for JsonUtility.
+ */
+export function unityRollBoard(game: PartyBoardState = { mode: "roll-it-up" }): UnityRollBoard {
+  const board = partyBoard(game), goal = goalField(game), roll = rollBoard(game);
+  const tunnels = Object.entries(roll.tunnels).map(([from, to]) => [Number(from), to]).filter(([from, to]) => from < to).flat();
   return {
-    type: "board",
+    type: "board", board: roll.id, name: roll.name, tunnels,
     fields: board.map(field => {
       const station = stationAt(game, field.id);
       const help = field.id === goal ? "Mit vollständigem Set gewinnst du bei Ankunft."
@@ -60,7 +66,7 @@ export function unityRollState(g: PartyGame, viewer: string, extra: { serverNow:
     const preview = boardRoute(g, p, field, g.steps), last = preview.fields.at(-1) ?? field, next = preview.stations.find(s => !s.owned);
     const detail = next ? `${next.name} in ${next.steps} ${next.steps === 1 ? "Schritt" : "Schritten"} · ${next.price} Münzen${p.coins < next.price ? ` (noch ${next.price - p.coins} nötig)` : ""}`
       : preview.junction ? "Weitere Wegwahl" : last === goalField(g) ? "Ziel erreicht" : `Landung: ${FIELD_LABELS[board[last].type]}`;
-    return { field, title: field === goalField(g) ? "Zum Jayspot" : index === 0 ? "Außenweg" : "Hügelweg", detail, route: [p.position, ...preview.fields] };
+    return { field, title: pathTitle(g, p.position, field, index), detail, route: [p.position, ...preview.fields] };
   }) : [];
   const distances = boardDistances(g, own), missing = stationsOf(g).filter(s => !own.supplies?.includes(s.field));
   const next = missing.slice().sort((a, b) => (distances.get(a.field) ?? Infinity) - (distances.get(b.field) ?? Infinity))[0];

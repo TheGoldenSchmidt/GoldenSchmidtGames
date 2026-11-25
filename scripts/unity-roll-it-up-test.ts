@@ -23,6 +23,16 @@ assert.ok(board.fields.every(f => f.next.every(n => n >= 0 && n <= JAYSPOT)));
 // Flat data for Unity's JsonUtility: no maps, no undefined values.
 const plain = (value: unknown): boolean => value === null ? false : Array.isArray(value) ? value.every(plain) : typeof value === "object" ? Object.values(value as object).every(plain) : value !== undefined;
 assert.ok(plain(board), "Brett ohne leere Werte");
+assert.equal(board.board, "bauschale");
+assert.deepEqual(board.tunnels, []);
+// The Grinder: board id for the scenery, each pneumatic tube once, tube fields typed for the symbol.
+const grinder = unityRollBoard({ mode: "roll-it-up", options: { rounds: 8, board: "grinder" as const } });
+assert.equal(grinder.board, "grinder");
+assert.equal(grinder.name, "Der Grinder");
+assert.deepEqual(grinder.tunnels, [7, 19, 33, 39]);
+assert.ok(grinder.tunnels.every(id => grinder.fields[id].type === "tunnel"));
+assert.equal(grinder.fields[goalField({ mode: "roll-it-up", options: { rounds: 8, board: "grinder" as const } })].type, "jayspot");
+assert.ok(plain(grinder), "Grinder ohne leere Werte");
 
 let g: PartyGame = make();
 const active = activePartyPlayer(g).id, other = g.players.find(p => p.id !== active)!.id;
