@@ -16,16 +16,16 @@ Reihenfolge: zuerst Spiele, die am meisten von 3D/Physik gewinnen; flache Reakti
 | --- | --- | --- |
 | Parcours-Probelevel (`parcours`, `ParcoursProbe`) | umgesetzt | 15 Stationen mit allen Hindernisarten, allein, Kontrollpunkte und Bestzeit. Stand vor getimtem Festhalten, langen Lücken, Serpentinen-Glibberflut und Ventilatoren mit Anlauf. |
 | Floor is Lava (`lava`, `FloorIsLava`) | umgesetzt | Regeln/Bots aus `floorIsLava.ts`, du gegen drei Bots. |
-| Sumo Smash (`sumo`, `SumoSmash`) | umgesetzt | C#-Port `Ring/RingSim.cs`; Podest über einem See. Kein Stoß, solange man nach einem Treffer rutscht (`CanAct`). Frontalzusammenstoß wie in `sumoSmash.ts`: der schnellere Stoß gewinnt, gleich schnelle prallen beide zurück. |
-| Bumper Mayhem (`bumpercars`, `BumperMayhem`) | umgesetzt | Gleicher Ringkern; Gummi-Elastizität 0,95, jeder Kontakt stößt beide um ≥2,6 m/s auseinander, harte Treffer × 1,3 (≤14), Rammer prallt zurück; kein Turbo im Rutschen. |
-| Bomb Arena (`bombs`, `BombArena`) | umgesetzt | C#-Port `Bombs/BombSim.cs`. |
-| Schneeballschlacht (`snowball`, `Schneeballschlacht`) | umgesetzt | C#-Port `Snow/SnowSim.cs`; eigener Wurf rastet nur ±11° um die Blickrichtung ein, ohne Vorhalt (Bots unverändert); Zielen per Ziehen fehlt noch. |
+| Sumo Smash (`sumo`, `SumoSmash`) | im Raum + Testbereich | C#-Port `Ring/RingSim.cs`; Podest über einem See. Im Raum Draufsicht oder 3rd Person (Kamera hinter dem eigenen Sumo, Wischen dreht). Die Rückmeldungsregeln gelten seit Nov. 2026 auch in `shared/`: kein Stoß, solange man nach einem Treffer rutscht. |
+| Bumper Mayhem (`bumpercars`, `BumperMayhem`) | im Raum + Testbereich | Gleicher Ringkern; Gummi-Elastizität 0,95, jeder Kontakt stößt beide um ≥2,6 m/s auseinander, harte Treffer × 1,3 (≤14), Rammer prallt zurück; kein Turbo im Rutschen – alles auch in `bumperMayhem.ts`. Im Raum Draufsicht oder 3rd Person; Abprall-Effekte entstehen aus Tempo-Sprüngen zwischen Schnappschüssen. |
+| Bomb Arena (`bombs`, `BombArena`) | im Raum + Testbereich | C#-Port `Bombs/BombSim.cs`. Im Raum Draufsicht; Kisten, Explosionen und schließende Mauern ergeben sich aus den Änderungen zwischen Schnappschüssen. |
+| Schneeballschlacht (`snowball`, `Schneeballschlacht`) | im Raum + Testbereich | C#-Port `Snow/SnowSim.cs`. Menschen werfen nur bis ±11° um Ziel bzw. Blick eingerastet und ohne Vorhalt, Bots mit Zielhilfe und Vorhalt – seit Nov. 2026 auch in `snowball.ts` (`MatchPlayer.bot`). Im Raum 3rd Person oder Draufsicht; Zielen per Ziehen fehlt in Unity noch (Tipp-Wurf). |
 | Tower Tumble (`tower`, `TowerTumble`) | umgesetzt | Unitys 2D-Physik (Box2D, 60 Hz, 12/6 Iterationen, Reibung 0,9, Schwerkraft 18) statt `physics2d.ts`; Steine setzen 2 cm über dem Kontakt auf, höchstens 4 m/s. |
 | Tower Tumble – Survival (`towersurvival`, `TowerSurvival`) | umgesetzt | Wie Tower Tumble mit Survival-Regeln, vorsichtigere Bots. |
 | Türenlotto (`tuerenlotto`, `Tuerenlotto`) | umgesetzt | Strecke aus `Resources/GSG/Courses/tuerenlotto.json`; Bots nach `parcoursBot`. |
 | Kreiselkurs (`kreiselkurs`, `Kreiselkurs`) | umgesetzt | Gleicher Lauf-Rahmen; Bots scheitern gelegentlich an den Inseln. |
 | Standhaft (`standhaft`, `Standhaft`) | umgesetzt | 25 Fallklappen von außen nach innen, zwei zeitversetzte Drehbalken; Läufer mit Rigidbody-Kollision, Balken nach App-Kontaktmodell. |
-| Tank Trouble (`tanks`, `TankTrouble`) | im Raum | Normales Minispiel mit Unity-Darstellung (siehe unten), kein Eintrag im Unity-Untermenü. Draufsicht; 3rd Person (Kamera hinter dem eigenen Panzer) und 1st Person (aus der Luke) mit den Turmsicht-Regeln: jedes Gerät sieht nur den eigenen Sichtbereich. |
+| Tank Trouble (`tanks`, `TankTrouble`) | im Raum + Testbereich | Normales Minispiel mit Unity-Darstellung (siehe unten). Draufsicht; 3rd Person (Kamera hinter dem eigenen Panzer) und 1st Person (aus der Luke) mit den Turmsicht-Regeln: jedes Gerät sieht nur den eigenen Sichtbereich. |
 | Geisterpfad, Fallklappen, Windkanal, Kletterwand, Glibberflut | offen | Streckendaten liegen als JSON vor; im `CourseBuilder` fehlen Geisterplatten, Klappen, Wind, Griffe, Glibber und die Bot-Regeln. |
 | Arrow Masters; Neon Racer (+ Kippen); Light Trails, Neon Pong, Quick Draw | offen | in dieser Reihenfolge |
 
@@ -149,7 +149,7 @@ dotnet .artifacts/unity-tank-sim-test/bin/TankSim.Tests/debug/TankSim.Tests.dll
 ## Offen
 
 - Auf echten Handys Bildrate, Ladezeit, Akku/Wärme und Touch-Gefühl beurteilen; danach Schatten, MSAA oder Renderauflösung anpassen.
-- Weitere Spiele auf die Darstellung im Raum umstellen (je Spiel: Schnappschuss in `UNITY_SNAPSHOTS`, `IOnlineMatch` in der Szene, Ansichten in `MINI_LOOKS`). Als Nächstes Standhaft mit 3rd Person; Unity-eigene Abweichungen (Sumo, Bumper, Schneeball, Tower-Tumble-Physik, Parcours-Läufer) vorher für `shared/` entscheiden.
+- Weitere Spiele auf die Darstellung im Raum umstellen (je Spiel: Schnappschuss in `UNITY_SNAPSHOTS`, `IOnlineMatch` in der Szene, Ansichten in `MINI_LOOKS`, Fall in `tests/browser/unity-match.spec.ts`). Offen: Floor is Lava, Tower Tumble (+ Survival; Box2D-Verhalten muss vorher in `physics2d.ts`), Türenlotto, Kreiselkurs, Standhaft (3rd Person).
 - Parcours-Probelevel: getimtes Festhalten, Lücken länger als Sprung + Hechten, Serpentinen-Glibberflut und Ventilatoren mit Anlauf nachziehen.
 - Kein Offline-Betrieb; ohne Internet übernimmt im Raum die Web-Darstellung.
 - Roll It Up! (Unity): nur Testpartie mit Bots am lokalen Tisch; Online-Räume, Wiederbeitritt und Handy-Hosting mit Unity-Brett sind nicht geprüft. Kameradrehen per Wischen, Zoomen mit zwei Fingern, Feldinfo per Tipp; die Feldliste/Regeltafel der Web-Bauschale fehlt noch.

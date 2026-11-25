@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { advanceMatch, botMatchInput, createMatch, matchStandings, removeMatchPlayer, setMatchControl } from "../shared/matches/framework";
 import type { Fighter, RingGame } from "../shared/matches/ringCore";
 import { SUMO, sumoRules } from "../shared/matches/sumoSmash";
-import { BUMPER, ITEMS } from "../shared/matches/bumperMayhem";
+import { BUMPER, BUMPER_RULES, ITEMS } from "../shared/matches/bumperMayhem";
 import { NEUTRAL_MATCH_INPUT, type MatchInput, type MatchState } from "../shared/matches/types";
 import { createPartyGame, partyMiniResults, tickParty } from "../shared/party";
 import { PartyBotDriver } from "../shared/partyBots";
@@ -222,4 +222,30 @@ for (const id of ["sumo", "bumpercars"] as const) {
     assert.equal(clash(SUMO.dash * .7, SUMO.dash, swap).victim, "a");
   }
 }
-console.log("Sumo Smash und Bumper Mayhem erfolgreich: Startplätze, Ring-Out mit Gutschrift und Verfall, Respawnschutz, gleichzeitige Ring-Outs, letzter Überlebender, Schrumpfen, 75-s-Entscheid, Sudden Death, Stoß mit Rückstoß, Abklingzeiten, Turbo-Rammwirkung, Wurfweite, Hindernisse, Aufgeben, Bots und Determinismus.");
+// Rückmeldung Nov. 2026: Wer nach einem Treffer rutscht, kann weder stoßen noch Turbo geben.
+for (const id of ["sumo", "bumpercars"] as const) {
+  const s = make(id, 2); step(s, 1000);
+  const f = put(s, "p0", -2, 0); put(s, "p1", 2, 0);
+  f.stunUntil = s.time + 400; f.actionAt = -99999;
+  act(s, "p0"); step(s, 50);
+  assert.ok(f.actionAt < 0, `${id}: kein Knopf im Rutschen`);
+  step(s, 400); act(s, "p0"); step(s, 50);
+  assert.ok(f.actionAt > 0, `${id}: Knopf wieder nach dem Rutschen`);
+}
+// Bumper (Rückmeldung Nov. 2026): jede Berührung prallt spürbar ab, harte Treffer schleudern stärker, der Rammer prallt zurück.
+{
+  const s = make("bumpercars", 2); step(s, 1000);
+  const r = (BUMPER.body * 2) / 2;
+  const a = put(s, "p0", -r + .01, 0), b = put(s, "p1", r - .01, 0);
+  a.vx = .5; b.vx = -.5; a.stunUntil = b.stunUntil = 0;
+  const soft = BUMPER_RULES.collide(a, b, s.time);
+  assert.equal(soft, undefined, "sanfte Berührung ist kein Treffer");
+  assert.ok(b.vx - a.vx >= BUMPER.minBounce - 1e-9, `beide prallen mindestens ${BUMPER.minBounce} m/s auseinander (${(b.vx - a.vx).toFixed(2)})`);
+  const c = put(s, "p0", -r + .01, 0), d = put(s, "p1", r - .01, 0);
+  c.vx = 6; d.vx = 0; c.actionUntil = 0; c.stunUntil = d.stunUntil = 0;
+  const hit = BUMPER_RULES.collide(c, d, s.time);
+  assert.equal(hit?.id, "p1", "Rammen trifft das andere Auto");
+  assert.ok(c.vx < 0, `Rammer prallt zurück (${c.vx.toFixed(2)})`);
+  assert.ok(d.vx > 6, `harter Treffer schleudert weit (${d.vx.toFixed(2)})`);
+}
+console.log("Sumo Smash und Bumper Mayhem erfolgreich: Kein Knopf im Rutschen, Abprallen bei jeder Berührung, Rammer prallt zurück, Startplätze, Ring-Out mit Gutschrift und Verfall, Respawnschutz, gleichzeitige Ring-Outs, letzter Überlebender, Schrumpfen, 75-s-Entscheid, Sudden Death, Stoß mit Rückstoß, Abklingzeiten, Turbo-Rammwirkung, Wurfweite, Hindernisse, Aufgeben, Bots und Determinismus.");

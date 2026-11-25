@@ -277,7 +277,7 @@ function startMini(g:PartyGame,now:number) {
   if(isArenaId(m.id))m.arena=createArena(m.id,g.players.filter((p,i)=>!p.passive&&(g.online||i===g.localMiniIndex)).map(p=>({id:p.id,style:g.players.indexOf(p),characterId:p.characterId})),m.arenaSeed??1);
   // In a duel only the two duelists enter the match.
   const contenders=g.duel?g.players.filter(p=>p.id===g.duel!.challenger||p.id===g.duel!.opponent):g.players.filter(p=>!p.passive);
-  if(isMatchId(m.id))m.match=createMatch(matchIdForLook(m.id,m.look),contenders.map(p=>({id:p.id,style:g.players.indexOf(p),characterId:p.characterId})),m.arenaSeed??1);
+  if(isMatchId(m.id))m.match=createMatch(matchIdForLook(m.id,m.look),contenders.map(p=>({id:p.id,style:g.players.indexOf(p),characterId:p.characterId,bot:p.bot})),m.arenaSeed??1);
   phase(g,"mini-play",now);g.deadline=m.startAt+MINIS[m.id].seconds*1000;
 }
 

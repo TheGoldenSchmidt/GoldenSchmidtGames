@@ -175,7 +175,8 @@ export function ringModule(rules: RingRules): MatchModule<RingGame> {
     },
     press(s, p: MatchPlayer, kind) {
       const f = s.game.fighters[p.id];
-      if (kind !== "a" || !f?.alive || f.out || s.game.resetAt !== undefined || s.time - f.actionAt < rules.actionCooldown) return;
+      // No dash or turbo while sliding after a hit: a knocked fighter cannot save itself with the button (feedback Nov. 2026).
+      if (kind !== "a" || !f?.alive || f.out || s.game.resetAt !== undefined || s.time - f.actionAt < rules.actionCooldown || s.time < f.stunUntil) return;
       f.actionAt = s.time;
       rules.action(f, s.time);
       emit(s, "action", "", [p.id]);

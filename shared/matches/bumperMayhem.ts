@@ -1,17 +1,19 @@
-import { bounce, ringModule, type Fighter, type RingGame, type RingItem, type RingItemKind } from "./ringCore";
+import { bounce, ringModule, type Fighter, type RingGame, type RingItem, type RingItemKind, type RingRules } from "./ringCore";
 import { dist, wrapAngle } from "./geometry";
 import { emit, random, type MatchState } from "./types";
 
 /** Bumper Mayhem – bumper cars with heading, inertia, top speed and a turbo. */
 /**
- * restitution: bounciness of ordinary contact (soft rubber bumpers);
+ * restitution: bounciness of ordinary contact (bouncy rubber, feedback Nov. 2026: every
+ * contact pushes both cars apart by at least `minBounce` m/s, `bounceGain` × closing speed);
  * kick: speed of the rammed car along the contact (× closing speed, turboKick
  * with turbo, capped by maxKnock); stunBase + stunMs per unit of closing speed
- * (capped by stunMax): spin-out without grip, sliding with `slide` per step;
+ * (capped by stunMax): spin-out without grip, sliding with `slide` per step; the rammer
+ * rebounds with `rebound` × closing speed instead of stopping;
  * coast: rolling friction per step without throttle (cars come to rest instead
  * of drifting); overspeed: smooth slow-down per step above the speed limit.
  */
-export const BUMPER = { body: .55, accel: 7, maxSpeed: 4.4, turboSpeed: 8, turboMs: 800, turn: 4.2, grip: .25, drag: .985, coast: .92, overspeed: .88, restitution: .5, kick: .9, turboKick: 1.75, maxKnock: 11, hitterKeeps: .25, stunBase: 220, stunMs: 55, stunMax: 650, slide: .93, spinRate: 6, hard: 2.5, cooldown: 4000, orbit: 2.8, postRadius: .6, spin: .6 } as const;
+export const BUMPER = { body: .55, accel: 7, maxSpeed: 4.4, turboSpeed: 8, turboMs: 800, turn: 4.2, grip: .25, drag: .985, coast: .92, overspeed: .88, restitution: .95, kick: 1.3, turboKick: 1.75, maxKnock: 14, hitterKeeps: .25, stunBase: 220, stunMs: 55, stunMax: 700, slide: .93, spinRate: 6, hard: 2.5, cooldown: 4000, orbit: 2.8, postRadius: .6, spin: .6, minBounce: 2.6, bounceGain: .6, rebound: .35 } as const;
 /**
  * Item boxes: one appears every `every` ms (from `first`), at most `max` on the
  * rink, collected by driving through. Mega: giant car (body × `megaScale`)
@@ -67,7 +69,8 @@ function extras(s: MatchState<RingGame>) {
   }
 }
 
-export const bumperMayhem = ringModule({
+/** The Bumper rules (exported for the rule tests); the module wraps them with the ring core. */
+export const BUMPER_RULES: RingRules = {
   id: "bumpercars", name: "Bumper Mayhem",
   instruction: "Ramm die anderen Autoscooter über den Rand, nutze Turbo und Item-Kisten. Jeder hat 3 Leben – wer zuletzt fährt, gewinnt.",
   rules: "Lenke dein Autoscooter-Fahrzeug mit dem Stick in die gewünschte Richtung, es beschleunigt von selbst. Der Turbo macht dich kurz viel schneller und deine Rammstöße härter (alle 4 Sekunden). Wer hart gerammt wird, schleudert ohne Kontrolle davon. Fahr durch Item-Kisten: Riesenauto (6 Sekunden groß und schwer), Ölfleck (andere schleudern darauf) oder Schockwelle (stößt alle in der Nähe weg). Ramme Gegner über den Rand: +2 pro Ring-Out. Das abgestürzte Auto kehrt allein zurück; sind nur noch zwei übrig, starten beide neu von ihren Startplätzen. Drehende Pfosten werfen alle zurück. Jeder hat 3 Leben, ab Sekunde 45 schrumpft die Arena. Letzter gewinnt, nach 75 Sekunden zählen Leben, dann Ring-Outs.",
@@ -100,6 +103,11 @@ export const bumperMayhem = ringModule({
   extras,
   collide(a, b, now) {
     const { nx, ny, closing } = bounce(a, b, (bodyOf(a, now) + bodyOf(b, now)) / 2, BUMPER.restitution, now, now < a.shieldUntil, now < b.shieldUntil);
+    if (closing <= 0) return undefined;
+    // Every contact bounces: both cars are pushed apart, a giant car takes less of it.
+    const push = Math.max(BUMPER.minBounce, closing * BUMPER.bounceGain), takeA = big(a, now) ? ITEMS.megaTake : 1, takeB = big(b, now) ? ITEMS.megaTake : 1;
+    a.vx -= nx * push * takeA * .5; a.vy -= ny * push * takeA * .5;
+    b.vx += nx * push * takeB * .5; b.vy += ny * push * takeB * .5;
     if (closing <= BUMPER.hard) return undefined;
     // The rammer (who pushed harder) launches the other car along the contact and nearly stops itself.
     const victim = b.lastHitBy === a.id && b.lastHitAt === now ? b : a, hitter = victim === a ? b : a, sign = victim === b ? 1 : -1;
@@ -109,7 +117,7 @@ export const bumperMayhem = ringModule({
     const ux = nx * sign, uy = ny * sign, along = victim.vx * ux + victim.vy * uy;
     if (along < kick) { victim.vx += ux * (kick - along); victim.vy += uy * (kick - along); }
     if (!big(victim, now)) victim.stunUntil = now + Math.min(BUMPER.stunMax, BUMPER.stunBase + closing * BUMPER.stunMs);
-    hitter.vx *= BUMPER.hitterKeeps; hitter.vy *= BUMPER.hitterKeeps;
+    hitter.vx = hitter.vx * BUMPER.hitterKeeps - ux * closing * BUMPER.rebound; hitter.vy = hitter.vy * BUMPER.hitterKeeps - uy * closing * BUMPER.rebound;
     return victim;
   },
   obstacles: () => [0, 1].map(i => ({ id: i, x: Math.cos(i * Math.PI) * BUMPER.orbit, y: Math.sin(i * Math.PI) * BUMPER.orbit, r: BUMPER.postRadius, angle: i * Math.PI })),
@@ -128,4 +136,5 @@ export const bumperMayhem = ringModule({
     const aligned = Math.cos(Math.atan2(dy, dx) - me.heading) > .92;
     return { x: dx / d, y: dy / d, act: aligned && d < 3 && s.time - me.actionAt >= BUMPER.cooldown };
   }
-});
+};
+export const bumperMayhem = ringModule(BUMPER_RULES);

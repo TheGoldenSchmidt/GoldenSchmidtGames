@@ -37,7 +37,7 @@ function render(ctx: CanvasRenderingContext2D, f: MatchFrame) {
   }
   // Lock-on ring under the opponent the own throw would go to.
   const mine = g.players[f.viewer], aim = Math.hypot(f.input.ax, f.input.ay);
-  const locked = mine && mine.outAt === undefined && mine.balls > 0 && !s.done ? throwTarget(g, mine, aim > .2 ? f.input.ax / aim : undefined, aim > .2 ? f.input.ay / aim : undefined) : undefined;
+  const locked = mine && mine.outAt === undefined && mine.balls > 0 && !s.done ? throwTarget(g, mine, aim > .2 ? f.input.ax / aim : undefined, aim > .2 ? f.input.ay / aim : undefined, SB.playerCone) : undefined;
   if (locked) { ctx.strokeStyle = "#ffe44e"; ctx.lineWidth = 3; ctx.setLineDash([5, 4]); ctx.beginPath(); ctx.arc(X(locked.x), Y(locked.y), SB.radius * scale * 1.7, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]); }
   for (const b of g.balls) {
     const before = prev.balls?.find(q => q.id === b.id), x = before ? lerp(before.x, b.x, f.alpha) : b.x, y = before ? lerp(before.y, b.y, f.alpha) : b.y;
@@ -60,7 +60,7 @@ function SnowControls({ io, view, viewer, active, world }: MatchControlsProps) {
         if (off) return;
         if (world && Math.hypot(x, y) < .2 && local.camYaw !== undefined && me) {
           // Tap: at the nearest opponent the camera shows (the marked one), else straight ahead.
-          const fx = Math.sin(local.camYaw), fy = -Math.cos(local.camYaw), pick = throwTarget(g, me, fx, fy, SB.tapCone);
+          const fx = Math.sin(local.camYaw), fy = -Math.cos(local.camYaw), pick = throwTarget(g, me, fx, fy, SB.playerCone);
           const dx = pick ? pick.x - me.x : fx, dy = pick ? pick.y - me.y : fy, n = Math.hypot(dx, dy) || 1;
           io.set({ ax: dx / n, ay: dy / n });
         } else if (world) chaseAim(io, x, y, false); else io.set({ ax: x, ay: y });
