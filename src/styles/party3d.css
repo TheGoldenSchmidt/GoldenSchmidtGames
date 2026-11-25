@@ -35,7 +35,7 @@
 .party-respawn { position:absolute; top:40%; left:12%; right:12%; text-align:center; padding:15px; background:#10485be0; color:#fff7d6; border-radius:14px; font-size:.8rem; z-index:2; pointer-events:none; }
 .party-key-hint { text-align:center; font-size:.7rem!important; color:#567162; margin:11px 0 5px; }.party-tilt-panel { display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:8px; margin:12px 0 0; padding:12px; border:1px solid #bbd3bb; border-radius:15px; background:#e1edd8; }.party-tilt-panel > p { width:100%; margin:0 0 3px; font-size:.72rem; color:#3a6252; line-height:1.4; text-align:center; }.party-tilt-panel .button { font-size:.72rem; padding:0 12px; min-height:42px; }
 .party-3d-error { position:absolute; inset:0; z-index:6; background:#164b61; color:#fff9df; display:flex; flex-direction:column; justify-content:center; padding:30px; text-align:center; }.party-3d-error h3 { font-size:1.3rem; }.party-3d-error p { font-size:.85rem; line-height:1.5; }
-.party-screen--playing .party-decision { width:100%; max-width:1000px; padding:12px; }.party-screen--playing .party-mini-player { margin-bottom:12px; }.party-screen--playing .party-end-attempt { margin-top:8px; }
+.party-screen--playing .party-decision { width:100%; max-width:1000px; padding:12px; }.party-screen--playing .party-mini-player { margin-bottom:12px; }
 .party-overlay .party-practice:has(.party-action-game) { width:min(980px,100%); padding:16px; }.party-practice .party-action-stage { height:min(54dvh,490px); min-height:330px; }.party-practice .party-practice-label { margin-bottom:12px; }
 @media(pointer:coarse) { .party-key-hint { display:none; } }
 @media(min-width:900px) { .party-world { height:min(58dvh,620px); }.party-camera-tools { padding:10px 14px; gap:16px; }.party-camera-presets { max-width:280px; }.party-camera-presets button { padding:5px 12px; font-size:.8rem; }.party-action-stage { height:min(65dvh,640px); }.party-action-heading h2 { font-size:1.7rem; }.party-action-heading p { font-size:.8rem; }.party-action-heading > span { width:57px; height:57px; font-size:.9rem; }.party-action-heading > strong { min-width:70px; }.party-action-heading > strong b { font-size:1.9rem; }.party-game-controls { padding:24px; }.party-joystick { width:118px; height:118px; }.party-joystick > i { left:30px; top:30px; }.party-action-buttons button { width:83px; height:86px; }.party-action-buttons .party-punch { width:75px; height:78px; }.party-action-feedback { top:18px; font-size:.85rem; }.party-screen--playing .party-decision { padding:20px 24px; }.party-practice .party-action-stage { height:min(56dvh,520px); } }
@@ -60,7 +60,7 @@
  .party-screen--playing .party-tilt-panel { flex-shrink:0; margin-top:6px; padding:4px 8px; }
  .party-screen--playing .party-tilt-panel > p { width:auto; flex:1; margin:0; text-align:left; }
  .party-screen--playing .party-tilt-panel .button { min-height:36px; }
- .party-screen--playing .party-end-attempt { flex-shrink:0; }
+ 
 }
 @media(prefers-reduced-motion:reduce) { .party-action-countdown b { animation:none; }.party-joystick > i { transition:none; } }
 
@@ -153,3 +153,11 @@ body:has(.party-action-game) { overflow:hidden; }
 /* In practice the goals take the row below the status; the feedback moves below them. */
 .party-practice .party-action-game .party-action-feedback { top:calc(var(--arena-top) + 176px); }
 .party-practice:has(.party-action-game) .party-practice-goals { position:fixed; z-index:31; top:calc(max(8px, env(safe-area-inset-top)) + 112px); left:max(8px, env(safe-area-inset-left)); right:max(8px, env(safe-area-inset-right)); margin:0; padding:6px 10px; border-radius:12px; background:#fff9e8e6; pointer-events:none; }
+.party-bonus-goals { margin-top:12px; }
+.party-bonus-goals h3 { margin:0 0 6px; font-size:.8rem; }
+.party-bonus-goals ul { list-style:none; margin:0; padding:0; display:grid; gap:6px; }
+.party-bonus-goals li { display:grid; grid-template-columns:auto 1fr auto; gap:8px; align-items:center; padding:7px 9px; border:1px solid #e6d2a0; border-radius:10px; background:#fff8e6; }
+.party-bonus-goals li.is-you { border-color:#b58a18; box-shadow:inset 0 0 0 1px #b58a18; }
+.party-bonus-goals li > span { color:#b58a18; font-size:1.1rem; }
+.party-bonus-goals strong { display:block; }
+.party-bonus-goals em { max-width:9.5em; font-style:normal; font-weight:800; font-size:.72rem; text-align:right; overflow-wrap:anywhere; }

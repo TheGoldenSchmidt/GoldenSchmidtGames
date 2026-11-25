@@ -154,7 +154,8 @@ export const lightTrails: MatchModule<TrailsGame> = {
   id: "trails",
   meta: {
     name: "Light Trails", seconds: 3 * (LT.roundMax + LT.pause) / 1000 + 5, players: [2, 3, 4, 5, 6], hz: 20,
-    instruction: "Dein Gleiter fährt von selbst und zieht eine tödliche Lichtspur. Du lenkst stufenlos: Der Stick zeigt, wohin du fahren willst, ⟲ und ⟳ (halten) lenken voll nach links oder rechts. Wand, eigene oder fremde Spur bedeuten das Aus. Ab Sekunde 14 schrumpft die Arena. Pro Durchgang gibt es +1 für jeden Gegner, der vor dir ausscheidet, und +3 als letzte Person im Spiel. Drei Durchgänge.",
+    instruction: "Dein Gleiter zieht eine Lichtspur. Weiche Wänden und Spuren aus und lass die anderen hineinfahren – wer am längsten fährt, punktet.",
+    rules: "Dein Gleiter fährt von selbst und zieht eine tödliche Lichtspur. Du lenkst stufenlos: Der Stick zeigt, wohin du fahren willst, ⟲ und ⟳ (halten) lenken voll nach links oder rechts. Wand, eigene oder fremde Spur bedeuten das Aus. Ab Sekunde 14 schrumpft die Arena. Pro Durchgang gibt es +1 für jeden Gegner, der vor dir ausscheidet, und +3 als letzte Person im Spiel. Drei Durchgänge.",
     controls: "Stick: Richtung · ⟲/⟳ halten: voll einlenken.",
     look: { icon: "⌁", action: "Überlebe im Neon-Feld", hint: "Stick lenkt · ⟲/⟳ halten", goal: "Am längsten überleben · 3 Durchgänge" }
   },

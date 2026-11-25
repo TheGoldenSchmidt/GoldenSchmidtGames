@@ -1,4 +1,4 @@
-import { fieldName, JAYSPOT, partyBoard } from "../../shared/partyBoard";
+import { fieldName, goalField, partyBoard } from "../../shared/partyBoard";
 import { mapObjective, objectiveHint } from "./RollItUp";
 import { preloadFigures } from "../figures/catalog";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -40,7 +40,7 @@ export function PartyBoard({game,now=Date.now(),rolling=false,onTravelChange,ros
   },[flat]);
   useEffect(()=>{setSelected(undefined);setDetail(current=>current==="field"?undefined:current);},[turn,game.dice.join()]);
   useEffect(()=>{onTravelChange?.(game.phase==="moving");},[game.phase,onTravelChange]);
-  const caption=<div className={`party-map-caption party-map-caption--${board[inspected].type}`} role="status"><strong>Feld {inspected}: {fieldName(game,inspected)}</strong><span>{objectiveHint(game,inspected)}{inspected!==JAYSPOT&&fieldHelp(game,board[inspected].type)}</span></div>;
+  const caption=<div className={`party-map-caption party-map-caption--${board[inspected].type}`} role="status"><strong>Feld {inspected}: {fieldName(game,inspected)}</strong><span>{objectiveHint(game,inspected)}{inspected!==goalField(game)&&fieldHelp(game,board[inspected].type)}</span></div>;
   return <section className={`party-board-wrap party-board-3d ${flat?"is-overview":""}`} aria-label={tray?"Bauschalenkarte":"Inselkarte"}>
     <div className="party-board-toolbar">
       <div className="party-map-objective">{mapObjective(game)}</div>

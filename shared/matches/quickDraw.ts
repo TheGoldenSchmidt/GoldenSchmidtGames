@@ -122,7 +122,8 @@ export const quickDraw: MatchModule<QuickDrawGame> = {
   id: "quickdraw",
   meta: {
     name: "Quick Draw", seconds: 120, players: [2, 3, 4, 5, 6], hz: 20,
-    instruction: "Warte auf das rote »ZIEH!« und tippe dann so schnell wie möglich. Wer vorher tippt, begeht einen Fehlstart. Achtung, Täuschungen: Krähen, Lampen, Schilder, ein Blitz, ein Schuss in der Ferne und rote Tafeln, die genauso aussehen wie das Signal, aber etwas anderes sagen (»NICHT ZIEHEN!«, »ZIEGE!« …). Nur »ZIEH!« gilt. Zu zweit: Wer zuerst 3 Duelle gewinnt, siegt. Ab drei Personen: 5 Durchgänge, die drei Schnellsten erhalten 3, 2 und 1 Punkt.",
+    instruction: "Warte auf das rote »ZIEH!« und tippe blitzschnell. Wer vorher tippt, begeht einen Fehlstart – Vorsicht vor Täuschungen!",
+    rules: "Warte auf das rote »ZIEH!« und tippe dann so schnell wie möglich. Wer vorher tippt, begeht einen Fehlstart. Achtung, Täuschungen: Krähen, Lampen, Schilder, ein Blitz, ein Schuss in der Ferne und rote Tafeln, die genauso aussehen wie das Signal, aber etwas anderes sagen (»NICHT ZIEHEN!«, »ZIEGE!« …). Nur »ZIEH!« gilt. Zu zweit: Wer zuerst 3 Duelle gewinnt, siegt. Ab drei Personen: 5 Durchgänge, die drei Schnellsten erhalten 3, 2 und 1 Punkt.",
     controls: "Tippe irgendwo auf die Straße, um zu ziehen.",
     look: { icon: "✶", action: "Zieh, sobald das Signal kommt", hint: "Tippe erst beim roten »ZIEH!«", goal: "Schnellster gültiger Schuss" }
   },

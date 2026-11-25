@@ -14,9 +14,10 @@ drei ersten Plätze; alle weiteren erhalten 0. Nichtteilnahme bleibt ohne
 Belohnung. Klassische Arenen lösen Gleichstände eindeutig auf; Match-Spiele können Plätze teilen (siehe unten). Die Anzeige
 und die tatsächliche Gutschrift verwenden dieselbe Wertungsfunktion.
 
-In Roll It Up! bleibt jedes Minispiel-Ergebnis einschließlich Auftakt stehen,
-bis alle aktiven menschlichen Teilnehmer es selbst bestätigt haben. Es gibt
-keinen automatischen Ablauf. Bots und pausierende Teilnehmer blockieren nicht;
+In Inselparty und Roll It Up! bleibt jedes Minispiel-Ergebnis einschließlich
+Auftakt und Duell stehen, bis alle aktiven menschlichen Teilnehmer es selbst
+bestätigt haben; die Anzeige nennt, auf wen noch gewartet wird. Es gibt keinen
+automatischen Ablauf. Bots und pausierende Teilnehmer blockieren nicht;
 Bestätigungen bleiben beim Wiederbeitritt erhalten.
 
 Der erste Sturz halbiert die bis dahin erzielten Minispielpunkte (abrunden).
@@ -32,24 +33,20 @@ Aktive Figuren können sich gegenseitig blockieren und in passenden Spielen
 anschubsen. Die Darstellungsgröße ist an den Körperradius angepasst, auch für
 breite Modelle. Ausgeschiedene und zurückkehrende Figuren blockieren nicht.
 
-## Neue Minispiele
+## Klassische Arenen
 
-| Vorbild | Eigene Variante | Vollständige Mechanik |
-| --- | --- | --- |
-| Booksquirm | Lückenwände | Sichere Öffnungen wechseln pro fallender Wand; 10 Punkte pro sicherer Wand. |
-| Hexagon Heat | Farbatoll | Angesagte Farbplattform erreichen; andere Plattformen sinken, Schubsen ist möglich. |
-| Slaparazzi | Fotogerangel | Wechselnder Fotoplatz; beim Auslösen erhalten die drei nächsten Figuren 10/4/2 Minispielpunkte. |
-| Bumper Balls | Kugelrempler | Physische Kugelkontakte, Abdrängen, Überlebenspunkte und Punkte für verursachte Stürze. |
-| Shy Guy Says | Kapitänskommando | Echte Kommandos befolgen; bei Täuschungen zählt das letzte gültige Zeichen. |
-| Sandwiched | Kistenregen | Angekündigte fallende Kisten, feste Stapel, Sprünge auf Oberflächen und Höhenpunkte. |
-| Tilt-a-Golf | Inselgolf | Neigung oder Stick, Öffnungen in Hindernissen, Flaggen, Zielloch und Zeitbonus. |
-| Dungeon Duos | Teamparcours | Gemeinsam zwei Plattenpaare gleichzeitig besetzen, Tore öffnen und Hürden bewältigen. |
+| Arena | Mechanik |
+| --- | --- |
+| Lückenwände | Sichere Öffnungen wechseln pro fallender Wand; 10 Punkte pro sicherer Wand. |
+| Farbatoll | Angesagte Farbplattform erreichen; andere Plattformen sinken, Schubsen ist möglich. |
+| Fotogerangel | Wechselnder Fotoplatz; beim Auslösen erhalten die drei nächsten Figuren 10/4/2 Minispielpunkte. |
+| Kugelrempler | Physische Kugelkontakte, Abdrängen, Überlebenspunkte und Punkte für verursachte Stürze. |
+| Kapitänskommando | Echte Kommandos befolgen; bei Täuschungen zählt das letzte gültige Zeichen. |
+| Kistenregen | Angekündigte fallende Kisten, feste Stapel, Sprünge auf Oberflächen und Höhenpunkte. |
+| Inselgolf | Neigung oder Stick, Öffnungen in Hindernissen, Flaggen, Zielloch und Zeitbonus. |
+| Teamparcours | Kooperativ für 2–6: zwei Plattenpaare gleichzeitig besetzen, Tore öffnen, Hürden bewältigen; in der Einzelübung nacheinander. |
 
-Der Teamparcours ist zunächst kooperativ für 2–6 Personen. Das ausdrücklich
-als später bezeichnete 2-gegen-2 bleibt eine nachfolgende Erweiterung. In der
-Einzelübung lassen sich die beiden Platten nacheinander auslösen. Bots spielen
-alle 14 Arenen über dieselben Eingaben wie Menschen. Alle neuen Spiele sind
-in normaler Rotation, im Solo-Testraum und als kurze Übung verfügbar.
+Bots spielen alle 14 Arenen über dieselben Eingaben wie Menschen.
 
 ## Brett und Ankunft
 
@@ -75,8 +72,8 @@ Handy live zu. Die alleinige Erstplatzierte erhält den ganzen Pott (doppelter
 Einsatz); bei Gleichstand oder ohne gewertete Teilnahme bekommen beide ihren
 Einsatz zurück. Duelle vergeben keine 10/4/2-Münzen und zählen nicht als
 Minispielsieg; das Schutzschild wirkt nicht gegen den eigenen Einsatz. Ohne
-eigene Münzen oder ohne möglichen Gegner wirkt das Feld nicht. Läuft die
-Online-Frist ab oder pausiert die herausfordernde Person, entfällt das Duell.
+eigene Münzen oder ohne möglichen Gegner wirkt das Feld nicht. Pausiert die
+herausfordernde Person, entfällt das Duell.
 Nach dem Ergebnis geht der Zug mit der Zusammenfassung weiter. Bots fordern
 die reichste Person mit bis zu 5 Münzen heraus. Roll It Up! behält an diesen
 Stellen schlichte Felder. In Testpartien mit Bots setzt das Testwerkzeug
@@ -84,10 +81,12 @@ Stellen schlichte Felder. In Testpartien mit Bots setzt das Testwerkzeug
 
 ## Trophäenstand, letzte Runden und Bonus-Trophäen
 
-Der Trophäenstand beginnt an Shop 6. Nach jedem Kauf zieht er zufällig zu einem
-der beiden anderen Shops (6, 15, 24); er bleibt nie am selben Shop. Den Zufall
-zieht die Raumautorität aus dem Zufallsstand der Partie, die Chronik nennt das
-neue Feld. Ohne Kauf bleibt er stehen.
+Eine Trophäe kostet 15 Münzen; bei einem Besuch des Trophäenstands lassen sich
+bis zu zwei auf einmal kaufen. Der Stand beginnt an Shop 6. Nach jedem Kauf
+zieht er zufällig zu einem der beiden anderen Shops (6, 15, 24); er bleibt nie
+am selben Shop. Den Zufall zieht die Raumautorität aus dem Zufallsstand der
+Partie, die Chronik nennt das neue Feld. Ohne Kauf bleibt er stehen. Wer mit
+dem Reisekompass direkt zum Trophäenstand reist, kann vor dem Wurf kaufen.
 
 Die letzten drei Runden sind Schlussrunden (bei 5 Runden also die Runden 3 bis
 5). Plus- und Minusfelder wirken dort doppelt (+6 bzw. bis zu −6 Münzen); der
@@ -98,14 +97,21 @@ bekommen sie stattdessen dessen Preis in Münzen. Bis zum ersten Wurf dieser Run
 zeigen alle Geräte die Ansage; danach markiert „Schlussrunde“ die Rundenanzeige.
 Roll It Up! und die eigenständigen Minispielmodi haben keine Schlussrunden.
 
-Nach dem letzten Minispiel vergibt die Siegerehrung drei Bonus-Trophäen, bevor
-der Sieg feststeht. Jede zählt wie eine gekaufte Trophäe:
+Jede Partie kündigt zu Beginn zwei Bonus-Trophäen an: immer das Minispiel-Ass
+und eine weitere, die aus dem Startwert gezogen wird. Das Ziel-Panel zeigt beide
+mit dem aktuellen Spitzenreiter. Nach dem letzten Minispiel vergibt die
+Siegerehrung sie, bevor der Sieg feststeht; jede zählt wie eine gekaufte
+Trophäe. Räume aus älteren Versionen vergeben weiter Minispiel-Ass, Weltenbummler
+und Pechvogel.
 
 | Bonus-Trophäe | Bedingung |
 | --- | --- |
 | Minispiel-Ass | meiste Minispielsiege (ohne Auftakt) |
 | Weltenbummler | meiste gelaufene Felder (Reisekompass zählt nicht) |
 | Pechvogel | meiste verlorene Münzen durch Minusfelder, Reparatur und Münzangel |
+| Duellkönig | meiste gewonnene Duelle |
+| Marktkönig | meiste im Inselmarkt ausgegebene Münzen |
+| Glückspilz | meiste Münzen von Plusfeldern und Strandfund |
 
 Bei Gleichstand erhalten alle Gleichplatzierten die Bonus-Trophäe; bei einem
 Höchstwert von 0 wird sie nicht vergeben. Die Bonus-Trophäen erscheinen
@@ -151,14 +157,15 @@ im vollständigen Raumzustand gespeichert; andere Geräte erhalten vor der
 Aufdeckung nur die Information, wer bereits gesetzt hat. Die bestehenden
 Pausen-, Wiederbeitritts- und Raumschließungsregeln gelten auch hier.
 
-## Match-Minispiele und 1st Generation Minigames
+## Match-Minispiele und klassische Minispiele
 
-Die 14 ersten Arenen sowie Hook Wars, Chaos Run und Wippenwerk bilden die **1st Generation
-Minigames** (`FIRST_GEN_MINI_IDS`). Inselparty, Roll It Up! und Schlag den
-GoldenSchmidt speichern dafür die Option `classic` (Standard: an). Ohne sie
-ziehen die Modi nur neue Match-Minispiele, die zur Zahl der
-aktiven Spieler passen. Die Lobby lehnt Einstellungen ab, für die es kein
-passendes Spiel gibt oder deren Rundenzahl die Auswahl übersteigt.
+Die 14 Arenen sowie Hook Wars, Chaos Run und Wippenwerk bilden die **klassischen
+Minispiele** (erste Generation, `FIRST_GEN_MINI_IDS`). Inselparty, Roll It Up! und
+Schlag den GoldenSchmidt speichern dafür die Option `classic` (Standard: an). Ohne
+sie ziehen die Modi nur neue Match-Minispiele, die zur Zahl der aktiven Spieler
+passen. Gezogen wird nach Spielfamilien, sodass sich Genres abwechseln
+([Auswahl](minigames/konzept.md#auswahl)). Die Lobby lehnt Einstellungen ab, für
+die es kein passendes Spiel gibt oder deren Rundenzahl die Auswahl übersteigt.
 
 Match-Minispiele ermitteln ihre Platzierung selbst, einschließlich eigener
 Stechregeln. Bleibt danach ein Gleichstand, teilen sich die Spieler den Platz
@@ -170,9 +177,9 @@ das Match. Details: [Konzept](minigames/konzept.md).
 
 ## Grundregeln der Brettspiele
 
-**Inselparty:** 2–6 Personen, 5–15 Runden (Standard 8), Startkapital 10 Münzen. Trophäe kostet 20; Sieg nach Trophäen, Münzen, Minispielsiegen. Hafenüberquerung gibt 3 Münzen, normale Felder wirken beim Landen. Inventar: drei Items, ein Einsatz vor dem Würfeln. Auftakt/Rundenminispiele wie oben.
+**Inselparty:** 2–6 Personen, 5–15 Runden (Standard 8, auch für Testpartien mit Bots), Startkapital 10 Münzen. Trophäe kostet 15; Sieg nach Trophäen, Münzen, Minispielsiegen. Hafenüberquerung gibt 3 Münzen, normale Felder wirken beim Landen. Inventar: drei Items, ein Einsatz vor dem Würfeln. Auftakt/Rundenminispiele wie oben.
 
-**Roll It Up!:** 2–6 Personen, kein Rundenlimit. Bauschale mit sechs Kaufstellen im Abstand von fünf Feldern: Grinder 8 Münzen, Pape/Filter je 3, drei Weedbuds je 5. Jede Figur kauft jede Station einmal für ihr Set; Zug-Items bleiben getrennt mit drei Inventarplätzen. Mit vollem Set führen Hügelwege ab Feld 31/33 zum Jayspot auf Feld 34. Erste Ankunft gewinnt sofort, auch mit restlichen Würfelschritten. Auftakt bestimmt Reihenfolge, gemeinsame Minispiele liefern Münzen.
+**Roll It Up!:** 2–6 Personen, kein Rundenlimit, Brett nach Wahl des Hosts. **Bauschale:** ein Rundweg mit zwei Hügelpfaden und sechs Kaufstellen im Abstand von fünf Feldern. **Grinder:** äußerer Ring im Uhrzeigersinn, innerer Ring gegen den Uhrzeigersinn, je vier Speichen nach innen und außen, zwei Wege zur Lounge in der Mitte; drei Kaufstellen außen, drei innen. Wer auf einer Rohrpost (⇄) landet, saust zum Partnerfeld auf der anderen Seite. Kaufstellen auf beiden Brettern: Grinder 8 Münzen, Pape/Filter je 3, drei Weedbuds je 5. Jede Figur kauft jede Station einmal für ihr Set; Zug-Items bleiben getrennt mit drei Inventarplätzen. Mit vollem Set führen Hügelwege ab Feld 31/33 zum Jayspot auf Feld 34. Erste Ankunft gewinnt sofort, auch mit restlichen Würfelschritten. Auftakt bestimmt Reihenfolge, gemeinsame Minispiele liefern Münzen.
 
 ## Prüfungen
 

@@ -41,7 +41,7 @@ test("Bauschale: Kaufbestätigung und Wegvorschau folgen dem tatsächlichen Zug"
       const g=(await session.state()).partyGame!,p=activePartyPlayer(g);
       if(g.phase==="moving"){await page.waitForTimeout(150);continue;}
       if(p.id===viewer&&g.phase==="supply"&&!purchased){
-        const station=stationAt(p.position)!;
+        const station=stationAt(g,p.position)!;
         await expect(page.locator(".roll-purchase")).toContainText(`${station.price} Münzen`);
         await expect(page.locator(".roll-purchase")).not.toContainText("Danach");
         await expect(page.locator(".roll-set")).toContainText(`${p.supplies?.length??0} / 6`);
@@ -103,9 +103,10 @@ for(const motion of ["no-preference","reduce"] as const)test(`Bauschale: ruhende
 test("Ergebnisse bleiben bis zur Bestätigung aller Teilnehmer sichtbar",async({page})=>{
  const session=await onlineSession(page,false,undefined,false,"roll-it-up");
  try{
+  await expect.poll(async()=>(await session.state()).partyGame!.phase).toBe("mini-intro");
   for(const id of session.ids)await session.action({type:"ready"},id);
   for(const id of session.ids)if((await session.state()).partyGame!.phase==="mini-play")await session.action({type:"finish"},id);
-  await page.getByRole("button",{name:"Ergebnis bestätigen",exact:true}).tap();
+  await page.getByRole("button",{name:"Weiter zur Bauschale",exact:true}).tap();
   await expect(page.getByRole("button",{name:"Bestätigt",exact:true})).toBeDisabled();
   expect((await session.state()).partyGame!.phase).toBe("mini-result");
   await page.reload();

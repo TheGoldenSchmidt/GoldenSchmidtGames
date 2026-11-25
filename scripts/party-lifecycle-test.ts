@@ -16,7 +16,7 @@ try{
  const members:Record<string,Socket>={host,guest:returned},tokens:Record<string,string>={host:token,guest:guestToken};
  const act=async(id:string,type:string)=>{const current=await request(host,"qwixx:state");return request(members[id],"party:action",{token:tokens[id],phaseId:current.partyGame!.phaseId,seq:(current.partyGame!.seq[id]??0)+1,action:{type}});};
  await act("host","ready");await act("guest","ready");room=await act("host","finish");if(room.partyGame!.phase==="mini-play")room=await act("guest","finish"); // Match games end once only one player remains.
- room=await act(room.partyGame!.order[0],"next");room=await act(room.partyGame!.order[0],"roll");const oldArrival=room.partyGame!.movement!.arriveAt;
+ room=await act("host","next");room=await act("guest","next");room=await act(room.partyGame!.order[0],"roll");const oldArrival=room.partyGame!.movement!.arriveAt;
  returned.disconnect();await new Promise(r=>setTimeout(r,1200));const activeGuest=await connect();room=await request(activeGuest,"room:join",{code,playerId:"guest",partyToken:guestToken});assert.ok(room.partyGame!.movement!.arriveAt>=oldArrival+1100,"Rejoin shifts the pending arrival by the connection pause");assert.equal(room.partyGame!.players.every(p=>p.position===0),true,"Pause cannot trigger the destination early");
  await assert.rejects(request(activeGuest,"party:action",{token:guestToken,phaseId:room.partyGame!.phaseId,seq:(room.partyGame!.seq.guest??0)+1,action:{type:"abort"}}));
  await assert.rejects(request(host,"room:close"),/läuft noch/);await assert.rejects(request(activeGuest,"room:leave"),/läuft noch/,"Während der Partie bleibt der Platz für die Rückkehr reserviert");

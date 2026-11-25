@@ -42,7 +42,7 @@ assert.throws(()=>applyPartyControl(game,"practice",NEUTRAL_INPUT,1,start-1));as
 game=applyPartyControl(game,"practice",{...NEUTRAL_INPUT,x:1},1,start+100);game=tickParty(game,start+300);assert.ok(game.mini!.runs.practice.lastInput>0);assert.ok(game.mini!.arena!.actors[0].x>0);
 game.pausedAt=start+300;const paused=structuredClone(game.mini!.arena);game=tickParty(game,start+5000);assert.deepEqual(game.mini!.arena,paused);assert.throws(()=>applyPartyControl(game,"practice",NEUTRAL_INPUT,2,start+5000));
 game.pausedAt=0;game=tickParty(game,game.deadline+1);assert.equal(game.phase,"mini-result");assert.equal(publicParty(game,"practice").rng,0);
-const online=createPartyGame([{id:"a",name:"A"},{id:"b",name:"B"}],{analog:true},true,4,100000);assert.equal(online.options.analog,false);
+const online=createPartyGame([{id:"a",name:"A"},{id:"b",name:"B"}],{analog:true} as never,true,4,100000);assert.equal("analog" in online.options,false);
 // Neutral calibration and correct landscape-axis mapping.
 assert.deepEqual(tiltAxes({beta:35,gamma:4},{beta:35,gamma:4},0),{x:0,z:0});
 assert.deepEqual(tiltAxes({beta:35,gamma:22},{beta:35,gamma:4},0),{x:1,z:0});

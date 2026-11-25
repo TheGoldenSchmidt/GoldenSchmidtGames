@@ -14,11 +14,13 @@ test("Roll It Up! (Unity): nur für Admin/Entwicklung, Unity-Brett lädt und nim
   await page.goto("/");
   await page.getByRole("button", { name: /Lokal spielen/ }).tap();
   await expect(page.getByRole("button", { name: /^Inselparty/ })).toBeVisible();
+  await page.getByRole("button", { name: /^Unity-Minispiele/ }).tap();
   await expect(page.getByRole("button", { name: /^Roll It Up! \(Unity\)/ })).toHaveCount(0);
 
   await loginTestOwner(page.request);
   await page.goto("/");
   await page.getByRole("button", { name: /Lokal spielen/ }).tap();
+  await page.getByRole("button", { name: /^Unity-Minispiele/ }).tap();
   await page.getByRole("button", { name: /^Roll It Up! \(Unity\)/ }).tap();
   await page.getByLabel("Deine Spielfigur").selectOption({ label: "Jonas" });
   await page.getByLabel("Bot-Mitspieler").selectOption("3");
@@ -36,7 +38,7 @@ test("Roll It Up! (Unity): nur für Admin/Entwicklung, Unity-Brett lädt und nim
   await expect(page.locator(".match-countdown, .party-action-countdown")).toHaveCount(0, { timeout: 10000 });
   await attempt.tap();
   await page.getByRole("button", { name: /^(Jetzt aufgeben|Versuch beenden)$/ }).tap();
-  const confirm = page.getByRole("button", { name: "Ergebnis bestätigen", exact: true });
+  const confirm = page.getByRole("button", { name: "Weiter zur Bauschale", exact: true });
   await expect(confirm).toBeVisible({ timeout: 70000 });
   await confirm.tap();
   await expect(board).toHaveAttribute("data-ready", "true", { timeout: 150000 });

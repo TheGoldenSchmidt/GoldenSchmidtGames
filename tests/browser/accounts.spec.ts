@@ -38,6 +38,7 @@ test("Einladung, Login, Einstellungen auf zwei Handys und Rechteentzug", async (
     await phone.screenshot({ path: info.outputPath("konto-320.png") });
     await phone.getByRole("button", { name: "Profil schließen" }).tap();
     await phone.getByRole("button", { name: /Lokal spielen/ }).tap();
+    await phone.getByRole("button", { name: /^Unity-Minispiele/ }).tap();
     await expect(phone.getByRole("button", { name: /Proberaum Eine Insel/ })).toBeVisible();
 
     const secondPhone = await otherContext.newPage();
@@ -60,7 +61,9 @@ test("Einladung, Login, Einstellungen auf zwei Handys und Rechteentzug", async (
     await secondPhone.reload();
     await expect(secondPhone.getByRole("button", { name: /^Konto:/ })).toBeVisible();
     await secondPhone.getByRole("button", { name: /Lokal spielen/ }).tap();
+    await secondPhone.getByRole("button", { name: /^Unity-Minispiele/ }).tap();
     await expect(secondPhone.getByRole("button", { name: /Proberaum Eine Insel/ })).toHaveCount(0);
+    await secondPhone.getByRole("button", { name: "Zurück", exact: true }).tap();
     await secondPhone.getByRole("button", { name: "Zurück", exact: true }).tap();
     await secondPhone.getByRole("button", { name: /^Konto:/ }).tap();
     await secondPhone.getByRole("button", { name: "Abmelden" }).tap();

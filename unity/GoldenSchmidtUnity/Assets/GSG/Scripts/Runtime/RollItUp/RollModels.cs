@@ -13,7 +13,8 @@ namespace GSG.RollItUp
         public int id; public float x, z; public string type; public int[] next; public string station, name, help; public int price;
     }
 
-    [Serializable] public class RollBoardMessage { public string type; public RollField[] fields; }
+    /// <summary>`board` picks the scenery (bauschale, grinder); `tunnels` lists each pneumatic tube once as a flat pair.</summary>
+    [Serializable] public class RollBoardMessage { public string type, board, name; public int[] tunnels; public RollField[] fields; }
 
     [Serializable]
     public class RollPlayer

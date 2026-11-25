@@ -89,7 +89,7 @@ for (const mode of ["party", "roll-it-up"] as const) {
         const inspect = page.getByRole("button", { name: field, exact: true });
         await activate(inspect);
         await expect(inspect).toHaveAttribute("aria-pressed", "true");
-        await expect(browser.locator(".party-map-caption")).toContainText(mode === "party" ? "Trophäenstand: 20 Münzen" : "Grinder beim Passieren für 8 Münzen");
+        await expect(browser.locator(".party-map-caption")).toContainText(mode === "party" ? "Trophäenstand: 15 Münzen" : "Grinder beim Passieren für 8 Münzen");
         await expect.poll(async () => distance(start, await camera(world))).toBeLessThan(.15);
         await browser.getByRole("button", { name: "Felder und Figuren schließen", exact: true }).click();
         await expect.poll(async () => distance(start, await camera(world))).toBeLessThan(.15);

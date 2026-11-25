@@ -24,7 +24,7 @@ Rücknahme: voriges Deployment im Render-Dashboard wiederherstellen oder einen `
 
 1. Die aktuelle PWA auf **jedem Gerät** über HTTPS vollständig laden, möglichst installieren. Spielmodule, Worker und QR-Leser werden offline gespeichert.
 2. Host: **Dieses Handy → Gerät verbinden**. Gast: **Raum beitreten → QR vom Handy-Host**. Gast scannt Einladung, Host scannt Antwort; mehrteilige Codes vollständig übertragen. Textcodes ersetzen die Kamera.
-3. Host-Handy entsperrt in der App lassen. Im Hintergrund pausiert die Simulation. Nach vollständigem Neustart stellt dasselbe Gerät den Tisch wieder her; Gäste koppeln sich bei verlorener Verbindung erneut.
+3. Host-Handy in der App lassen; die App hält den Bildschirm in Lobby und Spiel wach (Wake Lock, falls der Browser es erlaubt). Im Hintergrund pausiert die Simulation. Nach vollständigem Neustart stellt dasselbe Gerät den Tisch wieder her; Gäste koppeln sich bei verlorener Verbindung erneut.
 
 Kein Spielserver, Turso oder externer ICE-Server nötig. WebRTC braucht gegenseitige Erreichbarkeit im WLAN/Hotspot; Geräteisolation kann Verbindungen verhindern. Kamera benötigt ausdrückliche Freigabe. Für haltbare Spielstände keinen privaten Modus verwenden oder Browserdaten löschen. Kein automatischer Host-Gerätewechsel; Speicherfehler unterbrechen vor Bestätigung eines ungespeicherten Zugs.
 
@@ -109,7 +109,7 @@ Im selben WLAN geht es auch lokal: Aufgabenbranch auschecken, `npm ci`, `npm run
 
 ## Einrichtung durch den Betreiber
 
-Stand 19. November 2026: GitHub meldet das Repository als **öffentlich**, `main` ungeschützt und automatisches Branch-Löschen aus. Die App ist weiterhin für eine private Freundesrunde gedacht.
+Zuletzt geprüft am 24. November 2026: GitHub meldet das Repository als **öffentlich** und automatisches Branch-Löschen als aus (30 Remote-Branches). Die App ist für eine private Freundesrunde gedacht; ein privates Repository würde auch die erkennbaren Fremdfiguren und internen Hinweise aus der Öffentlichkeit nehmen (Actions-Minuten zählen dann gegen das Freikontingent, bei ≈3 min je CI-Lauf unkritisch).
 
 Rich (`rreicherter`) hat Schreibzugriff auf das Repository (geprüft am 20. November 2026).
 

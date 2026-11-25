@@ -58,7 +58,8 @@ export const tankView: MatchModule<TankGame> = {
   meta: {
     ...tankTrouble.meta,
     name: "Tank Trouble – Turmsicht",
-    instruction: "Tank Trouble aus der Sicht deines Panzers: Die Kamera fährt hinter dir her. Dein Panzer leuchtet den Bereich aus, den er bis 6 Meter ohne Mauer dazwischen sieht. Gegner und Kugeln erscheinen nur im hellen Bereich; wer daraus verschwindet, hinterlässt kurz eine Markierung „zuletzt gesehen“. Stick nach oben fährt dorthin, wohin die Kamera schaut. Ziehe rechts zum Zielen und lass los, um zu schießen. Kugeln prallen zweimal von festen Mauern ab, Ziegelmauern gehen nach zwei Treffern kaputt. Jeder Panzer hat 3 Treffer. Wer zuerst 7 Abschüsse hat oder nach 90 Sekunden die meisten, gewinnt.",
+    instruction: "Tank Trouble aus der Panzerluke: Du siehst nur, was dein Scheinwerfer erfasst. Die meisten Abschüsse gewinnen (höchstens 7).",
+    rules: "Tank Trouble aus der Sicht deines Panzers: Die Kamera fährt hinter dir her. Dein Panzer leuchtet den Bereich aus, den er bis 6 Meter ohne Mauer dazwischen sieht. Gegner und Kugeln erscheinen nur im hellen Bereich; wer daraus verschwindet, hinterlässt kurz eine Markierung „zuletzt gesehen“. Stick nach oben fährt dorthin, wohin die Kamera schaut. Ziehe rechts zum Zielen und lass los, um zu schießen. Kugeln prallen zweimal von festen Mauern ab, Ziegelmauern gehen nach zwei Treffern kaputt. Jeder Panzer hat 3 Treffer. Wer zuerst 7 Abschüsse hat oder nach 90 Sekunden die meisten, gewinnt.",
     controls: "Links fahren (Kamera-Richtung) · rechts ziehen, loslassen zum Schießen.",
     look: { icon: "◉", action: "Jagd im Labyrinth – ohne Überblick", hint: "Stick fahren · rechts zielen und loslassen", goal: "7 Abschüsse oder die meisten nach 90 s" }
   },

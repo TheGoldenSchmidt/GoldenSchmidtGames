@@ -19,7 +19,8 @@ async function playUntil(session: Session, done: (game: PartyGame) => boolean) {
     else if (game.phase === "shop") await session.action({ type: "shop" });
     else if (game.phase === "gift") await session.action({ type: "gift", accept: false });
     else if (game.phase === "duel") await session.action({ type: "duel" });
-    else if (game.phase === "summary" || game.phase === "mini-result") await session.action({ type: "next" });
+    else if (game.phase === "summary") await session.action({ type: "next" });
+    else if (game.phase === "mini-result") { for (const id of session.ids) if ((await session.state()).partyGame!.phase === "mini-result") await session.action({ type: "next" }, id); }
     else if (game.phase === "mini-intro") { for (const id of session.ids) if (!game.mini!.runs[id].ready) await session.action({ type: "ready" }, id); }
     else if (game.phase === "mini-play") {
       await pause(Math.max(0, game.mini!.startAt - game.serverTime!) + 100);
@@ -71,7 +72,9 @@ for (const reducedMotion of ["no-preference", "reduce"] as const) {
       await expect(page.locator(".party-final-call")).toHaveCount(0);
 
       game = await playUntil(session, g => g.phase === "finished");
-      expect(game.bonus).toHaveLength(3);
+      // Minispiel-Ass plus one bonus trophy drawn from the seed.
+      expect(game.bonus!.map(b => b.id)).toEqual(game.bonusPicks);
+      expect(game.bonus).toHaveLength(2);
       for (const device of [page, guest]) await expect(device.getByRole("heading", { name: "Bonus-Trophäen" })).toBeVisible();
       if (reducedMotion === "no-preference") {
         await page.waitForTimeout(1300);
@@ -85,7 +88,7 @@ for (const reducedMotion of ["no-preference", "reduce"] as const) {
       const verdict = (id: string) => game.winners.includes(id) ? (game.winners.length > 1 ? "Ihr teilt euch den Sieg!" : "Du gewinnst die Inselparty!") : (game.winners.length > 1 ? "teilen sich den Sieg!" : "gewinnt die Inselparty!");
       await expect(page.locator(".party-finale-winner p")).toHaveText(verdict(viewer));
       await expect(guest.locator(".party-finale-winner p")).toHaveText(verdict(other));
-      await expect(page.locator(".party-bonus li")).toHaveCount(3);
+      await expect(page.locator(".party-bonus li")).toHaveCount(game.bonus!.length);
       await expect(page.locator(".party-round-final")).toHaveCount(0);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       await page.screenshot({ path: testInfo.outputPath(`finale-${reducedMotion}.png`), fullPage: true });

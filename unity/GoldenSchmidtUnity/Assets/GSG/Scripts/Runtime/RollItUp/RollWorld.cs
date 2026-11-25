@@ -6,10 +6,12 @@ using static GSG.Kit;
 namespace GSG.RollItUp
 {
     /// <summary>
-    /// The Bauschale as a Unity scene: enamel tray with brass rim, clay floor, grass hill with the
-    /// Jayspot bench, the 35 fields with their type colours and symbols, and the six purchase
-    /// stations (Grinder, Weedbud I–III, Pape, Filter). Measures follow src/three/rollingTray.ts
-    /// (board units × 0.27, the same hill height function), so both boards show the same map.
+    /// The Roll It Up! boards as a Unity scene. Bauschale: enamel tray with brass rim, clay floor,
+    /// grass hill with the Jayspot bench. Grinder: steel disc with knurled rim, grinding teeth,
+    /// orange pneumatic tubes and a lounge on the mossy hill. Both carry the fields with their type
+    /// colours and symbols and the six purchase stations (Grinder, Weedbud I–III, Pape, Filter).
+    /// Measures follow src/three/rollingTray.ts (board units × 0.27, the same hill height function),
+    /// so web and Unity show the same map.
     /// </summary>
     public class RollWorld
     {
@@ -18,15 +20,18 @@ namespace GSG.RollItUp
         // Colours of the web board (src/three/rollingTray.ts, src/lib/partyFieldVisuals.ts).
         public static readonly Color Enamel = Palette.Hex("#23685e"), EnamelDeep = Palette.Hex("#194d49"), Brass = Palette.Hex("#dfab61"), Clay = Palette.Hex("#ce8057");
         public static readonly Color Grass = Palette.Hex("#6fbf35"), Moss = Palette.Hex("#7eaa43"), Pebble = Palette.Hex("#b1ad84"), Sand = Palette.Hex("#e5cb97");
+        // The Grinder (grinderScenery in rollingTray.ts).
+        public static readonly Color Steel = Palette.Hex("#8d97a6"), DarkSteel = Palette.Hex("#3b4352"), GrinderMoss = Palette.Hex("#8fae4b"), Tube = Palette.Hex("#e58a3a"), Plate = Palette.Hex("#6f7b8c");
 
         public static Color FieldColor(string type) => type switch
         {
             "start" => Palette.Hex("#fff0ad"), "coin" => Palette.Hex("#326fc7"), "bad" => Palette.Hex("#c33d4c"), "event" => Palette.Hex("#65c783"),
             "gift" => Palette.Hex("#ffd258"), "shop" => Palette.Hex("#a6dff5"), "duel" => Palette.Hex("#6a3fb8"), "station" => Brass, "jayspot" => Palette.Hex("#ffd777"),
+            "tunnel" => Tube,
             _ => Palette.Hex("#f5e9bc")
         };
 
-        public static Color FieldInk(string type) => type is "coin" or "bad" or "duel" ? Palette.Hex("#fff9e8") : Palette.Hex("#10485b");
+        public static Color FieldInk(string type) => type is "coin" or "bad" or "duel" ? Palette.Hex("#fff9e8") : type == "tunnel" ? Palette.Hex("#2a1606") : Palette.Hex("#10485b");
 
         public static float Height(float x, float z) => 0.44f + 3.15f * Mathf.Pow(Mathf.Max(0f, 1f - (x * x + z * z) / 25f), 0.65f);
 
@@ -46,6 +51,8 @@ namespace GSG.RollItUp
         public readonly Dictionary<Collider, int> fieldColliders = new();
         public Vector3[] spots;
         public Transform[] stationProps;
+        /// <summary>The Grinder instead of the Bauschale (set by <see cref="Build"/>).</summary>
+        public bool Grinder { get; private set; }
         readonly List<Transform> routeRings = new();
         Transform objective, selection;
         Material routeMat, routeSoft;
@@ -81,12 +88,33 @@ namespace GSG.RollItUp
 
         // ---- scenery -----------------------------------------------------------------------
 
-        public void Build(RollField[] fields)
+        public void Build(RollField[] fields, string board = "bauschale", int[] tunnels = null)
         {
+            Grinder = board == "grinder";
+            root.name = Grinder ? "Grinder" : "Bauschale";
             var scenery = new GameObject("Kulisse").transform;
             scenery.SetParent(root, false);
-            // A deep table cloth under the tray, so the Bauschale does not float in the sky.
+            // A deep table cloth under the board, so it does not float in the sky.
             Cyl(scenery, Palette.Hex("#2f2c74"), new Vector3(0f, -0.82f, 0f), 70f, 0.2f, 0f);
+            spots = new Vector3[fields.Length];
+            foreach (var f in fields) spots[f.id] = Spot(f);
+            var ico = Ico();
+            var cone = Cone();
+            if (Grinder) GrinderScenery(scenery, fields, tunnels ?? new int[0]);
+            else BowlScenery(scenery, ico, cone);
+
+            stationProps = new Transform[fields.Length];
+            var fieldRoot = new GameObject("Felder").transform;
+            fieldRoot.SetParent(scenery, false);
+            foreach (var f in fields) Field(f, fieldRoot);
+            foreach (var f in fields) if (f.type == "station") stationProps[f.id] = Station(scenery, f, ico);
+
+            StaticBatchingUtility.Combine(scenery.gameObject);
+            Highlights(cone);
+        }
+
+        void BowlScenery(Transform scenery, Mesh ico, Mesh cone)
+        {
             Cyl(scenery, EnamelDeep, new Vector3(0f, -0.25f, 0f), 12.7f, 0.8f, 0f);
             Cyl(scenery, Clay, new Vector3(0f, 0.18f, 0f), 12.3f, 0.48f, 0.8f);
             var profile = new[] { new Vector2(12.1f, 0.39f), new Vector2(12.4f, 0.52f), new Vector2(12.75f, 1.1f), new Vector2(13.07f, 1.22f), new Vector2(13.22f, 1.08f), new Vector2(13.08f, 0.7f), new Vector2(12.8f, -0.65f), new Vector2(12.4f, -0.78f) };
@@ -101,14 +129,12 @@ namespace GSG.RollItUp
             }
 
             Part(scenery, "Hügel", Hill(), Toon(Grass, 1.1f, 0.15f), Vector3.zero);
-            var ico = Ico();
             for (int i = 0; i < 32; i++)
             {
                 float a = i * Mathf.PI / 16f;
                 var s = Part(scenery, "Stein", ico, Toon(i % 2 == 0 ? Pebble : Palette.Hex("#a7a780"), 0.9f), new Vector3(Mathf.Cos(a) * 4.9f, 0.58f, Mathf.Sin(a) * 4.9f), new Vector3(0.35f, 0.3f, 0.4f));
                 s.transform.localRotation = Quaternion.Euler(0f, -a * Mathf.Rad2Deg, 0f);
             }
-            var cone = Cone();
             void Tree(float x, float z, float size)
             {
                 float y = Height(x, z);
@@ -123,9 +149,6 @@ namespace GSG.RollItUp
             foreach (var (x, z, s) in new[] { (-3.1f, 2.8f, 0.85f), (-4.1f, 1.8f, 0.6f), (2.5f, 3.8f, 0.8f), (4f, 3.1f, 0.5f), (-6f, 4f, 0.65f), (-7f, 3f, 0.4f), (6f, 4f, 0.5f), (-2f, 7f, 0.4f), (2f, -7f, 0.35f) })
                 Tree(x, z, s);
 
-            spots = new Vector3[fields.Length];
-            foreach (var f in fields) spots[f.id] = Spot(f);
-
             // Scattered pebbles and moss between the fields.
             for (int i = 0; i < 45; i++)
             {
@@ -137,14 +160,10 @@ namespace GSG.RollItUp
             }
 
             Bench(scenery);
-            stationProps = new Transform[fields.Length];
-            var fieldRoot = new GameObject("Felder").transform;
-            fieldRoot.SetParent(scenery, false);
-            foreach (var f in fields) Field(f, fieldRoot);
-            foreach (var f in fields) if (f.type == "station") stationProps[f.id] = Station(scenery, f, ico);
+        }
 
-            StaticBatchingUtility.Combine(scenery.gameObject);
-
+        void Highlights(Mesh cone)
+        {
             routeMat = Toon(Palette.Accent, 0f, 0f, Palette.Accent * 1.6f);
             routeSoft = Toon(Palette.Paper, 0f, 0f, Palette.Paper * 0.5f);
             var ring = Torus(FieldRadius + 0.08f, 0.07f, 40, 6);
@@ -184,6 +203,105 @@ namespace GSG.RollItUp
                 var lamp = Box(parent, Palette.Gold, new Vector3(x, y + 1.26f, 0f), new Vector3(0.24f, 0.3f, 0.37f), 0f);
                 lamp.GetComponent<Renderer>().sharedMaterial = Toon(Palette.Gold, 0f, 0f, Palette.Gold * 1.4f);
             }
+        }
+
+        /// <summary>
+        /// The Grinder seen from above: steel body with knurled rim, mossy hill in the middle (same
+        /// height profile, so paths and figures sit on it), grinding teeth in two rings left out where
+        /// fields run, raised orange tubes between the paired tunnel fields and the lounge on top.
+        /// </summary>
+        void GrinderScenery(Transform scenery, RollField[] fields, int[] tunnels)
+        {
+            // A cool steel evening instead of the violet Bauschale sky (only the colours change).
+            if (RenderSettings.skybox && RenderSettings.skybox.HasProperty("_Top"))
+            {
+                var sky = new Material(RenderSettings.skybox) { name = "Grinder-Himmel" };
+                sky.SetColor("_Top", Palette.Hex("#26304d")); sky.SetColor("_Horizon", Palette.Hex("#c9b6e8"));
+                if (sky.HasProperty("_Bottom")) sky.SetColor("_Bottom", Palette.Hex("#5f7fb8"));
+                RenderSettings.skybox = sky;
+            }
+            Cyl(scenery, DarkSteel, new Vector3(0f, -0.25f, 0f), 12.8f, 0.8f, 0f);
+            Cyl(scenery, Steel, new Vector3(0f, 0.18f, 0f), 12.35f, 0.48f, 0.6f);
+            Part(scenery, "Rand", Torus(12.75f, 0.3f, 72, 6), Toon(DarkSteel, 0.6f, 0.35f), new Vector3(0f, 0.62f, 0f));
+            for (int i = 0; i < 72; i++)
+            {
+                float a = i * Mathf.PI / 36f;
+                var knurl = Box(scenery, Steel, new Vector3(Mathf.Cos(a) * 12.95f, 0.66f, Mathf.Sin(a) * 12.95f), new Vector3(0.22f, 0.5f, 0.14f), 0f);
+                knurl.transform.localRotation = Quaternion.Euler(0f, -a * Mathf.Rad2Deg, 0f);
+            }
+            Part(scenery, "Moos", Hill(), Toon(GrinderMoss, 1.1f, 0.15f), Vector3.zero);
+
+            // Grinding teeth in two rings, left out where fields and paths run.
+            var tooth = Cone(4);
+            var toothMat = Toon(Steel, 0.5f, 0.4f);
+            bool Near(float x, float z) { foreach (var p in spots) if (new Vector2(p.x - x, p.z - z).magnitude < 1.25f) return true; return false; }
+            foreach (var (radius, count) in new[] { (9.6f, 40), (7.2f, 30) })
+                for (int i = 0; i < count; i++)
+                {
+                    float a = i * Mathf.PI * 2f / count + radius, x = Mathf.Cos(a) * radius, z = Mathf.Sin(a) * radius;
+                    if (Near(x, z)) continue;
+                    var t = Part(scenery, "Zahn", tooth, toothMat, new Vector3(x, 0.43f, z), new Vector3(0.32f, 0.7f, 0.32f));
+                    t.transform.localRotation = Quaternion.Euler(0f, -a * Mathf.Rad2Deg, 0f);
+                }
+
+            // Pneumatic tubes: raised arcs between the paired tunnel fields, with a socket at both ends.
+            var tubeMat = Toon(Tube, 0f, 0.3f, Tube * 0.25f);
+            for (int i = 0; i + 1 < tunnels.Length; i += 2)
+            {
+                if (tunnels[i] < 0 || tunnels[i] >= spots.Length || tunnels[i + 1] < 0 || tunnels[i + 1] >= spots.Length) continue;
+                Vector3 a = spots[tunnels[i]], b = spots[tunnels[i + 1]], mid = (a + b) / 2f;
+                mid.y = Mathf.Max(a.y, b.y) + 4.2f;
+                Part(scenery, "Rohrpost", TubeArc(a + Vector3.up * 0.2f, mid, b + Vector3.up * 0.2f, 0.16f), tubeMat, Vector3.zero);
+                foreach (var end in new[] { a, b }) Cyl(scenery, Tube, end + Vector3.up * 0.25f, 0.34f, 0.3f, 0.6f);
+            }
+            Lounge(scenery);
+        }
+
+        /// <summary>A round tube along a quadratic Bézier curve (outward normals, neutral uv).</summary>
+        static Mesh TubeArc(Vector3 a, Vector3 control, Vector3 b, float radius, int steps = 32, int sides = 8)
+        {
+            var verts = new List<Vector3>(); var normals = new List<Vector3>(); var tris = new List<int>();
+            for (int k = 0; k <= steps; k++)
+            {
+                float t = k / (float)steps, u = 1f - t;
+                var p = u * u * a + 2f * u * t * control + t * t * b;
+                var tangent = (2f * u * (control - a) + 2f * t * (b - control)).normalized;
+                var n1 = Vector3.Cross(tangent, Vector3.up);
+                if (n1.sqrMagnitude < 1e-4f) n1 = Vector3.Cross(tangent, Vector3.right);
+                n1.Normalize();
+                var n2 = Vector3.Cross(tangent, n1);
+                for (int s = 0; s <= sides; s++)
+                {
+                    float ang = s * Mathf.PI * 2f / sides;
+                    var dir = Mathf.Cos(ang) * n1 + Mathf.Sin(ang) * n2;
+                    verts.Add(p + dir * radius); normals.Add(dir);
+                }
+            }
+            int ring = sides + 1;
+            for (int k = 0; k < steps; k++)
+                for (int s = 0; s < sides; s++)
+                {
+                    int i = k * ring + s, j = i + ring;
+                    tris.AddRange(new[] { i, i + 1, j, j, i + 1, j + 1 });
+                }
+            var m = new Mesh { name = "Rohr", vertices = verts.ToArray(), normals = normals.ToArray(), triangles = tris.ToArray() };
+            NeutralUv(m); m.RecalculateBounds();
+            return m;
+        }
+
+        /// <summary>The Grinder's goal on the hill: a cushioned sofa with a small lamp (lounge in rollingTray.ts).</summary>
+        void Lounge(Transform parent)
+        {
+            var lounge = new GameObject("Lounge").transform;
+            lounge.SetParent(parent, false);
+            lounge.localPosition = new Vector3(0f, 3.62f, 0.7f);
+            Color cushion = Palette.Hex("#5a3d8f"), back = Palette.Hex("#6f4fb0");
+            Box(lounge, cushion, new Vector3(0f, 0.42f, 0f), new Vector3(2.6f, 0.36f, 0.9f));
+            Box(lounge, back, new Vector3(0f, 0.9f, 0.38f), new Vector3(2.6f, 0.7f, 0.22f));
+            foreach (var x in new[] { -1.25f, 1.25f }) Box(lounge, cushion, new Vector3(x, 0.7f, 0f), new Vector3(0.22f, 0.5f, 0.9f));
+            Cyl(lounge, DarkSteel, new Vector3(1.7f, 0.6f, -0.2f), 0.05f, 1.2f, 0f);
+            var shade = Part(lounge, "Lampe", Cone(8), Toon(Palette.Gold, 0f, 0f, Palette.Gold * 1.4f), new Vector3(1.7f, 1.1f, -0.2f), new Vector3(0.32f, 0.3f, 0.32f));
+            shade.name = "Lampe";
         }
 
         void Field(RollField f, Transform parent)
@@ -241,6 +359,15 @@ namespace GSG.RollItUp
                 case "station":
                     Cyl(field, Palette.Hex("#10485b"), new Vector3(0f, y, 0f), 0.24f, 0.07f, 0f);
                     break;
+                case "tunnel":
+                    // ⇄: two bars with arrow heads pointing in opposite directions.
+                    foreach (var (z, dir) in new[] { (0.15f, 1f), (-0.15f, -1f) })
+                    {
+                        Box(field, ink, new Vector3(0f, y, z), new Vector3(0.5f, 0.07f, 0.09f), 0f);
+                        Box(field, ink, new Vector3(dir * 0.22f, y, z + 0.07f), new Vector3(0.2f, 0.07f, 0.07f), 0f).transform.localRotation = Quaternion.Euler(0f, dir * 40f, 0f);
+                        Box(field, ink, new Vector3(dir * 0.22f, y, z - 0.07f), new Vector3(0.2f, 0.07f, 0.07f), 0f).transform.localRotation = Quaternion.Euler(0f, -dir * 40f, 0f);
+                    }
+                    break;
                 default:
                     Cyl(field, ink, new Vector3(0f, y, 0f), 0.1f, 0.06f, 0f);
                     break;
@@ -250,12 +377,18 @@ namespace GSG.RollItUp
         Transform Station(Transform parent, RollField f, Mesh ico)
         {
             var p = spots[f.id];
+            // Between the field and the centre; on the Grinder's inner ring that is the hill slope.
             var basePos = new Vector3(p.x * 0.76f, 0f, p.z * 0.76f);
-            Cyl(parent, Moss, basePos + new Vector3(0f, 0.48f, 0f), 1.8f, 0.16f, 1f);
-            for (int i = 0; i < 5; i++)
+            basePos.y = Mathf.Max(0f, Height(basePos.x, basePos.z) - 0.44f);
+            if (Grinder) Cyl(parent, Plate, basePos + new Vector3(0f, 0.48f, 0f), 1.55f, 0.14f, 0.6f);
+            else
             {
-                float a = i * 1.26f;
-                Part(parent, "Randstein", ico, Toon(Palette.Hex("#bfa37d"), 0.8f), basePos + new Vector3(Mathf.Cos(a) * 1.76f, 0.55f, Mathf.Sin(a) * 1.76f), new Vector3(0.18f, 0.12f, 0.2f));
+                Cyl(parent, Moss, basePos + new Vector3(0f, 0.48f, 0f), 1.8f, 0.16f, 1f);
+                for (int i = 0; i < 5; i++)
+                {
+                    float a = i * 1.26f;
+                    Part(parent, "Randstein", ico, Toon(Palette.Hex("#bfa37d"), 0.8f), basePos + new Vector3(Mathf.Cos(a) * 1.76f, 0.55f, Mathf.Sin(a) * 1.76f), new Vector3(0.18f, 0.12f, 0.2f));
+                }
             }
             var prop = new GameObject("Station " + f.station).transform;
             prop.SetParent(parent, false);

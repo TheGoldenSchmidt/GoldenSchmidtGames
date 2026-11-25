@@ -93,7 +93,9 @@ function finish(setup: (g: PartyGame) => void) {
   assert.equal(game.phase, "finished");
   return game;
 }
+// Older rooms (and these checks) use the former three bonus trophies.
 g = finish(game => {
+  game.bonusPicks = ["minis", "walker", "unlucky"];
   Object.assign(byId(game, "a"), { trophies: 2, coins: 10, wins: 1, walked: 30, lost: 0 });
   Object.assign(byId(game, "b"), { trophies: 1, coins: 10, wins: 4, walked: 41, lost: 0 });
 });
@@ -101,6 +103,7 @@ assert.deepEqual(g.bonus!.map(b => [b.id, b.winners, b.value]), [["minis", ["b"]
 assert.equal(byId(g, "a").trophies, 2); assert.equal(byId(g, "b").trophies, 3);
 assert.deepEqual(g.winners, ["b"], "Bonus-Trophäen zählen für den Sieg");
 g = finish(game => {
+  game.bonusPicks = ["minis", "walker", "unlucky"];
   Object.assign(byId(game, "a"), { trophies: 1, coins: 10, wins: 3, walked: 20, lost: 7 });
   Object.assign(byId(game, "b"), { trophies: 1, coins: 10, wins: 3, walked: 25, lost: 7 });
 });
@@ -109,21 +112,25 @@ assert.deepEqual(g.bonus!.find(b => b.id === "unlucky")!.winners, ["a", "b"]);
 assert.equal(byId(g, "a").trophies, 3); assert.equal(byId(g, "b").trophies, 4); assert.deepEqual(g.winners, ["b"]);
 assert.equal(g.log.filter(line => line.startsWith("Bonus-Trophäe")).length, 3);
 assert.deepEqual(publicParty(g, "a", now).bonus, g.bonus, "Alle Geräte sehen dieselben Bonus-Trophäen");
-assert.equal(BONUS_TROPHIES.length, 3);
+assert.equal(BONUS_TROPHIES.length, 6);
 
 // A whole party records walked fields and awards the bonus trophies exactly once.
 let full = createPartyGame(Array.from({ length: 4 }, (_, i) => ({ id: `p${i}`, name: `P${i}` })), { rounds: 5 }, true, 77, now);
+let bought = 0;
 for (let n = 0; n < 5000 && full.phase !== "finished"; n++) {
   const player = activePartyPlayer(full).id;
   if (full.phase === "moving") { full = settleMovement(full); continue; }
   if (full.phase === "mini-intro") { for (const p of full.players) if (!full.mini!.runs[p.id].ready) full = act(full, p.id, { type: "ready" }, now += 100); continue; }
   if (full.phase === "mini-play") { for (const p of full.players) if (!full.mini!.runs[p.id].done && full.phase === "mini-play") full = act(full, p.id, { type: "finish" }, now += 100); continue; }
+  if (full.phase === "mini-result") { for (const p of full.players) if (full.phase === "mini-result") full = act(full, p.id, { type: "next" }, now += 100); continue; }
   const action: PartyAction = full.phase === "turn" ? { type: "roll" } : full.phase === "path" ? { type: "path", destination: partyPaths(full, activePartyPlayer(full)).at(-1)! } : full.phase === "trophy" ? { type: "trophy", buy: true } : full.phase === "gift" ? { type: "gift", accept: false } : full.phase === "duel" ? { type: "duel" } : full.phase === "shop" ? { type: "shop" } : { type: "next" };
+  const before = activePartyPlayer(full).trophies;
   full = act(full, player, action, now += 100);
+  bought += full.players.find(p => p.id === player)!.trophies - before;
 }
-assert.equal(full.phase, "finished"); assert.equal(full.bonus!.length, 3); assert.ok(full.finalStretch);
+assert.equal(full.phase, "finished"); assert.deepEqual(full.bonus!.map(b => b.id), full.bonusPicks); assert.equal(full.bonus!.length, 2); assert.ok(full.finalStretch);
 assert.ok(full.players.every(p => (p.walked ?? 0) > 0));
 const bonusCount = full.bonus!.reduce((sum, b) => sum + b.winners.length, 0);
-assert.equal(full.players.reduce((sum, p) => sum + p.trophies, 0), bonusCount + full.log.filter(line => line.endsWith("kauft eine Trophäe!")).length);
+assert.equal(full.players.reduce((sum, p) => sum + p.trophies, 0), bonusCount + bought);
 
 console.log("Inselparty-Finale erfolgreich: wechselnder Trophäenstand, letzte drei Runden mit doppelten Feldern und Rückenwind, Bonus-Trophäen mit Gleichstand und Sieg sowie eine vollständige Partie.");

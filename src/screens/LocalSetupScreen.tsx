@@ -6,9 +6,16 @@ import {isCharacterId,type CharacterId} from "../../shared/characters";
 import { CharacterGallery } from "../components/RoomGalleries";
 import { ScreenHeader } from "../components/ScreenHeader";
 import { IslandWorld } from "../components/IslandWorld";
-import { UNITY_GAMES, type UnityGameId } from "../unityGames";
+import { UNITY_GAMES, UNITY_LOAD_NOTE, type UnityGameId } from "../unityGames";
+import { MenuIcon } from "../components/MenuIcon";
+import { useBackStep } from "../lib/backNavigation";
+
+/** `games`: the main list; `unity`: Unity minigames and developer tools. */
+export type LocalSection = "games" | "unity";
 
 export function LocalSetupScreen({
+  section = "games",
+  onSection,
   onPractice,
   onUnity,
   onUnityRollItUp,
@@ -16,6 +23,8 @@ export function LocalSetupScreen({
   onTest,
   onStart
 }: {
+  section?: LocalSection;
+  onSection?: (section: LocalSection) => void;
   onPractice?: () => void;
   /** Unity test games (separate WebGL builds), open to everyone. */
   onUnity?: (id: UnityGameId) => void;
@@ -42,11 +51,15 @@ export function LocalSetupScreen({
   function changeCount(value: number) {
     setCount(value);
   }
+  const unity = section === "unity" && !settingUp;
+  // Back gesture: leave the player setup or the Unity list first.
+  useBackStep(() => settingUp ? setSettingUp(false) : onSection?.("games"), settingUp || unity);
+  const hasLab = Boolean(onPractice || onUnity || onUnityRollItUp);
 
   return (
     <main className="page iw-menu local-setup screen-enter">
       <IslandWorld />
-      <ScreenHeader title={settingUp ? game.name : "Lokal spielen"} onBack={settingUp ? () => setSettingUp(false) : onBack} />
+      <ScreenHeader title={settingUp ? game.name : unity ? "Unity-Minispiele" : "Lokal spielen"} onBack={settingUp ? () => setSettingUp(false) : unity ? () => onSection?.("games") : onBack} />
       {settingUp ? <>
       <div className="page__content">
         <section className="local-setup__players" aria-label="Mitspieler">
@@ -91,7 +104,18 @@ export function LocalSetupScreen({
           {game.name} starten
         </button>
       </div>
-      </> : <nav className="page__content game-shelf" aria-label="Spiel auswählen">
+      </> : unity ? <nav className="page__content game-shelf" aria-label="Unity-Minispiel auswählen">
+        <p className="iw-note game-shelf__note">{UNITY_LOAD_NOTE}</p>
+        {onUnity&&UNITY_GAMES.map(entry=><button key={entry.id} className="practice-entry iw-card" onClick={()=>onUnity(entry.id)}><strong>{entry.name}</strong><span>{entry.text}</span><small>{entry.note}</small></button>)}
+        {(onPractice||onUnityRollItUp)&&<h2 className="iw-plank game-shelf__group">Entwicklung</h2>}
+        {onUnityRollItUp&&<button className="practice-entry iw-card" onClick={onUnityRollItUp}><strong>Roll It Up! (Unity)</strong><span>Bauschale oder Grinder als Unity-Brett gegen Bots; Regeln und Minispiele wie im Original.</span><small>Nur Admin/Entwicklung</small></button>}
+        {onPractice&&<button className="practice-entry iw-card" onClick={onPractice}><strong>Proberaum</strong><span>Eine Insel für Bewegung, Hindernisse und Animationen.</span><small>Ohne Zeitlimit · auch offline</small></button>}
+      </nav> : <nav className="page__content game-shelf" aria-label="Spiel auswählen">
+        <h2 className="iw-plank game-shelf__group">Allein mit Bots</h2>
+        <p className="iw-note game-shelf__note">Läuft nur auf diesem Handy, auch ohne Internet.</p>
+        {GAMES.filter(entry => entry.status === "ready" && isPartyMode(entry.id)).map(entry =>
+          <GameTile key={entry.id} game={entry} players="1–5 Bots" onSelect={() => onTest(entry.id)}/>
+        )}
         <h2 className="iw-plank game-shelf__group">Ein Handy für alle</h2>
         {GAMES.filter(entry => entry.status === "ready" && !isPartyMode(entry.id)).map(entry =>
           <GameTile key={entry.id} game={entry} onSelect={() => {
@@ -100,15 +124,9 @@ export function LocalSetupScreen({
             setSettingUp(true);
           }}/>
         )}
-        {(onPractice||onUnity||onUnityRollItUp)&&<><h2 className="iw-plank game-shelf__group">Frei ausprobieren</h2><p className="iw-note game-shelf__note">Testbereich für Admin und Entwicklung: Unity-Fassungen gegen Bots auf diesem Handy. In Partien und Minispielen wählt der Host vor dem Start zwischen Unity und Web.</p></>}
-        {onPractice&&<button className="practice-entry iw-card" onClick={onPractice}><strong>Proberaum</strong><span>Eine Insel für Bewegung, Hindernisse und Animationen.</span><small>Ohne Zeitlimit · auch offline</small></button>}
-        {onUnityRollItUp&&<button className="practice-entry iw-card" onClick={onUnityRollItUp}><strong>Roll It Up! (Unity)</strong><span>Die Bauschale als Unity-Brett gegen Bots; Regeln und Minispiele wie im Original.</span><small>Unity-Test · nur Admin/Entwicklung</small></button>}
-        {onUnity&&UNITY_GAMES.map(entry=><button key={entry.id} className="practice-entry iw-card" onClick={()=>onUnity(entry.id)}><strong>{entry.name}</strong><span>{entry.text}</span><small>Unity-Test · {entry.note}</small></button>)}
-        <h2 className="iw-plank game-shelf__group">Allein mit Bots</h2>
-        <p className="iw-note game-shelf__note">Läuft nur auf diesem Handy, auch ohne Internet.</p>
-        {GAMES.filter(entry => entry.status === "ready" && isPartyMode(entry.id)).map(entry =>
-          <GameTile key={entry.id} game={entry} players="1–5 Bots" onSelect={() => onTest(entry.id)}/>
-        )}
+        {hasLab&&<button className="iw-slab iw-slab--stone shelf-slab" onClick={()=>onSection?.("unity")}>
+          <span className="iw-slab__face"><MenuIcon name="crown"/><span className="shelf-slab__copy"><strong>Unity-Minispiele</strong><small>{UNITY_GAMES.length} Spiele gegen Bots{onPractice?" · Proberaum":""}</small></span><MenuIcon name="next"/></span>
+        </button>}
       </nav>}
 
     </main>

@@ -178,13 +178,15 @@ function measure(s: MatchState<TowerGame>, id: string, t: Tower) {
 
 const RACE_META: MatchModule["meta"] = {
     name: "Tower Tumble", seconds: TW.regular / 1000 + 2, players: [2, 3, 4, 5, 6], hz: 20,
-    instruction: "Turmrennen: Alle bauen gleichzeitig auf einem eigenen, schmalen Sockel und bekommen dieselben Steine. Mit ⇦ und ⇨ schiebst du den fallenden Stein um eine halbe Zelle (gedrückt halten: weiter), tippe ⟳ zum Drehen und halte ⇩ zum schnellen Fallen. Sobald ein Stein aufsetzt, gilt echte Physik: Steine kippen, rutschen und stürzen ab. Wer zuerst zwei Sekunden lang über der Ziellinie steht, gewinnt. Nach zwei Minuten entscheidet die Höhe.",
+    instruction: "Alle bauen gleichzeitig mit denselben Steinen. Wer seinen Turm zuerst zwei Sekunden über der Ziellinie hält, gewinnt – Vorsicht, echte Physik!",
+    rules: "Turmrennen: Alle bauen gleichzeitig auf einem eigenen, schmalen Sockel und bekommen dieselben Steine. Mit ⇦ und ⇨ schiebst du den fallenden Stein um eine halbe Zelle (gedrückt halten: weiter), tippe ⟳ zum Drehen und halte ⇩ zum schnellen Fallen. Sobald ein Stein aufsetzt, gilt echte Physik: Steine kippen, rutschen und stürzen ab. Wer zuerst zwei Sekunden lang über der Ziellinie steht, gewinnt. Nach zwei Minuten entscheidet die Höhe.",
     controls: "⇦ ⇨ verschieben · ⟳ drehen · ⇩ halten: schnell fallen.",
     look: { icon: "▦", action: "Bau schneller als die anderen", hint: "⇦ ⇨ schieben · ⟳ drehen · ⇩ fallen", goal: "Zuerst über der Ziellinie" }
 };
 const SURVIVAL_META: MatchModule["meta"] = {
     name: "Tower Tumble – Survival", seconds: TW.survivalMs / 1000 + 2, players: [2, 3, 4, 5, 6], hz: 20,
-    instruction: "Turmbau ohne Ziellinie: Alle bauen gleichzeitig auf einem eigenen, schmalen Sockel und bekommen dieselben Steine. Mit ⇦ und ⇨ schiebst du den fallenden Stein (gedrückt halten: weiter), ⟳ dreht ihn, ⇩ gedrückt halten lässt ihn schnell fallen. Sobald ein Stein aufsetzt, gilt echte Physik. Baue immer weiter, ohne Steine zu verlieren: Fällt dein dritter Stein vom Turm, bist du raus. Die Steine fallen mit der Zeit immer schneller. Wer zuletzt noch baut, gewinnt; nach drei Minuten gewinnt der höchste Turm.",
+    instruction: "Bau immer höher, ohne Steine zu verlieren – sie fallen immer schneller. Drei verlorene Steine und du bist raus; wer zuletzt baut, gewinnt.",
+    rules: "Turmbau ohne Ziellinie: Alle bauen gleichzeitig auf einem eigenen, schmalen Sockel und bekommen dieselben Steine. Mit ⇦ und ⇨ schiebst du den fallenden Stein (gedrückt halten: weiter), ⟳ dreht ihn, ⇩ gedrückt halten lässt ihn schnell fallen. Sobald ein Stein aufsetzt, gilt echte Physik. Baue immer weiter, ohne Steine zu verlieren: Fällt dein dritter Stein vom Turm, bist du raus. Die Steine fallen mit der Zeit immer schneller. Wer zuletzt noch baut, gewinnt; nach drei Minuten gewinnt der höchste Turm.",
     controls: "⇦ ⇨ verschieben · ⟳ drehen · ⇩ halten: schnell fallen · 3 verlorene Steine = raus.",
     look: { icon: "▥", action: "Bau weiter, verlier nichts", hint: "⇦ ⇨ schieben · ⟳ drehen · ⇩ fallen", goal: "Als Letzter ohne drei verlorene Steine" }
 };

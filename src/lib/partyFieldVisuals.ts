@@ -9,7 +9,8 @@ export const FIELD_VISUALS={
   gift:{color:"#ffd258",ink:"#10485b",symbol:"◇"},
   shop:{color:"#a6dff5",ink:"#10485b",symbol:"▣"},
   duel:{color:"#6a3fb8",ink:"#fff9e8",symbol:"⚔"},
-  safe:{color:"#f5e9bc",ink:"#10485b",symbol:"·"}
+  safe:{color:"#f5e9bc",ink:"#10485b",symbol:"·"},
+  tunnel:{color:"#e58a3a",ink:"#2a1606",symbol:"⇄"}
 } as const satisfies Record<Field,{color:string;ink:string;symbol:string}>;
 
 export const fieldSymbol=(type:Field)=>FIELD_VISUALS[type].symbol;
@@ -18,7 +19,8 @@ export const FIELD_HELP: Record<Field,string> = {
   start:"Beim Passieren bekommst du 3 Münzen.",coin:"Beim Landen bekommst du 3 Münzen.",
   bad:"Beim Landen verlierst du bis zu 3 Münzen. Ein Schild schützt dich.",
   event:"Eine Überraschung für dich oder die ganze Gruppe.",gift:"Hier wartet ein zufälliges Item auf dich.",
-  shop:"Kaufe ein Item für deinen nächsten Zug.",duel:"Fordere jemanden zum Duell: Beide setzen gleich viele Münzen, wer das Minispiel gewinnt, bekommt alle.",safe:"Hier kannst du die Aussicht genießen. Keine weiteren Effekte."
+  shop:"Kaufe ein Item für deinen nächsten Zug.",duel:"Fordere jemanden zum Duell: Beide setzen gleich viele Münzen, wer das Minispiel gewinnt, bekommt alle.",safe:"Hier kannst du die Aussicht genießen. Keine weiteren Effekte.",
+  tunnel:"Rohrpost: Wer hier landet, saust zum Partnerfeld auf der anderen Seite."
 };
 
 /** Field explanation for map pop-ups; plus and minus fields name their current amount. */
@@ -32,6 +34,7 @@ export function fieldHelp(game:PartyBoardState,type:Field) {
     gift:"Hier wartet ein zufälliges Item auf dich.",
     shop:"Kaufe ein Item für deinen nächsten Zug.",
     duel:"Fordere jemanden zum Duell: Beide setzen gleich viele Münzen (bis 10), wer das Minispiel zu zweit gewinnt, bekommt alle.",
-    safe:"Hier kannst du die Aussicht genießen."
+    safe:"Hier kannst du die Aussicht genießen.",
+    tunnel:"Rohrpost: Wer hier landet, saust zum Partnerfeld auf der anderen Seite."
   }[type];
 }

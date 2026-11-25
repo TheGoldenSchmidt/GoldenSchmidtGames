@@ -251,6 +251,8 @@ namespace GSG.Ring
         }
 
         static bool Dashing(Fighter f, float now) => now < f.actionUntil;
+        /// <summary>Two dashes this close in speed count as equally strong (sumoSmash.ts CLASH_TIE).</summary>
+        const float ClashTie = 0.25f;
 
         public override void Drive(Fighter f, Vector2 input, float dt, float now)
         {
@@ -271,10 +273,32 @@ namespace GSG.Ring
             float dx = b.x - a.x, dy = b.y - a.y, d = Mathf.Sqrt(dx * dx + dy * dy);
             if (d < 1e-6f) { dx = 1f; dy = 0f; d = 1f; }
             float nx = dx / d, ny = dy / d;
+            // A dash into the opponent becomes a knockback along the contact normal. Head-on clash of two
+            // dashes: the faster one wins; equally fast dashes knock both back, so the seat order never decides.
+            var strikes = new List<(Fighter hitter, Fighter victim, float sign)>();
             foreach (var (hitter, victim, sign) in new[] { (a, b, 1f), (b, a, -1f) })
             {
                 if (!Dashing(hitter, now) || (victim == b ? shieldB : shieldA) || (hitter == a ? shieldA : shieldB)) continue;
                 if ((hitter.vx * nx + hitter.vy * ny) * sign <= 0.5f) continue;
+                strikes.Add((hitter, victim, sign));
+            }
+            if (strikes.Count == 2)
+            {
+                float speedA = a.vx * nx + a.vy * ny, speedB = -(b.vx * nx + b.vy * ny);
+                if (Mathf.Abs(speedA - speedB) < ClashTie)
+                {
+                    RingSim.Bounce(a, b, body, 0f, now, true, true);
+                    foreach (var (f, sign) in new[] { (a, -1f), (b, 1f) })
+                    {
+                        f.vx = nx * sign * Knock * 0.6f; f.vy = ny * sign * Knock * 0.6f; f.stunUntil = now + StunMs; f.actionUntil = now;
+                    }
+                    lastClosing = speedA + speedB; // shown as a hard bounce
+                    return null;
+                }
+                strikes.RemoveAt(speedA > speedB ? 1 : 0);
+            }
+            foreach (var (hitter, victim, sign) in strikes)
+            {
                 RingSim.Bounce(a, b, body, 0f, now, true, true);
                 victim.vx = nx * sign * Knock; victim.vy = ny * sign * Knock; victim.stunUntil = now + StunMs;
                 hitter.vx *= 0.15f; hitter.vy *= 0.15f; hitter.actionUntil = now;

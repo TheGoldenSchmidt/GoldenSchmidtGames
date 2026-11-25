@@ -84,6 +84,7 @@
 .iw-menu .player-row--empty {background:transparent;border-style:dashed;}
 .iw-menu .player-row--empty .player-avatar {background:#e8dcc6;}
 .iw-menu .live-badge,.iw-menu .ready-mark.is-ready {background:#daedd5;color:#25452a;}
+.iw-menu .ready-mark.is-ready {padding:3px 9px;border-radius:999px;}
 .iw-menu .lobby-config {background:transparent;border:0;padding:0;gap:10px;}
 .iw-menu .party-settings {margin-top:12px;background:#fff8e8;border:1px solid #c7af90;}
 .iw-menu .party-test-notice {background:#ffdf9d;color:#3a2c26;border:1px solid #bb8b50;}
@@ -131,6 +132,13 @@
 .game-shelf__caption small {color:#ebd7bb;font-size:.7rem;}
 .game-shelf button:active {transform:translateY(2px);}
 .iw-menu.local-setup:has(> nav.game-shelf) {padding-bottom:20px;}
+.game-shelf .shelf-slab {grid-column:1/-1;width:100%;min-height:56px;margin-top:18px;}
+.shelf-slab .iw-slab__face {gap:12px;padding:5px 20px 3px 18px;}
+.shelf-slab .menu-icon {width:22px;height:22px;}
+.shelf-slab .menu-icon:last-child {width:16px;margin-left:auto;}
+.shelf-slab__copy {display:grid;gap:1px;min-width:0;text-align:left;}
+.shelf-slab__copy strong {font:400 clamp(1.02rem,4.4vw,1.2rem)/1.1 var(--iw-font-display);text-transform:uppercase;text-shadow:0 1px 0 #0000005c;}
+.shelf-slab__copy small {font:480 clamp(.68rem,2.9vw,.8rem)/1.3 var(--iw-font-ui);color:#fff8eadd;}
 @media (prefers-reduced-motion:reduce) { .iw-menu *, .iw-menu, .iw-dialog * {animation:none;transition:none;} }
 /* Room creation shares the illustrated shelf, stone surfaces and gemstone controls. */
 .game-art:is(.game-art--roll-it-up,.game-art--party,.game-art--free-minigame,.game-art--goldenschmidt) { background-image:url("../assets/expedition/online-art.webp"); }
@@ -207,6 +215,7 @@
 .room .lobby-settings fieldset.settings-fields > label { border-top:1px solid #b4997055; }
 .iw-menu .room .lobby-settings select { width:auto; max-width:62%; min-height:44px; background:#282238; color:#ffe2ac; border:1px solid #ad8b62; border-radius:8px; }
 .room .settings-checkbox input { accent-color:#cca4df; }
+.settings-checkbox > span small { display:block; margin-top:2px; font-size:.72rem; font-weight:400; opacity:.8; }
 .host-gallery > .party-character-stage { margin:0 10px 10px; border-radius:10px; overflow:hidden; }
 
 .local-setup__players { display:grid; gap:12px; }
@@ -232,3 +241,5 @@
 .room .lobby-exit__confirm { display:grid; gap:10px; padding:18px 16px 16px; color:#221b4f; background:#fff8ea; border:2px solid #221b4f; border-radius:14px; }
 .room .lobby-exit__confirm h2 { margin:0; font:400 1.3rem var(--iw-font-display); }
 .room .lobby-exit__confirm p { margin:0 0 4px; font:400 .88rem/1.45 var(--iw-font-ui); }
+.room .lobby-settings .settings-fields > label:has(> small) { flex-wrap:wrap; row-gap:4px; }
+.room .lobby-settings .settings-fields > label > small { flex-basis:100%; font-size:.74rem; color:#ead7bd; }

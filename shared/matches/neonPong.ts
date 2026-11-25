@@ -149,7 +149,8 @@ export const neonPong: MatchModule<PongGame> = {
   id: "pong",
   meta: {
     name: "Neon Pong", seconds: (NP.regular + NP.goldenMax) / 1000 + 2, players: [2, 4], hz: 20,
-    instruction: "Ziehe den Finger waagrecht über die untere Bildschirmhälfte, um deinen Schläger zu bewegen. Wo der Ball den Schläger trifft, bestimmt den Abprallwinkel. Ball durch Power-ups schießen: breiter Schläger, Mehrball, Kurvenbälle oder Zeitlupe. Zuerst 7 Tore oder nach 90 Sekunden mehr Tore; bei Gleichstand entscheidet das nächste Tor. Zu viert spielt ihr 2 gegen 2.",
+    instruction: "Verteidige dein Tor unten und schieß den Ball durch Power-ups. Wer zuerst 7 Tore hat, gewinnt; zu viert spielt ihr 2 gegen 2.",
+    rules: "Ziehe den Finger waagrecht über die untere Bildschirmhälfte, um deinen Schläger zu bewegen. Wo der Ball den Schläger trifft, bestimmt den Abprallwinkel. Ball durch Power-ups schießen: breiter Schläger, Mehrball, Kurvenbälle oder Zeitlupe. Zuerst 7 Tore oder nach 90 Sekunden mehr Tore; bei Gleichstand entscheidet das nächste Tor. Zu viert spielt ihr 2 gegen 2.",
     controls: "Finger waagrecht ziehen: Schläger folgt.",
     look: { icon: "◐", action: "Verteidige dein Neon-Tor", hint: "Waagrecht ziehen, Ball zurückschlagen", goal: "7 Tore oder mehr nach 90 s" }
   },

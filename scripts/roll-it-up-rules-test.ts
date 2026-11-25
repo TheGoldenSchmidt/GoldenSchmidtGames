@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { createPartyGame, tickParty, activePartyPlayer, applyPartyAction, publicParty, type PartyAction, type PartyGame } from "../shared/party";
-import { boardDistances, boardPathTo, boardRoute, hasFullSet, JAYSPOT, partyBoard, partyPaths, STATIONS } from "../shared/partyBoard";
+import { boardDistances, boardPathTo, boardRoute, goalField, hasFullSet, partyBoard, partyPaths, stationsOf } from "../shared/partyBoard";
+
+const BOWL = { mode: "roll-it-up" as const }, JAYSPOT = goalField(BOWL), STATIONS = stationsOf(BOWL);
 import { botBoardAction, PartyBotDriver } from "../shared/partyBots";
 import { boardGame, settleMovement } from "./party-fixtures";
 
@@ -63,7 +65,7 @@ for (const station of STATIONS) {
   assert.equal(g.players.find(p=>p.id===other.id)!.supplies!.length,0);
   assert.notEqual(approach(structuredClone(g),station.field).phase,"supply");
 }
-assert.ok(hasFullSet(activePartyPlayer(g)));
+assert.ok(hasFullSet(g,activePartyPlayer(g)));
 assert.deepEqual(publicParty(g,id).players.find(p=>p.id===id)!.supplies,STATIONS.map(s=>s.field));
 for (const gate of [31,33]) {
   const attempt=structuredClone(g);
@@ -98,13 +100,14 @@ for(let turns=0;match.phase!=="finished" && turns<1500;turns++) {
     for(const p of match.players) if(match.phase===phase) match=applyPartyAction(match,p.id,action,100000);
     continue;
   }
+  if(match.phase==="mini-result"){for(const p of match.players)if(match.phase==="mini-result")match=applyPartyAction(match,p.id,{type:"next"},100000);continue;}
   const action=botBoardAction(match);
   assert.ok(action,match.phase);
   match=command(match,action);
 }
 assert.equal(match.phase,"finished");
 assert.equal(activePartyPlayer(match).position,JAYSPOT);
-assert.ok(hasFullSet(activePartyPlayer(match)));
+assert.ok(hasFullSet(match,activePartyPlayer(match)));
 assert.deepEqual(match.winners,[activePartyPlayer(match).id]);
 
 

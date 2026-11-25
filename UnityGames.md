@@ -2,73 +2,49 @@
 
 Verbindlich für alle Arbeiten an Unity-Minispielen und am Unity-Brett von Roll It Up! (`unity/`, `public/unity/`, `src/unityGames.ts`, `src/unityRollItUp.ts`, `UnityGameScreen`, `UnityRollItUpBoard`, CSP und Header unter `/unity/`). Gilt für Menschen sowie Codex und Claude Code zusätzlich zu [AGENTS.md](AGENTS.md) und den [Designregeln](designregeln.md).
 
-## Zweck und Stand
+## Zweck
 
-Alle Minispiele, die nicht zur ersten Generation gehören (`NEW_MATCH_IDS` in `shared/minigameCatalog.ts`), werden schrittweise als Unity-Fassung umgesetzt. Jedes Unity-Spiel ist ein **eigenständiges Minispiel** in **einem gemeinsamen WebGL-Build** (`public/unity/spiele/`, `?spiel=<id>` wählt die Szene), in der App als **Testbereich nur für Admin und Entwicklung** unter **Lokal spielen → Frei ausprobieren** (`src/unityGames.ts`). Sie laufen lokal auf einem Handy gegen Bots: keine Räume, kein Zufallspool, kein Offline-Cache. Die Web-Fassungen bleiben unverändert im Spiel.
+Alle Minispiele außerhalb der ersten Generation (`NEW_MATCH_IDS` in `shared/minigameCatalog.ts`) werden schrittweise als Unity-Fassung umgesetzt: jedes ein **eigenständiges Minispiel** in **einem gemeinsamen WebGL-Build** (`public/unity/spiele/`, `?spiel=<id>` wählt die Szene), in der App als **Testbereich nur für Admin und Entwicklung** unter **Lokal spielen → Unity-Minispiele** (`src/unityGames.ts` ist die Liste der freigeschalteten Spiele). Sie laufen lokal gegen Bots: keine Räume, kein Zufallspool, kein Offline-Cache. Die Web-Fassungen bleiben unverändert. Danach wird ein Spiel nach und nach zur [Darstellung im Raum](#unity-als-darstellung-im-raum) umgestellt.
 
-**Unity als Darstellung im Raum (seit Nov. 2026, zuerst Tank Trouble):** Entscheidung „App rechnet, Unity zeigt“. Die Raumautorität rechnet wie bei allen Minispielen mit den Regeln aus `shared/`; ein dauerhaft geladener Unity-Rahmen (`UnityMatchHost`, `?spiel=online`) zeichnet die Schnappschüsse unter Steuerung, HUD, Countdown und Ergebnis der App (`src/unityMatch.ts`, `src/matches/unityWorld.ts`, Unity `MatchBridge`). Damit laufen Online-Räume, Handy-Hosting, Wiederbeitritt, Inselparty und „Allein mit Bots“ ohne eigene Netzwerkschicht. Der Host wählt in der Intro-Tafel vor „Ich bin bereit“ (und im Spielmenü ☰) **Variante** (Unity/Web) und **Ansicht** (Draufsicht, 3rd Person, 1st Person) für alle (`shared/minigameLooks.ts`, Aktion `look`, nur Host); Standard ist Unity, wo es eine Unity-Darstellung gibt. Sobald die Unity-Szene steht („playing“), übernimmt **Unitys eigenes HUD**: Stick, Tasten, Zielen, Countdown, Spielerleiste, Töne, Effekte und Kurzmeldungen kommen aus Unity, die Eingaben gehen als `input`/`press` über die Brücke an die Raumautorität; die App blendet ihre Steuerung, Rückmeldungen und Töne aus und behält oben rechts nur Ton und Menü (Aufgeben). Bis dahin gilt die App-Steuerung. Ansichten sind Einstellungen, keine eigenen Minispiele. Schlägt Unity fehl (kein Internet, kein WebGL, nach 25 s nicht bereit), übernimmt die Web-Darstellung. Ein Spiel, das so umgestellt ist, verliert seinen Eintrag unter „Frei ausprobieren“; die übrigen Einträge rechnen weiter mit ihren C#-Ports.
+Unity bringt echte Physik (Wippen mit Gelenk, Türsplitter, durchfallende Platten), eine Toon-Shaderfamilie mit Echtzeitschatten, HDR-Bloom, Nebel und Partikeln, Kameraschütteln und Hit-Stop, synthetisierte Geräusche/Musik und ein UI-Toolkit-HUD mit Mehrfinger-Touch.
 
-| Spiel | Inhalt | Build |
+## Spiele und Stand
+
+Reihenfolge: zuerst Spiele, die am meisten von 3D/Physik gewinnen; flache Reaktions- und Draufsichtspiele zuletzt. Regeln und Werte stammen aus `shared/`, Abweichungen stehen in der letzten Spalte.
+
+| Spiel (`id`, Szene) | Stand | Besonderheit der Unity-Fassung |
 | --- | --- | --- |
-| Parcours-Probelevel (`parcours`) | 15 Stationen mit allen Hindernisarten der Online-Parcours (`parcoursCourses.ts`): Stufen/Lücke, Türenwand (2 von 5 echt), Schieber, Drehbalken unten/oben/Kreuz, Fahrinseln, Wippen, Förderband mit Walzen, Kletterkante, Geisterpfad, Fallklappen mit Vorwarnung, Windsteg, Wechselgriffe, Glibbergrube, Türgänge (weiter/Sackgasse/Falltür/zu), Ziel. Allein, mit Kontrollpunkten, Zeit, Stürzen und Bestzeit. | Szene `ParcoursProbe` |
-| Floor is Lava (`lava`) | Regeln aus `shared/matches/floorIsLava.ts`: 3 Etagen à 9 × 13 Platten, Bröseln nach 0,8 s, Runenplatten kehren nach 2,5 s zurück, Rand stürzt bei 16 s und 23 s ein, Springen/Hechten/Schubsen mit Abklingzeiten, +1 je früher gefallene Person, +3 für Überlebende, drei Durchgänge und Stechrunde. Du gegen drei Bots (Bot-Logik portiert). | Szene `FloorIsLava` |
-| Sumo Smash (`sumo`) | Regeln aus `ringCore.ts` + `sumoSmash.ts` in 50-ms-Schritten (C#-Port `Ring/RingSim.cs`): Stoß mit Rückstoß, 3 Leben, Ring-Out +2, Ring schrumpft ab 40 s, Entscheid nach 75 s, Sudden Death. Podest über einem See mit Torii; Stürze ins Wasser. | Szene `SumoSmash` |
-| Bumper Mayhem (`bumpercars`) | Gleicher Ringkern + `bumperMayhem.ts`: Lenken/Turbo, Schleudern, Item-Kisten (Riesenauto, Ölfleck, Schockwelle), drehende Pfosten, Fläche schrumpft ab 45 s. Neonfläche mit Riesenrad. | Szene `BumperMayhem` |
-| Bomb Arena (`bombs`) | Port von `bombArena.ts` (`Bombs/BombSim.cs`): 11 × 15 Felder, 2-s-Zünder, Kreuzflammen mit Ketten, Kisten mit Extras (Reichweite, Bombe, Tempo, Kick), Spirale ab 25 s, 2 Leben, K.o. +2, Durchgangssieg +3, zwei Durchgänge, Sudden Death. | Szene `BombArena` |
-| Schneeballschlacht (`snowball`) | Port von `snowball.ts` (`Snow/SnowSim.cs`): Formen/Schneehaufen, höchstens zwei Bälle, Wurf rastet auf den nächsten Gegner im Bild ein (Vorhalt), −10 % Tempo je Treffer, Schneemann nach drei. Verfolgerkamera, Wischen dreht. Zielen per Ziehen gibt es noch nicht, nur den Tipp-Wurf. | Szene `Schneeballschlacht` |
-| Tower Tumble (`tower`) | Turmrennen aus `towerTumble.ts` (Steinfolge, Steuerung, Ziellinie 16, 2 s halten, 120 s, Bot-Planer); die Physik ist **Unitys 2D-Physik (Box2D)** statt `physics2d.ts` (Reibung 0,9, Schwerkraft 18), die Steine werden als 3D-Würfel gezeichnet. | Szene `TowerTumble` |
-| Tower Tumble – Survival (`towersurvival`) | Gleiche Szene-Logik mit `survival`: keine Ziellinie, drei verlorene Steine = raus, Fallen bis × 1,8 schneller in 180 s, vorsichtigere Bots. | Szene `TowerSurvival` |
-| Türenlotto (`tuerenlotto`) | Parcours-Lauf aus den App-Streckendaten (`Resources/GSG/Courses/tuerenlotto.json`, erzeugt aus `parcoursCourses.ts`): Türreihen, Gassen mit Sackgasse/Falltür, Schieber, Graben, Drehbalken. Läufer und Hindernisse des Probelevels; eigener Kontrollpunkt je Läufer, Zielreihenfolge, Zielschluss 20 s nach dem Ersten, Zeitlimit 120 s. Bots nach `parcoursBot` (gemeinsames Wissen über probierte Türen/Gassen, springen/ducken an Balken, springen über Lücken, warten auf Inseln und Schieber). | Szene `Tuerenlotto` |
-| Kreiselkurs (`kreiselkurs`) | Gleicher Lauf-Rahmen: Drehbalken unten/oben/Kreuz, fahrende Inseln, zwei Wippen, Rührwerk. Bots scheitern gelegentlich an den Inseln (wie in der App). | Szene `Kreiselkurs` |
-| Standhaft (`standhaft`) | Ausscheidungsfinale aus `standhaft.json`. 25 Fallklappen öffnen sich von außen nach innen, zwei Drehbalken starten zeitversetzt. Spieler und drei Bots weichen über die Plattform aus. Letzte Überlebende gewinnen, nach 90 s auch gemeinsam. Unitys Parcours-Läufer verwendet Rigidbody-Kollisionen, die Balken folgen dem App-Kontaktmodell. Die Kamera rahmt beim Spielen die ruhende Arena wie die App; ausgeschieden lässt sie Platz zum Drehen per Wischen. | Szene `Standhaft` |
-| Tank Trouble (`tanks`) | C#-Port von `tankTrouble.ts` in 50-ms-Schritten. 7 × 11 Zellen, Abpraller, zerstörbare Ziegel, Extras, Respawn mit Schild und drei Bots mit Labyrinth-Pfadsuche. Übersicht auf das ganze Feld, links fahren, rechts ziehen und zum Schießen loslassen. Der Ziellaser reicht bis zur ersten Mauer. Sieben Abschüsse oder Zeitwertung mit höchstens 30 s Stechen. **Im Raum** (normales Minispiel, kein Eintrag unter „Frei ausprobieren“ mehr) zeichnet dieselbe Szene die Schnappschüsse von `tankTrouble.ts`: Draufsicht; 3rd Person (Kamera hinter dem eigenen Panzer, hohe Mauern, Nebel) und 1st Person (aus der Luke) mit den Turmsicht-Regeln, also nur dem eigenen Sichtbereich, alles andere dunkel. | Szene `TankTrouble` |
+| Parcours-Probelevel (`parcours`, `ParcoursProbe`) | umgesetzt | 15 Stationen mit allen Hindernisarten, allein, Kontrollpunkte und Bestzeit. Stand vor getimtem Festhalten, langen Lücken, Serpentinen-Glibberflut und Ventilatoren mit Anlauf. |
+| Floor is Lava (`lava`, `FloorIsLava`) | umgesetzt | Regeln/Bots aus `floorIsLava.ts`, du gegen drei Bots. |
+| Sumo Smash (`sumo`, `SumoSmash`) | umgesetzt | C#-Port `Ring/RingSim.cs`; Podest über einem See. Kein Stoß, solange man nach einem Treffer rutscht (`CanAct`). Frontalzusammenstoß wie in `sumoSmash.ts`: der schnellere Stoß gewinnt, gleich schnelle prallen beide zurück. |
+| Bumper Mayhem (`bumpercars`, `BumperMayhem`) | umgesetzt | Gleicher Ringkern; Gummi-Elastizität 0,95, jeder Kontakt stößt beide um ≥2,6 m/s auseinander, harte Treffer × 1,3 (≤14), Rammer prallt zurück; kein Turbo im Rutschen. |
+| Bomb Arena (`bombs`, `BombArena`) | umgesetzt | C#-Port `Bombs/BombSim.cs`. |
+| Schneeballschlacht (`snowball`, `Schneeballschlacht`) | umgesetzt | C#-Port `Snow/SnowSim.cs`; eigener Wurf rastet nur ±11° um die Blickrichtung ein, ohne Vorhalt (Bots unverändert); Zielen per Ziehen fehlt noch. |
+| Tower Tumble (`tower`, `TowerTumble`) | umgesetzt | Unitys 2D-Physik (Box2D, 60 Hz, 12/6 Iterationen, Reibung 0,9, Schwerkraft 18) statt `physics2d.ts`; Steine setzen 2 cm über dem Kontakt auf, höchstens 4 m/s. |
+| Tower Tumble – Survival (`towersurvival`, `TowerSurvival`) | umgesetzt | Wie Tower Tumble mit Survival-Regeln, vorsichtigere Bots. |
+| Türenlotto (`tuerenlotto`, `Tuerenlotto`) | umgesetzt | Strecke aus `Resources/GSG/Courses/tuerenlotto.json`; Bots nach `parcoursBot`. |
+| Kreiselkurs (`kreiselkurs`, `Kreiselkurs`) | umgesetzt | Gleicher Lauf-Rahmen; Bots scheitern gelegentlich an den Inseln. |
+| Standhaft (`standhaft`, `Standhaft`) | umgesetzt | 25 Fallklappen von außen nach innen, zwei zeitversetzte Drehbalken; Läufer mit Rigidbody-Kollision, Balken nach App-Kontaktmodell. |
+| Tank Trouble (`tanks`, `TankTrouble`) | im Raum | Normales Minispiel mit Unity-Darstellung (siehe unten), kein Eintrag im Unity-Untermenü. Draufsicht; 3rd Person (Kamera hinter dem eigenen Panzer) und 1st Person (aus der Luke) mit den Turmsicht-Regeln: jedes Gerät sieht nur den eigenen Sichtbereich. |
+| Geisterpfad, Fallklappen, Windkanal, Kletterwand, Glibberflut | offen | Streckendaten liegen als JSON vor; im `CourseBuilder` fehlen Geisterplatten, Klappen, Wind, Griffe, Glibber und die Bot-Regeln. |
+| Arrow Masters; Neon Racer (+ Kippen); Light Trails, Neon Pong, Quick Draw | offen | in dieser Reihenfolge |
 
-Dazu kommt **Roll It Up! (Unity)** (`rollitup`, Szene `RollItUp`): die Bauschale als Unity-Brett. Nur für Admin/Entwicklung sichtbar (`canDevelop`) unter **Frei ausprobieren**; startet eine Testpartie mit Bots am lokalen Tisch. Regeln, Bots, Items, Inventar/Menü und die Minispiele zwischen den Runden bleiben unverändert in der App (`shared/party.ts` über die Raumautorität); Unity zeichnet nur Schale, Felder, Stationen, Figuren, Würfel und die Brett-Entscheidungen.
+## Unity als Darstellung im Raum
 
-Was Unity hier anders macht: echte Physik (Wippen mit Gelenk, Türsplitter als Rigidbodies, Platten fallen wirklich durch Löcher), eine Toon-Shaderfamilie für das ganze Bild mit Echtzeitschatten, HDR-Bloom, Nebel und Partikeln, Kameraschütteln und Hit-Stop, zur Laufzeit synthetisierte Geräusche und Musik, UI-Toolkit-HUD mit Mehrfinger-Touch.
+Entscheidung „App rechnet, Unity zeigt“: Die Raumautorität rechnet wie bei allen Minispielen mit `shared/`; ein dauerhaft geladener Unity-Rahmen (`UnityMatchHost`, `?spiel=online`) zeichnet die Schnappschüsse (`src/unityMatch.ts`, `src/matches/unityWorld.ts`, Unity `MatchBridge`). Sobald die Unity-Szene steht („playing“), übernimmt **Unitys eigenes HUD**: Stick, Tasten, Zielen, 3-2-1 zum Startsignal des Raums, Spielerleiste, Töne, Effekte und Kurzmeldungen kommen aus Unity; Eingaben gehen als `input`/`press` geprüft an die Raumautorität. Die App blendet Steuerung, Countdown, Rückmeldungen und eigene Töne aus und behält oben rechts Ton und Menü (Aufgeben); Ergebnis und Vibration bleiben in der App. Bis Unity bereit ist, gilt die App-Steuerung. So laufen Online-Räume, Handy-Hosting, Wiederbeitritt, Inselparty und „Allein mit Bots“ ohne eigene Netzwerkschicht. Der Host wählt in der Intro-Tafel vor „Ich bin bereit“ (und im Spielmenü ☰) **Variante** (Unity/Web) und **Ansicht** (Draufsicht, 3rd, 1st Person) für alle (`shared/minigameLooks.ts`, Aktion `look`); Standard ist Unity, wo es eine Unity-Darstellung gibt. Ansichten sind Einstellungen, keine eigenen Minispiele. Schlägt Unity fehl (kein Internet, kein WebGL, nach 25 s nicht bereit), übernimmt die Web-Darstellung. Ein so umgestelltes Spiel verliert seinen Eintrag im Unity-Untermenü.
 
-### Reihenfolge der Umstellung
+Erste Generation (klassische Arenen, Wippenwerk, Hook Wars, Chaos Run) wird nicht umgestellt.
 
-Begründung: zuerst Spiele, die am meisten von 3D/Physik gewinnen und eine gemeinsame Basis legen; flache Reaktions- und Draufsichtspiele zuletzt. Nach den ersten fünf gab es eine Rückmeldungsrunde.
-
-| # | Spiel | Stand |
-| --- | --- | --- |
-| 1 | Sumo Smash | umgesetzt (Nov. 2026) |
-| 2 | Bumper Mayhem | umgesetzt (Nov. 2026) |
-| 3 | Bomb Arena | umgesetzt (Nov. 2026) |
-| 4 | Schneeballschlacht | umgesetzt (Nov. 2026) |
-| 5 | Tower Tumble | umgesetzt (Nov. 2026) |
-| 6 | Tower Tumble – Survival | umgesetzt (Nov. 2026) |
-| 7 | Türenlotto | umgesetzt (Nov. 2026) |
-| 8 | Kreiselkurs | umgesetzt (Nov. 2026) |
-| 9–13 | Parcours-Läufe Geisterpfad, Fallklappen, Windkanal, Kletterwand, Glibberflut | offen; Streckendaten liegen schon als JSON vor, es fehlen Geisterplatten-, Klappen-, Wind-, Griff- und Glibber-Aufbau im `CourseBuilder` sowie die zugehörigen Bot-Regeln |
-| 14 | Standhaft | umgesetzt (Nov. 2026) |
-| 15 | Arrow Masters | offen |
-| 16–17 | Neon Racer, Neon Racer – Kippen | offen |
-| 18–19 | Tank Trouble, Turmsicht | umgesetzt (Nov. 2026); Turmsicht ist seitdem die Ansicht 3rd/1st Person von Tank Trouble und kein eigenes Minispiel mehr |
-| 20–22 | Light Trails, Neon Pong, Quick Draw | offen |
-
-Floor is Lava ist bereits umgesetzt; Wippenwerk, Hook Wars, Chaos Run und die klassischen Arenen gehören zur ersten Generation und werden nicht umgestellt.
-
-### Abweichungen nach Rückmeldung (Nov. 2026)
-
-Nur in den Unity-Fassungen; die Web-Fassungen bleiben unverändert, bis über eine Übernahme entschieden ist.
-
-| Spiel | Rückmeldung | Änderung |
-| --- | --- | --- |
-| Tower Tumble | Steine springen umher und fallen herunter | Unity-2D-Physik (Box2D, 60 Hz, 12/6 Iterationen) statt PhysX; Steine setzen 2 cm über dem Kontakt auf statt minimal überlappend, Aufsetztempo höchstens 4 m/s. Die Darstellung bleibt 3D. |
-| Sumo Smash | Nach einem Treffer rettet man sich mit einem Stoß | Kein Stoß, solange man nach einem Treffer rutscht (`CanAct`; gilt auch für den Turbo in Bumper Mayhem) |
-| Bumper Mayhem | Langweilig, jede Kollision soll abprallen | Gummi-Elastizität 0,95 statt 0,5; jeder Kontakt stößt beide Autos um mindestens 2,6 m/s auseinander (0,6 × Annäherung); harte Treffer stärker (1,3 × statt 0,9 ×, höchstens 14), der Rammer prallt zurück; Wackeln, Funken und Ton je nach Stärke |
-| Schneeballschlacht | Man trifft zu einfach | Der eigene Wurf rastet nur noch bis ±11° um die Blickrichtung ein (vorher ±66°) und hält laufende Gegner nicht mehr vor; Bots unverändert |
+**Roll It Up! (Unity)** (`rollitup`, Szene `RollItUp`): Bauschale und Grinder (Wahl in der Testlobby) als Unity-Brett, nur für Admin/Entwicklung (`canDevelop`) im selben Untermenü; startet eine Testpartie mit Bots. Die Brücke sendet Brett-ID und Rohrpost-Paare, `RollWorld` baut danach die Szenerie (Grinder: Stahlscheibe, Mahlzähne, Rohrpost-Bögen, Lounge). Regeln, Bots, Items und Minispiele bleiben in der App (`shared/party.ts`); Unity zeichnet Schale, Felder, Stationen, Figuren, Würfel und Brett-Entscheidungen.
 
 ## Regeln
 
-- **Regeln und Werte** aus `shared/` übernehmen (Tempo, Abklingzeiten, Wertung, Bot-Logik). Abweichungen hier unter „Offen“ oder im [Minispiel-Konzept](docs/minigames/konzept.md#unity-tests) festhalten. Online gilt: Die Raumautorität rechnet mit `shared/`, Unity zeichnet nur. Unity-eigene Regeln und Physik (C#-Ports, Tower-Tumble-Physik, Läufer) gelten nur für die lokalen Einträge unter „Frei ausprobieren“; für die Darstellung im Raum müssen gewünschte Abweichungen erst in `shared/` übernommen werden.
+- **Regeln und Werte** aus `shared/` übernehmen (Tempo, Abklingzeiten, Wertung, Bot-Logik). Abweichungen in der Tabelle „Spiele und Stand“ festhalten. Die Einträge im Unity-Untermenü rechnen lokal mit ihren C#-Ports und verwenden weder `roomCore` noch Raumautorität. Im Raum zeichnet Unity nur; gewünschte Abweichungen (C#-Ports, Tower-Tumble-Physik, Läufer) müssen dafür erst in `shared/` übernommen werden.
 - **Figuren:** nur [freigegebene Figuren](docs/approved-character-design.md) aus `public/models` (Basismenschen, Kleidungsmaske in Spielerfarbe). Keine neuen Modelle ohne Freigabe. Die in der App gewählte Figur kommt über `?figur=`; andere Wahl → Basismensch nach Farbplatz.
 - **Oberfläche:** Touch auf getrennten Handys zuerst, keine Tastatur- oder PC-Bedienung. Hochkant zuerst, Touch-Ziele ≥ 44 px. HUD und Menüs in den Inselwelt-Materialien (Gold = Hauptaktion, Stein = Nebenaktion, Glas = Status, Papier = Texttafeln) mit Lilita One und Lexend. Oben rechts bleibt frei für den Zurück-Knopf der App. `?ruhig=1` (reduzierte Bewegung, von der App aus `prefers-reduced-motion` gesetzt) schaltet Kameraschütteln, Hit-Stop, Neigen/Stauchen der Figuren und Plattenwackeln ab und reduziert Partikel, ohne das Spielergebnis zu ändern.
-- **Gestaltung und Spielgefühl:** bei Gameplay, Licht, Effekten, Ton und Menüs den Skill `craft-game-floors` laden (Palette aus `Palette.cs` als einzige Farbquelle, keine Standardmaterialien/-skybox). Fehlt er, in der Übergabe nennen.
+- **Gestaltung und Spielgefühl:** bei Gameplay, Licht, Effekten, Ton und Menüs den Skill `unity:craft-game-floors` laden (Palette aus `Palette.cs` als einzige Farbquelle, keine Standardmaterialien/-skybox). Fehlt er, in der Übergabe nennen.
 - **Roll It Up!-Brücke:** Unity rechnet keine Regeln. `src/unityRollItUp.ts` macht aus dem Partiezustand einen flachen Schnappschuss für `JsonUtility` (keine Maps, keine optionalen Felder) und prüft jede Aktion aus Unity, bevor sie an die Raumautorität geht: nur `roll`, `path`, `supply`, `shop`, `gift`, `next` im eigenen Zug und in passender Phase. Items einsetzen, Inventar, Set und Menü öffnen die React-Tafeln (`panel`-Nachricht). Nachrichten laufen per `postMessage` nur zwischen App und eigenem iframe (gleiche Herkunft, Absender geprüft; `Plugins/WebGL/GSGBridge.jslib`). Bewegung folgt den Zeitstempeln des Raums (`departAt`/`arriveAt`, Uhrabgleich über `serverNow`); der Würfel landet immer auf dem Raumergebnis. Der Build bleibt die ganze Partie geladen und wird während der Minispiele nur versteckt (Bildrate 4, Ton aus).
-- **Vorher absprechen:** Unity-Pakete (`unity/GoldenSchmidtUnity/Packages/manifest.json`), Unity-Version, die gelockerte CSP unter `/unity/` (`server/index.ts`), neue Nachrichtenarten der Brücke und Änderungen an Raum, Sitzung oder Socket-Nachrichten.
+- **Vorher absprechen:** Unity-Pakete (`unity/GoldenSchmidtUnity/Packages/manifest.json`), Unity-Version, die gelockerte CSP unter `/unity/` (`server/index.ts`), Einträge außerhalb des Unity-Untermenüs, neue Nachrichtenarten der Brücke und Änderungen an Raum, Sitzung oder Socket-Nachrichten.
 - **Nie einchecken:** `Library/`, `Temp/`, `Logs/`, `Builds/`, `UserSettings/`, `Screenshots/`, `Data/` (siehe `unity/GoldenSchmidtUnity/.gitignore`). Generierte Großdaten nicht duplizieren: Animationen kommen direkt aus `anims.glb` (keine kopierten `.anim`-Dateien).
 - **Codesuche:** `public/unity/**/Build/`, `unity/**/*.unity` und `unity/**/*.glb` bei allgemeinen Suchen auslassen und nur gezielt lesen.
 
@@ -88,7 +64,7 @@ Nur in den Unity-Fassungen; die Web-Fassungen bleiben unverändert, bis über ei
 | `Assets/GSG/Plugins/WebGL` | `GSGBridge.jslib` (`postMessage` zwischen App und Build) |
 | `Assets/GSG/Scripts/Editor` | `GSGSetup` (Materialien, Figuren-Prefabs, Szenen, Projekt-/WebGL-Einstellungen), `GSGPlaytest` (Mechanik-Prüfung im Play Mode) |
 | `Assets/GSG/Shaders` | `GSG/Toon`, `GSG/Outline`, `GSG/Glow` (Lava/Glibber), `GSG/Sky`, `GSG/Particle` |
-| `Assets/GSG/Resources/GSG` | Materialien, Figuren-Prefabs, Schriften, HUD-Stylesheets (`Hud.uss`, `Roll.uss`), Panel-Einstellungen, `RollDemo.json` (vorbereitete Brettzustände für Editor und `?demo=1`) |
+| `Assets/GSG/Resources/GSG` | Materialien, Figuren-Prefabs, Schriften, HUD-Stylesheets (`Hud.uss`, `Roll.uss`), Panel-Einstellungen, `RollDemo.json` und `RollDemoGrinder.json` (vorbereitete Brettzustände für Editor und `?demo=1`, Grinder mit `&brett=grinder` bzw. `RollGame.DemoBoard = "grinder"`) |
 | `Assets/WebGLTemplates/GSG` | Startseite ohne Inline-Skript (CSP), Ladebalken, Pixeldichte ≤ 2 |
 
 Menü **GSG → 1 Alles einrichten** (oder `GSGSetup.All()`) baut Materialien, Figuren, alle Szenen und die WebGL-Einstellungen reproduzierbar neu. Einzelschritte: Menü GSG 2–10 (9 = Startszene, 10 = Szenen der Match-Spiele aus `MatchScenes`).
@@ -105,7 +81,7 @@ Eigene Meshes (Drehkörper, Hügel, Steine) brauchen UV-Koordinaten: `GSG/Toon` 
 
 ## Arbeitsumgebung (Cloud-Sitzung)
 
-- Umgebung **„GoldenSchmidtGames (Unity)“** verwenden. Sie erlaubt die Unity-Hosts: `unity.com`, `public-cdn.cloud.unity3d.com`, `download.unity3d.com`, `beta.unity3d.com`, `services.api.unity.com`, `api.unity.com`, `login.unity.com`, `id.unity.com`, `core.cloud.unity3d.com`, `license.unity3d.com`, `activation.unity3d.com`, `packages.unity.com`, `download.packages.unity.com`, `cdn.packages.unity.com`, `live-platform-api.prd.ld.unity3d.com`, `public-stevedore.unity3d.com`, `services.unity.com`, `cloud.unity.com`, `accounts.unity3d.com`.
+- Umgebung **„GoldenSchmidtGames (Unity)“** verwenden; sie erlaubt die Unity-Hosts für CLI, Editor, Anmeldung, Lizenz und Pakete.
 - Unity CLI: Installskript von `https://unity.com/install.sh` herunterladen, lesen, dann ausführen (landet in `~/.local/bin`). Editor: `unity install 6000.6.10f1 --module webgl --yes` (≈ 5,8 GB, im Hintergrund starten).
 - Anmeldung: `unity auth login --insecure-storage` im Hintergrund starten, den ausgegebenen Link an die Person weitergeben. **Der Link gilt nur ca. 10 Minuten**; wer noch kein Konto hat, legt es vorher auf `https://id.unity.com` an und meldet sich dann. Es muss keine Adresse zurückkopiert werden. Danach `unity license activate --personal --accept-eula` – nur nach ausdrücklicher Zustimmung der Person zur Unity-Personal-EULA.
 - Editor ohne Bildschirm dauerhaft starten (mit Software-OpenGL für Aufnahmen):
@@ -116,7 +92,7 @@ Eigene Meshes (Drehkörper, Hügel, Steine) brauchen UV-Koordinaten: `GSG/Toon` 
 
   Bereitschaft: `unity status --until-ready --project-path <Pfad>`. Steuerung: `unity command script eval`, `unity recompile`, `unity command editor.playmode start|stop`, `unity command capture game_view`. Vor dem Play Mode `unity command editor set_auto_tick`; Handy-Auflösung über `UnityEditor.PlayModeWindow.SetCustomRenderingResolution(540, 1080, "Handy")`. Hintergrundprozesse einer Agenten-Sitzung enden nach höchstens 2 Stunden – dann Editor neu starten.
 - Jeder neue Container beginnt ohne CLI, Editor, Anmeldung und Lizenz (Einrichtung ≈ 20 Min. plus Anmeldelink). Unity-Aufgaben und Rückmeldungen deshalb möglichst in einer Sitzung bündeln. .NET 8 für den Tank-Regeltest: `apt-get install -y dotnet-sdk-8.0`.
-- Am Ende `unity close <Pfad>` (schreibt Projekteinstellungen sauber) und `unity license return --yes`: Der Container verschwindet, die Aktivierung würde sonst einen Platz belegen.
+- Am Ende `unity close <Pfad>` (schreibt Projekteinstellungen sauber) und `unity auth logout` (die Anmeldung liegt sonst unverschlüsselt im Container). Eine Personal-Lizenz lässt sich nicht zurückgeben (`unity license return` meldet das); nur bezahlte Sitze mit `unity license return --yes` freigeben.
 
 ## Bauen und ausliefern
 
@@ -132,7 +108,7 @@ Eigene Meshes (Drehkörper, Hügel, Steine) brauchen UV-Koordinaten: `GSG/Toon` 
 4. Die Builds mit dem Quellstand einchecken. CI und Render bauen sie nicht.
 5. Einstellungen (setzt `GSGSetup.Project()`): Gzip mit Entpack-Rückfall, Dateinamen mit Inhalts-Hash, Datencache, keine Ausnahmen, IL2CPP „Optimize Size“, WebGL-Codeoptimierung „Disk Size with LTO“, Managed Stripping „High“, Engine-Code-Stripping, kein Splash-Bildschirm, Qualitätsstufe „Mobile“ mit HDR und Schatten.
 6. Streckendaten nach Änderungen an `shared/matches/parcoursCourses.ts` neu exportieren: `npx tsx scripts/unity-export-courses.ts` (flaches JSON nach `Resources/GSG/Courses/<id>.json`; nicht gesetzte Indizes = −1). `npm run test:rules` schlägt fehl, solange die Dateien veraltet sind.
-7. `RollDemo.json` nach Änderungen an `src/unityRollItUp.ts` neu erzeugen (Felder müssen zu `RollModels.cs` passen); die Brücke selbst prüft `npm run test:rules` (`scripts/unity-roll-it-up-test.ts`).
+7. `RollDemo.json` nach Änderungen an `src/unityRollItUp.ts` neu erzeugen (Felder müssen zu `RollModels.cs` passen), `RollDemoGrinder.json` mit `npx tsx scripts/unity-roll-demo-grinder.ts`; die Brücke selbst prüft `npm run test:rules` (`scripts/unity-roll-it-up-test.ts`).
 
 Auslieferung: Der Server erlaubt **nur unter `/unity/`** WebAssembly (`'wasm-unsafe-eval'`), `blob:`-Skripte und das Einbetten im eigenen App-Rahmen (`frame-ancestors 'self'`, `X-Frame-Options: SAMEORIGIN`); die App selbst bleibt streng. `Build/`-Dateien sind ein Jahr cachebar. `.unityweb`-Dateien gehen mit `Content-Encoding: gzip` (und `application/wasm` für den Code) hinaus: Der Browser entpackt selbst und übersetzt WebAssembly schon während des Downloads. Der Service Worker nimmt `unity/**` nicht in den Offline-Cache und leitet Navigationen nach `/unity/` nicht auf die App um. Andere Hoster brauchen dieselben Header ([Deployment](DEPLOYMENT.md#node-starten)). Der erste Start lädt ca. 12 MB für alle Spiele zusammen (Engine-Code ≈ 7,3 MB, Daten ≈ 4,4 MB; neue Szenen sind klein, weil ihre Welt zur Laufzeit entsteht); weitere Spiele kommen danach aus dem Browser-Cache. Jeder Neubau legt den ganzen Build neu im Repository ab, deshalb Spiele gesammelt bauen und nicht für Kleinigkeiten. Startzeit bis spielbereit (Chromium-Emulation, 4× gedrosselte CPU, 30 Mbit/s, 40 ms): Parcours 8,4 s → 6,4–7,1 s, Floor is Lava 7,4 s → 6,2–6,4 s, Bauschale 6 s. Die Bauschale lädt verdeckt schon während des Auftakt-Minispiels.
 
@@ -174,6 +150,6 @@ dotnet .artifacts/unity-tank-sim-test/bin/TankSim.Tests/debug/TankSim.Tests.dll
 
 - Auf echten Handys Bildrate, Ladezeit, Akku/Wärme und Touch-Gefühl beurteilen; danach Schatten, MSAA oder Renderauflösung anpassen.
 - Weitere Spiele auf die Darstellung im Raum umstellen (je Spiel: Schnappschuss in `UNITY_SNAPSHOTS`, `IOnlineMatch` in der Szene, Ansichten in `MINI_LOOKS`). Als Nächstes Standhaft mit 3rd Person; Unity-eigene Abweichungen (Sumo, Bumper, Schneeball, Tower-Tumble-Physik, Parcours-Läufer) vorher für `shared/` entscheiden.
-- Parcours-Stand vor #40: getimtes Festhalten, Lücken länger als Sprung + Hechten, Serpentinen-Glibberflut und Ventilatoren mit Anlauf sind noch nicht nachgezogen.
-- Kein Offline-Betrieb (ohne Internet übernimmt die Web-Darstellung). Seit Unity 6 ist der Splash-Bildschirm auch mit Unity Personal abschaltbar und aus.
+- Parcours-Probelevel: getimtes Festhalten, Lücken länger als Sprung + Hechten, Serpentinen-Glibberflut und Ventilatoren mit Anlauf nachziehen.
+- Kein Offline-Betrieb; ohne Internet übernimmt im Raum die Web-Darstellung.
 - Roll It Up! (Unity): nur Testpartie mit Bots am lokalen Tisch; Online-Räume, Wiederbeitritt und Handy-Hosting mit Unity-Brett sind nicht geprüft. Kameradrehen per Wischen, Zoomen mit zwei Fingern, Feldinfo per Tipp; die Feldliste/Regeltafel der Web-Bauschale fehlt noch.

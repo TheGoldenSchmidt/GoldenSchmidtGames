@@ -69,7 +69,8 @@ function extras(s: MatchState<RingGame>) {
 
 export const bumperMayhem = ringModule({
   id: "bumpercars", name: "Bumper Mayhem",
-  instruction: "Lenke dein Autoscooter-Fahrzeug mit dem Stick in die gewünschte Richtung, es beschleunigt von selbst. Der Turbo macht dich kurz viel schneller und deine Rammstöße härter (alle 4 Sekunden). Wer hart gerammt wird, schleudert ohne Kontrolle davon. Fahr durch Item-Kisten: Riesenauto (6 Sekunden groß und schwer), Ölfleck (andere schleudern darauf) oder Schockwelle (stößt alle in der Nähe weg). Ramme Gegner über den Rand: +2 pro Ring-Out. Das abgestürzte Auto kehrt allein zurück; sind nur noch zwei übrig, starten beide neu von ihren Startplätzen. Drehende Pfosten werfen alle zurück. Jeder hat 3 Leben, ab Sekunde 45 schrumpft die Arena. Letzter gewinnt, nach 75 Sekunden zählen Leben, dann Ring-Outs.",
+  instruction: "Ramm die anderen Autoscooter über den Rand, nutze Turbo und Item-Kisten. Jeder hat 3 Leben – wer zuletzt fährt, gewinnt.",
+  rules: "Lenke dein Autoscooter-Fahrzeug mit dem Stick in die gewünschte Richtung, es beschleunigt von selbst. Der Turbo macht dich kurz viel schneller und deine Rammstöße härter (alle 4 Sekunden). Wer hart gerammt wird, schleudert ohne Kontrolle davon. Fahr durch Item-Kisten: Riesenauto (6 Sekunden groß und schwer), Ölfleck (andere schleudern darauf) oder Schockwelle (stößt alle in der Nähe weg). Ramme Gegner über den Rand: +2 pro Ring-Out. Das abgestürzte Auto kehrt allein zurück; sind nur noch zwei übrig, starten beide neu von ihren Startplätzen. Drehende Pfosten werfen alle zurück. Jeder hat 3 Leben, ab Sekunde 45 schrumpft die Arena. Letzter gewinnt, nach 75 Sekunden zählen Leben, dann Ring-Outs.",
   controls: "Stick: Fahrtrichtung · Knopf: Turbo.",
   look: { icon: "⛐", action: "Rammen erlaubt!", hint: "Stick lenken · Knopf Turbo · Item-Kisten einsammeln", goal: "Als Letzter auf der Fläche" },
   radius: 6, minRadius: 3.4, shrinkFrom: 45000, shrinkTo: 75000,

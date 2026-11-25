@@ -159,7 +159,8 @@ export const tankTrouble: MatchModule<TankGame> = {
   id: "tanks",
   meta: {
     name: "Tank Trouble", seconds: (TT.regular + TT.overtime) / 1000 + 2, players: [2, 3, 4, 5, 6], hz: 10,
-    instruction: "Fahre mit dem Stick links. Ziehe rechts zum Zielen und lass los, um zu schießen; kurz tippen schießt geradeaus. Kugeln prallen zweimal von festen Mauern ab, Ziegelmauern gehen nach zwei Treffern kaputt. Jeder Panzer hat 3 Treffer. Wer zuerst 7 Abschüsse hat oder nach 90 Sekunden die meisten, gewinnt. Eigentreffer zählen nicht als Abschuss.",
+    instruction: "Panzerduell im Labyrinth: Kugeln prallen von Mauern ab, Ziegel zerbrechen. Die meisten Abschüsse gewinnen (höchstens 7).",
+    rules: "Fahre mit dem Stick links. Ziehe rechts zum Zielen und lass los, um zu schießen; kurz tippen schießt geradeaus. Kugeln prallen zweimal von festen Mauern ab, Ziegelmauern gehen nach zwei Treffern kaputt. Jeder Panzer hat 3 Treffer. Wer zuerst 7 Abschüsse hat oder nach 90 Sekunden die meisten, gewinnt. Eigentreffer zählen nicht als Abschuss.",
     controls: "Links fahren · rechts ziehen, loslassen zum Schießen.",
     look: { icon: "⛭", action: "Trickschüsse im Labyrinth", hint: "Stick fahren · rechts zielen und loslassen", goal: "7 Abschüsse oder die meisten nach 90 s" }
   },
