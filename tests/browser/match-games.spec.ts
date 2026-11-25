@@ -245,8 +245,10 @@ for (const motion of ["no-preference", "reduce"] as const) test(`Tank Trouble â€
   await page.emulateMedia({ reducedMotion: motion });
   const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "tanks" });
   try {
-    // Turmsicht is Tank Trouble in 3rd person, here with the app's own web rendering.
-    await session.action({ type: "look", renderer: "web", view: "third" }, session.ids[0]);
+    // Turmsicht is Tank Trouble in 3rd person, here with the app's own web rendering (the host picks in the intro).
+    await page.getByRole("group", { name: "Variante" }).getByRole("button", { name: /Web/ }).tap();
+    await page.getByRole("group", { name: "Ansicht" }).getByRole("button", { name: /3rd Person/ }).tap();
+    await expect(page.getByRole("group", { name: "Ansicht" }).getByRole("button", { name: /3rd Person/ })).toHaveAttribute("aria-pressed", "true");
     await page.getByRole("button", { name: "Ich bin bereit", exact: true }).tap();
     await session.action({ type: "ready" }, session.ids[1]);
     await matchStarted(page);

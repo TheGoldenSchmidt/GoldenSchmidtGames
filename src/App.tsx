@@ -361,13 +361,13 @@ export default function App() {
         />
       )}
       {view === "practice-world" && canDevelop(account?.role) && <Suspense fallback={<p role="status">Proberaum wird geladen …</p>}><PracticeWorldScreen characterId={profile.characterId} onExit={()=>setView("local-setup")}/></Suspense>}
-      {view === "unity" && <Suspense fallback={<p role="status">Unity-Test wird geladen …</p>}><UnityGameScreen game={unityGame} characterId={profile.characterId} onExit={()=>setView("local-setup")}/></Suspense>}
+      {view === "unity" && canDevelop(account?.role) && <Suspense fallback={<p role="status">Unity-Test wird geladen …</p>}><UnityGameScreen game={unityGame} characterId={profile.characterId} onExit={()=>setView("local-setup")}/></Suspense>}
       {view === "local-setup" && (
         <LocalSetupScreen
           section={localSection}
           onSection={setLocalSection}
           onPractice={canDevelop(account?.role) ? openPractice : undefined}
-          onUnity={id => { setUnityGame(id); setView("unity"); }}
+          onUnity={canDevelop(account?.role) ? id => { setUnityGame(id); setView("unity"); } : undefined}
           onUnityRollItUp={canDevelop(account?.role) ? () => { setUnityBoard(true); setTestGameId("roll-it-up"); setView("test"); } : undefined}
           onTest={gameId => { setUnityBoard(false); setTestGameId(gameId); setView("test"); }}
           onBack={() => setView("home")}

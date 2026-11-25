@@ -13,7 +13,7 @@ export const UNITY_MATCH_URL = "/unity/spiele/index.html?spiel=online";
 export const UNITY_MATCH_SCENES: Readonly<Record<string, string>> = { tanks: "tanks", tankview: "tanks" };
 export const hasUnityMatch = (matchId: string) => matchId in UNITY_MATCH_SCENES;
 
-export interface UnityMessage { type: string; yaw?: number }
+export interface UnityMessage { type: string; yaw?: number; kind?: string; x?: number; y?: number; ax?: number; ay?: number; ha?: boolean; hb?: boolean }
 type Listener = (message: UnityMessage) => void;
 
 /** The persistent Unity frame of the current page (mounted by `UnityMatchHost`). */
@@ -30,14 +30,16 @@ class UnityStage {
     if (message.type === "ready") this.ready = true;
     for (const listener of this.listeners) listener(message);
   }
-  show(on: boolean) { this.frame?.parentElement?.classList.toggle("is-shown", on); }
+  show(on: boolean) { this.frame?.parentElement?.classList.toggle("is-shown", on); if (!on) this.interactive(false); }
+  /** Unity's own HUD takes the touches (the app layer above lets them through). */
+  interactive(on: boolean) { this.frame?.parentElement?.classList.toggle("is-interactive", on); }
 }
 export const unityStage = new UnityStage();
 
 /** Seats for the Unity scene: colour slot, name and the figure chosen in the app (Unity falls back to a base human). */
-export function unityMatchSetup(s: MatchState, viewer: string, view: string, reduced: boolean, names: Record<string, string>, characters: Record<string, string | undefined>) {
+export function unityMatchSetup(s: MatchState, viewer: string, view: string, reduced: boolean, names: Record<string, string>, characters: Record<string, string | undefined>, startIn = 0, sound = true) {
   return {
-    type: "setup", game: UNITY_MATCH_SCENES[s.id], view, viewer, reduced,
+    type: "setup", game: UNITY_MATCH_SCENES[s.id], view, viewer, reduced, startIn: Math.round(startIn), sound,
     players: s.players.map(p => ({ id: p.id, slot: p.style, name: names[p.id] ?? "", figure: characters[p.id] ?? "" }))
   };
 }
@@ -59,8 +61,18 @@ export function unityTankSnapshot(s: MatchState) {
       };
     }),
     bullets: g.bullets.map(b => ({ id: b.id, slot: slot(b.owner), x: b.x, y: b.y })),
-    powers: g.powers.map(p => ({ id: p.id, kind: p.kind, x: p.x, y: p.y }))
+    powers: g.powers.map(p => ({ id: p.id, kind: p.kind, x: p.x, y: p.y })),
+    events: unityEvents(s)
   };
+}
+
+/** The room's recent events (Unity plays their sounds, toasts and effects while it draws). */
+export const unityEvents = (s: MatchState) => s.events.map(e => ({ seq: e.seq, kind: e.kind, text: e.text, ids: e.ids }));
+
+/** Input from Unity's own HUD, checked before it reaches the room (finite, within −1…1). */
+export function unityInput(message: UnityMessage) {
+  const clamp = (v: unknown) => typeof v === "number" && Number.isFinite(v) ? Math.max(-1, Math.min(1, v)) : 0;
+  return { x: clamp(message.x), y: clamp(message.y), ax: clamp(message.ax), ay: clamp(message.ay), ha: message.ha === true, hb: message.hb === true };
 }
 
 /** Snapshot builder per Unity game id. */

@@ -15,14 +15,17 @@ for (const view of ["3rd Person", "1st Person"] as const) test(`Tank Trouble mit
   const session = await onlineSession(page, false, undefined, false, "free-minigame", { miniId: "tanks" });
   try {
     // Default: Unity in the overview; the Unity build already loads during the intro.
-    await expect(page.locator(".party-mini-look")).toContainText("Unity · Draufsicht");
+    const variant = page.getByRole("group", { name: "Variante" }), views = page.getByRole("group", { name: "Ansicht" });
+    await expect(variant.getByRole("button", { name: /Unity/ })).toHaveAttribute("aria-pressed", "true");
+    await expect(views.getByRole("button", { name: /Draufsicht/ })).toHaveAttribute("aria-pressed", "true");
     await expect(page.locator(".unity-match iframe")).toHaveAttribute("src", /^\/unity\/spiele\/index\.html\?spiel=online/);
-    await page.locator(".party-mini-look").getByRole("button", { name: "Ändern" }).tap();
+    // The host picks in the intro (the game menu offers the same choice).
+    await views.getByRole("button", { name: new RegExp(view) }).tap();
+    await expect(views.getByRole("button", { name: new RegExp(view) })).toHaveAttribute("aria-pressed", "true");
+    await page.getByRole("button", { name: "Spielmenü öffnen" }).tap();
     const menu = page.getByRole("dialog", { name: "Spielmenü" });
-    await menu.getByLabel("Ansicht", { exact: true }).selectOption({ label: view });
     await expect(menu.getByLabel("Ansicht", { exact: true })).toHaveValue(view === "3rd Person" ? "third" : "first");
     await menu.getByRole("button", { name: "Spielmenü schließen" }).tap();
-    await expect(page.locator(".party-mini-look")).toContainText(`Unity · ${view}`);
     // Only the host chooses.
     await expect(session.action({ type: "look", renderer: "web", view: "top" }, session.ids[1])).rejects.toThrow(/Host/);
 
@@ -40,18 +43,29 @@ for (const view of ["3rd Person", "1st Person"] as const) test(`Tank Trouble mit
     await expect(world).toHaveAttribute("data-yaw", /^-?\d/, { timeout: 30000 });
     const own = async () => (await match()).players.find(p => p.id === session.ids[0])!.input;
     const forward = async (x: number, y: number) => { const yaw = Number(await world.getAttribute("data-yaw")); return (x * Math.sin(yaw) - y * Math.cos(yaw)) / (Math.hypot(x, y) || 1); };
-    const stick = (await page.getByRole("group", { name: "Bewegungsstick" }).boundingBox())!;
-    await page.mouse.move(stick.x + stick.width / 2, stick.y + stick.height / 2); await page.mouse.down();
-    await page.mouse.move(stick.x + stick.width / 2, stick.y + stick.height / 2 - 45, { steps: 3 });
+    // Unity's own HUD takes over: the app keeps only its menu and sound toggle; touches reach the Unity frame.
+    await expect(page.locator(".match-game")).toHaveClass(/is-unity-hud/, { timeout: 30000 });
+    await expect(page.getByRole("group", { name: "Bewegungsstick" })).toHaveCount(0);
+    await expect(page.locator(".match-hud__info")).toBeHidden();
+    await expect(page.getByRole("button", { name: /Ton (aus|ein)schalten/ })).toBeVisible();
+    const cdp = await page.context().newCDPSession(page);
+    const touch = (type: "touchStart" | "touchMove" | "touchEnd", points: [number, number][]) =>
+      cdp.send("Input.dispatchTouchEvent", { type, touchPoints: points.map(([x, y], id) => ({ x, y, id: id + 1 })) });
+    // Own tank alive (controls shown), then push Unity's stick up: the room gets "where the camera looks".
+    await expect.poll(async () => (await match()).game.tanks[session.ids[0]]?.alive ?? false, { timeout: 10000 }).toBe(true);
+    await page.waitForTimeout(500);
+    await touch("touchStart", [[80, 740]]);
+    for (const dy of [15, 30, 45, 60]) await touch("touchMove", [[80, 740 - dy]]);
     await expect.poll(async () => { const input = await own(); return forward(input.x, input.y); }, { timeout: 5000 }).toBeGreaterThan(.9);
     await page.waitForTimeout(1500);
     await page.screenshot({ path: info.outputPath(`unity-tanks-${view.split(" ")[0]}.png`) });
-    await page.mouse.up();
-    // Drag on the right half and release: the room registers the shot.
-    const aim = (await page.getByRole("group", { name: "Zielen und schießen" }).boundingBox())!;
-    await page.mouse.move(aim.x + aim.width / 2, aim.y + aim.height / 2); await page.mouse.down();
-    await page.mouse.move(aim.x + aim.width / 2, aim.y + aim.height / 2 - 60, { steps: 3 });
-    await page.mouse.up();
+    await touch("touchEnd", []);
+    await expect.poll(async () => { const input = await own(); return Math.hypot(input.x, input.y); }, { timeout: 5000 }).toBeLessThan(.1);
+    // Drag in Unity's aim zone and release: the room registers the shot.
+    await touch("touchStart", [[300, 700]]);
+    for (const dy of [20, 40, 60]) await touch("touchMove", [[300, 700 - dy]]);
+    await page.waitForTimeout(150);
+    await touch("touchEnd", []);
     await expect.poll(async () => (await match()).game.tanks[session.ids[0]]?.lastShot ?? 0, { timeout: 5000 }).toBeGreaterThan(0);
     await session.action({ type: "finish" }, session.ids[1]);
     await expect(page.getByRole("heading", { name: "Euer Ergebnis", exact: true })).toBeVisible({ timeout: 20000 });

@@ -1,7 +1,16 @@
 import { test, expect } from "@playwright/test";
 import { UNITY_GAMES } from "../../src/unityGames";
+import { loginTestOwner } from "./account-session";
 
-// Unity test games: one shared WebGL build in the app's own frame (?spiel= picks the game), open to everyone.
+// Unity test area (admin/development only): one shared WebGL build in the app's own frame (?spiel= picks the game).
+test("Unity-Testbereich: ohne Entwicklerkonto keine Unity-Testeinträge", async ({ page }, info) => {
+  test.skip(info.project.name !== "phone", "Nur Smartphone");
+  await page.goto("/");
+  await page.getByRole("button", { name: /Lokal spielen/ }).tap();
+  await expect(page.getByRole("button", { name: /^Inselparty/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Unity-Minispiele/ })).toHaveCount(0);
+});
+
 for (const game of UNITY_GAMES) test(`Unity-Test ${game.name}: Eintrag, Start im App-Rahmen unter der CSP, Rückkehr`, async ({ page }, info) => {
   test.skip(info.project.name !== "phone", "Nur Smartphone");
   test.setTimeout(180000);
@@ -9,6 +18,7 @@ for (const game of UNITY_GAMES) test(`Unity-Test ${game.name}: Eintrag, Start im
   page.on("pageerror", e => errors.push(e.message));
   page.on("console", m => { if (/CSP-VERSTOSS|\[GSG\] Unbekanntes Spiel/.test(m.text())) errors.push(m.text()); });
   await page.addInitScript(() => document.addEventListener("securitypolicyviolation", e => console.log(`CSP-VERSTOSS ${e.violatedDirective} ${e.blockedURI}`)));
+  await loginTestOwner(page.request);
   await page.goto("/");
   await page.getByRole("button", { name: /Lokal spielen/ }).tap();
   await page.getByRole("button", { name: /^Unity-Minispiele/ }).tap();

@@ -22,3 +22,29 @@ export function MiniLookSettings({ game, host, busy, send }: { game: PartyGame; 
     <p className="mini-look__note">{host ? "Gilt für alle Mitspielenden. Unity braucht Internet und lädt beim ersten Mal ca. 12 MB." : `Der Host hat ${lookLabel(look)} gewählt.`}</p>
   </fieldset>;
 }
+
+/**
+ * The same choice directly in the minigame intro, before "Ich bin bereit": the host taps the variant
+ * (Unity or Web) and the view; everyone else sees what the host picked.
+ */
+export function MiniLookPicker({ game, host, busy, send }: { game: PartyGame; host: boolean; busy: boolean; send: (action: PartyAction) => void }) {
+  const mini = game.mini, choices = mini && lookChoices(mini.id), look = mini?.look;
+  if (game.phase !== "mini-intro" || !choices || !look) return null;
+  const renderers = (Object.keys(choices) as MiniRenderer[]).filter(r => choices[r]?.length);
+  const views = choices[look.renderer]!;
+  const choose = (next: MiniLook) => { if (next.renderer !== look.renderer || next.view !== look.view) send({ type: "look", renderer: next.renderer, view: next.view }); };
+  if (!host) return <p className="mini-look-picker__readonly" role="status">Variante: <b>{lookLabel(look)}</b> <small>· wählt der Host</small></p>;
+  const option = (key: string, label: string, pressed: boolean, onClick: () => void) =>
+    <button key={key} type="button" aria-pressed={pressed} disabled={busy} onClick={onClick}>{pressed && <span aria-hidden="true">✓ </span>}{label}</button>;
+  return <div className="mini-look-picker">
+    {renderers.length > 1 && <div role="group" aria-label="Variante">
+      <span>Variante</span>
+      {renderers.map(r => option(r, RENDERER_NAMES[r], r === look.renderer, () => { const next = choices[r]!; choose({ renderer: r, view: next.includes(look.view) ? look.view : next[0] }); }))}
+    </div>}
+    {views.length > 1 && <div role="group" aria-label="Ansicht">
+      <span>Ansicht</span>
+      {views.map(v => option(v, VIEW_NAMES[v], v === look.view, () => choose({ renderer: look.renderer, view: v })))}
+    </div>}
+    {look.renderer === "unity" && <small>Unity lädt beim ersten Mal ca. 12 MB; ohne Internet übernimmt Web.</small>}
+  </div>;
+}
