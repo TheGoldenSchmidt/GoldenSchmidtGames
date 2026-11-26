@@ -127,7 +127,8 @@ namespace GSG.Lava
         {
             if (chase) rig.Swipe(hud.Look);
             if (beganAt < 0f || Time.unscaledTime < nextReport || state == State.Ended) return;
-            nextReport = Time.unscaledTime + ReportEvery;
+            // On the schedule, not from this frame: at 60 fps the reports alternate two and three frames, 25 a second on average.
+            nextReport = Mathf.Max(nextReport + ReportEvery, Time.unscaledTime);
             Report("hostsnap");
         }
 
