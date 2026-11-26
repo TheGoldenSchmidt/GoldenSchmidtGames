@@ -9,7 +9,7 @@ namespace GSG.Lava
     /// Pilot "Unity · Host rechnet": on the host's phone this scene simulates the room's Floor is Lava
     /// with its own physics, exactly like the local test. The own runner follows Unity's HUD at once,
     /// the other phones' runners follow their inputs relayed by the room ("inputs"), the room's bots
-    /// use the bot logic of this scene. About 13 times a second the state goes back to the room in the
+    /// use the bot logic of this scene. 25 times a second the state goes back to the room in the
     /// format of unityLavaSnapshot (src/unityMatch.ts) plus the physical height `h`, so every other
     /// phone draws it with the online renderer (LavaGame.Online.cs). The room checks every report.
     /// </summary>
@@ -19,7 +19,8 @@ namespace GSG.Lava
         [System.Serializable] class HostInputs { public float time; public HostInput[] players; }
         [System.Serializable] class HostMessage { public string type; public Snap snap; }
 
-        const float ReportEvery = 0.075f;
+        // 25 reports a second; the room relays each at once.
+        const float ReportEvery = 0.04f;
         bool hostMode, spectator;
         float beganAt = -1f, nextReport;
         int tiebreakSeat = -1, eventSeq;

@@ -25,6 +25,10 @@ export async function decode(text: string): Promise<Signal> {
   return s;
 }
 
+/** Messages on the unreliable live channel: steering, arena states and the "Unity · Host rechnet" relay. */
+const REALTIME_EVENTS = new Set(["party:arena", "party:unity-input", "party:unity-snap"]);
+const isRealtime = (p: { kind: string; event?: string }) => (p.kind === "call" && p.event === "party:control") || (p.kind === "event" && REALTIME_EVENTS.has(p.event ?? ""));
+
 export class DirectLink {
   private pc = new RTCPeerConnection({ iceServers: [] });
   private reliable?: RTCDataChannel;
@@ -76,13 +80,13 @@ export class DirectLink {
       }
       if(ch===this.reliable && !this.host && kind==="pong"){this.lastReply=Date.now();return;}
       if (this.host ? !isCall(p) : !(p.kind === "ack" || (p.kind === "event" && typeof p.event === "string"))) return;
-      const realtime = (p.kind === "call" && p.event === "party:control") || (p.kind === "event" && p.event === "party:arena");
+      const realtime = isRealtime(p);
       if (realtime === (ch === this.live)) this.received(p);
     };
     ready();
   }
   send(p: Wire) {
-    const ch = (p.kind === "call" && p.event === "party:control") || (p.kind === "event" && p.event === "party:arena")
+    const ch = isRealtime(p)
       ? this.live : this.reliable;
     if (!ch || ch.readyState !== "open" || (ch === this.live && ch.bufferedAmount > 32000)) return;
     try { ch.send(JSON.stringify(p)); } catch { this.close(); }

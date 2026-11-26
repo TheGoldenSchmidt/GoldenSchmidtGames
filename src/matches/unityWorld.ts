@@ -1,5 +1,5 @@
 import { followCamera, takeCameraTurn, type ChaseLocal, type MatchIO, type MatchWorld, type MatchWorldFrame } from "./client";
-import { isUnityHost, UNITY_MATCH_SCENES, UNITY_SNAPSHOTS, unityInput, unityMatchSetup, unityStage } from "../unityMatch";
+import { isUnityHost, UNITY_MATCH_SCENES, UNITY_SNAPSHOTS, unityInput, unityMatchSetup, unityRelay, unityStage } from "../unityMatch";
 import type { LavaHostGame } from "../../shared/matches/lavaHost";
 import type { PartyUnityReport } from "../../shared/party";
 import type { MatchState } from "../../shared/matches/types";
@@ -50,6 +50,12 @@ export function createUnityWorld(view: MiniView, host: HTMLElement, read: () => 
       hooks.report?.({ seq: ++reportSeq, snap: message.snap, done: message.type === "hostdone" });
       host.dataset.hostReports = String(reportSeq);
     }
+  });
+  // Relayed at once by the room: the host's scene gets each input, every other scene each snapshot (older ones are ignored there).
+  const offRelay = unityRelay.listen(message => {
+    if (!started) return;
+    if (hostRole && message.kind === "input") unityStage.post({ type: "inputs", time: 0, players: [{ ...message.input, id: message.id, gone: false }] });
+    else if (!hostRole && message.kind === "snap") unityStage.post(message.snap);
   });
   const fail = () => {
     if (disposed) return;
@@ -102,6 +108,7 @@ export function createUnityWorld(view: MiniView, host: HTMLElement, read: () => 
     disposed = true;
     cancelAnimationFrame(frame);
     off();
+    offRelay();
     if (started) unityStage.post({ type: "idle" });
     unityStage.show(false);
     hooks.onControls(false);

@@ -19,6 +19,7 @@ import { PartyDice } from "../components/PartyDice";
 import { PartyMini, PartyPractice } from "../components/PartyMini";
 import { MiniLookSettings } from "../components/MiniLookSettings";
 import { UnityMatchHost } from "../components/UnityMatchHost";
+import { unityRelay } from "../unityMatch";
 import { preloadMatchWorld } from "../matches/registry";
 import { PartyPanel } from "../components/PartyPanel";
 import { PartyTestTools } from "../components/PartyTestTools";
@@ -57,8 +58,11 @@ export function PartyGameScreen({profile,initialRoom,onExit,onLobby,unityBoard=f
     const arena=(payload:{code:string;phaseId:number;arena:ArenaState;serverTime:number})=>{if(payload.code!==initialRoom.code)return;offset.current=payload.serverTime-Date.now();setRoom(previous=>{const g=previous.partyGame;if(!g?.mini||g.phaseId!==payload.phaseId||(g.mini.arena?.time??0)>payload.arena.time)return previous;const runs={...g.mini.runs};for(const actor of payload.arena.actors)runs[actor.id]={...runs[actor.id],score:actor.score,feedback:actor.feedback,done:runs[actor.id].done||actor.finished,lastInput:actor.played?(runs[actor.id].lastInput||payload.serverTime):0};return {...previous,partyGame:{...g,serverTime:payload.serverTime,mini:{...g.mini,arena:payload.arena,runs}}};});};
     // Match games: the authority sends each device its own view at 10 or 20 Hz.
     const match=(payload:{code:string;phaseId:number;match:MatchState;serverTime:number})=>{if(payload.code!==initialRoom.code)return;offset.current=payload.serverTime-Date.now();setRoom(previous=>{const g=previous.partyGame;if(!g?.mini?.match||g.phaseId!==payload.phaseId||g.mini.match.time>payload.match.time)return previous;return {...previous,partyGame:{...g,serverTime:payload.serverTime,mini:{...g.mini,match:payload.match}}};});};
-    socket.on("room:updated",update);socket.on("party:arena",arena);socket.on("party:match",match);
-    return()=>{socket.off("room:updated",update);socket.off("party:arena",arena);socket.off("party:match",match);};
+    // "Unity · Host rechnet": inputs (for the host) and snapshots (for everyone else) relayed at once, straight to Unity.
+    const unityInput=(payload:{code:string;id:string;input:{x:number;y:number;ca:number;cb:number;cn:number}})=>{if(payload.code===initialRoom.code)unityRelay.emit({kind:"input",id:payload.id,input:payload.input});};
+    const unitySnap=(payload:{code:string;snap:object})=>{if(payload.code===initialRoom.code)unityRelay.emit({kind:"snap",snap:payload.snap});};
+    socket.on("room:updated",update);socket.on("party:arena",arena);socket.on("party:match",match);socket.on("party:unity-input",unityInput);socket.on("party:unity-snap",unitySnap);
+    return()=>{socket.off("room:updated",update);socket.off("party:arena",arena);socket.off("party:match",match);socket.off("party:unity-input",unityInput);socket.off("party:unity-snap",unitySnap);};
   },[initialRoom.code,profile.id]);
   useEffect(()=>{setError("");setReplace(0);setPractice(undefined);setSelectedItem(undefined);if(game?.phase==="mini-intro"){if(game.mini?.match)preloadMatchWorld(game.mini.match.id,game.players.map(p=>p.characterId));else void import("../three/arenaWorld");}},[game?.phaseId,game?.itemUsed]);
   useEffect(()=>{setPanel(undefined);},[game?.phase==="mini-play",game?.phase==="aborted",game?.phase==="finished",game?.itemUsed]);

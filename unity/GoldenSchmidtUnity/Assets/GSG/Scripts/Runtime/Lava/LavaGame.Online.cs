@@ -150,6 +150,9 @@ namespace GSG.Lava
             var next = JsonUtility.FromJson<Snap>(json);
             if (next?.runners == null || next.runners.Length != runners.Count || next.tiles == null || next.tiles.Length != tiles.Length) return;
             bool newRound = next.round != lastRound;
+            // The room relays the host's snapshots at once and again with its regular views: older ones are dropped.
+            if (built && !newRound && next.time <= snapTime) return;
+            if (newRound) ResetPrediction();
             if (built && next.time > snapTime) snapInterval = Mathf.Clamp((next.time - snapTime) / 1000f, 0.03f, 0.25f);
             prevSnapTime = built && !newRound ? snapTime : next.time;
             snapTime = next.time;
@@ -177,6 +180,7 @@ namespace GSG.Lava
 
         void Show(LavaRunner r, SnapRunner s)
         {
+            if (r == player) ResetPrediction();
             r.alive = true;
             r.facing = new Vector3(s.fx, 0f, s.fy);
             r.transform.position = World(new Vector2(s.x, s.y), FloorY(s.floor));
@@ -294,9 +298,10 @@ namespace GSG.Lava
                         Sfx.Play("rumble");
                         Fx.Shake(0.6f);
                         break;
-                    case "jump": if (a != null) Answer(a, "jump"); break;
-                    case "dive": if (a != null) Answer(a, "dive"); break;
-                    case "dash": if (a != null) Answer(a, "shove"); break;
+                    // The own press already showed it (LavaGame.Predict.cs).
+                    case "jump": if (a != null && !(a == player && OwnActionShown("jump"))) Answer(a, "jump"); break;
+                    case "dive": if (a != null && !(a == player && OwnActionShown("dive"))) Answer(a, "dive"); break;
+                    case "dash": if (a != null && !(a == player && OwnActionShown("dash"))) Answer(a, "shove"); break;
                 }
             }
         }
@@ -337,8 +342,9 @@ namespace GSG.Lava
                 if (jump) MatchBridge.Press("a");
                 if (shove) MatchBridge.Press("b");
                 if (dive) MatchBridge.Command(1);
+                PredictInput(new Vector2(d.x, d.z), jump, shove, dive, mine, now);
             }
-            else if (me >= 0) MatchBridge.Input(0f, 0f, 0f, 0f);
+            else if (me >= 0) { MatchBridge.Input(0f, 0f, 0f, 0f); PredictInput(Vector2.zero, false, false, false, mine, now); }
             hud.SetControlsVisible(canAct);
             if (chase) rig.Swipe(hud.Look);
 
@@ -374,6 +380,13 @@ namespace GSG.Lava
                 r.diveUntil = t + (s.diveUntil - now) / 1000f;
                 r.proneUntil = t + (s.proneUntil - now) / 1000f;
                 r.shoveUntil = t + (s.shoveUntil - now) / 1000f;
+                // The own runner moves at once with the own input (LavaGame.Predict.cs).
+                if (i == me)
+                {
+                    var field = PredictOwn(s, Vector2.Lerp(m.prev, m.cur, alpha), now, Time.deltaTime);
+                    r.transform.position = World(field, OwnHeight(s, now));
+                    ApplyOwn(r, s, now);
+                }
             }
 
             foreach (var tile in tiles)
