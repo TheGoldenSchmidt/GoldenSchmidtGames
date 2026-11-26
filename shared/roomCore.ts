@@ -1,6 +1,7 @@
 import { getGame, isPartyMode } from "./games";
 import { checkMinigameSetup, isMinigameMode, minigameOptions, type MinigameOptions } from "./minigameModes";
 import { isPlayableMini, miniPool, type PlayableMiniId } from "./minigameCatalog";
+import type { LavaHostGame } from "./matches/lavaHost";
 import { MATCH_MODULES, publicMatch, type MatchId } from "./matches/framework";
 import { applyPartyAction, applyPartyControl, applyPartyUnity, createPartyGame, neutralizePartyInputs, PARTY_DEFAULTS, partyOptions, publicParty, selectPartyTestMini, shiftPartyClock, startPartyTestDuel, tickParty, type PartyAction, type PartyOptions, type PartyUnityReport } from "./party";
 import { CHARACTERS, characterId, isCharacterId } from "./characters";
@@ -353,9 +354,24 @@ hub.onPeer((socket) => {
     if(!member||!room||!g||!validSession(room.code, member.playerId, payload.token))return fail("Die Inselparty-Sitzung ist nicht gültig.");
     if(payload.phaseId!==g.phaseId)return fail("Die Minispielrunde hat sich geändert.");
     const now=Date.now();if(now-lastPartyControl<25)return callback?.({ok:true,data:{accepted:false}});
-    try{room.partyGame=applyPartyControl(g,member.playerId,payload.input!,payload.seq!,now);lastPartyControl=now;if(acknowledged)transactions.dirty(room.code);callback({ok:true,data:{accepted:true}});}
+    try{
+      room.partyGame=applyPartyControl(g,member.playerId,payload.input!,payload.seq!,now);lastPartyControl=now;if(acknowledged)transactions.dirty(room.code);
+      // "Unity · Host rechnet": the checked input goes on to the simulating host at once (not with the next room tick).
+      const match=room.partyGame.mini?.match,player=match?.players.find(p=>p.id===member.playerId);
+      if(match?.id==="lavahost"&&player){const {x,y,ca,cb,cn}=player.input;relayUnity(room,"party:unity-input",{phaseId:room.partyGame.phaseId,id:player.id,input:{x,y,ca,cb,cn}},id=>id===(match.game as LavaHostGame).host);}
+      callback({ok:true,data:{accepted:true}});
+    }
     catch(error){fail(error instanceof Error?error.message:"Steuerung nicht möglich.");}
   }, true); // Arena controls are also sent without acknowledgements.
+  /**
+   * Pilot "Unity · Host rechnet": realtime data of the host's simulation goes on at once instead of
+   * waiting for the next 50-ms room tick (the regular party:match views still follow as a fallback).
+   */
+  function relayUnity(room:RoomState,event:string,payload:object,to:(playerId:string)=>boolean){
+    transactions.publish(()=>{
+      for(const id of hub.members(room.code)??[]){const viewer=socketMembership.get(id)?.playerId;if(viewer&&to(viewer))hub.peer(id)?.emit(event,{code:room.code,...payload});}
+    });
+  }
   // "Unity · Host rechnet" (Floor is Lava pilot): the host's Unity scene reports snapshots, the end or a failure.
   // Checked in applyPartyUnity; the room relays the snapshots with the normal party:match views.
   withPayload("party:unity",(payload:{phaseId?:number;token?:string;report?:PartyUnityReport},callback:(ack:Ack<{accepted:boolean}>)=>void)=>{
@@ -367,6 +383,9 @@ hub.onPeer((socket) => {
       const report=payload.report??{},before=g.mini?.match?.id;
       room.partyGame=applyPartyUnity(g,member.playerId,report,Date.now());
       if(report.done||report.fail||room.partyGame.mini?.match?.id!==before)transactions.dirty(room.code);
+      // The checked snapshot goes to everyone else at once.
+      const relay=room.partyGame.mini?.match;
+      if(relay?.id==="lavahost"&&report.snap!==undefined&&(relay.game as LavaHostGame).snap)relayUnity(room,"party:unity-snap",{phaseId:room.partyGame.phaseId,snap:(relay.game as LavaHostGame).snap},id=>id!==member.playerId);
       callback?.({ok:true,data:{accepted:true}});
     }catch(error){fail(error instanceof Error?error.message:"Unity-Meldung nicht möglich.");}
   }, true);

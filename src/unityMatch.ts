@@ -42,6 +42,16 @@ class UnityStage {
 }
 export const unityStage = new UnityStage();
 
+/** "Unity · Host rechnet": data the room relays at once (inputs for the host, snapshots for everyone else). */
+export type UnityRelayMessage =
+  | { kind: "input"; id: string; input: { x: number; y: number; ca: number; cb: number; cn: number } }
+  | { kind: "snap"; snap: object };
+const relayListeners = new Set<(message: UnityRelayMessage) => void>();
+export const unityRelay = {
+  emit(message: UnityRelayMessage) { for (const listener of relayListeners) listener(message); },
+  listen(listener: (message: UnityRelayMessage) => void) { relayListeners.add(listener); return () => { relayListeners.delete(listener); }; }
+};
+
 /** "Unity · Host rechnet": this device's Unity scene simulates the match for everyone. */
 export const isUnityHost = (s: MatchState, viewer: string) => s.id === "lavahost" && (s.game as LavaHostGame).host === viewer;
 
